@@ -1,0 +1,6 @@
+class bob {
+	public tom() {
+		int i[] = new int[100];
+		i[0] = 1;
+	}
+}
