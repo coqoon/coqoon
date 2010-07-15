@@ -91,7 +91,7 @@ trait Expression
 	// always starts with primary expression, then 0 or more of various things
 	def postfixExpression = primaryExpression ~
 			rep ( "." ~
-					( opt(genericTypeArgumentListSimplified) ~ id ~ opt(arguments)
+					( opt(genericTypeArgumentList) ~ id ~ opt(arguments)
 					| "this"
 					| "super" ~ arguments
 					| "super" ~ "." ~ id ~ opt(arguments)
@@ -106,7 +106,7 @@ trait Expression
 		| literal
 		| newExpression
 		| qualifiedIdExpression
-		| genericTypeArgumentListSimplified ~
+		| genericTypeArgumentList ~
 			( "super" ~ (arguments | "." ~ id ~ arguments)
 			| id ~ arguments
 			| "this" ~ arguments
@@ -122,7 +122,7 @@ trait Expression
 			opt	( bracesList ~ "." ~ "class"
 				| arguments
 				| "." ~ ( "class"
-						| genericTypeArgumentListSimplified ~ ("super" ~ opt("." ~ id) | id) ~ arguments
+						| genericTypeArgumentList ~ ("super" ~ opt("." ~ id) | id) ~ arguments
 						| "this"
 						| "super" ~ arguments
 						| innerNewExpression
@@ -131,11 +131,11 @@ trait Expression
 
 	def newExpression = "new" ~>
 		( basicType ~ newArrayConstruction
-		| opt(genericTypeArgumentListSimplified) ~ qualifiedTypeIdentSimplified ~
+		| opt(genericTypeArgumentList) ~ qualifiedTypeIdent ~
 				(newArrayConstruction | arguments ~ opt(classBody))
 		) ^^ NewExpr
 
-	def innerNewExpression = "new" ~> opt(genericTypeArgumentListSimplified) ~ id ~ arguments ~ opt(classBody) ^^ NewExpr
+	def innerNewExpression = "new" ~> opt(genericTypeArgumentList) ~ id ~ arguments ~ opt(classBody) ^^ NewExpr
 	def newArrayConstruction = 
 		( bracesList ~ arrayInitializer
 		| rep1(bracesExpr) ~ rep(braces)
@@ -151,31 +151,59 @@ trait Expression
 	// types
 	//
 	
-	// TODO: ignoring nested type parameters for now, but note <T<U>> yields a nice bit shift
-	
 	def jtype: Parser[Any] =
 		( simpleType
 		| objectType
 		) 
+	def jtype0: Parser[Any] = objectType0
+	def jtype1: Parser[Any] = objectType1
+        def jtype2: Parser[Any] = objectType2
+
 	def simpleType = basicType ~ rep(braces) ^^ { case x~List() => Primitive(x) ; case x~y => ArrayType(x, y.length) }
 	def objectType = qualifiedTypeIdent ~ rep(braces)
-	def objectTypeSimplified = qualifiedTypeIdentSimplified ~ rep(braces)
+	def objectType0 = qualifiedTypeIdent0 ~ rep(braces)
+	def objectType1 = qualifiedTypeIdent1 ~ rep(braces)
+	def objectType2 = qualifiedTypeIdent2 ~ rep(braces)
 	def qualifiedTypeIdent = rep1sep(typeIdent, ".")
-	def qualifiedTypeIdentSimplified = rep1sep(typeIdentSimplified, ".")
+	def qualifiedTypeIdent0 = rep1sep(typeIdent0, ".")
+	def qualifiedTypeIdent1 = rep1sep(typeIdent1, ".")
+	def qualifiedTypeIdent2 = rep1sep(typeIdent2, ".")
 	def typeIdent = id ~ opt(genericTypeArgumentList)
-	def typeIdentSimplified = id ~ opt(genericTypeArgumentListSimplified)
+	def typeIdent0 = id ~ genericTypeArgumentList0
+	def typeIdent1 = id ~ genericTypeArgumentList0
+	def typeIdent2 = id ~ genericTypeArgumentList00
 	
-	def genericTypeArgumentList = "<" ~ rep1sep(genericTypeArgument, ",") ~ ">"
-	def genericTypeArgumentListSimplified = "<" ~ rep1sep(jtype | "?", ",") ~ ">"
+	def genericTypeArgumentList = genericTypeArgumentList3 | genericTypeArgumentList2| genericTypeArgumentList1
+
+        def genericTypeArgumentList00 = "<" ~ rep1sep(genericTypeArgument0, ",")
+        def genericTypeArgumentList0 = "<" ~ rep1sep(genericTypeArgument, ",")
+        def genericTypeArgumentList1 = "<" ~ rep1sep(genericTypeArgument, ",") ~ ">"
+        def genericTypeArgumentList2 = "<" ~ rep1sep(genericTypeArgument1, ",") ~ ">>"
+        def genericTypeArgumentList3 = "<" ~ rep1sep(genericTypeArgument2, ",") ~ ">>>"
+
+	def genericTypeArgument0 =
+		( jtype0
+		| "?" ~ opt(genericWildcardBoundType0)
+		)
+	def genericWildcardBoundType0 = ("extends" | "super") ~ jtype0
+
+	def genericTypeArgument1 =
+		( jtype1
+		| "?" ~ opt(genericWildcardBoundType1)
+		)
+	def genericWildcardBoundType1 = ("extends" | "super") ~ jtype1
+
+	def genericTypeArgument2 =
+		( jtype2
+		| "?" ~ opt(genericWildcardBoundType2)
+		)
+	def genericWildcardBoundType2 = ("extends" | "super") ~ jtype2
+
 	def genericTypeArgument =
 		( jtype
 		| "?" ~ opt(genericWildcardBoundType)
 		)
 	def genericWildcardBoundType = ("extends" | "super") ~ jtype
-	def genericTypeArgumentSimplified =
-		( jtype
-		| "?"
-		)
 	
 	def braces = "[" ~ "]"
 	def bracesList = rep1(braces)

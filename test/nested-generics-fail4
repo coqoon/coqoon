@@ -1,0 +1,11 @@
+public class Foo {
+    Foo<ZZZ<XXXX<X>>> foobar;
+    public static void bar (List<X<X<X<X>>>> foo) {
+    }
+  public static void foo () {
+      Foo<X> x = new Foo<X>>();
+      Foo<X<X>> x = new Foo<X<X>>();
+      Foo<X<X<X>>> x = new Foo<X<X<X>>>();
+      Foo<X<X<X<X<X<X<X<X>>>>>>>> x = new Foo<X<X<X<X<X<X<X<X>>>>>>>>();
+  }
+}
