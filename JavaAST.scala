@@ -18,7 +18,7 @@ trait JavaAST extends JavaParser with JavaImplicits
 		
 	def pp(xs: Any, indent: Int): Unit = {
 		def iprint(s: String) = {
-			for (val i <- 1 to indent) Console.print(" ")
+			for (i <- 1 to indent) Console.print(" ")
 			Console.print(s)
 		}
 		def iprintln(s: String) = iprint(s); Console.print("\n");
@@ -31,7 +31,7 @@ trait JavaAST extends JavaParser with JavaImplicits
 				print(" ~ ")
 				pp(x2, indent + 2)
 			case xs @ List(_) =>
-				for (val x <- xs) yield pp(x, indent + 2)
+				for (x <- xs) yield pp(x, indent + 2)
 			case x @ _ =>
 				iprintln(x.toString)
 		}

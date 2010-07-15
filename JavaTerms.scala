@@ -53,7 +53,7 @@ trait JavaTerms
 	case class Id(x: String) extends Term { override def toString = x }	
 	case class Num(x: String) extends Term { override def toString = x }	
 	case class Key(x: String) extends Term { override def toString = "'" + x + "'" }
-	case class Dummy extends Term { override def toString = "DUMMY" }
+	case class Dummy() extends Term { override def toString = "DUMMY" }
 
 	case class QualId(xs: List[Any]) extends Term {
 		val id = xs.reduceLeft(_ + "." + _)		 
