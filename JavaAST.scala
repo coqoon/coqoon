@@ -2,15 +2,16 @@ import scala.util.parsing.input._
 
 trait JavaAST extends JavaParser with JavaImplicits
 {
-	var x: Int = 0
+	var x : Int = 0
 	def parse(r: Reader[Char]) : ParseResult[Any] = { 
 		val p = phrase(compilationUnit)(new lexical.Scanner(r))
 		
 		p match {
-			case Success(x @ ~(_,_), _) => Console.println(x) ; pp(x, 0)			// Console.println(x)
+			case Success(x @ ~(_,_), _) => pp(x, 0)			// Console.println(x)
       		case Failure(msg, remainder) => Console.println("Failure: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString) 
       		case Error(msg, remainder) => Console.println("Error: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString) 
 		}
+                Console.print("\n");
 		p
 	}
 	
@@ -23,8 +24,6 @@ trait JavaAST extends JavaParser with JavaImplicits
 		}
 		def iprintln(s: String) = iprint(s); Console.print("\n");
 			
-		iprint("(")
-		
 		xs match {
 			case x1~x2 =>
 				pp(x1, indent + 2)
@@ -32,11 +31,11 @@ trait JavaAST extends JavaParser with JavaImplicits
 				pp(x2, indent + 2)
 			case xs @ List(_) =>
 				for (x <- xs) yield pp(x, indent + 2)
-			case x @ _ =>
-				iprintln(x.toString)
+                        case xs : JClass =>
+                                iprintln("Class " + xs.id + " (" + xs.body.length + ")"); for (x <- xs.body) yield pp(x, indent + 2)
+		        case x @ _ =>
+				iprintln(x.asInstanceOf[AnyRef].getClass().toString() + ": " + x.toString)
 		}
-		
-		iprintln("(")
 	}
 	
 	
