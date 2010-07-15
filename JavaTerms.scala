@@ -82,7 +82,7 @@ trait JavaTerms
 	def isMember[T](xs: List[T], x: T) = xs contains x
 
   
-  case class Bool(b: boolean) extends Term
+  case class Bool(b: Boolean) extends Term
   {
     override def toString = b.toString
   }

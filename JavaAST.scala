@@ -2,8 +2,8 @@ import scala.util.parsing.input._
 
 trait JavaAST extends JavaParser with JavaImplicits
 {
-	var x: int = 0
-	def parse(r: Reader[char]) : ParseResult[Any] = { 
+	var x: Int = 0
+	def parse(r: Reader[Char]) : ParseResult[Any] = { 
 		val p = phrase(compilationUnit)(new lexical.Scanner(r))
 		
 		p match {
