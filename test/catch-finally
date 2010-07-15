@@ -1,0 +1,16 @@
+public class Foo {
+  public static void foo () {
+    try {
+      foo();
+      bar();
+//    } catch (Exception e) {
+//      barf();
+    } catch (Exception e2) {
+      barf();
+    } finally {
+      foo();
+    }
+    foo();
+    bar();
+  }
+}

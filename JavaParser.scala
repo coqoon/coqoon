@@ -129,7 +129,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaImpli
 		| "for" ~ "(" ~> forControl <~ ")" ~ statement
 		| "while" ~ parExpression ~ statement
 		| "do" ~ statement ~ "while" ~ parExpression <~ ";"
-		| "try" ~ block ~ (catches | opt(catches) ~ jfinally)
+		| "try" ~ block ~ (catches ~ jfinally | catches | jfinally)
 		| "switch" ~ parExpression <~ "{" ~ switchBlockStatementGroups <~ "}"
 		| "synchronized" ~ parExpression ~ block
 		| "return" ~ opt(expression) <~ ";"
@@ -141,7 +141,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaImpli
 		| ";"
 		) ^^ Stmt
 		
-	def catches = rep1(catchClause)
+	def catches = rep1(catchClause ~ block)
 	def catchClause = "catch" ~> "(" ~> formalParameter <~ ")"
 	def jfinally = "finally" ~> block
 		
