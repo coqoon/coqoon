@@ -7,8 +7,10 @@ Bundle-Activator: coqscala.Activator
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,
  org.scala-ide.scala.library,
- org.eclipse.ui.editors;bundle-version="3.6.0",
  org.eclipse.jface.text;bundle-version="3.6.0",
- org.eclipse.ui.console;bundle-version="3.5.0"
+ org.eclipse.ui.console;bundle-version="3.5.0",
+ org.eclipse.core.resources;bundle-version="3.6.0",
+ org.eclipse.ui.ide;bundle-version="3.6.0",
+ org.eclipse.ui.editors;bundle-version="3.6.0"
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6

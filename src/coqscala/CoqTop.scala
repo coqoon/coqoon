@@ -95,6 +95,7 @@ object ErrorOutputActor extends Actor {
             //like linearity and monotonicity of steps, but who cares?
             ready.setValue(true)
             context = tokens
+            DocumentState.commit
           }
           case None => if (msg.filterNot(x => x == '\n').length > 0)
                          Console.println("couldn't parse X" + msg + "X")

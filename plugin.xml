@@ -25,5 +25,16 @@
          </action>
       </actionSet>
    </extension>
+   <extension
+         point="org.eclipse.ui.editors">
+      <editor
+            class="coqscala.CoqEditor"
+            contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
+            extensions="v"
+            icon="icons/sample.gif"
+            id="coqscala.CoqEditor"
+            name="Coq Editor">
+      </editor>
+   </extension>
 
 </plugin>

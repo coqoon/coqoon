@@ -1,10 +1,20 @@
 package coqscala
 
+import org.eclipse.ui.editors.text.TextEditor;
+
+class CoqEditor extends TextEditor {
+	import org.eclipse.jface.text.source.ISourceViewer;
+	
+	def getSource () : ISourceViewer = {
+		getSourceViewer();
+	}
+}
+
 import org.eclipse.ui.IWorkbenchWindowActionDelegate
 
 class CoqStepAction extends IWorkbenchWindowActionDelegate {
   import org.eclipse.ui.{IWorkbenchWindow,IWorkbenchPage,IEditorPart}
-  import org.eclipse.ui.texteditor.{ITextEditor,IDocumentProvider}
+  import org.eclipse.ui.texteditor.{ITextEditor,IDocumentProvider,AbstractTextEditor}
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.viewers.ISelection
   import org.eclipse.jface.text.IDocument
@@ -25,17 +35,22 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
     }
     val editorpart = window.getActivePage.getActiveEditor
     if (editorpart.isInstanceOf[ITextEditor]) {
-    	val texteditor = editorpart.asInstanceOf[ITextEditor]
+      if (editorpart.isInstanceOf[CoqEditor]) {
+    	val texteditor = editorpart.asInstanceOf[CoqEditor]
         val dp : IDocumentProvider = texteditor.getDocumentProvider
         val doc : IDocument = dp.getDocument(texteditor.getEditorInput)
-        val line = doc.getLineOfOffset(DocumentPosition.position)
+        val line = doc.getLineOfOffset(DocumentState.position)
         val length = doc.getLineLength(line)
-        val content = doc.get(DocumentPosition.position, length)
-        DocumentPosition.position += length
+        val content = doc.get(DocumentState.position, length)
+        DocumentState.sendlen = length
+        DocumentState.sourceview = texteditor.getSource
         Console.println("content is " + content)
         CoqTop.writeToCoq(content)
+      } else {
+        Console.println("not a CoqEditor!")
+      }
     } else
-    	Console.println("is not an ITextEditor!")
+    	Console.println("not a ITextEditor!")
   }
 
   override def selectionChanged (action : IAction, selection : ISelection) : Unit = { }
@@ -45,8 +60,25 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
 
 object CoqStepAction extends CoqStepAction {}
 
-object DocumentPosition {
+object DocumentState {
+  import org.eclipse.jface.text.{ITextViewer}
+  import org.eclipse.swt.graphics.{Color,RGB}
+  import org.eclipse.swt.widgets.Display
+ 
+  var sourceview : ITextViewer = null
   var position : Int = 0
+  var sendlen : Int = 0
+
+  def commit () : Unit = {
+    val bl = new Color(Display.getDefault, new RGB(0, 0, 220))
+    Display.getDefault.syncExec(
+      new Runnable() {
+        def run() = sourceview.setTextColor(bl, position, sendlen, false)
+    });
+
+    position += sendlen
+    sendlen = 0
+  }
 }
 
 object EclipseConsole {
@@ -77,3 +109,4 @@ object EclipseConsole {
 //   IConsoleView view = (IConsoleView) page.showView(id);
 //   view.display(myConsole);
 }
+
