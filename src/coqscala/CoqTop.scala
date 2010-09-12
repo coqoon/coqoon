@@ -27,7 +27,6 @@ class BusyStreamReader (input : InputStream) extends Runnable {
   }
 }
 
-
 object PrintActor extends Actor {
   object PCons {
     def println (x : String) : Unit = { Console.println(x) }
@@ -38,7 +37,13 @@ object PrintActor extends Actor {
   def act() {
     while (true) {
       receive {
-        case msg => stream.println("received\n" + msg + "\ndeviecer")
+        case msg : String =>
+          //stream.println("received\n" + msg + "\ndeviecer")
+          ParseCoqResponse.parse(msg) match {
+            case CoqGoal(n, goals) => stream.println("GOAL")
+            case CoqProofCompleted() => stream.println("YAY")
+            case x => stream.println("???" + x)
+          }
       }
     }
   }

@@ -3,11 +3,11 @@ package coqscala
 import org.eclipse.ui.editors.text.TextEditor;
 
 class CoqEditor extends TextEditor {
-	import org.eclipse.jface.text.source.ISourceViewer;
+  import org.eclipse.jface.text.source.ISourceViewer;
 	
-	def getSource () : ISourceViewer = {
-		getSourceViewer();
-	}
+  def getSource () : ISourceViewer = {
+    getSourceViewer();
+  }
 }
 
 import org.eclipse.ui.IWorkbenchWindowActionDelegate
@@ -43,7 +43,7 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
         val length = doc.getLineLength(line)
         val content = doc.get(DocumentState.position, length)
         DocumentState.sendlen = length
-        DocumentState.sourceview = texteditor.getSource
+        DocumentState.sourceview = texteditor.getSource //should only be called once, somehow!
         Console.println("content is " + content)
         CoqTop.writeToCoq(content)
       } else {
