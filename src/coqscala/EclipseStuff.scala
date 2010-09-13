@@ -163,11 +163,11 @@ object CoqOutputDispatcher extends CoqCallback {
       case CoqGoal(n, goals) => {
           val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
           val ht = hy.reduceLeft((x, y) => x + "\n" + y)
-          val subd = res.findIndexOf(_.contains("subgoal is:"))
+          val subd = res.findIndexOf(_.contains("subgoal "))
           val (g, r) = if (subd > 0) res.splitAt(subd) else (res, List[String]())
           val gt = g.drop(1).reduceLeft((x, y) => x + " " + y)
           val ot = if (r.length > 0) {
-            val r2 = r.map(x => { if (x.contains("subgoal is:")) x.drop(1) else x })
+            val r2 = r.map(x => { if (x.contains("subgoal ")) x.drop(1) else x })
             r2.reduceLeft((x, y) => x + "\n" + y)
           } else ""
           (ht, gt, ot)
