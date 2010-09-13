@@ -44,7 +44,7 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
         val content = doc.get(DocumentState.position, length)
         DocumentState.sendlen = length
         DocumentState.sourceview = texteditor.getSource //should only be called once, somehow!
-        Console.println("content is " + content)
+        //Console.println("content is " + content)
         CoqTop.writeToCoq(content)
       } else {
         Console.println("not a CoqEditor!")
@@ -58,7 +58,7 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
   override def dispose () : Unit = { }	
 }
 
-object CoqStepAction extends CoqStepAction {}
+object CoqStepAction extends CoqStepAction { }
 
 object DocumentState {
   import org.eclipse.jface.text.{ITextViewer}
@@ -110,3 +110,76 @@ object EclipseConsole {
 //   view.display(myConsole);
 }
 
+import org.eclipse.ui.part.ViewPart
+
+class GoalViewer extends ViewPart {
+  import org.eclipse.swt.widgets.{Composite,Label,Text}
+  import org.eclipse.swt.SWT
+  import org.eclipse.swt.layout.{GridData,GridLayout}
+  import org.eclipse.swt.graphics.{Color,RGB}
+  import org.eclipse.swt.widgets.Display
+
+
+  var hypos : Text = null
+  var goal : Label = null
+  var othersubs : Text = null
+  var comp : Composite = null
+
+  override def createPartControl (parent : Composite) : Unit = {
+    comp = new Composite(parent, SWT.NONE)
+    comp.setLayout(new GridLayout(1, true))
+    hypos = new Text(comp, SWT.READ_ONLY | SWT.MULTI)
+    hypos.setLayoutData(new GridData(GridData.FILL_HORIZONTAL))
+    //hypos.setText("foo\nbar")
+    new Label(comp, SWT.SEPARATOR | SWT.HORIZONTAL).setLayoutData(new GridData(GridData.FILL_HORIZONTAL))
+    goal = new Label(comp, SWT.READ_ONLY)
+    goal.setBackground(new Color(Display.getDefault, new RGB(255, 255, 255)))
+    goal.setLayoutData(new GridData(GridData.FILL_HORIZONTAL))
+    //goal.setText("baz")
+    val other = new Label(comp, SWT.READ_ONLY)
+    other.setLayoutData(new GridData(GridData.FILL_HORIZONTAL))
+    other.setText("other subgoals")
+    othersubs = new Text(comp, SWT.READ_ONLY | SWT.MULTI)
+    othersubs.setLayoutData(new GridData(GridData.FILL_HORIZONTAL))
+    //othersubs.setText("buz\nfoobar")
+    CoqOutputDispatcher.goalviewer = this
+    PrintActor.register(CoqOutputDispatcher)
+  }
+
+  def setFocus() : Unit = {
+  //  viewer.getControl.setFocus
+  }
+}
+
+object GoalViewer extends GoalViewer { }
+
+object CoqOutputDispatcher extends CoqCallback {
+  import org.eclipse.swt.widgets.Display
+
+  var goalviewer : GoalViewer = null
+	
+  override def dispatch (x : CoqResponse) : Unit = {
+    val (ht, gt, ot) = x match {
+      case CoqGoal(n, goals) => {
+          val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("===")))
+          val ht = hy.reduceLeft((x, y) => x + "\n" + y)
+          val subd = res.findIndexOf(_.contains("subgoal"))
+          val (g, r) = if (subd > 0) res.splitAt(subd) else (res, List[String]())
+          val gt = g.drop(1).reduceLeft((x, y) => x + " " + y)
+          val ot = if (r.length > 0) r.reduceLeft((x, y) => x + "\n" + y) else ""
+          (ht, gt, ot)
+        }
+      case CoqProofCompleted() => ("Proof completed", "", "")
+      case _ => ("", "", "")
+    }
+    Display.getDefault.syncExec(
+      new Runnable() {
+        def run() = {
+          goalviewer.hypos.setText(ht)
+          goalviewer.goal.setText(gt)
+          goalviewer.othersubs.setText(ot)
+          goalviewer.comp.layout
+        }
+      })
+  }
+}

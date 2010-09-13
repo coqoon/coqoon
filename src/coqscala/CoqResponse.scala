@@ -15,7 +15,7 @@ import scala.util.parsing.combinator.JavaTokenParsers
 trait CoqResponseParser extends JavaTokenParsers {
   def top = vars | comp | thmd | erro | goal | rest
 
-  val anything = """[^\s]+""".r
+  val anything = """[^\n]+""".r
   val number = """[0-9]+""".r
 
   def goal = number ~ """subgoal[s]?""".r ~ rep1(anything) ^^ { case (x~_)~y => CoqGoal(x.toInt, y) }

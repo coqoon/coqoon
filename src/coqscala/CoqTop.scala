@@ -27,6 +27,10 @@ class BusyStreamReader (input : InputStream) extends Runnable {
   }
 }
 
+trait CoqCallback {
+  def dispatch (x : CoqResponse) : Unit
+}
+
 object PrintActor extends Actor {
   object PCons {
     def println (x : String) : Unit = { Console.println(x) }
@@ -34,16 +38,18 @@ object PrintActor extends Actor {
   type Printable = { def println (x : String) : Unit }
   var stream : Printable = PCons
 
+  private var callbacks : List[CoqCallback] = List[CoqCallback]()
+
+  def register (c : CoqCallback) : Unit = { callbacks = c :: callbacks }
+
   def act() {
     while (true) {
       receive {
-        case msg : String =>
-          //stream.println("received\n" + msg + "\ndeviecer")
-          ParseCoqResponse.parse(msg) match {
-            case CoqGoal(n, goals) => stream.println("GOAL")
-            case CoqProofCompleted() => stream.println("YAY")
-            case x => stream.println("???" + x)
-          }
+        case msg : String => {
+          stream.println("received\n" + msg)
+          val coqr = ParseCoqResponse.parse(msg)
+          callbacks.foreach(_.dispatch(coqr))
+        }
       }
     }
   }
@@ -79,7 +85,7 @@ class BoolRef {
   def getValue () : Boolean = { return value }
   def setValue (newval : Boolean) : Unit = {
     value = newval
-    Console.println("ready? " + newval)
+    //Console.println("ready? " + newval)
   }
 }
 
@@ -137,7 +143,7 @@ object CoqTop {
       if (isReady) {
         val datarr = data.getBytes("UTF-8")
         coqin.write(datarr)
-        Console.println("wrote " + data)
+        //Console.println("wrote " + data)
         if (datarr(datarr.length - 1) != '\n'.toByte)
           coqin.write('\n'.toByte)
         coqin.flush

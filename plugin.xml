@@ -36,5 +36,32 @@
             name="Coq Editor">
       </editor>
    </extension>
+   <extension
+         point="org.eclipse.ui.views">
+      <category
+            id="CoqScala"
+            name="Coq Views">
+      </category>
+      <view
+            allowMultiple="false"
+            category="CoqScala"
+            class="coqscala.GoalViewer"
+            icon="icons/sample.gif"
+            id="coqscala.GoalViewer"
+            name="Goal Viewer">
+      </view>
+   </extension>
+   <extension
+         point="org.eclipse.ui.perspectiveExtensions">
+      <perspectiveExtension
+            targetID="org.eclipse.jdt.ui.JavaPerspective">
+         <view
+               id="coqscala.GoalViewer"
+               ratio="0.5"
+               relationship="right"
+               relative="org.eclipse.ui.views.ContentOutline">
+         </view>
+      </perspectiveExtension>
+   </extension>
 
 </plugin>
