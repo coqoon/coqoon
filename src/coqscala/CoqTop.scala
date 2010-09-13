@@ -46,7 +46,7 @@ object PrintActor extends Actor {
     while (true) {
       receive {
         case msg : String => {
-          stream.println("received\n" + msg)
+          //stream.println("received\n" + msg)
           val coqr = ParseCoqResponse.parse(msg)
           callbacks.foreach(_.dispatch(coqr))
         }

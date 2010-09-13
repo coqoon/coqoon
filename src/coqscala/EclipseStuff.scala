@@ -161,22 +161,25 @@ object CoqOutputDispatcher extends CoqCallback {
   override def dispatch (x : CoqResponse) : Unit = {
     val (ht, gt, ot) = x match {
       case CoqGoal(n, goals) => {
-          val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("===")))
+          val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
           val ht = hy.reduceLeft((x, y) => x + "\n" + y)
-          val subd = res.findIndexOf(_.contains("subgoal"))
+          val subd = res.findIndexOf(_.contains("subgoal is:"))
           val (g, r) = if (subd > 0) res.splitAt(subd) else (res, List[String]())
           val gt = g.drop(1).reduceLeft((x, y) => x + " " + y)
-          val ot = if (r.length > 0) r.reduceLeft((x, y) => x + "\n" + y) else ""
+          val ot = if (r.length > 0) {
+            val r2 = r.map(x => { if (x.contains("subgoal is:")) x.drop(1) else x })
+            r2.reduceLeft((x, y) => x + "\n" + y)
+          } else ""
           (ht, gt, ot)
         }
       case CoqProofCompleted() => ("Proof completed", "", "")
-      case _ => ("", "", "")
+      case x => EclipseConsole.out.println("received: " + x); ("", "", "")
     }
     Display.getDefault.syncExec(
       new Runnable() {
         def run() = {
           goalviewer.hypos.setText(ht)
-          goalviewer.goal.setText(gt)
+          goalviewer.goal.setText(" " + gt)
           goalviewer.othersubs.setText(ot)
           goalviewer.comp.layout
         }

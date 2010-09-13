@@ -30,10 +30,6 @@ trait CoqResponseParser extends JavaTokenParsers {
 }
 
 object ParseCoqResponse extends CoqResponseParser {
-  def parse (s : String) : CoqResponse = {
-    val res = parseAll(top, s).get
-    Console.println("got " + res)
-    res
-  }
+  def parse (s : String) : CoqResponse = parseAll(top, s).get
 }
 
