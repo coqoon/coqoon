@@ -39,19 +39,38 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
     	val texteditor = editorpart.asInstanceOf[CoqEditor]
         val dp : IDocumentProvider = texteditor.getDocumentProvider
         val doc : IDocument = dp.getDocument(texteditor.getEditorInput)
-        val line = doc.getLineOfOffset(DocumentState.position)
-        val length = doc.getLineLength(line)
-        val content = doc.get(DocumentState.position, length)
-        DocumentState.sendlen = length
-        DocumentState.sourceview = texteditor.getSource //should only be called once, somehow!
-        //Console.println("content is " + content)
-        CoqTop.writeToCoq(content)
+        val content = doc.get.drop(DocumentState.position)
+        if (content.length > 0) {
+          val eoc = findEnd(content)
+
+          DocumentState.sendlen = eoc
+          DocumentState.sourceview = texteditor.getSource //should only be called once, somehow!
+          Console.println("command is (" + eoc + "): " + content.take(eoc))
+          CoqTop.writeToCoq(content.take(eoc))
+        } else { Console.println("EOF") }
       } else {
         Console.println("not a CoqEditor!")
       }
     } else
     	Console.println("not a ITextEditor!")
   }
+
+  def findEnd (content : String) : Int = {
+    var cont = true
+    val comment = content.indexOf("(*")
+    var endofcommand = 0
+    if (comment < content.indexOf("."))
+      endofcommand = content.indexOf("*)", comment + 2)
+    while (cont) {
+      val newend = content.indexOf(".", endofcommand + 1)
+      if (newend == -1) cont = false
+      else endofcommand = newend
+      if (content(endofcommand - 1) != '.' && (content.startsWith(" ", endofcommand + 1) || content.startsWith("\n", endofcommand + 1)))
+        cont = false
+    }
+    endofcommand + 2 //". "
+  }
+
 
   override def selectionChanged (action : IAction, selection : ISelection) : Unit = { }
 
@@ -162,7 +181,7 @@ object CoqOutputDispatcher extends CoqCallback {
     val (ht, gt, ot) = x match {
       case CoqGoal(n, goals) => {
           val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
-          val ht = hy.reduceLeft((x, y) => x + "\n" + y)
+          val ht = if (hy.length > 0) hy.reduceLeft((x, y) => x + "\n" + y) else ""
           val subd = res.findIndexOf(_.contains("subgoal "))
           val (g, r) = if (subd > 0) res.splitAt(subd) else (res, List[String]())
           val gt = g.drop(1).reduceLeft((x, y) => x + " " + y)

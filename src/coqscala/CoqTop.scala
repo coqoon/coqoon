@@ -31,7 +31,7 @@ trait CoqCallback {
   def dispatch (x : CoqResponse) : Unit
 }
 
-object PrintActor extends Actor {
+object PrintActor extends Actor with OutputChannel[String] {
   object PCons {
     def println (x : String) : Unit = { Console.println(x) }
   }
@@ -46,9 +46,9 @@ object PrintActor extends Actor {
     while (true) {
       receive {
         case msg : String => {
-          //stream.println("received\n" + msg)
+          stream.println("received\n" + msg)
           val coqr = ParseCoqResponse.parse(msg)
-          callbacks.foreach(_.dispatch(coqr))
+          coqr.foreach(x => callbacks.foreach(_.dispatch(x)))
         }
       }
     }
@@ -89,7 +89,7 @@ class BoolRef {
   }
 }
 
-object ErrorOutputActor extends Actor {
+object ErrorOutputActor extends Actor with OutputChannel[String] {
   private var ready : BoolRef = null
   private var context : CoqShellTokens = null
 
