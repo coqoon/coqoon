@@ -92,7 +92,7 @@ class BoolRef {
 
 object ErrorOutputActor extends Actor with OutputChannel[String] {
   private var ready : BoolRef = null
-  private var context : CoqShellTokens = new CoqShellTokens("", 0, "", 0)
+  private var context : CoqShellTokens = new CoqShellTokens("Coq", 0, "", 0)
 
   def setBoolRef (n : BoolRef) : Unit = { ready = n }
 
@@ -103,11 +103,10 @@ object ErrorOutputActor extends Actor with OutputChannel[String] {
       receive {
         case msg : String => ValidCoqShell.getTokens(msg) match {
           case Some(tokens : CoqShellTokens) => {
-            //TODO: we could do some more ambitious checking,
-            //like linearity and monotonicity of steps, but who cares?
             ready.setValue(true)
+            //Console.println("old " + context + " new " + tokens)
             if (context.globalStep < tokens.globalStep) //got no error
-              if (context.localStep <= tokens.localStep) //and doing the same proof
+              if (context.localStep <= tokens.localStep || context.theorem != tokens.theorem)
                 DocumentState.commit
               else
                 DocumentState.undo

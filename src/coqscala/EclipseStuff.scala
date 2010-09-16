@@ -1,15 +1,60 @@
 package coqscala
 
-import org.eclipse.ui.editors.text.TextEditor;
+import org.eclipse.ui.editors.text.TextEditor
 
 class CoqEditor extends TextEditor {
-  import org.eclipse.jface.text.source.ISourceViewer;
-	
+  import org.eclipse.jface.text.source.ISourceViewer
+
+  override protected def initializeEditor() : Unit = {
+    Console.println("initializeEditor was called")
+    super.initializeEditor();
+    setSourceViewerConfiguration(CoqSourceViewerConfiguration);
+  }
+
   def getSource () : ISourceViewer = {
     getSourceViewer();
   }
 }
 
+import org.eclipse.jface.text.rules.ITokenScanner
+
+object CoqTokenScanner extends ITokenScanner {
+  import org.eclipse.jface.text.rules.{IToken,Token}
+  import org.eclipse.jface.text.IDocument
+
+  private var off : Int = 0
+  private var len : Int = 0
+
+  override def getTokenLength () : Int = len
+  override def getTokenOffset () : Int = off
+  override def nextToken () : IToken = Token.UNDEFINED
+  override def setRange (doc : IDocument, offset : Int, length : Int) : Unit = {
+    off = offset
+    len = length
+  }
+}
+
+//import org.eclipse.jface.text.rules.DefaultDamageRepairer
+
+//object CoqDamageRepairer extends DefaultDamageRepairer {
+//}
+
+import org.eclipse.jface.text.source.SourceViewerConfiguration
+
+object CoqSourceViewerConfiguration extends SourceViewerConfiguration {
+  import org.eclipse.jface.text.presentation.{IPresentationReconciler, PresentationReconciler}
+  import org.eclipse.jface.text.rules.DefaultDamagerRepairer
+  import org.eclipse.jface.text.TextAttribute
+  import org.eclipse.swt.graphics.{Color,RGB}
+  import org.eclipse.swt.widgets.Display
+  import org.eclipse.jface.text.source.ISourceViewer
+
+  override def getPresentationReconciler (v : ISourceViewer) : IPresentationReconciler = {
+    val pr = new PresentationReconciler
+    val ddr = new DefaultDamagerRepairer(CoqTokenScanner, new TextAttribute(new Color(Display.getDefault, new RGB(0, 0, 220))))
+    pr
+  }
+}
 
 object EclipseBoilerPlate {
   import org.eclipse.ui.{IWorkbenchWindow,IEditorPart}
@@ -80,7 +125,7 @@ class CoqUndoAction extends IWorkbenchWindowActionDelegate {
   override def run (action : IAction) : Unit = {
     val content = EclipseBoilerPlate.getContent()
     val l = findPrevious(content, DocumentState.position)
-    Console.println("prev (" + DocumentState.position + " [" + content(DocumentState.position) + "]): " + l)
+    //Console.println("prev (" + DocumentState.position + " [" + content(DocumentState.position) + "]): " + l)
     if (l > -1) {
       DocumentState.sendlen = DocumentState.position - l
       CoqTop.writeToCoq("Undo.")
@@ -132,7 +177,7 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
       val eoc = findEnd(content)
 
       DocumentState.sendlen = eoc
-      Console.println("command is (" + eoc + "): " + content.take(eoc))
+      //Console.println("command is (" + eoc + "): " + content.take(eoc))
       CoqTop.writeToCoq(content.take(eoc))
     } else { Console.println("EOF") }
   }
@@ -169,11 +214,14 @@ object DocumentState {
   var position : Int = 0
   var sendlen : Int = 0
 
+  //def position : Int = position_
+  //def position_= (x : Int) { Console.println("new pos is " + x + " (old was " + position_ + ")"); position_ = x }
+
   def undo () : Unit = {
     val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
     Display.getDefault.syncExec(
       new Runnable() {
-        def run() = sourceview.setTextColor(bl, position - sendlen, sendlen, false)
+        def run() = sourceview.setTextColor(bl, position - sendlen, sendlen, true)
     });
     position -= sendlen
     sendlen = 0
@@ -183,7 +231,7 @@ object DocumentState {
     val bl = new Color(Display.getDefault, new RGB(0, 0, 220))
     Display.getDefault.syncExec(
       new Runnable() {
-        def run() = sourceview.setTextColor(bl, position, sendlen, false)
+        def run() = sourceview.setTextColor(bl, position, sendlen, true)
     });
     position += sendlen
     sendlen = 0
