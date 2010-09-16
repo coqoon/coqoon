@@ -10,14 +10,78 @@ class CoqEditor extends TextEditor {
   }
 }
 
+
+object EclipseBoilerPlate {
+  import org.eclipse.ui.{IWorkbenchWindow,IEditorPart}
+  import org.eclipse.ui.texteditor.{ITextEditor,IDocumentProvider,AbstractTextEditor}
+  import org.eclipse.jface.text.IDocument
+
+  def getContent (window : IWorkbenchWindow) : String = {
+    val editorpart = window.getActivePage.getActiveEditor
+    if (editorpart.isInstanceOf[CoqEditor]) {
+      val texteditor = editorpart.asInstanceOf[CoqEditor]
+      val dp : IDocumentProvider = texteditor.getDocumentProvider
+      val doc : IDocument = dp.getDocument(texteditor.getEditorInput)
+      DocumentState.sourceview = texteditor.getSource //should only be called once, somehow!
+      doc.get
+    } else {
+      Console.println("not a CoqEditor!")
+      ""
+    }
+  }
+}
+
 import org.eclipse.ui.IWorkbenchWindowActionDelegate
 
-class CoqStepAction extends IWorkbenchWindowActionDelegate {
-  import org.eclipse.ui.{IWorkbenchWindow,IWorkbenchPage,IEditorPart}
-  import org.eclipse.ui.texteditor.{ITextEditor,IDocumentProvider,AbstractTextEditor}
+class CoqUndoAction extends IWorkbenchWindowActionDelegate {
+  import org.eclipse.ui.IWorkbenchWindow
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.viewers.ISelection
-  import org.eclipse.jface.text.IDocument
+
+  var window : IWorkbenchWindow = null
+  
+  override def init (window_ : IWorkbenchWindow) : Unit = {
+    window = window_
+    Console.println("init called")
+  }
+
+  override def run (action : IAction) : Unit = {
+    val content = EclipseBoilerPlate.getContent(window)
+    val l = findPrevious(content, DocumentState.position)
+    Console.println("prev (" + DocumentState.position + " [" + content(DocumentState.position) + "]): " + l)
+    if (l > -1) {
+      DocumentState.sendlen = DocumentState.position - l
+      CoqTop.writeToCoq("Undo.")
+    }
+  }
+
+  def findPrevious (content : String, pos : Int) : Int = {
+    var cont = true
+    var last = pos - 2
+    val clco = content.lastIndexOf("*)", pos)
+    if (clco > content.lastIndexOf(".", pos))
+      last = content.lastIndexOf("(*", clco - 2)
+    while (cont) {
+      val newend = content.lastIndexOf(".", last - 1)
+      if (newend <= 0) { cont = false; last = -1 }
+      else {
+        last = newend
+        if (content(last - 1) != '.' && (content.startsWith(" ", last + 1) || content.startsWith("\n", last + 1)))
+          cont = false
+      }
+    }
+    last + 1 //don't color "."
+  }
+
+  override def selectionChanged (action : IAction, selection : ISelection) : Unit = { }
+
+  override def dispose () : Unit = { }	
+}
+
+class CoqStepAction extends IWorkbenchWindowActionDelegate {
+  import org.eclipse.ui.IWorkbenchWindow
+  import org.eclipse.jface.action.IAction
+  import org.eclipse.jface.viewers.ISelection
 
   var window : IWorkbenchWindow = null
   
@@ -33,26 +97,14 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
         EclipseConsole.initConsole
       PrintActor.stream = EclipseConsole.out
     }
-    val editorpart = window.getActivePage.getActiveEditor
-    if (editorpart.isInstanceOf[ITextEditor]) {
-      if (editorpart.isInstanceOf[CoqEditor]) {
-    	val texteditor = editorpart.asInstanceOf[CoqEditor]
-        val dp : IDocumentProvider = texteditor.getDocumentProvider
-        val doc : IDocument = dp.getDocument(texteditor.getEditorInput)
-        val content = doc.get.drop(DocumentState.position)
-        if (content.length > 0) {
-          val eoc = findEnd(content)
+    val content = EclipseBoilerPlate.getContent(window).drop(DocumentState.position)
+    if (content.length > 0) {
+      val eoc = findEnd(content)
 
-          DocumentState.sendlen = eoc
-          DocumentState.sourceview = texteditor.getSource //should only be called once, somehow!
-          Console.println("command is (" + eoc + "): " + content.take(eoc))
-          CoqTop.writeToCoq(content.take(eoc))
-        } else { Console.println("EOF") }
-      } else {
-        Console.println("not a CoqEditor!")
-      }
-    } else
-    	Console.println("not a ITextEditor!")
+      DocumentState.sendlen = eoc
+      Console.println("command is (" + eoc + "): " + content.take(eoc))
+      CoqTop.writeToCoq(content.take(eoc))
+    } else { Console.println("EOF") }
   }
 
   def findEnd (content : String) : Int = {
@@ -71,7 +123,6 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
     endofcommand + 2 //". "
   }
 
-
   override def selectionChanged (action : IAction, selection : ISelection) : Unit = { }
 
   override def dispose () : Unit = { }	
@@ -88,13 +139,22 @@ object DocumentState {
   var position : Int = 0
   var sendlen : Int = 0
 
+  def undo () : Unit = {
+    val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
+    Display.getDefault.syncExec(
+      new Runnable() {
+        def run() = sourceview.setTextColor(bl, position - sendlen, sendlen, false)
+    });
+    position -= sendlen
+    sendlen = 0
+  }
+
   def commit () : Unit = {
     val bl = new Color(Display.getDefault, new RGB(0, 0, 220))
     Display.getDefault.syncExec(
       new Runnable() {
         def run() = sourceview.setTextColor(bl, position, sendlen, false)
     });
-
     position += sendlen
     sendlen = 0
   }

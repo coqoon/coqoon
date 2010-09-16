@@ -46,8 +46,9 @@ object PrintActor extends Actor with OutputChannel[String] {
     while (true) {
       receive {
         case msg : String => {
-          stream.println("received\n" + msg)
+          stream.println("received:" + msg)
           val coqr = ParseCoqResponse.parse(msg)
+          stream.println("received (parsed):" + coqr)
           coqr.foreach(x => callbacks.foreach(_.dispatch(x)))
         }
       }
@@ -105,8 +106,11 @@ object ErrorOutputActor extends Actor with OutputChannel[String] {
             //TODO: we could do some more ambitious checking,
             //like linearity and monotonicity of steps, but who cares?
             ready.setValue(true)
+            if (context == null || context.localStep <= tokens.localStep) //and doing the same proof
+              DocumentState.commit
+            else
+              DocumentState.undo
             context = tokens
-            DocumentState.commit
           }
           case None => if (msg.filterNot(x => x == '\n').length > 0)
                          Console.println("couldn't parse X" + msg + "X")
