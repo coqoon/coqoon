@@ -93,4 +93,4 @@ object VernacularParser extends RegexParsers {
 
   def sideeffects = "Print" | "Eval" | "Check"
 */
-}
+

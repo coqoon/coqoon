@@ -92,7 +92,7 @@ class BoolRef {
 
 object ErrorOutputActor extends Actor with OutputChannel[String] {
   private var ready : BoolRef = null
-  private var context : CoqShellTokens = null
+  private var context : CoqShellTokens = new CoqShellTokens("", 0, "", 0)
 
   def setBoolRef (n : BoolRef) : Unit = { ready = n }
 
@@ -106,10 +106,11 @@ object ErrorOutputActor extends Actor with OutputChannel[String] {
             //TODO: we could do some more ambitious checking,
             //like linearity and monotonicity of steps, but who cares?
             ready.setValue(true)
-            if (context == null || context.localStep <= tokens.localStep) //and doing the same proof
-              DocumentState.commit
-            else
-              DocumentState.undo
+            if (context.globalStep < tokens.globalStep) //got no error
+              if (context.localStep <= tokens.localStep) //and doing the same proof
+                DocumentState.commit
+              else
+                DocumentState.undo
             context = tokens
           }
           case None => if (msg.filterNot(x => x == '\n').length > 0)

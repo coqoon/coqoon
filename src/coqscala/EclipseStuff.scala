@@ -16,7 +16,9 @@ object EclipseBoilerPlate {
   import org.eclipse.ui.texteditor.{ITextEditor,IDocumentProvider,AbstractTextEditor}
   import org.eclipse.jface.text.IDocument
 
-  def getContent (window : IWorkbenchWindow) : String = {
+  var window : IWorkbenchWindow = null
+
+  def getContent () : String = {
     val editorpart = window.getActivePage.getActiveEditor
     if (editorpart.isInstanceOf[CoqEditor]) {
       val texteditor = editorpart.asInstanceOf[CoqEditor]
@@ -29,6 +31,38 @@ object EclipseBoilerPlate {
       ""
     }
   }
+  
+  import org.eclipse.core.resources.{IResource, IFile}
+  import org.eclipse.ui.{IEditorInput, IFileEditorInput}
+
+  def getResource () : IFile = {
+    val editorpart = window.getActivePage.getActiveEditor
+    if (editorpart.isInstanceOf[CoqEditor]) {
+      val texteditor = editorpart.asInstanceOf[CoqEditor]
+      val ei : IEditorInput = texteditor.getEditorInput
+      if (ei.isInstanceOf[IFileEditorInput]) {
+        val fei = ei.asInstanceOf[IFileEditorInput]
+        fei.getFile
+      } else {
+        Console.println("not a file editor")
+        null
+      }
+    } else null
+  }
+
+  import org.eclipse.core.resources.IMarker
+
+  def mark (text : String) : Unit = {
+    val file = getResource
+    val marker = file.createMarker(IMarker.PROBLEM)
+    marker.setAttribute(IMarker.MESSAGE, text)
+    marker.setAttribute(IMarker.LOCATION, file.getName)
+    marker.setAttribute(IMarker.CHAR_START, DocumentState.position)
+    marker.setAttribute(IMarker.CHAR_END, DocumentState.position + DocumentState.sendlen - 1) //for tha whitespace
+    DocumentState.sendlen = 0
+    marker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_ERROR)
+    marker.setAttribute(IMarker.TRANSIENT, true)
+  }
 }
 
 import org.eclipse.ui.IWorkbenchWindowActionDelegate
@@ -38,15 +72,13 @@ class CoqUndoAction extends IWorkbenchWindowActionDelegate {
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.viewers.ISelection
 
-  var window : IWorkbenchWindow = null
-  
   override def init (window_ : IWorkbenchWindow) : Unit = {
-    window = window_
+    EclipseBoilerPlate.window = window_
     Console.println("init called")
   }
 
   override def run (action : IAction) : Unit = {
-    val content = EclipseBoilerPlate.getContent(window)
+    val content = EclipseBoilerPlate.getContent()
     val l = findPrevious(content, DocumentState.position)
     Console.println("prev (" + DocumentState.position + " [" + content(DocumentState.position) + "]): " + l)
     if (l > -1) {
@@ -78,16 +110,14 @@ class CoqUndoAction extends IWorkbenchWindowActionDelegate {
   override def dispose () : Unit = { }	
 }
 
+object CoqUndoAction extends CoqUndoAction { }
+
 class CoqStepAction extends IWorkbenchWindowActionDelegate {
   import org.eclipse.ui.IWorkbenchWindow
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.viewers.ISelection
 
-  var window : IWorkbenchWindow = null
-  
   override def init (window_ : IWorkbenchWindow) : Unit = {
-    window = window_
-    Console.println("init called")
   }
 
   override def run (action : IAction) : Unit = {
@@ -97,7 +127,7 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
         EclipseConsole.initConsole
       PrintActor.stream = EclipseConsole.out
     }
-    val content = EclipseBoilerPlate.getContent(window).drop(DocumentState.position)
+    val content = EclipseBoilerPlate.getContent.drop(DocumentState.position)
     if (content.length > 0) {
       val eoc = findEnd(content)
 
@@ -238,7 +268,7 @@ object CoqOutputDispatcher extends CoqCallback {
   var goalviewer : GoalViewer = null
 	
   override def dispatch (x : CoqResponse) : Unit = {
-    val (ht, gt, ot) = x match {
+    x match {
       case CoqGoal(n, goals) => {
           val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
           val ht = if (hy.length > 0) hy.reduceLeft((x, y) => x + "\n" + y) else ""
@@ -249,17 +279,24 @@ object CoqOutputDispatcher extends CoqCallback {
             val r2 = r.map(x => { if (x.contains("subgoal ")) x.drop(1) else x })
             r2.reduceLeft((x, y) => x + "\n" + y)
           } else ""
-          (ht, gt, ot)
+          writeGoal(ht, gt, ot)
         }
-      case CoqProofCompleted() => ("Proof completed", "", "")
-      case x => EclipseConsole.out.println("received: " + x); ("", "", "")
+      case CoqProofCompleted() => writeGoal("Proof completed", "", "")
+      case CoqError(msg) => {
+        val ps = msg.drop(msg.findIndexOf(_.startsWith("Error")))
+        EclipseBoilerPlate.mark(ps.reduceLeft((x, y) => x + " " + y))
+      }
+      case x => EclipseConsole.out.println("received: " + x)
     }
+  }
+
+  def writeGoal (assumptions : String, goal : String, othergoals : String) : Unit = {
     Display.getDefault.syncExec(
       new Runnable() {
         def run() = {
-          goalviewer.hypos.setText(ht)
-          goalviewer.goal.setText(" " + gt)
-          goalviewer.othersubs.setText(ot)
+          goalviewer.hypos.setText(assumptions)
+          goalviewer.goal.setText(" " + goal)
+          goalviewer.othersubs.setText(othergoals)
           goalviewer.comp.layout
         }
       })
