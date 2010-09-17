@@ -10,7 +10,7 @@ class BusyStreamReader (input : InputStream) extends Runnable {
 
   def addActor (c : Actor) : Unit = { callbacks = c :: callbacks }
   def removeActor (c : Actor) : Unit =
-    { callbacks = callbacks.filterNot(x => x == c) }
+    { callbacks = callbacks.filterNot(_ == c) }
 
   override def run () : Unit = {
     while (true) {
@@ -112,7 +112,7 @@ object ErrorOutputActor extends Actor with OutputChannel[String] {
                 DocumentState.undo
             context = tokens
           }
-          case None => if (msg.filterNot(x => x == '\n').length > 0)
+          case None => if (msg.filterNot(_ == '\n').length > 0)
                          Console.println("couldn't parse X" + msg + "X")
         }
       }

@@ -327,20 +327,21 @@ object CoqOutputDispatcher extends CoqCallback {
     x match {
       case CoqGoal(n, goals) => {
           val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
-          val ht = if (hy.length > 0) hy.reduceLeft((x, y) => x + "\n" + y) else ""
+          val ht = if (hy.length > 0) hy.reduceLeft(_ + "\n" + _) else ""
           val subd = res.findIndexOf(_.contains("subgoal "))
           val (g, r) = if (subd > 0) res.splitAt(subd) else (res, List[String]())
-          val gt = g.drop(1).reduceLeft((x, y) => x + " " + y)
+          val gt = g.drop(1).reduceLeft(_ + " " + _)
           val ot = if (r.length > 0) {
             val r2 = r.map(x => { if (x.contains("subgoal ")) x.drop(1) else x })
-            r2.reduceLeft((x, y) => x + "\n" + y)
+            r2.reduceLeft(_ + "\n" + _)
           } else ""
           writeGoal(ht, gt, ot)
         }
       case CoqProofCompleted() => writeGoal("Proof completed", "", "")
       case CoqError(msg) => {
+        //TODO: what if Error not found, should come up with a sensible message anyways!
         val ps = msg.drop(msg.findIndexOf(_.startsWith("Error")))
-        EclipseBoilerPlate.mark(ps.reduceLeft((x, y) => x + " " + y))
+        EclipseBoilerPlate.mark(ps.reduceLeft(_ + " " + _))
       }
       case x => EclipseConsole.out.println("received: " + x)
     }
@@ -373,10 +374,10 @@ object CoqContentAssistantProcessor extends IContentAssistProcessor {
     val result= new Array[ICompletionProposal](completions.length);
 	var i : Int = 0
     while (i < completions.length) {
-//	  val info = new ContextInformation(completions(i), MessageFormat.format(JavaEditorMessages.getString("CompletionProcessor.Proposal.ContextInfo.pattern"), Array(completions(i)))); //$NON-NLS-1$
-//	  result(i)= new CompletionProposal(completions(i), documentOffset, 0, completions(i).length, null, completions(i), info, MessageFormat.format(JavaEditorMessages.getString("CompletionProcessor.Proposal.hoverinfo.pattern"), Array(completions(i)))); //$NON-NLS-1$
-	  val info = new ContextInformation(completions(i), MessageFormat.format("CompletionProcessor.Proposal.ContextInfo.pattern")); //$NON-NLS-1$
-	  result(i)= new CompletionProposal(completions(i), documentOffset, 0, completions(i).length, null, completions(i), info, MessageFormat.format("CompletionProcessor.Proposal.hoverinfo.pattern")); //$NON-NLS-1$
+//	  val info = new ContextInformation(completions(i), MessageFormat.format(JavaEditorMessages.getString("CompletionProcessor.Proposal.ContextInfo.pattern"), Array(completions(i))));
+//	  result(i)= new CompletionProposal(completions(i), documentOffset, 0, completions(i).length, null, completions(i), info, MessageFormat.format(JavaEditorMessages.getString("CompletionProcessor.Proposal.hoverinfo.pattern"), Array(completions(i))));
+	  val info = new ContextInformation(completions(i), MessageFormat.format("CompletionProcessor.Proposal.ContextInfo.pattern"));
+	  result(i)= new CompletionProposal(completions(i), documentOffset, 0, completions(i).length, null, completions(i), info, MessageFormat.format("CompletionProcessor.Proposal.hoverinfo.pattern"));
 	  i += 1
     }
 	return result;
