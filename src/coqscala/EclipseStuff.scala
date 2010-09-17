@@ -44,10 +44,18 @@ import org.eclipse.jface.text.source.SourceViewerConfiguration
 object CoqSourceViewerConfiguration extends SourceViewerConfiguration {
   import org.eclipse.jface.text.presentation.{IPresentationReconciler, PresentationReconciler}
   import org.eclipse.jface.text.rules.DefaultDamagerRepairer
-  import org.eclipse.jface.text.TextAttribute
+  import org.eclipse.jface.text.{TextAttribute,IDocument}
   import org.eclipse.swt.graphics.{Color,RGB}
   import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.text.source.ISourceViewer
+  import org.eclipse.jface.text.contentassist.{IContentAssistant,ContentAssistant}
+
+
+  override def getContentAssistant(v : ISourceViewer) : IContentAssistant = {
+    val assistant= new ContentAssistant
+    assistant.setContentAssistProcessor(CoqContentAssistantProcessor, IDocument.DEFAULT_CONTENT_TYPE)
+    assistant
+  }
 
   override def getPresentationReconciler (v : ISourceViewer) : IPresentationReconciler = {
     val pr = new PresentationReconciler
@@ -349,4 +357,34 @@ object CoqOutputDispatcher extends CoqCallback {
         }
       })
   }
+}
+
+import org.eclipse.jface.text.contentassist.IContentAssistProcessor
+
+object CoqContentAssistantProcessor extends IContentAssistProcessor {
+  import org.eclipse.jface.text.contentassist.{IContextInformationValidator,IContextInformation,ICompletionProposal,CompletionProposal,ContextInformation}
+  import org.eclipse.jface.text.ITextViewer
+//  import org.eclipse.ui.examples.javaeditor.JavaEditorMessages
+  import java.text.MessageFormat
+
+  private val completions = Array("intros", "assumption", "induction ", "apply")
+
+  def computeCompletionProposals(viewer : ITextViewer, documentOffset : Int) : Array[ICompletionProposal] = {
+    val result= new Array[ICompletionProposal](completions.length);
+	var i : Int = 0
+    while (i < completions.length) {
+//	  val info = new ContextInformation(completions(i), MessageFormat.format(JavaEditorMessages.getString("CompletionProcessor.Proposal.ContextInfo.pattern"), Array(completions(i)))); //$NON-NLS-1$
+//	  result(i)= new CompletionProposal(completions(i), documentOffset, 0, completions(i).length, null, completions(i), info, MessageFormat.format(JavaEditorMessages.getString("CompletionProcessor.Proposal.hoverinfo.pattern"), Array(completions(i)))); //$NON-NLS-1$
+	  val info = new ContextInformation(completions(i), MessageFormat.format("CompletionProcessor.Proposal.ContextInfo.pattern")); //$NON-NLS-1$
+	  result(i)= new CompletionProposal(completions(i), documentOffset, 0, completions(i).length, null, completions(i), info, MessageFormat.format("CompletionProcessor.Proposal.hoverinfo.pattern")); //$NON-NLS-1$
+	  i += 1
+    }
+	return result;
+    }
+
+  def computeContextInformation(viewer : ITextViewer, offset : Int) : Array[IContextInformation] = { null }
+  def getCompletionProposalAutoActivationCharacters() : Array[Char] = { Array('.') }
+  def getContextInformationAutoActivationCharacters() : Array[Char] = { null }
+  def getContextInformationValidator() : IContextInformationValidator = { null }
+  def getErrorMessage() : String = { "not yet implemented" }
 }
