@@ -36,7 +36,7 @@ trait JavaTerms
 	case class NewExpr(e: Any) extends AnyExpr	
 	
 	// statements
-	case class Block(xs: List[BlockStmt]) extends Term // { override def toString = "Block[" + x.length + "]" }
+	case class Block(xs: List[BlockStmt]) extends Term { override def toString = "Block[" + xs.length + "]" }
 	case class BlockStmt(x: Any) extends Term
 	case class Stmt(x: Any) extends Term
 	
@@ -76,44 +76,9 @@ trait JavaTerms
 		
 	case class Program(terms: List[Any]) extends Term { override def toString = "PROGRAM: " + terms.toString }
 	
-	
-	
-	
-	def isMember[T](xs: List[T], x: T) = xs contains x
-
-  
-  case class Bool(b: Boolean) extends Term
-  {
-    override def toString = b.toString
-  }
   
   case class Name(name: String) extends Term
   {
     override def toString = name
   }
-
-  case class Ref(n: Name) extends Term
-  {
-    def value = n
-  }
-  
-  case class Lam(n: Name, l: Term) extends Term
-  {
-    override def toString = "(\\ "+n+" -> "+l+")"
-  } 
-  
-  case class App(t1: Term, t2: Term) extends Term
-  {
-    override def toString = "("+t1+" "+t2+")"
-  } 
-  
-  case class Let(n: Name, t1: Term, t2: Term) extends Term
-  {
-    override def toString = "let "+n+" = "+t1+" in "+t2
-  }
-  
-  case class If(c: Term, t1: Term, t2: Term) extends Term
-  {
-    override def toString = "if "+c+" then "+t1+" else "+t2
-  }  
 }

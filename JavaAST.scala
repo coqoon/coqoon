@@ -1,13 +1,13 @@
 import scala.util.parsing.input._
 
-trait JavaAST extends JavaParser with JavaImplicits
+trait JavaAST extends JavaParser
 {
 	var x : Int = 0
 	def parse(r: Reader[Char]) : ParseResult[Any] = { 
 		val p = phrase(compilationUnit)(new lexical.Scanner(r))
 		
 		p match {
-			case Success(x @ ~(_,_), _) => pp(x, 0)			// Console.println(x)
+			case Success(x @ ~(_,_), _) => coqoutput(x) //pp(x, 0)			// Console.println(x)
       		case Failure(msg, remainder) => Console.println("Failure: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString) 
       		case Error(msg, remainder) => Console.println("Error: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString) 
 		}
@@ -38,25 +38,16 @@ trait JavaAST extends JavaParser with JavaImplicits
 		}
 	}
 	
+
+  def coqoutput (xs : Any) : Unit = {
+    xs match {
+      case Nil =>
+      case x1~x2 => coqoutput(x1); coqoutput(x2)
+      case JClass(id, typ, supers, inters, body) =>
+        Console.println("class " + id + " implements " + inters + " supers " + supers); body.foreach(coqoutput(_))
+      case xs @ List(_) => xs.foreach(coqoutput(_))
+      case x @ _ => Console.println(x.asInstanceOf[AnyRef].getClass().toString() + ": " + x.toString)
+    }
+  }
 	
-	def simplify(tree: Any): List[Any] = {
-		x = x + 1
-		println(x + ": " + tree.toString)
-		tree match {
-			case w @ Import(x, y, z) => { println(x); List(w) }
-			case _ => List(tree)
-			/*
-			case Name(x) => { println("name: " + x); simplify(x) }
-			case None => List()
-			case Some(s) => simplify(List(s))
-			case List() => List()
-			case a :: List() => simplify(a)
-			case a :: b => simplify(a) ++ simplify(b)
-			case Primary(a) => List(Expr(a)) // simplify(a)
-			// case Expr(a) => simplify(a)
-			case a~b => simplify(a) ++ simplify(b)
-			case _ => { println(tree.toString); List(tree) }
-			*/
-		}
-	}
 }

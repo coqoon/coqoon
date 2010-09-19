@@ -315,57 +315,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaImpli
 	    p ^^ (x => true) | success(false)
 	
 	
-	 //   def ~ [U](p: => Parser[U]): Parser[~[T, U]] = (for(a <- this; b <- p) yield new ~(a,b)).named("~")
-
-	    /** A parser combinator for sequential composition which keeps only the right result 
-	     *
-	     * <p> `p ~> q' succeeds if `p' succeeds and `q' succeeds on the input
-	     *           left over by `p'.</p>
-	     * 
-	     * @param q a parser that will be executed after `p' (this parser) succeeds
-	     * @return a `Parser' that -- on success -- returns the result of `q'.
-	     */
-	 //   def ~> [U](p: => Parser[U]): Parser[U] = (for(a <- this; b <- p) yield b).named("~>")
-	
-
-
 	// always suceed and consume a token
 	def eatMe = elem("eatMe", { x => true })
 	
-	
-	// turn Something~()~()~()~() into Something		
-	
-	// def opt[T](p: => Parser[T]): Parser[Option[T]] = 
-    //  p ^^ (x => Some(x)) | success(None)
-  
-
-/*
-	def listify[T,U] = (_: ~[T, U]) {
-		case x ~ List() => List(x)
-		case x ~ xs => x :: listify(xs)
-	}
-*/
-		
-/*
-	override def elem(kind: String, p: Elem => Boolean) = {
-		println("elem: " + kind)
-		acceptIf(p)(inEl => kind+" expected")
-	}
-
-	override implicit def accept(e: Elem): Parser[Elem] = {
-		println("accept: ==? " + e)
-		acceptIf(_ == e)("`"+e+"' expected but " + _ + " found")
-	}
-
-	override def rep1[T](first: => Parser[T], p: => Parser[T]): Parser[List[T]] = {
-		println(first.toString + ", " + p.toString)
-		super.rep1(first, p)
-	}
-	
-	override def rep1sep[T](p: => Parser[T], q: => Parser[Any]): Parser[List[T]] = {
-		println(p.toString + " (sep by) " + q.toString)
-		super.rep1sep(p, q)
-	}
-*/
-
 }
