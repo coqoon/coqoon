@@ -22,7 +22,7 @@ import scala.util.parsing.combinator.RegexParsers
  *
  * @author Miles Sabin (adapted slightly by Adriaan Moors)
  */
-trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaImplicits with JavaTerms with Expression
+trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms with Expression
 {
 	type Tokens = JavaLexer
 	val lexical = new JavaLexer

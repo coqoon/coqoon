@@ -45,7 +45,7 @@ trait JavaAST extends JavaParser
       case x1~x2 => coqoutput(x1); coqoutput(x2)
       case JClass(id, typ, supers, inters, body) =>
         Console.println("class " + id + " implements " + inters + " supers " + supers); body.foreach(coqoutput(_))
-      case xs @ List(_) => xs.foreach(coqoutput(_))
+      //case xs @ List(_) => xs.foreach(coqoutput(_))
       case x @ _ => Console.println(x.asInstanceOf[AnyRef].getClass().toString() + ": " + x.toString)
     }
   }
