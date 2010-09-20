@@ -210,10 +210,11 @@ trait Expression
 	def bracesExpr = "[" ~ expression ~ "]"
 	
 	def formalParameterList = "(" ~>
-			opt ( rep1sep(formalParameter, ",") ~ opt("," ~ formalParameterVarArgDecl)
+			opt ( rep1sep(formalParameter, ",") ~ opt("," ~> formalParameterVarArgDecl)
 				| formalParameterVarArgDecl
 				) <~ ")"
-	def formalParameter = rep(localVariableModifier) ~ jtype ~ variableDeclaratorId
+	def formalParameter = rep(localVariableModifier) ~> jtype ~ variableDeclaratorId ^^ {
+          case jtype~id => FormalVariable(None, jtype, id) }
 	def formalParameterVarArgDecl = rep(localVariableModifier) ~ jtype ~ "..." ~ variableDeclaratorId
 	
 	def binExpr(x: Any): Any = x

@@ -11,7 +11,6 @@ trait JavaAST extends JavaParser
       		case Failure(msg, remainder) => Console.println("Failure: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString) 
       		case Error(msg, remainder) => Console.println("Error: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString) 
 		}
-                Console.print("\n");
 		p
 	}
 	
@@ -39,15 +38,27 @@ trait JavaAST extends JavaParser
 	}
 	
 
-  def coqoutput (xs : Any) : Unit = {
+  def coqoutput (xs : Any) : String = {
     xs match {
       case Nil =>
       case x1~x2 => coqoutput(x1); coqoutput(x2)
+      case JInterface(id, typ, inters, body) =>
+        Console.println("Definition " + id + " := Build_Inter (SS.empty) ") ; body.foreach(coqoutput(_))
       case JClass(id, typ, supers, inters, body) =>
-        Console.println("class " + id + " implements " + inters + " supers " + supers); body.foreach(coqoutput(_))
-      //case xs @ List(_) => xs.foreach(coqoutput(_))
-      case x @ _ => Console.println(x.asInstanceOf[AnyRef].getClass().toString() + ": " + x.toString)
+        Console.println("Definition " + id + " := Build_Class "); body.foreach(coqoutput(_))
+      case MethodDeclaration(name, typ, parameters, throws, body) =>
+        Console.println("SM.add \"" + name + "\" (["); parameters.foreach(coqoutput(_))
+        body match {
+          case None => 
+          case Some(b) => coqoutput(b)
+          case Block(xs) => xs.foreach(coqoutput(_))
+        }
+      case x :: tl => coqoutput(x); tl.foreach(coqoutput(_))
+      case Some(x) => coqoutput(x)
+      case None =>
+      case x => Console.println("leaf " + x.asInstanceOf[AnyRef].getClass().toString() + ": " + x.toString)
     }
+      ""
   }
 	
 }

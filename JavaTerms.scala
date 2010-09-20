@@ -18,8 +18,16 @@ trait JavaTerms
 	case class Lit(value: Any) extends Term
 	case class Modifier(word: Any) extends Term
 	case class JClass(id: Term, jtype: Option[Any], superclass: Option[Any], interfaces: Option[Any], body: List[Any]) extends Term
+        case class JInterface(id : Term, jtype : Option[Any], interfaces : Option[Any], body : List[Any]) extends Term
 	case class Throws(exceptions: List[QualId]) extends Term
 	
+        case class MethodDeclarator (parameters : Option[Any], throws : List[Throws], body : Any) extends Term
+
+        case class MethodDeclaration (id : Term, jtype : Any, parameters : Option[Any], throws : List[Throws], body : Any) extends Term
+        case class FieldDeclaration (id : Term, jtype : Any, rest : Any) extends Term
+
+        case class FormalVariable (modifiers : Any, jtype : Any, id : Term) extends Term
+
 	// expressions
 	trait AnyExpr extends Term
 	case class Expr(e: Any) extends AnyExpr { override def toString = "EXPR" }
@@ -36,7 +44,7 @@ trait JavaTerms
 	case class NewExpr(e: Any) extends AnyExpr	
 	
 	// statements
-	case class Block(xs: List[BlockStmt]) extends Term { override def toString = "Block[" + xs.length + "]" }
+	case class Block(xs: List[BlockStmt]) extends Term
 	case class BlockStmt(x: Any) extends Term
 	case class Stmt(x: Any) extends Term
 	
@@ -53,7 +61,6 @@ trait JavaTerms
 	case class Id(x: String) extends Term { override def toString = x }	
 	case class Num(x: String) extends Term { override def toString = x }	
 	case class Key(x: String) extends Term { override def toString = "'" + x + "'" }
-	case class Dummy() extends Term { override def toString = "DUMMY" }
 
 	case class QualId(xs: List[Any]) extends Term {
 		val id = xs.reduceLeft(_ + "." + _)		 
@@ -61,19 +68,8 @@ trait JavaTerms
 	}
 	// case class expression(x: Term) extends Term { override def toString = x }
 
-	
-				
-	case class UnOp(op: Any, value: Any) extends Term
-	case class BinOp(op: Any, lvalue: Any, rvalue: Any) extends Term
-	case class TernOp(condition: Any, yes: Any, no: Any) extends Term
-	
-	// case class Import(static: Option[String], id: List[Term], wildcard: Option[String]) extends Term
-	// case class Import(static: Boolean, id: List[Term], wildcard: Boolean) extends Term
-	case class Import(static: Boolean, id: QualId, wildcard: Boolean) extends Term
+      	case class Import(static: Boolean, id: QualId, wildcard: Boolean) extends Term
 			
-	// a little more interesting
-	case class AssignOp(x: String) extends Term { override def toString = "assignOp: " + x }
-		
 	case class Program(terms: List[Any]) extends Term { override def toString = "PROGRAM: " + terms.toString }
 	
   

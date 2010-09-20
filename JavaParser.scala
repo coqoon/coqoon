@@ -185,7 +185,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
 	def constantDeclaratorsRest = rep("," ~> constantDeclarator)
 	def variableDeclaratorRest = rep(braces) ~ opt("=" ~ variableInitializer)
 	def constantDeclaratorRest = rep(braces) ~ "=" ~ variableInitializer
-	def variableDeclaratorId = id ~ rep(braces)					// see 14.20 for "correct" version
+	def variableDeclaratorId = id <~ rep(braces)					// see 14.20 for "correct" version
 	def compilationUnit = opt(opt(annotations) <~ "package" ~> qualifiedId <~ ";") ~>
 				rep(importDeclaration) ~ rep(typeDeclaration)
 	def importDeclaration = "import" ~> optb("static") ~ qualifiedId ~ optb("." ~> "*") <~ ";" ^^ Import
@@ -216,7 +216,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
 		( normalInterfaceDeclaration
 		| annotationTypeDeclaration
 		)
-	def normalInterfaceDeclaration = "interface" ~> id ~ opt(typeParameters) ~ opt("extends" ~ typeList) ~ interfaceBody
+	def normalInterfaceDeclaration = "interface" ~> id ~ opt(typeParameters) ~ opt("extends" ~> typeList) ~ interfaceBody ^^ flatten4(JInterface)
 	def typeList = rep1sep(jtype, ",")
 	def annotationTypeDeclaration = "@interface" ~> id ~ annotationTypeBody
 	def annotationTypeBody = rep(opt(annotationTypeElementDeclarations))
@@ -248,7 +248,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
 		)
 	def memberDecl = 
 		( genericMethodOrConstructorDecl
-	    | methodOrFieldDecl
+	        | methodOrFieldDecl
 		| "void" ~> id ~ voidMethodDeclaratorRest
 		| id ~ constructorDeclaratorRest
 		| interfaceDeclaration
@@ -262,7 +262,10 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
 		| id ~ constructorDeclaratorRest
 		)
 	
-	def methodOrFieldDecl = jtype ~ id ~ methodOrFieldRest
+	def methodOrFieldDecl = jtype ~ id ~ methodOrFieldRest ^^ {
+          case (jtype~id)~MethodDeclarator(parameters, throws, body) => MethodDeclaration(id, jtype, parameters, throws, body)
+          case (jtype~id)~initializer => FieldDeclaration(id, jtype, initializer)
+        }
 	def methodOrFieldRest =
 		( methodDeclaratorRest			
 		| variableDeclaratorRest	
@@ -278,14 +281,17 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
 		| interfaceDeclaration
 		| classDeclaration
 		)
-	def interfaceMethodOrFieldDecl = jtype ~ id ~ interfaceMethodOrFieldRest
+	def interfaceMethodOrFieldDecl = jtype ~ id ~ interfaceMethodOrFieldRest ^^ { 
+          case (jtype~id)~MethodDeclarator(parameters, throws, body) => MethodDeclaration(id, jtype, parameters, throws, body)
+          case (jtype~id)~initializer => FieldDeclaration(id, jtype, initializer)
+        }
 	def interfaceMethodOrFieldRest =
 		( constantDeclaratorRest <~ ";"
 		| interfaceMethodDeclaratorRest
 		)
-	def methodDeclaratorRest = formalParameterList ~ rep(braces) ~ throwsClause ~ (methodBody | ";")
+	def methodDeclaratorRest = formalParameterList ~ rep(braces) ~ throwsClause ~ (methodBody | ";") ^^ { case ((arg~br)~throws)~body => MethodDeclarator(arg, throws, body) }
 	def voidMethodDeclaratorRest = formalParameterList ~ throwsClause ~ (methodBody | ";")
-	def interfaceMethodDeclaratorRest = formalParameterList ~ rep(braces) ~ throwsClause <~ ";"
+	def interfaceMethodDeclaratorRest = formalParameterList ~ rep(braces) ~ throwsClause ~ ";" ^^ { case ((arg~br)~throws)~";" => MethodDeclarator(arg, throws, None) }
 	def interfaceGenericMethodDecl = typeParameters ~ (jtype | "void") ~ id ~ interfaceMethodDeclaratorRest
 	def voidInterfaceMethodDeclaratorRest = formalParameterList ~ throwsClause <~ ";"
 	
