@@ -18,8 +18,8 @@ import java.io.InputStreamReader
  */
 object Main extends Application with JavaAST
 {
-	override def main(args: Array[String]) = {
-    	val in = StreamReader(new InputStreamReader(new FileInputStream(new File(args(0))), "ISO-8859-1"))
-		parse(in)
-	}
+  override def main(args: Array[String]) = {
+    val in = StreamReader(new InputStreamReader(new FileInputStream(new File(args(0))), "ISO-8859-1"))
+    parse(in)
+  }
 }
