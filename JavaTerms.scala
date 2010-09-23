@@ -32,16 +32,11 @@ trait JavaTerms
   trait AnyExpr extends Term
   case class Expr (e : Any) extends AnyExpr //{ override def toString = "EXPR" }
   case class ParExpr (e : AnyExpr) extends AnyExpr
-  case class PrimaryExpr (e : Any) extends AnyExpr {
-    override def toString = {
-      e match {
-        case Lit(x) => x.toString
-        case _ => e.toString
-      }
-    }
-  }
+  case class PrimaryExpr (e : Any) extends AnyExpr
 
   case class NewExpr (e : Any) extends AnyExpr
+
+  case class BinaryExpr (op : Any, left : Any, right : Any) extends AnyExpr
 
   // statements
   case class Block (xs : List[BlockStmt]) extends Term
@@ -58,11 +53,11 @@ trait JavaTerms
   case class ArrayType (t : Any, braces : Int) extends AnyType
 
   // basic literals straight from tokens
-  case class Str (x : String) extends Term { override def toString = "\"" + x + "\"" }
-  case class Op (x : String) extends Term { override def toString = "'" + x + "'" }
-  case class Id (x : String) extends Term { override def toString = x }
-  case class Num (x : String) extends Term { override def toString = x }
-  case class Key (x : String) extends Term { override def toString = "'" + x + "'" }
+  case class Str (x : String) extends Term
+  case class Op (x : String) extends Term
+  case class Id (x : String) extends Term
+  case class Num (x : String) extends Term
+  case class Key (x : String) extends Term
 
   case class QualId (xs : List[Any]) extends Term {
     val id = xs.reduceLeft(_ + "." + _)
