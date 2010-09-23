@@ -123,23 +123,23 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
     ) ^^ BlockStmt
 
   def statement: Parser[Any] =
-    ( block
-     | "assert" ~ expression ~ opt(":" ~ expression) <~ ";"
-     | "if" ~ parExpression ~ statement ~ opt("else" ~ statement)
-     | "for" ~ "(" ~> forControl <~ ")" ~ statement
-     | "while" ~ parExpression ~ statement
-     | "do" ~ statement ~ "while" ~ parExpression <~ ";"
-     | "try" ~ block ~ (catches ~ jfinally | catches | jfinally)
-     | "switch" ~ parExpression <~ "{" ~ switchBlockStatementGroups <~ "}"
-     | "synchronized" ~ parExpression ~ block
-     | "return" ~ opt(expression) <~ ";"
-     | "throw" ~> expression <~ ";"
-     | "break" ~> opt(id) <~ ";"
-     | "continue" ~> opt(id) <~ ";"
-     | expression <~ ";"
-     | id ~ ":" ~ statement
+    ( block ^^ Stmt
+     | "assert" ~ expression ~ opt(":" ~ expression) <~ ";" ^^ Stmt
+     | "if" ~> parExpression ~ statement ~ opt("else" ~ statement) ^^ Conditional
+     | "for" ~ "(" ~> forControl <~ ")" ~ statement ^^ Stmt
+     | "while" ~ parExpression ~ statement ^^ Stmt
+     | "do" ~ statement ~ "while" ~ parExpression <~ ";" ^^ Stmt
+     | "try" ~ block ~ (catches ~ jfinally | catches | jfinally) ^^ Stmt
+     | "switch" ~ parExpression <~ "{" ~ switchBlockStatementGroups <~ "}" ^^ Stmt
+     | "synchronized" ~ parExpression ~ block ^^ Stmt
+     | "return" ~> opt(expression) <~ ";" ^^ ReturnStmt
+     | "throw" ~> expression <~ ";" ^^ Stmt
+     | "break" ~> opt(id) <~ ";" ^^ Stmt
+     | "continue" ~> opt(id) <~ ";" ^^ Stmt
+     | expression <~ ";" ^^ Stmt
+     | id ~ ":" ~ statement ^^ Stmt
      | ";"
-    ) ^^ Stmt
+    )
 
   def catches = rep1(catchClause ~ block)
   def catchClause = "catch" ~> "(" ~> formalParameter <~ ")"
@@ -309,8 +309,8 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
   //
 
   // option parser that results in 0-or-1 length list
-  def optl[T](p: => Parser[T]): Parser[List[T]] =
-    p ^^ (x => List(x)) | success(List())
+  //def optl[T](p: => Parser[T]): Parser[List[T]] =
+  //  p ^^ (x => List(x)) | success(List())
 
   // option parser that results in boolean
   def optb[T](p: => Parser[T]): Parser[Boolean] =

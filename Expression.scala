@@ -14,7 +14,7 @@ import scala.util.parsing.combinator.RegexParsers
 // primaryExpression
 
 
-trait Expression
+trait Expression extends ImplicitConversions
 {
   this: JavaParser =>
 
@@ -50,27 +50,68 @@ trait Expression
   //
 
   // high level look
+
   def expression = assignmentExpression ^^ Expr
   def expressionList = rep1sep(expression, ",")
   def parExpression = "(" ~> expression <~ ")" ^^ ParExpr
   def arguments = "(" ~> repsep(expression, ",") <~ ")"
 
-  def assignmentExpression: Parser[Any] = conditionalExpression ~ opt(Pair(assignmentOp, "assignment") ~ assignmentExpression)
-  def conditionalExpression: Parser[Any] = logicalOrExpression ~ opt("?" ~> assignmentExpression <~ ":" ~ conditionalExpression)
+  def assignmentExpression: Parser[Any] = conditionalExpression ~ opt(Pair(assignmentOp, "assignment") ~ assignmentExpression) ^^ {
+    case x~None => x
+    case x~Some(y) => new ~(x, y)
+  }
 
-  def logicalOrExpression: Parser[Any] = logicalAndExpression ~ rep("||" ~ logicalAndExpression)
-  def logicalAndExpression: Parser[Any] = inclusiveOrExpression ~ rep("&&" ~ inclusiveOrExpression)
-  def inclusiveOrExpression: Parser[Any] = exclusiveOrExpression ~ rep("|" ~ exclusiveOrExpression)
-  def exclusiveOrExpression: Parser[Any] = andExpression ~ rep("^" ~ andExpression)
-  def andExpression: Parser[Any] = equalityExpression ~ rep("&" ~ equalityExpression)
+  def conditionalExpression: Parser[Any] = logicalOrExpression ~ opt("?" ~> assignmentExpression <~ ":" ~ conditionalExpression) ^^ {
+    case x~None => x
+    case x~Some(y) => new ~(x, y)
+  }
 
-  def equalityExpression: Parser[Any] = instanceOfExpression ~ rep(List("==", "!=") ~ instanceOfExpression)
-  def instanceOfExpression: Parser[Any] = relationalExpression ~ opt("instanceof" ~> jtype)
-  def relationalExpression: Parser[Any] = shiftExpression ~ rep(List("<", ">", "<=", ">=") ~ shiftExpression)
+  def logicalOrExpression: Parser[Any] = logicalAndExpression ~ rep("||" ~ logicalAndExpression) ^^ {
+    case x~List() => x
+    case y => y
+  }
+  def logicalAndExpression: Parser[Any] = inclusiveOrExpression ~ rep("&&" ~ inclusiveOrExpression) ^^ {
+    case x~List() => x
+    case y => y
+  }
+  def inclusiveOrExpression: Parser[Any] = exclusiveOrExpression ~ rep("|" ~ exclusiveOrExpression) ^^ {
+    case x~List() => x
+    case y => y
+  }
+  def exclusiveOrExpression: Parser[Any] = andExpression ~ rep("^" ~ andExpression) ^^ {
+    case x~List() => x
+    case y => y
+  }
+  def andExpression: Parser[Any] = equalityExpression ~ rep("&" ~ equalityExpression) ^^ {
+    case x~List() => x
+    case y => y
+  }
 
-  def shiftExpression = additiveExpression ~ rep(List("<<", ">>", ">>>") ~ additiveExpression)
-  def additiveExpression = multiplicativeExpression ~ rep(List("+", "-") ~ multiplicativeExpression)
-  def multiplicativeExpression = unaryExpression ~ rep(List("*", "/", "%") ~ unaryExpression)
+  def equalityExpression: Parser[Any] = instanceOfExpression ~ rep(List("==", "!=") ~ instanceOfExpression) ^^ {
+    case x~List() => x
+    case y => y
+  }
+  def instanceOfExpression: Parser[Any] = relationalExpression ~ opt("instanceof" ~> jtype) ^^ {
+    case x~None => x
+    case x~Some(y) => new ~(x, y)
+  }
+  def relationalExpression: Parser[Any] = shiftExpression ~ rep(List("<", ">", "<=", ">=") ~ shiftExpression) ^^ {
+    case x~List() => x
+    case y => y
+  }
+
+  def shiftExpression = additiveExpression ~ rep(List("<<", ">>", ">>>") ~ additiveExpression) ^^ {
+    case x~List() => x
+    case y => y
+  }
+  def additiveExpression = multiplicativeExpression ~ rep(List("+", "-") ~ multiplicativeExpression) ^^ {
+    case x~List() => x
+    case y => y
+  }
+  def multiplicativeExpression = unaryExpression ~ rep(List("*", "/", "%") ~ unaryExpression) ^^ {
+    case x~List() => x
+    case y => y
+  }
   def unaryExpression: Parser[Any] =
     ( "++" ~ unaryExpression
      | "--" ~ unaryExpression
@@ -95,7 +136,11 @@ trait Expression
            | innerNewExpression
           )
          | bracesExpr
-        ) ~ opt (List("++", "--"))
+        ) ~ opt (List("++", "--")) ^^ {
+      case x~List()~None => x
+      case x~None => x
+      case x => x
+    }
 
   def primaryExpression =
     ( parExpression
@@ -123,7 +168,10 @@ trait Expression
                   | "super" ~ arguments
                   | innerNewExpression
                  )
-        )
+        ) ^^ {
+      case x~None => x
+      case x~Some(y) => new ~(x, y)
+    }
 
   def newExpression = "new" ~>
     ( basicType ~ newArrayConstruction
@@ -214,5 +262,8 @@ trait Expression
   def formalParameterVarArgDecl = rep(localVariableModifier) ~ jtype ~ "..." ~ variableDeclaratorId
 
   def binExpr(x: Any): Any = x
+
+  def optl[T](p: => Parser[T]): Parser[List[T]] =
+    p ^^ (x => List(x)) | success(List())
 }
 

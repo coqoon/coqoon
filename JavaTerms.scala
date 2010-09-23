@@ -30,7 +30,7 @@ trait JavaTerms
 
   // expressions
   trait AnyExpr extends Term
-  case class Expr (e : Any) extends AnyExpr { override def toString = "EXPR" }
+  case class Expr (e : Any) extends AnyExpr //{ override def toString = "EXPR" }
   case class ParExpr (e : AnyExpr) extends AnyExpr
   case class PrimaryExpr (e : Any) extends AnyExpr {
     override def toString = {
@@ -47,6 +47,9 @@ trait JavaTerms
   case class Block (xs : List[BlockStmt]) extends Term
   case class BlockStmt (x : Any) extends Term
   case class Stmt (x : Any) extends Term
+
+  case class Conditional (test : Any, consequent : Any, alternative : Any) extends Term
+  case class ReturnStmt (x : Any) extends Term
 
   // types
   trait AnyType extends Term
