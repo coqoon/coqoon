@@ -116,7 +116,7 @@ trait Expression extends ImplicitConversions
   def listhelper (left : Any, x : List[Any]) : Any = {
     x match {
       case Nil => left
-      case (x : Key) ~ y :: rt => listhelper(BinaryExpr(x, left, y), rt)
+      case x~y :: rt => listhelper(BinaryExpr(x, left, y), rt)
     }
   }
 
@@ -212,7 +212,7 @@ trait Expression extends ImplicitConversions
   def jtype2: Parser[Any] = objectType2
 
   def simpleType = basicType ~ rep(braces) ^^ { case x~List() => Primitive(x) ; case x~y => ArrayType(x, y.length) }
-  def objectType = qualifiedTypeIdent ~ rep(braces)
+  def objectType = qualifiedTypeIdent <~ rep(braces)
   def objectType0 = qualifiedTypeIdent0 ~ rep(braces)
   def objectType1 = qualifiedTypeIdent1 ~ rep(braces)
   def objectType2 = qualifiedTypeIdent2 ~ rep(braces)
@@ -220,7 +220,10 @@ trait Expression extends ImplicitConversions
   def qualifiedTypeIdent0 = rep1sep(typeIdent0, ".")
   def qualifiedTypeIdent1 = rep1sep(typeIdent1, ".")
   def qualifiedTypeIdent2 = rep1sep(typeIdent2, ".")
-  def typeIdent = id ~ opt(genericTypeArgumentList)
+  def typeIdent = id ~ opt(genericTypeArgumentList) ^^ {
+    case id~None => id
+    case id~so => new ~(id, so)
+  }
   def typeIdent0 = id ~ genericTypeArgumentList0
   def typeIdent1 = id ~ genericTypeArgumentList0
   def typeIdent2 = id ~ genericTypeArgumentList00
@@ -262,7 +265,10 @@ trait Expression extends ImplicitConversions
   def bracesExpr = "[" ~ expression ~ "]"
 
   def formalParameterList = "(" ~>
-    opt ( rep1sep(formalParameter, ",") ~ opt("," ~> formalParameterVarArgDecl)
+    opt ( rep1sep(formalParameter, ",") ~ opt("," ~> formalParameterVarArgDecl) ^^ {
+      case x~None => x
+      case x~Some(y) => new ~(x, y)
+    }
          | formalParameterVarArgDecl
         ) <~ ")"
   def formalParameter = rep(localVariableModifier) ~> jtype ~ variableDeclaratorId ^^ {

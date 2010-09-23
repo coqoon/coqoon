@@ -125,7 +125,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
   def statement: Parser[Any] =
     ( block ^^ Stmt
      | "assert" ~ expression ~ opt(":" ~ expression) <~ ";" ^^ Stmt
-     | "if" ~> parExpression ~ statement ~ opt("else" ~ statement) ^^ Conditional
+     | "if" ~> parExpression ~ statement ~ opt("else" ~> statement) ^^ Conditional
      | "for" ~ "(" ~> forControl <~ ")" ~ statement ^^ Stmt
      | "while" ~ parExpression ~ statement ^^ Stmt
      | "do" ~ statement ~ "while" ~ parExpression <~ ";" ^^ Stmt
@@ -168,14 +168,14 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
     )
   def elementValueArrayInitializer = "{" ~> rep1sep(elementValue, ",") ~ opt(",") <~ "}"
 
-  def localVariableDeclaration = rep(localVariableModifier) ~ jtype ~ variableDeclarators
+  def localVariableDeclaration = rep(localVariableModifier) ~> jtype ~ variableDeclarators
   def modifier =
     ( annotation
      | Pair(modifierWord, "modifier")
     ) ^^ Modifier
 
   // p592
-  def variableDeclarator = id ~ rep(braces) ~ opt("=" ~> variableInitializer)             // paulp
+  def variableDeclarator = id <~ rep(braces) ~> opt("=" ~> variableInitializer)
   def constantDeclarator = id ~ constantDeclaratorRest
 
   def variableDeclarators = rep1sep(variableDeclarator, ",")

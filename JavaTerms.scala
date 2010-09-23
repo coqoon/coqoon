@@ -59,17 +59,12 @@ trait JavaTerms
   case class Num (x : String) extends Term
   case class Key (x : String) extends Term
 
-  case class QualId (xs : List[Any]) extends Term {
-    val id = xs.reduceLeft(_ + "." + _)
-    override def toString = id.toString
-  }
+  case class QualId (xs : List[Any]) extends Term
   // case class expression (x : Term) extends Term { override def toString = x }
 
   case class Import (static : Boolean, id : QualId, wildcard : Boolean) extends Term
 
   case class Program (terms : List[Any]) extends Term { override def toString = "PROGRAM: " + terms.toString }
 
-  case class Name (name : String) extends Term {
-    override def toString = name
-  }
+  case class Name (name : String) extends Term
 }
