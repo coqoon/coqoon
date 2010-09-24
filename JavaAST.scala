@@ -98,6 +98,8 @@ trait JavaAST extends JavaParser
       case Name(x) => x
       case Num(x) => x
       case Lit(x) => unpackR(x)
+      case x :: rt => unpackR(x) + unpackR(rt)
+      case Nil => ""
       case None => ""
       case x => Console.println("unpackR dunno " + x + " class " + x.asInstanceOf[AnyRef].getClass.getName); ""
     }
@@ -105,13 +107,19 @@ trait JavaAST extends JavaParser
 
   def translateOp (x : Any) : String = {
     x match {
-      case Key(x) => if (x == ">=") "egt"
+      case Key(x) => if (x == ">") "egt"
                      else if (x == "-") "eminus"
                      else if (x == "*") "etimes"
                      else if (x == "=") "cassign"
                      else { Console.println("translateOp dunno Key " + x); "" }
       case x => Console.println("translateOp dunno " + x); ""
     }
+  }
+
+  var count : Int = 0
+  def gensym () : String = {
+    count += 1
+    return "tmp_" + count
   }
 
   def getExpr (something : Any) : String = {
@@ -121,10 +129,19 @@ trait JavaAST extends JavaParser
       case PrimaryExpr(x) => getExpr(x)
       case Stmt(x) => getExpr(x)
       case ParExpr(x) => "(" + getExpr(x) + ")"
+      case Block(x) => "(" + x.map(getExpr).reduceLeft(_ + " " + _) + ")"
+      case BlockStmt(x) => getExpr(x)
       case Expr(x) => getExpr(x)
       case BinaryExpr(op, l, r) => "(" + translateOp(op) + " " + getExpr(l) + " " + getExpr(r) + ")"
-      case (x:QualId)~(y:List[Any]) => "(ccall " + //need access to assignment now!
-                                      "assigned this" + unpackR(x) + "([" + y.map(getExpr).reduceLeft(_ + " " + _) + "]) " + "(virtualcallinstance)" + ")"
+      case (x:QualId)~(y:List[Any]) =>
+        val result = gensym
+        val callpref = x.xs.dropRight(1)
+        val p = if (callpref.length == 0)
+                  "this"
+                else
+                  callpref.map(unpackR).reduceLeft(_ + "." + _)
+        val mname = if (x.xs.length == 1) x.xs else x.xs.takeRight(1)
+        "(ccall \"" + result + "\" \"" + p + "\" \"" + unpackR(mname) + "\" ([" + y.map(getExpr).reduceLeft(_ + " " + _) + "]) " + "(virtualcallinstance)" + ")"
       case y => unpackR(y)
     }
   }
@@ -144,7 +161,7 @@ trait JavaAST extends JavaParser
           Console.println("    " + tr)
           Console.println("    " + fa)
         case ReturnStmt(r) => ret = unpackR(r)
-        case x => Console.println("dunno " + x)
+        case x => Console.println("getBody dunno " + x)
       }
     })
     Console.println(".")
