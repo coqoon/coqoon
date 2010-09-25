@@ -146,11 +146,11 @@ trait JavaAST extends JavaParser
   }
 
   def extractCalls (statements : List[AnyExpr], acc : List[AnyExpr]) : List[AnyExpr] = {
-    statements match {
-      case nil => acc
-      case x :: xs => extractCallsHelper(x) ++ extractCalls(xs, acc)
-      case y => Console.println("extractCalls: dunno about " + y); List[AnyExpr]()
-    }
+//    statements match {
+//      case nil => acc
+//      case x :: xs => extractCallsHelper(x) ++ extractCalls(xs, acc)
+//    }
+    acc
   }
 
   def extractCallsHelper (x : AnyExpr) : List[AnyExpr] = {

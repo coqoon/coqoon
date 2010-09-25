@@ -122,13 +122,13 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
      | statement
     )
 
-  def statement: Parser[Statement] =
+  def statement: Parser[AnyExpr] =
     ( block
      | "assert" ~ expression ~ opt(":" ~ expression) <~ ";" ^^ AnyStatement
      | "if" ~> parExpression ~ statement ~ opt("else" ~> statement) ^^ flatten3(Conditional)
-     | "for" <~ "(" ~> forControl <~ ")" ~> statement ^^ { case "for"~cont~body => For(cont, body) }
+     | "for" <~ "(" ~> forControl <~ ")" ~> statement ^^ For
      | "while" ~> parExpression ~ statement ^^ While
-     | "do" ~> statement <~ "while" ~> parExpression <~ ";" ^^ { case body~test => DoWhile(test, body) }
+     | "do" ~> statement ~ "while" ~> parExpression <~ ";" ^^ DoWhile
      | "try" ~ block ~ (catches ~ jfinally | catches | jfinally) ^^ AnyStatement
      | "switch" ~ parExpression <~ "{" ~ switchBlockStatementGroups <~ "}" ^^ AnyStatement
      | "synchronized" ~ parExpression ~ block ^^ AnyStatement
@@ -138,7 +138,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
      | "continue" ~> opt(id) <~ ";" ^^ AnyStatement
      | expression <~ ";"
      | id ~ ":" ~ statement ^^ AnyStatement
-     | ";"
+     | ";" ^^ AnyStatement
     )
 
   def catches = rep1(catchClause ~ block)

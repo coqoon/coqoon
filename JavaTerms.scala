@@ -45,14 +45,14 @@ trait JavaTerms
   case class Call (fun : QualId, arguments : List[Expr]) extends AnyExpr
   case class Assignment (left : QualId, right : AnyExpr) extends Statement
   //might be test ? consequent : alternative at expr location, therefore AnyExpr?
-  case class Conditional (test : ParExpr, consequent : Statement, alternative : Option[Statement]) extends Statement
-  case class Return (x : AnyExpr) extends Statement
-  case class AnyStatement (x : Any) extends Statement
+  case class Conditional (test : ParExpr, consequent : AnyExpr, alternative : Option[AnyExpr]) extends Statement
+  case class Return (x : Option[AnyExpr]) extends Statement
   trait Loop extends Statement
-  case class For (control : Any, body : Statement) extends Loop
-  case class While (test : Any, body : Statement) extends Loop
-  case class DoWhile (test : Any, body : Statement) extends Loop
+  case class For (what : Any) extends Loop
+  case class While (test : Any, body : AnyExpr) extends Loop
+  case class DoWhile (what : Any) extends Loop
   //try/switch/synchronized/throw/break/continue/label
+  case class AnyStatement (x : Any) extends Statement
 
   // types
   trait AnyType extends Term

@@ -58,7 +58,7 @@ trait Expression extends ImplicitConversions
 
   def assignmentExpression: Parser[Any] = conditionalExpression ~ opt(assignmentOp ~ assignmentExpression) ^^ {
     case x~None => x
-    case x~Some((op : Key)~y) => BinaryExpr(op, x, y)
+    case (x : AnyExpr)~Some((op : Key)~(y : AnyExpr)) => BinaryExpr(op, x, y)
   }
 
   def conditionalExpression: Parser[Any] = logicalOrExpression ~ opt("?" ~> assignmentExpression <~ ":" ~ conditionalExpression) ^^ {
@@ -68,28 +68,28 @@ trait Expression extends ImplicitConversions
 
   def logicalOrExpression: Parser[Any] = logicalAndExpression ~ rep("||" ~ logicalAndExpression) ^^ {
     case x~List() => x
-    case x~(y : List[Any]) => listhelper(x, y)
+    case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   }
   def logicalAndExpression: Parser[Any] = inclusiveOrExpression ~ rep("&&" ~ inclusiveOrExpression) ^^ {
     case x~List() => x
-    case x~(y : List[Any]) => listhelper(x, y)
+    case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   }
   def inclusiveOrExpression: Parser[Any] = exclusiveOrExpression ~ rep("|" ~ exclusiveOrExpression) ^^ {
     case x~List() => x
-    case x~(y : List[Any]) => listhelper(x, y)
+    case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   }
   def exclusiveOrExpression: Parser[Any] = andExpression ~ rep("^" ~ andExpression) ^^ {
     case x~List() => x
-    case x~(y : List[Any]) => listhelper(x, y)
+    case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   }
   def andExpression: Parser[Any] = equalityExpression ~ rep("&" ~ equalityExpression) ^^ {
     case x~List() => x
-    case x~(y : List[Any]) => listhelper(x, y)
+    case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   }
 
   def equalityExpression: Parser[Any] = instanceOfExpression ~ rep(List("==", "!=") ~ instanceOfExpression) ^^ {
     case x~List() => x
-    case x~(y : List[Any]) => listhelper(x, y)
+    case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   }
   def instanceOfExpression: Parser[Any] = relationalExpression ~ opt("instanceof" ~> jtype) ^^ {
     case x~None => x
@@ -97,26 +97,26 @@ trait Expression extends ImplicitConversions
   }
   def relationalExpression: Parser[Any] = shiftExpression ~ rep(List("<", ">", "<=", ">=") ~ shiftExpression) ^^ {
     case x~List() => x
-    case x~(y : List[Any]) => listhelper(x, y)
+    case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   }
 
   def shiftExpression = additiveExpression ~ rep(List("<<", ">>", ">>>") ~ additiveExpression) ^^ {
     case x~List() => x
-    case x~(y : List[Any]) => listhelper(x, y)
+    case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   }
   def additiveExpression = multiplicativeExpression ~ rep(List("+", "-") ~ multiplicativeExpression) ^^ {
     case x~List() => x
-    case x~(y : List[Any]) => listhelper(x, y)
+    case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   }
   def multiplicativeExpression = unaryExpression ~ rep(List("*", "/", "%") ~ unaryExpression) ^^ {
     case x~List() => x
-    case x~(y : List[Any]) => listhelper(x, y)
+    case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   }
 
-  def listhelper (left : Any, x : List[Any]) : Any = {
+  def listhelper (left : AnyExpr, x : List[Any]) : AnyExpr = {
     x match {
       case Nil => left
-      case x~y :: rt => listhelper(BinaryExpr(x, left, y), rt)
+      case (op : Key)~(y : AnyExpr) :: rt => listhelper(BinaryExpr(op, left, y), rt)
     }
   }
 
