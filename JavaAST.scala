@@ -127,10 +127,9 @@ trait JavaAST extends JavaParser
     something match {
       case Some(x) => getExpr(x)
       case PrimaryExpr(x) => getExpr(x)
-      case Stmt(x) => getExpr(x)
+      case AnyStatement(x) => getExpr(x)
       case ParExpr(x) => "(" + getExpr(x) + ")"
       case Block(x) => "(" + x.map(getExpr).reduceLeft(_ + " " + _) + ")"
-      case BlockStmt(x) => getExpr(x)
       case Expr(x) => getExpr(x)
       case BinaryExpr(op, l, r) => "(" + translateOp(op) + " " + getExpr(l) + " " + getExpr(r) + ")"
       case (x:QualId)~(y:List[Any]) =>
@@ -146,23 +145,38 @@ trait JavaAST extends JavaParser
     }
   }
 
-  def getBody (xs : List[BlockStmt], myname : String) : (List[String], String) = {
+  def extractCalls (statements : List[AnyExpr], acc : List[AnyExpr]) : List[AnyExpr] = {
+    statements match {
+      case nil => acc
+      case x :: xs => extractCallsHelper(x) ++ extractCalls(xs, acc)
+      case y => Console.println("extractCalls: dunno about " + y); List[AnyExpr]()
+    }
+  }
+
+  def extractCallsHelper (x : AnyExpr) : List[AnyExpr] = {
+    x match {
+      case Block(xs) => List(Block(extractCalls(xs, List[AnyExpr]())))
+      //case BinaryExpr(op, l, r) => List(BinaryExpr(op, extractCallsHelper(l), extractCallsHelper(r)))
+      //case Assignment(l, r) => Assignment(l, extractCallsHelper(r))
+      case Call(fun, args) => extractCalls(args, List[AnyExpr]()) //++ Call(fun, replaced-args)
+    }
+  }
+
+  def getBody (xs : List[AnyExpr], myname : String) : (List[String], String) = {
     var vars : List[String] = List[String]()
     var ret = "myreturnvaluedummy"
     Console.println("Definition " + myname + " :=")
     xs.foreach(x => x match {
-      case BlockStmt(x) => x match {
-        case Primitive(x)~(names : List[Name]) => vars ++= names.map(_.name) //localvars (of primitive type)!
-        case Conditional(test, consequence, alternative) =>
-          val te = getExpr(test)
-          val tr = getExpr(consequence)
-          val fa = getExpr(alternative)
-          Console.println("cif " + te)
-          Console.println("    " + tr)
-          Console.println("    " + fa)
-        case ReturnStmt(r) => ret = unpackR(r)
-        case x => Console.println("getBody dunno " + x)
-      }
+      //case Primitive(x)~(names : List[Name]) => vars ++= names.map(_.name) //localvars (of primitive type)!
+      case Conditional(test, consequence, alternative) =>
+        val te = getExpr(test)
+        val tr = getExpr(consequence)
+        val fa = getExpr(alternative)
+        Console.println("cif " + te)
+        Console.println("    " + tr)
+        Console.println("    " + fa)
+      case Return(r) => ret = unpackR(r)
+      case x => Console.println("getBody dunno " + x)
     })
     Console.println(".")
     (vars, "var_expr \"" + ret + "\"")

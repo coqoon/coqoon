@@ -36,15 +36,23 @@ trait JavaTerms
 
   case class NewExpr (e : Any) extends AnyExpr
 
-  case class BinaryExpr (op : Any, left : Any, right : Any) extends AnyExpr
+  case class BinaryExpr (op : Key, left : AnyExpr, right : AnyExpr) extends AnyExpr
 
   // statements
-  case class Block (xs : List[BlockStmt]) extends Term
-  case class BlockStmt (x : Any) extends Term
-  case class Stmt (x : Any) extends Term
+  trait Statement extends AnyExpr
+  case class Block (xs : List[AnyExpr]) extends Statement
 
-  case class Conditional (test : Any, consequent : Any, alternative : Any) extends Term
-  case class ReturnStmt (x : Any) extends Term
+  case class Call (fun : QualId, arguments : List[Expr]) extends AnyExpr
+  case class Assignment (left : QualId, right : AnyExpr) extends Statement
+  //might be test ? consequent : alternative at expr location, therefore AnyExpr?
+  case class Conditional (test : ParExpr, consequent : Statement, alternative : Option[Statement]) extends Statement
+  case class Return (x : AnyExpr) extends Statement
+  case class AnyStatement (x : Any) extends Statement
+  trait Loop extends Statement
+  case class For (control : Any, body : Statement) extends Loop
+  case class While (test : Any, body : Statement) extends Loop
+  case class DoWhile (test : Any, body : Statement) extends Loop
+  //try/switch/synchronized/throw/break/continue/label
 
   // types
   trait AnyType extends Term

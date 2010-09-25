@@ -117,27 +117,27 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
   // p590         
   def block = "{" ~> rep(blockStatement) <~ "}" ^^ Block
   def blockStatement =
-    ( localVariableDeclaration <~ ";"
-     | classOrInterfaceDeclaration
+    ( localVariableDeclaration <~ ";" ^^ AnyStatement
+     | classOrInterfaceDeclaration ^^ AnyStatement
      | statement
-    ) ^^ BlockStmt
+    )
 
-  def statement: Parser[Any] =
-    ( block ^^ Stmt
-     | "assert" ~ expression ~ opt(":" ~ expression) <~ ";" ^^ Stmt
-     | "if" ~> parExpression ~ statement ~ opt("else" ~> statement) ^^ Conditional
-     | "for" ~ "(" ~> forControl <~ ")" ~ statement ^^ Stmt
-     | "while" ~ parExpression ~ statement ^^ Stmt
-     | "do" ~ statement ~ "while" ~ parExpression <~ ";" ^^ Stmt
-     | "try" ~ block ~ (catches ~ jfinally | catches | jfinally) ^^ Stmt
-     | "switch" ~ parExpression <~ "{" ~ switchBlockStatementGroups <~ "}" ^^ Stmt
-     | "synchronized" ~ parExpression ~ block ^^ Stmt
-     | "return" ~> opt(expression) <~ ";" ^^ ReturnStmt
-     | "throw" ~> expression <~ ";" ^^ Stmt
-     | "break" ~> opt(id) <~ ";" ^^ Stmt
-     | "continue" ~> opt(id) <~ ";" ^^ Stmt
-     | expression <~ ";" ^^ Stmt
-     | id ~ ":" ~ statement ^^ Stmt
+  def statement: Parser[Statement] =
+    ( block
+     | "assert" ~ expression ~ opt(":" ~ expression) <~ ";" ^^ AnyStatement
+     | "if" ~> parExpression ~ statement ~ opt("else" ~> statement) ^^ flatten3(Conditional)
+     | "for" <~ "(" ~> forControl <~ ")" ~> statement ^^ { case "for"~cont~body => For(cont, body) }
+     | "while" ~> parExpression ~ statement ^^ While
+     | "do" ~> statement <~ "while" ~> parExpression <~ ";" ^^ { case body~test => DoWhile(test, body) }
+     | "try" ~ block ~ (catches ~ jfinally | catches | jfinally) ^^ AnyStatement
+     | "switch" ~ parExpression <~ "{" ~ switchBlockStatementGroups <~ "}" ^^ AnyStatement
+     | "synchronized" ~ parExpression ~ block ^^ AnyStatement
+     | "return" ~> opt(expression) <~ ";" ^^ Return
+     | "throw" ~> expression <~ ";" ^^ AnyStatement
+     | "break" ~> opt(id) <~ ";" ^^ AnyStatement
+     | "continue" ~> opt(id) <~ ";" ^^ AnyStatement
+     | expression <~ ";"
+     | id ~ ":" ~ statement ^^ AnyStatement
      | ";"
     )
 
