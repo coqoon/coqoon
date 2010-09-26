@@ -99,6 +99,7 @@ trait JavaAST extends JavaParser
       case Num(x) => x
       case Lit(x) => unpackR(x)
       case x :: rt => unpackR(x) + unpackR(rt)
+      case x : String => x
       case Nil => ""
       case None => ""
       case x => Console.println("unpackR dunno " + x + " class " + x.asInstanceOf[AnyRef].getClass.getName); ""
@@ -110,15 +111,18 @@ trait JavaAST extends JavaParser
       case Key(x) => if (x == ">") "egt"
                      else if (x == "-") "eminus"
                      else if (x == "*") "etimes"
+                     else if (x == "+") "eplus"
                      else if (x == "=") "cassign"
                      else { Console.println("translateOp dunno Key " + x); "" }
       case x => Console.println("translateOp dunno " + x); ""
     }
   }
 
+  var freevars : List[String] = List[String]()
   var count : Int = 0
   def gensym () : QualId = {
     count += 1
+    freevars ::= "tmp_" + count
     return QualId(List("tmp_" + count))
   }
 
@@ -132,15 +136,29 @@ trait JavaAST extends JavaParser
       case Block(x) => "(" + x.map(getExpr).reduceLeft(_ + " " + _) + ")"
       case Expr(x) => getExpr(x)
       case BinaryExpr(op, l, r) => "(" + translateOp(op) + " " + getExpr(l) + " " + getExpr(r) + ")"
-      case (x:QualId)~(y:List[Any]) =>
-        val result = gensym
-        val callpref = x.xs.dropRight(1)
+      case Assignment(name, value : Call) =>
+        val funname = value.fun
+        val args = value.arguments
+        val res = unpackR(name)
+        val callpref = funname.xs.dropRight(1)
         val p = if (callpref.length == 0)
                   "this"
                 else
                   callpref.map(unpackR).reduceLeft(_ + "." + _)
-        val mname = if (x.xs.length == 1) x.xs else x.xs.takeRight(1)
-        "(ccall \"" + result + "\" \"" + p + "\" \"" + unpackR(mname) + "\" ([" + y.map(getExpr).reduceLeft(_ + " " + _) + "]) " + "(virtualcallinstance)" + ")"
+        val mname = if (funname.xs.length == 1) funname.xs else funname.xs.takeRight(1)
+        val argstring = if (args.length > 0) args.map(getExpr).reduceLeft(_ + " " + _) else "nil"
+        "(ccall \"" + res + "\" \"" + p + "\" \"" + unpackR(mname) + "\" ([" + argstring + "]) " + "(virtualcallinstance)" + ")"
+      case Assignment(name, value) => "(cassign " + unpackR(name) + " " + getExpr(value) + ")"
+      case Call(funname : QualId, args : List[AnyExpr]) =>
+        Console.println("getExpr: Call called, shouldn't happen!")
+        val result = gensym
+        val callpref = funname.xs.dropRight(1)
+        val p = if (callpref.length == 0)
+                  "this"
+                else
+                  callpref.map(unpackR).reduceLeft(_ + "." + _)
+        val mname = if (funname.xs.length == 1) funname.xs else funname.xs.takeRight(1)
+        "(ccall \"" + result + "\" \"" + p + "\" \"" + unpackR(mname) + "\" ([" + args.map(getExpr).reduceLeft(_ + " " + _) + "]) " + "(virtualcallinstance)" + ")"
       case y => unpackR(y)
     }
   }
@@ -230,14 +248,13 @@ trait JavaAST extends JavaParser
   }
 
   def getBody (xs : List[AnyExpr], myname : String) : (List[String], String) = {
-    var vars : List[String] = List[String]()
-    Console.println("converted: " + extractCalls(xs, List[AnyExpr]()))
     var ret = "myreturnvaluedummy"
     Console.println("Definition " + myname + " :=")
     xs.foreach(x => x match {
       case AnyStatement(x) => x match {
-        case Primitive(x)~(names : List[Name]) => vars ++= names.map(_.name) //localvars (of primitive type)!
-        case x => Console.println("getBody: got AnyStatement, but dunno about its body " + x)
+        case Primitive(x)~(names : List[Name]) =>
+          freevars ++= names.map(_.name) //localvars (of primitive type)!
+        case x => Console.println(getExpr(x))
       }
       case Conditional(test, consequence, alternative) =>
         val te = getExpr(test)
@@ -247,18 +264,20 @@ trait JavaAST extends JavaParser
         Console.println("    " + tr)
         Console.println("    " + fa)
       case Return(r) => ret = unpackR(r)
-      case x => Console.println("getBody dunno " + x)
+      case x => Console.println(getExpr(x))
     })
     Console.println(".")
-    (vars, "var_expr \"" + ret + "\"")
+    (freevars, "var_expr \"" + ret + "\"")
   }
 
   def classMethods (body : List[Any], acc : List[String]) : List[String] = {
     body match {
       case Nil => acc.reverse
       case MethodDeclaration(Name(name), jtype, params, throws, Block(body)) :: rt =>
+        freevars = List[String]()
         val bodyref = name + "_body"
-        val (local, returnvar) = getBody(body, bodyref)
+        val cbody = extractCalls(body, List[AnyExpr]())
+        val (local, returnvar) = getBody(cbody, bodyref)
         val args = getArgs(params, List[String]())
         Console.println("Definition " + name + "M :=")
         Console.println("  Build_Method ([" + pList(args, true) + "]) ([" + pList(local, true) + "]) " + bodyref + " (" + returnvar + ").")
