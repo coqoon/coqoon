@@ -160,8 +160,8 @@ trait Expression extends ImplicitConversions
         | id ~ arguments
         | "this" ~ arguments
        )
-     | "this" ~ opt(arguments)
-     | "super" ~ arguments
+     | "this" ~ opt(arguments) //Hannes: I doubt that this is correct (the opt(arguments))
+     | "super" ~ arguments //^^ Call(QualId(List("super")), _)
      | "super" ~ "." ~ id ~ opt(arguments)
      | basicType ~ rep(braces) ~ "." ~ "class"
      | "void" ~ "." ~ "class"
@@ -177,6 +177,7 @@ trait Expression extends ImplicitConversions
                   | innerNewExpression
                  )
         ) ^^ {
+      case x~Some(y : List[AnyExpr]) => Call(x, y)
       case x~None => x
       case x~Some(y) => new ~(x, y)
     }

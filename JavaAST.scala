@@ -117,9 +117,9 @@ trait JavaAST extends JavaParser
   }
 
   var count : Int = 0
-  def gensym () : String = {
+  def gensym () : QualId = {
     count += 1
-    return "tmp_" + count
+    return QualId(List("tmp_" + count))
   }
 
   def getExpr (something : Any) : String = {
@@ -146,28 +146,99 @@ trait JavaAST extends JavaParser
   }
 
   def extractCalls (statements : List[AnyExpr], acc : List[AnyExpr]) : List[AnyExpr] = {
-//    statements match {
-//      case nil => acc
-//      case x :: xs => extractCallsHelper(x) ++ extractCalls(xs, acc)
-//    }
-    acc
+    statements match {
+      case Expr(x : AnyExpr) :: xs => //doesn't preserve Expr
+        val r = extractCalls(List(x), List[AnyExpr]())
+        //assert(r.length == 1)
+        extractCalls(xs, r ++ acc)
+      case PrimaryExpr(x : AnyExpr) :: xs => //doesn't preserve PrimaryExpr
+        val r = extractCalls(List(x), List[AnyExpr]())
+        //Console.println("result " + r)
+        //assert(r.length == 1)
+        extractCalls(xs, r ++ acc)
+      case BinaryExpr(op, l, r) :: xs =>
+        //l must be simple!?
+        val (args, ins) = extractHelper(List(r), List[AnyExpr](), List[AnyExpr]())
+        assert(args.length == 1)
+        extractCalls(xs, ins ++ (BinaryExpr(op, l, args(0)) :: acc))
+      case Nil => acc.reverse
+      case Conditional(t, c, a) :: xs =>
+        val (ta, ti) = extractHelper(List(t.e), List[AnyExpr](), List[AnyExpr]())
+        assert(ta.length == 1)
+        val tst = ParExpr(ta(0))
+        val con = c match {
+          case Block(cs) => Block(extractCalls(cs, List[AnyExpr]()))
+          case x =>
+            val r = extractCalls(List(x), List[AnyExpr]())
+            if (r.length == 1)
+              r(0)
+            else
+              Block(r)
+        }
+        val alt = a match {
+          case None => None
+          case Some(w) => w match {
+            case Block(as) => Some(Block(extractCalls(as, List[AnyExpr]())))
+            case x =>
+              val r = extractCalls(List(x), List[AnyExpr]())
+              if (r.length == 1)
+                Some(r(0))
+              else
+                Some(Block(r))
+          }
+        }
+        extractCalls(xs, Conditional(tst, con, alt) :: ti ++ acc)
+      case Call(name, args) :: xs => 
+        val (ars, ins) = extractHelper(args, List[AnyExpr](), List[AnyExpr]())
+        //Console.println("results from extracthelper: " + ars + " ins " + ins)
+        extractCalls(xs, Call(name, ars) :: ins ++ acc)
+      case x :: xs => extractCalls(xs, x :: acc)
+    }
   }
 
-  def extractCallsHelper (x : AnyExpr) : List[AnyExpr] = {
-    x match {
-      case Block(xs) => List(Block(extractCalls(xs, List[AnyExpr]())))
-      //case BinaryExpr(op, l, r) => List(BinaryExpr(op, extractCallsHelper(l), extractCallsHelper(r)))
-      //case Assignment(l, r) => Assignment(l, extractCallsHelper(r))
-      case Call(fun, args) => extractCalls(args, List[AnyExpr]()) //++ Call(fun, replaced-args)
+  def extractHelper (xs : List[AnyExpr], acca : List[AnyExpr], acci : List[AnyExpr]) : (List[AnyExpr], List[AnyExpr]) = {
+    //Console.println("extracthelper called with " + xs + " acca " + acca + " acci " + acci)
+    xs match {
+      case Nil => (acca.reverse, acci)
+      case Expr(x : AnyExpr) :: xs => //doesn't preserve Expr!
+        val (a, i) = extractHelper(List(x), acca, acci)
+        extractHelper(xs, a, i)
+      case PrimaryExpr(x : AnyExpr) :: xs => //doesn't preserve PrimaryExpr
+        val (a, i) = extractHelper(List(x), acca, acci)
+        extractHelper(xs, a, i)
+      case BinaryExpr(op, l, r) :: xs =>
+        val (ri, rii) = extractHelper(List(r), List[AnyExpr](), acci)
+        val (le, lei) = extractHelper(List(l), List[AnyExpr](), rii)
+        //Console.println("HELP le " + le + " ri " + ri + " is " + lei)
+        assert(le.length == 1 && ri.length == 1)
+        extractHelper(xs, BinaryExpr(op, le(0), ri(0)) :: acca, lei)
+      case Call(name, args) :: rt =>
+        val (as, ins) = extractHelper(args, List[AnyExpr](), List[AnyExpr]())
+        val t = gensym
+        extractHelper(rt, Expr(t) :: acca, Assignment(t, Call(name, as)) :: ins ++ acci)
+/*      case Conditional(test, c, Some(a)) :: rt =>
+        val t = gensym
+        val (ta, ti) = extractHelper(List(test.e), List[AnyExpr](), List[AnyExpr]())
+        val (ca, ci) = extractHelper(List(c), List[AnyExpr](), List[AnyExpr]())
+        val (aa, ai) = extractHelper(List(a), List[AnyExpr](), List[AnyExpr]())
+        assert(ca.length == aa.length == 0)
+        extractHelper(rt, t :: acca, ti ++ Conditional(ParExpr(ta(0)),
+                                                       ci :: Assignment(t, last),
+                                                       ai :: Assignment(t, last))) */
+      case x :: rt => extractHelper(rt, x :: acca, acci)
     }
   }
 
   def getBody (xs : List[AnyExpr], myname : String) : (List[String], String) = {
     var vars : List[String] = List[String]()
+    Console.println("converted: " + extractCalls(xs, List[AnyExpr]()))
     var ret = "myreturnvaluedummy"
     Console.println("Definition " + myname + " :=")
     xs.foreach(x => x match {
-      //case Primitive(x)~(names : List[Name]) => vars ++= names.map(_.name) //localvars (of primitive type)!
+      case AnyStatement(x) => x match {
+        case Primitive(x)~(names : List[Name]) => vars ++= names.map(_.name) //localvars (of primitive type)!
+        case x => Console.println("getBody: got AnyStatement, but dunno about its body " + x)
+      }
       case Conditional(test, consequence, alternative) =>
         val te = getExpr(test)
         val tr = getExpr(consequence)

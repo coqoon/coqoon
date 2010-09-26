@@ -42,7 +42,8 @@ trait JavaTerms
   trait Statement extends AnyExpr
   case class Block (xs : List[AnyExpr]) extends Statement
 
-  case class Call (fun : QualId, arguments : List[Expr]) extends AnyExpr
+  case class Call (fun : QualId, arguments : List[AnyExpr]) extends AnyExpr
+
   case class Assignment (left : QualId, right : AnyExpr) extends Statement
   //might be test ? consequent : alternative at expr location, therefore AnyExpr?
   case class Conditional (test : ParExpr, consequent : AnyExpr, alternative : Option[AnyExpr]) extends Statement
