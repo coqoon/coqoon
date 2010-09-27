@@ -1,12 +1,13 @@
 package dk.itu.sdg.javaparser
 
 import scala.util.parsing.input._
+import java.io.PrintWriter
 
 trait JavaAST extends JavaParser {
-  def parse(r: Reader[Char]) : ParseResult[Any] = {
+  def parse(r: Reader[Char], out : PrintWriter) : ParseResult[Any] = {
     val p = phrase(compilationUnit)(new lexical.Scanner(r))
     p match {
-      case Success(x @ ~(_,_), _) => CoqOutputter.output(x)
+      case Success(x @ ~(_,_), _) => CoqOutputter.output(x, out)
       case Failure(msg, remainder) => Console.println("Failure: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString)
       case Error(msg, remainder) => Console.println("Error: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString)
     }
@@ -142,8 +143,8 @@ trait JavaToSimpleJava extends JavaTerms {
 import scala.util.parsing.combinator.Parsers
 object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
 
-  var classes : List[String] = List[String]()
-  var interfaces : List[String] = List[String]()
+  var classes : List[Pair[String,String]] = List[Pair[String,String]]()
+  var interfaces : List[Pair[String,String]] = List[Pair[String,String]]()
 
   def getArgs (as : Option[Any], acc : List[String]) : List[String] = {
     as match {
@@ -161,24 +162,20 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
     }
   }
 
-  def pList (l : List[String], esc : Boolean) : String = {
-    if (l.length > 0) {
-      val t = if (esc) 
-                l.map("\"" + _ + "\"")
-              else
-                l
-      t.reduceLeft(_ + ", " + _)
-    } else
-      ""
+  def printArgList (l : List[String]) : String = {
+    l match {
+      case Nil => "nil"
+      case a :: b => "\"" + a + "\" :: " + printArgList(b) 
+    }
   }
 
-  def interfaceMethods (body : List[Any], acc : List[String]) : List[String] = {
+  def interfaceMethods (body : List[Any], acc : List[Pair[String,String]]) : List[Pair[String,String]] = {
     body match {
       case Nil => acc.reverse
       case MethodDeclaration(Name(name), jtype, params, throws, body) :: rt =>
         val ps = getArgs(params, List[String]())
-        val f = "\"" + name + "\" ([" + pList(ps, true) + "])"
-        interfaceMethods(rt, f :: acc)
+        val f = "(" + printArgList(ps) + ")"
+        interfaceMethods(rt, ("\"" + name + "\"", f) :: acc)
       case x ~ (y : MethodDeclaration) :: rt => interfaceMethods(y :: rt, acc)
       case x :: rt => Console.println("interfacemethods: no handler for " + x); interfaceMethods(rt, acc)
     }
@@ -220,7 +217,7 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
       case PrimaryExpr(x) => getExpr(x)
       case AnyStatement(x) => getExpr(x)
       case ParExpr(x) => "(" + getExpr(x) + ")"
-      case Block(x) => "(" + x.map(getExpr).reduceLeft(_ + " " + _) + ")"
+      case Block(x) => "(" + printBody(x.map(getExpr)) + ")"
       case Expr(x) => getExpr(x)
       case BinaryExpr(op, l, r) => "(" + translateOp(op) + " " + getExpr(l) + " " + getExpr(r) + ")"
       case Assignment(name, value : Call) =>
@@ -233,48 +230,46 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
                 else
                   callpref.map(unpackR).reduceLeft(_ + "." + _)
         val mname = if (funname.xs.length == 1) funname.xs else funname.xs.takeRight(1)
-        val argstring = if (args.length > 0) args.map(getExpr).reduceLeft(_ + " " + _) else "nil"
+        val argstring = if (args.length > 0) args.map(getExpr).reduceLeft(_ + " " + _) else "nil" //XXX: so wrong!
         "(ccall \"" + res + "\" \"" + p + "\" \"" + unpackR(mname) + "\" ([" + argstring + "]) " + "(virtualcallinstance)" + ")"
       case Assignment(name, value) => "(cassign " + unpackR(name) + " " + getExpr(value) + ")"
-      case Call(funname : QualId, args : List[AnyExpr]) =>
-        Console.println("getExpr: Call called, shouldn't happen!")
-        val result = Gensym.newsym
-        val callpref = funname.xs.dropRight(1)
-        val p = if (callpref.length == 0)
-                  "this"
-                else
-                  callpref.map(unpackR).reduceLeft(_ + "." + _)
-        val mname = if (funname.xs.length == 1) funname.xs else funname.xs.takeRight(1)
-        "(ccall \"" + result + "\" \"" + p + "\" \"" + unpackR(mname) + "\" ([" + args.map(getExpr).reduceLeft(_ + " " + _) + "]) " + "(virtualcallinstance)" + ")"
       case y => unpackR(y)
+    }
+  }
+
+  def printBody (bs : List[String]) : String = {
+    bs match {
+      case Nil => ""
+      case x :: Nil => x
+      case x :: y => "(cseq " + x + " " + printBody(y) + ")"
     }
   }
 
   def getBody (xs : List[AnyExpr], myname : String) : (List[String], String) = {
     var ret = "myreturnvaluedummy"
     var freevars = List[String]()
-    Console.println("Definition " + myname + " :=")
-    xs.foreach(x => x match {
+    val body = xs.map(x => x match {
       case AnyStatement(x) => x match {
         case Primitive(x)~(names : List[Name]) =>
-          freevars ++= names.map(_.name) //localvars (of primitive type)!
-        case x => Console.println(getExpr(x))
+          freevars ++= names.map(_.name); None //localvars (of primitive type)!
+        case x => Some(getExpr(x))
       }
       case Conditional(test, consequence, alternative) =>
         val te = getExpr(test)
         val tr = getExpr(consequence)
         val fa = getExpr(alternative)
-        Console.println("cif " + te)
-        Console.println("    " + tr)
-        Console.println("    " + fa)
-      case Return(r) => ret = unpackR(r)
-      case x => Console.println(getExpr(x))
+        Some("cif " + te + "\n    " + tr + "\n    " + fa)
+      case Return(r) => ret = unpackR(r); None
+      case x => Some(getExpr(x))
     })
-    Console.println(".")
+    outp.println("Definition " + myname + " :=")
+    val b = printBody(body.flatten)
+    outp.println(b)
+    outp.println(".")
     (freevars ++ Gensym.getfree, "var_expr \"" + ret + "\"")
   }
 
-  def classMethods (body : List[Any], acc : List[String]) : List[String] = {
+  def classMethods (body : List[Any], acc : List[Pair[String,String]]) : List[Pair[String,String]] = {
     body match {
       case Nil => acc.reverse
       case MethodDeclaration(Name(name), jtype, params, throws, Block(body)) :: rt =>
@@ -282,9 +277,9 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
         val cbody = extractCalls(body, List[AnyExpr]())
         val (local, returnvar) = getBody(cbody, bodyref)
         val args = getArgs(params, List[String]())
-        Console.println("Definition " + name + "M :=")
-        Console.println("  Build_Method ([" + pList(args, true) + "]) ([" + pList(local, true) + "]) " + bodyref + " (" + returnvar + ").")
-        classMethods(rt, "\"" + name + "\"" :: name + "M" :: acc)
+        outp.println("Definition " + name + "M :=")
+        outp.println("  Build_Method (" + printArgList(args) + ") (" + printArgList(local) + ") " + bodyref + " (" + returnvar + ").")
+        classMethods(rt, ("\"" + name + "\"", name + "M") :: acc)
       case x ~ (y : MethodDeclaration) :: rt => classMethods(y :: rt, acc)
       case x :: rt => Console.println("classmethods: no handler for " + x); classMethods(rt, acc)      
     }
@@ -304,30 +299,24 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
       case x1~x2 => coqoutput(x1); coqoutput(x2)
       case JInterface(Name(id), typ, inters, body) =>
         //Console.println("interfaces are " + inters)
-        interfaces ::= id
-        interfaces ::= "\"" + id + "\""
-        Console.println("Definition " + id + " :=")
-        val supers = "SS.empty" //inters
-        val methods = interfaceMethods(body, List[String]())
-        Console.println("  Build_Inter (" + supers + ") (SM'.singleton " + pList(methods, false) + ").")
+        interfaces ::= ("\"" + id + "\"", id)
+        outp.println("Definition " + id + " :=")
+        val supers = List[String]() //XXX: super-inters
+        val methods = interfaceMethods(body, List[Pair[String,String]]())
+        outp.println("  Build_Inter " + printList(supers, "_") + " " + printMap(methods, "_") + ".")
       case JClass(Name(id), typ, supers, inters, body) =>
-        classes ::= id
-        classes ::= "\"" + id + "\""
+        classes ::= ("\"" + id + "\"", id)
         val ints = inters match {
           case Some(x : List[List[Any]]) => getInterfaces(x.flatten, List[String]())
           case Some(x : List[Any]) => getInterfaces(x, List[String]())
           case None => List[String]()
         }
-        val methods = classMethods(body, List[String]())
-        val fields = "SS.empty"
-        val ms = if (methods.length > 0)
-                   methods.reverse.reduceLeft(_ + " " + _)
-                 else
-                   ""
-        Console.println("Definition " + id + " :=")
-        Console.println("  Build_Class (SS.singleton " + pList(ints.reverse, true) + ")")
-        Console.println("              (" + fields + ")")
-        Console.println("              (SM'.singleton " + ms + ").")
+        val methods = classMethods(body, List[Pair[String,String]]())
+        val fields = List[String]() //XXX
+        outp.println("Definition " + id + " :=")
+        outp.println("  Build_Class " + printList(ints.reverse, "_"))
+        outp.println("              " + printList(fields, "_"))
+        outp.println("              " + printMap(methods, "Method") + ".")
       case x :: tl => coqoutput(x); tl.foreach(coqoutput(_))
       case Some(x) => coqoutput(x)
       case None =>
@@ -335,18 +324,29 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
     }
   }
 
-  def output (x : Any) : Unit = {
+  def printList (l : List[String], mtype : String) : String = {
+    l match {
+      case Nil => "(SS.empty " + mtype + ")"
+      case k :: b => "(SS.add " + k + " " + printList(b, mtype) + ")"
+    }
+  }
+
+  def printMap (map : List[Pair[String, String]], mtype : String) : String = {
+    map match {
+      case Nil => "(SM.empty " + mtype + ")"
+      case (k,v) :: b => "(SM.add " + k + " " + v + " " + printMap(b, mtype) + ")"
+    }
+  }
+
+  var outp : PrintWriter = null
+
+  def output (x : Any, out : PrintWriter) : Unit = {
+    outp = out
     coqoutput(x)
-    val cs = if (classes.length > 0)
-              classes.reduceLeft(_ + " " + _)
-             else
-               ""
-    val is = if (interfaces.length > 0)
-               interfaces.reduceLeft(_ + " " + _)
-             else
-               ""
-    Console.println("Definition P := ")
-    Console.println("  Build_Program (SM'.singleton " + cs + ")")
-    Console.println("                (SM'.singleton " + is + ").")
+    val cs = printMap(classes, "Class")
+    val is = printMap(interfaces, "Inter")
+    outp.println("Definition P :=")
+    outp.println("  Build_Program " + cs)
+    outp.println("                " + is + ".")
   }
 }
