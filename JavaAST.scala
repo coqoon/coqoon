@@ -142,6 +142,8 @@ trait JavaToSimpleJava extends JavaTerms {
 
 import scala.util.parsing.combinator.Parsers
 object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
+  import scala.collection.mutable.HashMap
+  var symboltable : HashMap[String,String] = new HashMap[String,String]()
 
   var classes : List[Pair[String,String]] = List[Pair[String,String]]()
   var interfaces : List[Pair[String,String]] = List[Pair[String,String]]()
@@ -156,7 +158,9 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
 
   def getArgsHelper (x : List[Any], acc : List[String]) : List[String] = {
     x match {
-      case FormalVariable(modifier, jtype, Name(id)) :: rt => getArgsHelper(rt, id :: acc)
+      case FormalVariable(modifier, jtype, Name(id)) :: rt =>
+        symboltable += id -> jtype.toString
+        getArgsHelper(rt, id :: acc)
       case a :: rt => getArgsHelper(rt, acc)
       case y => acc
     }
@@ -165,7 +169,7 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
   def printArgList (l : List[String]) : String = {
     l match {
       case Nil => "nil"
-      case a :: b => "\"" + a + "\" :: " + printArgList(b) 
+      case a :: b => "\"" + a + "\" :: " + printArgList(b)  //or [foo, bar, baz]?
     }
   }
 
@@ -231,7 +235,8 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
                   callpref.map(unpackR).reduceLeft(_ + "." + _)
         val mname = if (funname.xs.length == 1) funname.xs else funname.xs.takeRight(1)
         val argstring = if (args.length > 0) args.map(getExpr).reduceLeft(_ + " " + _) else "nil" //XXX: so wrong!
-        "(ccall \"" + res + "\" \"" + p + "\" \"" + unpackR(mname) + "\" ([" + argstring + "]) " + "(virtualcallinstance)" + ")"
+        val typ = symboltable(p)
+        "(ccall \"" + res + "\" \"" + p + "\" \"" + unpackR(mname) + "\" ([" + argstring + "]) " + "(TClass \"" + typ + "\")" + ")"
       case Assignment(name, value) => "(cassign " + unpackR(name) + " " + getExpr(value) + ")"
       case y => unpackR(y)
     }
@@ -275,8 +280,8 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
       case MethodDeclaration(Name(name), jtype, params, throws, Block(body)) :: rt =>
         val bodyref = name + "_body"
         val cbody = extractCalls(body, List[AnyExpr]())
-        val (local, returnvar) = getBody(cbody, bodyref)
         val args = getArgs(params, List[String]())
+        val (local, returnvar) = getBody(cbody, bodyref)
         outp.println("Definition " + name + "M :=")
         outp.println("  Build_Method (" + printArgList(args) + ") (" + printArgList(local) + ") " + bodyref + " (" + returnvar + ").")
         classMethods(rt, ("\"" + name + "\"", name + "M") :: acc)
@@ -311,8 +316,10 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
           case Some(x : List[Any]) => getInterfaces(x, List[String]())
           case None => List[String]()
         }
-        val methods = classMethods(body, List[Pair[String,String]]())
+        symboltable = new HashMap[String, String]()
+        symboltable += "this" -> id
         val fields = List[String]() //XXX
+        val methods = classMethods(body, List[Pair[String,String]]())
         outp.println("Definition " + id + " :=")
         outp.println("  Build_Class " + printList(ints.reverse, "_"))
         outp.println("              " + printList(fields, "_"))
