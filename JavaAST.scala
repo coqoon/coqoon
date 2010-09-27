@@ -191,7 +191,7 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
       case Some(x) => unpackR(x)
       case Expr(x) => unpackR(x)
       case PrimaryExpr(x) => unpackR(x)
-      case Name(x) => x
+      case Name(x) => "\"" + x + "\""
       case Num(x) => x
       case Lit(x) => unpackR(x)
       case x :: rt => unpackR(x) + unpackR(rt)
