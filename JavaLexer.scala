@@ -1,3 +1,5 @@
+package dk.itu.sdg.javaparser
+
 import scala.util.parsing.combinator.lexical.StdLexical
 
 import scala.util.matching.Regex

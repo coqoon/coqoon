@@ -1,4 +1,4 @@
-// package examples.parsing.lambda
+package dk.itu.sdg.javaparser
 
 import scala.util.parsing.combinator.Parsers
 import scala.util.parsing.input.StreamReader

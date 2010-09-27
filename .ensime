@@ -1,0 +1,17 @@
+;; This config was generated using ensime-config-gen. Feel free to customize its contents manually. 
+
+(
+
+:project-name "JavaParser"
+
+:server-root "/Users/hannes/ensime_2.8.0-0.3.0/"
+
+:project-package "dk.itu.sdg.javaparser"
+
+:sources ("./")
+
+:compile-jars ("./" "/opt/local/share/scala-2.8/lib/")
+
+:target "./"
+
+)

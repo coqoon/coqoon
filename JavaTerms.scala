@@ -1,14 +1,13 @@
-// package examples.parsing.lambda
+package dk.itu.sdg.javaparser
 
 /**
  * Parser for an untyped lambda calculus: abstract syntax tree
  *
  * @author Miles Sabin (adapted slightly by Adriaan Moors)
  */
+
 trait JavaTerms
 {
-  this: JavaParser =>
-
   trait Term
 
   // case class PACKAGE(a: Option[ANNOTS], id: QualId) extends Term
