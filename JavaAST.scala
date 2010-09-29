@@ -125,7 +125,7 @@ trait JavaToSimpleJava extends JavaTerms {
       case Call(name, args) :: rt =>
         val (as, ins) = extractHelper(args, List[AnyExpr](), List[AnyExpr]())
         val t = Gensym.newsym
-        extractHelper(rt, Expr(t) :: acca, Assignment(QualId(List(t)), Call(name, as)) :: ins ++ acci)
+        extractHelper(rt, Expr(QualId(List(t))) :: acca, Assignment(QualId(List(t)), Call(name, as)) :: ins ++ acci)
 /*      case Conditional(test, c, Some(a)) :: rt =>
         val t = gensym
         val (ta, ti) = extractHelper(List(test.e), List[AnyExpr](), List[AnyExpr]())
@@ -166,13 +166,6 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
     }
   }
 
-  def printArgList (l : List[String]) : String = {
-    l match {
-      case Nil => "nil"
-      case a :: b => "\"" + a + "\" :: " + printArgList(b)  //or [foo, bar, baz]?
-    }
-  }
-
   def interfaceMethods (body : List[Any], acc : List[Pair[String,String]]) : List[Pair[String,String]] = {
     body match {
       case Nil => acc.reverse
@@ -187,12 +180,12 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
 
   def unpackR (r : Any) : String = {
     r match {
-      case QualId(xs) => xs.map(unpackR).reduceLeft(_ + "." + _)
+      case QualId(xs) => "(\"" + xs.map(unpackR).reduceLeft(_ + "." + _) + "\":var)"
       case Some(x) => unpackR(x)
       case Expr(x) => unpackR(x)
       case PrimaryExpr(x) => unpackR(x)
-      case Name(x) => "\"" + x + "\""
-      case Num(x) => x
+      case Name(x) => x
+      case Num(x) => "(val_to_int (vint " + x + "))"
       case Lit(x) => unpackR(x)
       case x :: rt => unpackR(x) + unpackR(rt)
       case x : String => x
@@ -234,9 +227,9 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
                 else
                   callpref.map(unpackR).reduceLeft(_ + "." + _)
         val mname = if (funname.xs.length == 1) funname.xs else funname.xs.takeRight(1)
-        val argstring = if (args.length > 0) args.map(getExpr).reduceLeft(_ + " " + _) else "nil" //XXX: so wrong!
+        val argstring = args.map(getExpr).foldRight("nil")(_ + " :: " + _)
         val typ = symboltable(p)
-        "(ccall \"" + res + "\" \"" + p + "\" \"" + unpackR(mname) + "\" ([" + argstring + "]) " + "(TClass \"" + typ + "\")" + ")"
+        "(ccall " + res + " \"" + p + "\" \"" + unpackR(mname) + "\" (" + argstring + ") " + "(TClass \"" + typ + "\")" + ")"
       case Assignment(name, value) => "(cassign " + unpackR(name) + " " + getExpr(value) + ")"
       case y => unpackR(y)
     }
@@ -271,7 +264,7 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
     val b = printBody(body.flatten)
     outp.println(b)
     outp.println(".")
-    (freevars ++ Gensym.getfree, "var_expr \"" + ret + "\"")
+    (freevars ++ Gensym.getfree, "var_expr " + ret)
   }
 
   def classMethods (body : List[Any], acc : List[Pair[String,String]]) : List[Pair[String,String]] = {
@@ -308,7 +301,7 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
         outp.println("Definition " + id + " :=")
         val supers = List[String]() //XXX: super-inters
         val methods = interfaceMethods(body, List[Pair[String,String]]())
-        outp.println("  Build_Inter " + printList(supers, "_") + " " + printMap(methods, "_") + ".")
+        outp.println("  Build_Inter " + printFiniteSet(supers) + " " + printFiniteMap(methods, "_") + ".")
       case JClass(Name(id), typ, supers, inters, body) =>
         classes ::= ("\"" + id + "\"", id)
         val ints = inters match {
@@ -321,9 +314,9 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
         val fields = List[String]() //XXX
         val methods = classMethods(body, List[Pair[String,String]]())
         outp.println("Definition " + id + " :=")
-        outp.println("  Build_Class " + printList(ints.reverse, "_"))
-        outp.println("              " + printList(fields, "_"))
-        outp.println("              " + printMap(methods, "Method") + ".")
+        outp.println("  Build_Class " + printFiniteSet(ints.reverse))
+        outp.println("              " + printFiniteSet(fields))
+        outp.println("              " + printFiniteMap(methods, "Method") + ".")
       case x :: tl => coqoutput(x); tl.foreach(coqoutput(_))
       case Some(x) => coqoutput(x)
       case None =>
@@ -331,17 +324,18 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
     }
   }
 
-  def printList (l : List[String], mtype : String) : String = {
-    l match {
-      case Nil => "(SS.empty " + mtype + ")"
-      case k :: b => "(SS.add " + k + " " + printList(b, mtype) + ")"
-    }
+  def printArgList (l : List[String]) : String = {
+    l.foldRight("nil")("\"" + _ + "\" :: " + _)
   }
 
-  def printMap (map : List[Pair[String, String]], mtype : String) : String = {
+  def printFiniteSet (l : List[String]) : String = {
+    l.foldRight("(SS.empty)")("(SS.add \"" + _ + "\" " + _ + ")")
+  }
+
+  def printFiniteMap (map : List[Pair[String, String]], mtype : String) : String = {
     map match {
       case Nil => "(SM.empty " + mtype + ")"
-      case (k,v) :: b => "(SM.add " + k + " " + v + " " + printMap(b, mtype) + ")"
+      case (k,v) :: b => "(SM.add " + k + " " + v + " " + printFiniteMap(b, mtype) + ")"
     }
   }
 
@@ -350,8 +344,8 @@ object CoqOutputter extends JavaTerms with Parsers with JavaToSimpleJava {
   def output (x : Any, out : PrintWriter) : Unit = {
     outp = out
     coqoutput(x)
-    val cs = printMap(classes, "Class")
-    val is = printMap(interfaces, "Inter")
+    val cs = printFiniteMap(classes, "Class")
+    val is = printFiniteMap(interfaces, "Inter")
     outp.println("Definition P :=")
     outp.println("  Build_Program " + cs)
     outp.println("                " + is + ".")
