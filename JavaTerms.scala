@@ -32,8 +32,10 @@ trait JavaTerms
   case class Expr (e : Any) extends AnyExpr //{ override def toString = "EXPR" }
   case class ParExpr (e : AnyExpr) extends AnyExpr
   case class PrimaryExpr (e : Any) extends AnyExpr
+  case class PostFixExpression (e : Any) extends AnyExpr
 
   case class NewExpr (e : Any) extends AnyExpr
+  case class NewExpression (mtype : Any, arguments : List[AnyExpr]) extends AnyExpr
 
   case class BinaryExpr (op : Key, left : AnyExpr, right : AnyExpr) extends AnyExpr
 
@@ -52,6 +54,7 @@ trait JavaTerms
   case class While (test : Any, body : AnyExpr) extends Loop
   case class DoWhile (what : Any) extends Loop
   //try/switch/synchronized/throw/break/continue/label
+  case class LocalVar (x : Any) extends Statement
   case class AnyStatement (x : Any) extends Statement
 
   // types

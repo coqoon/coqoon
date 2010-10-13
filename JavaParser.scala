@@ -117,7 +117,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
   // p590         
   def block = "{" ~> rep(blockStatement) <~ "}" ^^ Block
   def blockStatement =
-    ( localVariableDeclaration <~ ";" ^^ AnyStatement
+    ( localVariableDeclaration <~ ";" ^^ LocalVar
      | classOrInterfaceDeclaration ^^ AnyStatement
      | statement
     )
@@ -168,14 +168,14 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
     )
   def elementValueArrayInitializer = "{" ~> rep1sep(elementValue, ",") ~ opt(",") <~ "}"
 
-  def localVariableDeclaration = rep(localVariableModifier) ~> jtype ~ variableDeclarators
+  def localVariableDeclaration = rep(localVariableModifier) ~ jtype ~ variableDeclarators
   def modifier =
     ( annotation
      | Pair(modifierWord, "modifier")
     ) ^^ Modifier
 
   // p592
-  def variableDeclarator = id <~ rep(braces) ~> opt("=" ~> variableInitializer)
+  def variableDeclarator = id ~ rep(braces) ~ opt("=" ~> variableInitializer)
   def constantDeclarator = id ~ constantDeclaratorRest
 
   def variableDeclarators = rep1sep(variableDeclarator, ",")

@@ -117,6 +117,7 @@ trait Expression extends ImplicitConversions
     x match {
       case Nil => left
       case (op : Key)~(y : AnyExpr) :: rt => listhelper(BinaryExpr(op, left, y), rt)
+      case (op : String)~(y : AnyExpr) :: rt => listhelper(BinaryExpr(Key(op), left, y), rt)
     }
   }
 
@@ -126,7 +127,7 @@ trait Expression extends ImplicitConversions
      | "-" ~ unaryExpression
      | "+" ~ unaryExpression
      | unaryExpressionNotPlusOrMinus
-   )
+   ) ^^ PrimaryExpr
   def unaryExpressionNotPlusOrMinus: Parser[Any] =
     ( "~" ~ unaryExpression
      | "!" ~ unaryExpression
@@ -137,17 +138,20 @@ trait Expression extends ImplicitConversions
   // always starts with primary expression, then 0 or more of various things
   def postfixExpression = primaryExpression ~
     rep ( "." ~
-          ( opt(genericTypeArgumentList) ~ id ~ opt(arguments)
+          ( opt(genericTypeArgumentList) ~> id ~ opt(arguments) ^^ { //that's either call or field access (depending on arguments or no arguments)
+            case x~None => x
+            case x~Some(y) => new ~(x, y)
+          }
            | "this"
            | "super" ~ arguments
            | "super" ~ "." ~ id ~ opt(arguments)
            | innerNewExpression
           )
          | bracesExpr
-        ) ~ opt (List("++", "--")) ^^ {
-      case x~List()~None => x
-      case x~None => x
-      case x => x
+        ) ~ opt(List("++", "--")) ^^ {
+      case x~List()~None => PostFixExpression(x)
+      case x~None => PostFixExpression(x)
+      case x => PostFixExpression(x)
     }
 
   def primaryExpression =
@@ -160,7 +164,7 @@ trait Expression extends ImplicitConversions
         | id ~ arguments
         | "this" ~ arguments
        )
-     | "this" ~ opt(arguments) //Hannes: I doubt that this is correct (the opt(arguments))
+     | "this" //~ opt(arguments) Hannes: I doubt that this is correct (the opt(arguments))
      | "super" ~ arguments //^^ Call(QualId(List("super")), _)
      | "super" ~ "." ~ id ~ opt(arguments)
      | basicType ~ rep(braces) ~ "." ~ "class"
@@ -169,9 +173,9 @@ trait Expression extends ImplicitConversions
 
   def qualifiedIdExpression = qualifiedId ~
     opt ( bracesList ~ "." ~ "class"
-         | arguments
+         | arguments //a call!
          | "." ~ ( "class"
-                  | genericTypeArgumentList ~ ("super" ~ opt("." ~ id) | id) ~ arguments
+                  | genericTypeArgumentList ~ ("super" ~ opt("." ~ id) | id) ~ arguments //call with generics
                   | "this"
                   | "super" ~ arguments
                   | innerNewExpression
@@ -184,11 +188,17 @@ trait Expression extends ImplicitConversions
 
   def newExpression = "new" ~>
     ( basicType ~ newArrayConstruction
-     | opt(genericTypeArgumentList) ~ qualifiedTypeIdent ~
-       (newArrayConstruction | arguments ~ opt(classBody))
-    ) ^^ NewExpr
+     | opt(genericTypeArgumentList) ~> qualifiedTypeIdent ~
+       (newArrayConstruction | arguments <~ opt(classBody))
+    ) ^^ { case ty~(arg : List[AnyExpr]) => NewExpression(ty, arg)
+           case x => NewExpr(x)
+        }
 
-  def innerNewExpression = "new" ~> opt(genericTypeArgumentList) ~ id ~ arguments ~ opt(classBody) ^^ NewExpr
+  def innerNewExpression = "new" ~> opt(genericTypeArgumentList) ~> id ~ arguments <~ opt(classBody) ^^ {
+    case ty~(arg : List[AnyExpr]) => NewExpression
+    case x => NewExpr
+  }
+
   def newArrayConstruction =
     ( bracesList ~ arrayInitializer
      | rep1(bracesExpr) ~ rep(braces)
