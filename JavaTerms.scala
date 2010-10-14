@@ -24,6 +24,7 @@ trait JavaTerms
 
   case class MethodDeclaration (id : Term, jtype : Any, parameters : Option[Any], throws : List[Throws], body : Any) extends Term
   case class FieldDeclaration (id : Term, jtype : Any, rest : Any) extends Term
+  case class ConstructorDeclaration (id : Term, parameters : Option[Any], throws : List[Throws], body : Any) extends Term
 
   case class FormalVariable (modifiers : Any, jtype : Any, id : Term) extends Term
 

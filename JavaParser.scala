@@ -248,7 +248,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
     ( genericMethodOrConstructorDecl
      | methodOrFieldDecl
      | "void" ~> id ~ voidMethodDeclaratorRest
-     | id ~ constructorDeclaratorRest
+     | id ~ constructorDeclaratorRest ^^ { case id~MethodDeclarator(parameters, throws, body) => ConstructorDeclaration(id, parameters, throws, body) }
      | interfaceDeclaration
      | classDeclaration
     )
@@ -296,7 +296,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
   def throwsClause = optl("throws" ~> qualifiedIdList) ^^ { x => x.map(Throws) }
 
   // p596
-  def constructorDeclaratorRest = formalParameterList ~ throwsClause ~ methodBody
+  def constructorDeclaratorRest = formalParameterList ~ throwsClause ~ methodBody ^^ MethodDeclarator
   def methodBody = block
 
   //
