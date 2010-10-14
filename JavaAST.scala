@@ -153,6 +153,7 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
     x match {
       case Expr(x) => transformStatement(x)
       case PostFixExpression(x) => transformStatement(x)
+      case AnyStatement(x) => transformStatement(x)
       case PrimaryExpr(x) => transformStatement(x)
       case ParExpr(x) => transformStatement(x)
       case Some(x) => transformStatement(x)
@@ -243,9 +244,9 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
         lvars = List[String]()
         val args = transformOL(parameters, List[JArgument]())
         lvars ++= args.map(_.id)
-        Console.println("walking over body " + body)
+        //Console.println("walking over body " + body)
         val realbody = walk(body)
-        Console.println("walked over body " + realbody)
+        //Console.println("walked over body " + realbody)
         val realrealbody : List[JBodyStatement] =
           if (realbody.forall(_.isInstanceOf[JBodyStatement]))
             realbody.map(_.asInstanceOf[JBodyStatement])
@@ -266,13 +267,19 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
       case Expr(y) => Some(transformStatement(y))
       case (x : Conditional) => Some(transformStatement(x))
       case Return(x) => Some(JReturn(transformExpression(x)))
-      case x => Console.println("transform: dunno about [" + x.asInstanceOf[AnyRef].getClass.toString + "] " + x); None
+      case x => 
+        val r = transformStatement(x)
+        if (r == null) {
+          Console.println("transform: dunno about [" + x.asInstanceOf[AnyRef].getClass.toString + "] " + x)
+          None
+        } else
+          Some(r)
     }
   }
 
   def walk (statements : Any) : List[JStatement] = {
     statements match {
-      case Nil => Console.println("hit nil"); List[JStatement]()
+      case Nil => List[JStatement]()
       case x ~ y => walk(x) ++ walk(y)
       case x :: xs => walk(x) ++ walk(xs)
       case x =>
@@ -286,21 +293,32 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
     //Console.println("walking over " + a)
     val x = walk(a)
     //Console.println("doit, walked " + x)
-    val y = x.map(y => y match {
-      case JClassDefinition(name, supers, interf, body) => 
-        val nb = body.map(z => z match {
-          case JMethodDefinition(name, params, body) =>
-            //Console.println("body: " + body)
-            val tb = body.foldRight(List[JBodyStatement]())(extractCalls)
-            //Console.println("body translated: " + tb)
-            JMethodDefinition(name, params, tb)
-          case x => x
-        })
-        JClassDefinition(name, supers, interf, nb)
-      case x => x
-    })
-    Console.println("outputting " + y)
-    coqoutput(y, out)
+    var innerclasses : List[JClassDefinition] = List[JClassDefinition]()
+    val convert = (x : List[JStatement]) =>
+      x.map(y => y match {
+        case JClassDefinition(name, supers, interf, body) => 
+          val nb = body.flatMap(z => z match {
+            case (x : JClassDefinition) =>
+              innerclasses ::= x; None
+            case JMethodDefinition(name, params, body) =>
+              //Console.println("body: " + body)
+              val tb = body.foldRight(List[JBodyStatement]())(extractCalls)
+              //Console.println("body translated: " + tb)
+              Some(JMethodDefinition(name, params, tb))
+            case x => Some(x)
+          })
+          JClassDefinition(name, supers, interf, nb)
+        case x => x
+      })
+    val main = convert(x)
+    var workset : List[JClassDefinition] = List[JClassDefinition]()
+    while (innerclasses.length > 0) {
+      val ci = innerclasses
+      innerclasses = List[JClassDefinition]()
+      workset = ci.map(i => convert(List(i)).head.asInstanceOf[JClassDefinition]) ++ workset
+    }
+    Console.println("outputting " + main + " inners " + workset)
+    coqoutput(workset ++ main, out)
   }
 }
 
@@ -433,7 +451,12 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
         val t = value.jtype
         val a = value.arguments.map(getExpr).foldRight("nil")(_ + " :: " + _)
         symboltable += name -> t
-        "(calloc " + name + " " + t + " " + a + ")"
+        "(calloc \"" + name + "\" \"" + t + "\" " + a + ")"
+      case JAssignment(name, value : JFieldAccess) =>
+        //symboltable += name -> 
+        "(cread \"" + name + "\" \"" + value.variable + "\" \"" + value.field + "\")"
+      case JFieldWrite(v, f, n) =>
+        "(cwrite \"" + v + "\" \"" + f + "\"" + getExpr(n) + ")"
       case JAssignment(name, value) => "(cassign \"" + name + "\" " + getExpr(value) + ")"
       case JBinaryExpression(op, l, r) =>
         "(" + translateOp(op) + " " + getExpr(l) + " " + getExpr(r) + ")"
