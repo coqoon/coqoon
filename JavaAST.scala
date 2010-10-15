@@ -56,7 +56,7 @@ object Gensym {
 
 trait JavaStatements {
   trait JStatement
-  case class JClassDefinition (id : String, superclass : String, interfaces : List[String], body : List[JStatement]) extends JStatement
+  case class JClassDefinition (id : String, superclass : String, interfaces : List[String], body : List[JStatement], outerclass : Option[String]) extends JStatement
   case class JInterfaceDefinition (id : String, interfaces : List[String], body : List[JStatement]) extends JStatement
 
   trait InnerStatement extends JStatement
@@ -83,11 +83,43 @@ trait JavaStatements {
   case class JFieldAccess (variable : String, field : String) extends JExpression
 }
 
+object ClassTable {
+  import scala.collection.mutable.HashMap
+  private var classtable : HashMap[String,(Option[String], List[String])] = new HashMap[String,(Option[String], List[String])]()
+
+  def registerClass (id : String, outer : Option[String], fields : List[String]) = {
+    if (classtable.contains(id))
+      Console.println("overwriting of " + id + " in CT not allowed")
+    else
+      classtable += id -> (outer, fields)
+  }
+
+  def updateClass (id : String, fields : List[String]) = {
+    val par = classtable(id)._1
+    classtable -= id
+    registerClass(id, par, fields)
+  }
+
+  def getOuter (id : String) : Option[String] = {
+    if (classtable.contains(id))
+      classtable(id)._1
+    else
+      None
+  }
+
+  def getFields (id : String) : Option[List[String]] = {
+    if (classtable.contains(id))
+      Some(classtable(id)._2)
+    else
+      None
+  }
+}
 
 import scala.util.parsing.combinator.Parsers
 object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToSimpleJava with CoqOutputter {
   private var fields : List[String] = List[String]()
   private var lvars : List[String] = List[String]()
+  private var outer : Option[String] = None
 
   def unpackR (r : Any) : String = {
     r match {
@@ -178,15 +210,20 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
           JBinaryExpression(oper, transformExpression(le), transformExpression(ri))
       case Call(fun, args) => JCall(unpackR(fun), args.map(transformExpression))
       case QualId(x) =>
-        val v = unpackR(x)
-        if (fields.contains(v))
-          JFieldAccess("this", v)
-        else if (lvars.contains(v))
-          JVariableAccess(v)
-        else {
-          Console.println("got a qualid which isn't in lvars or fields " + v + "(fields: " + fields + ")(lvar: " + lvars + ")")
-          JVariableAccess(v)
-        }
+        //Console.println("inspecting qualid: " + x)
+        val vs = x.map(unpackR)
+        if (vs.length == 1) {
+          val v = vs(0)
+          if (fields.contains(v))
+            JFieldAccess("this", v)
+          else if (lvars.contains(v))
+            JVariableAccess(v)
+          else {
+            Console.println("got a qualid which isn't in lvars or fields " + vs + " (fields: " + fields + ")(lvar: " + lvars + ")")
+            JVariableAccess(vs.reduceLeft(_ + "." + _))
+          }
+        } else
+          JFieldAccess(vs.dropRight(1).reduceLeft(_ + "." + _), vs.takeRight(1)(0))
       case Lit(x) => JLiteral(unpackR(x))
       case (x : PrimaryExpr)~(y : List[Any]) =>
         val rx = unpackR(x) //most likely a name (to a class/var)
@@ -276,11 +313,28 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
       case JInterface(id, jtype, interfaces, body) =>
         val is = transformOLF(interfaces)
         Some(JInterfaceDefinition(unpackR(id), is, walk(body)))
-      case JClass(id, jtype, superclass, interfaces, body) =>
-        fields = List[String]()
+      case JClass(id, jtype, superclass, interfaces, bodyp) =>
         val is = transformOLF(interfaces)
         val cs = unpackR(superclass)
-        Some(JClassDefinition(unpackR(id), cs, is, walk(body)))
+        val mid = unpackR(id)
+        outer match {
+          case Some(x) => ClassTable.updateClass(x, fields)
+          case None =>
+        }
+        fields = List[String]()
+        ClassTable.registerClass(mid, outer, fields)
+        outer = Some(mid)
+        val mybody = walk(bodyp)
+        ClassTable.updateClass(mid, fields)
+        outer = ClassTable.getOuter(mid)
+        fields = outer match {
+          case None => List[String]();
+          case Some(x) => ClassTable.getFields(x) match {
+            case None => List[String]()
+            case Some(x) => x
+          }
+        }
+        Some(JClassDefinition(mid, cs, is, mybody, outer))
       case Expr(y) => Some(transformStatement(y))
       case (x : Conditional) => Some(transformStatement(x))
       case Return(x) => Some(JReturn(transformExpression(x)))
@@ -314,7 +368,7 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
     var innerclasses : List[JClassDefinition] = List[JClassDefinition]()
     val convert = (x : List[JStatement]) =>
       x.map(y => y match {
-        case JClassDefinition(name, supers, interf, body) => 
+        case JClassDefinition(name, supers, interf, body, outer) => 
           val nb = body.flatMap(z => z match {
             case (x : JClassDefinition) =>
               innerclasses ::= x; None
@@ -325,7 +379,7 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
               Some(JMethodDefinition(name, params, tb))
             case x => Some(x)
           })
-          JClassDefinition(name, supers, interf, nb)
+          JClassDefinition(name, supers, interf, nb, outer)
         case x => x
       })
     val main = convert(x)
@@ -359,7 +413,7 @@ trait JavaToSimpleJava extends JavaStatements {
       case JFieldWrite(x, f, v) =>
         val (a, i) = extractHelper(List(v), List[JExpression](), List[JBodyStatement]())
         assert(a.length == 1)
-        JFieldWrite(x, f, a(0)) :: i ++ acc
+        i ++ (JFieldWrite(x, f, a(0)) :: acc)
       case JConditional(t, c, a) =>
         val (ta, ti) = extractHelper(List(t), List[JExpression](), List[JBodyStatement]())
         assert(ta.length == 1)
@@ -434,13 +488,13 @@ trait JavaToSimpleJava extends JavaStatements {
             (ta(0), ti)
           }
         val getb = (x : JBodyStatement) => {
-          Console.println("extracting conditional, body is " + x)
+          //Console.println("extracting conditional, body is " + x)
           assert(x.isInstanceOf[JBlock])
           val ps = x.asInstanceOf[JBlock].body
           ps.foreach(x => assert(x.isInstanceOf[JExpression]))
           val bs = ps.map(x => x.asInstanceOf[JExpression])
           val (ca, ci) = extractHelper(bs, List[JExpression](), List[JBodyStatement]())
-          Console.println("extracted ca: " + ca + "\nci: " + ci)
+          //Console.println("extracted ca: " + ca + "\nci: " + ci)
           val lastc = ca.takeRight(1)(0)
           if (ca.length == 1)
             JBlock(ci ++ List(JAssignment(t, lastc)))
@@ -587,13 +641,6 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
     }
   }
 
-  def getFields (xs : List[JStatement]) : List[String] = {
-    xs.flatMap {
-      case JFieldDefinition (name, typ) => Some(name)
-      case _ => None
-    }
-  }
-
   private var outp : PrintWriter = null
 
   def coqoutput (xs : List[JStatement], out : PrintWriter) : Unit = {
@@ -605,11 +652,11 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
         outp.println("Definition " + id + " :=")
         val methods = interfaceMethods(body)
         outp.println("  Build_Inter " + printFiniteSet(inters) + " " + printFiniteMap(methods) + ".")
-      case JClassDefinition(id, supers, inters, body) =>
+      case JClassDefinition(id, supers, inters, body, par) =>
         classes ::= ("\"" + id + "\"", id)
         symboltable = new HashMap[String, String]()
         symboltable += "this" -> id
-        val fields = getFields(body)
+        val fields = ClassTable.getFields(id) match { case None => List[String](); case Some(x) => x }
         val methods = classMethods(body)
         outp.println("Definition " + id + " :=")
         outp.println("  Build_Class " + printFiniteSet(inters))
