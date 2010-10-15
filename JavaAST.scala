@@ -38,18 +38,10 @@ trait JavaAST extends JavaParser {
 }
 
 object Gensym {
-  var freevars : List[String] = List[String]()
   var count : Int = 0
   def newsym () : String = {
     count += 1
-    freevars ::= "tmp_" + count
     return "tmp_" + count
-  }
-
-  def getfree () : List[String] = {
-    val tmp = freevars
-    freevars = List[String]()
-    tmp
   }
 }
 
@@ -226,10 +218,10 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
         val vs = x.map(unpackR)
         if (vs.length == 1) {
           val v = vs(0)
-          if (fields.contains(v))
-            JFieldAccess("this", v)
-          else if (lvars.contains(v))
+          if (lvars.contains(v))
             JVariableAccess(v)
+          else if (fields.contains(v))
+            JFieldAccess("this", v)
           else {
             Console.println("got a qualid which isn't in lvars or fields " + vs + " (fields: " + fields + ")(lvar: " + lvars + ")")
             JVariableAccess(vs.reduceLeft(_ + "." + _))
@@ -586,7 +578,7 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
         //symboltable += name -> 
         "(cread \"" + name + "\" \"" + value.variable + "\" \"" + value.field + "\")"
       case JFieldWrite(v, f, n) =>
-        "(cwrite \"" + v + "\" \"" + f + "\"" + printStatement(n) + ")"
+        "(cwrite \"" + v + "\" \"" + f + "\" " + printStatement(n) + ")"
       case JAssignment(name, value) => "(cassign \"" + name + "\" " + printStatement(value) + ")"
       case JBinaryExpression(op, l, r) =>
         "(" + translateOp(op) + " " + printStatement(l) + " " + printStatement(r) + ")"
@@ -611,7 +603,8 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
     }
   }
 
-  private var freevars : List[String] = List[String]()
+  import scala.collection.mutable.Set
+  private var freevars : Set[String] = Set[String]()
   private var ret : String = "myreturnvaluedummy"
 
   def getBS (xs : JBodyStatement) : Option[List[String]] = {
@@ -624,8 +617,9 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
       case JBlock(xs) => Some(xs.map(getBS).flatten.flatten)
       case JWhile(test, body) =>
         Some(List("(cwhile " + printStatement(test) + " " + optPrintBody(getBS(body)) + ")"))
-      case JBinding(x, typ, init) => freevars ::= x; None
+      case JBinding(x, typ, init) => freevars += x; None
       case JReturn(JVariableAccess(r)) => ret = r; None
+      case a @ JAssignment(n, x) => freevars += n; Some(List(printStatement(a)))
       case (x : JBodyStatement) => Some(List(printStatement(x)))
       case y => Console.println("no handler for getBS " + y); None
     }
@@ -633,7 +627,7 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
 
   def getBody (xs : List[JStatement], myname : String) : (List[String], String) = {
     ret = "myreturnvaluedummy"
-    freevars = List[String]()
+    freevars = Set[String]()
     //Console.println("getbody, flattening " + xs)
     val body = xs.flatMap {
       case (x : JBodyStatement) => getBS(x)
@@ -643,7 +637,7 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
     val b = printBody(body.flatten)
     outp.println(b)
     outp.println(".")
-    (freevars ++ Gensym.getfree, "var_expr \"" + ret + "\"")
+    (freevars.toList, "var_expr \"" + ret + "\"")
   }
 
   def classMethods (body : List[JStatement]) : List[Pair[String,String]] = {
