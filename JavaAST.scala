@@ -377,7 +377,7 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
               innerclasses ::= x; None
             case JMethodDefinition(name, params, body) =>
               //Console.println("body: " + body)
-              val tb = body.foldRight(List[JBodyStatement]())(extractCalls)
+              val tb = body.foldLeft(List[JBodyStatement]())((b,a) => b ++ extractCalls(a))
               //Console.println("body translated: " + tb)
               Some(JMethodDefinition(name, params, tb))
             case x => Some(x)
@@ -399,57 +399,59 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
 
 trait JavaToSimpleJava extends JavaStatements {
 
-  def extractCalls (statement : JBodyStatement, acc : List[JBodyStatement]) : List[JBodyStatement] = {
+  def extractCalls (statement : JBodyStatement) : List[JBodyStatement] = {
     //Console.println("calling extract for " + statement)
     statement match {
-      case JBlock(xs) => JBlock(xs.foldRight(List[JBodyStatement]())(extractCalls)) :: acc
+      case JBlock(xs) => List(JBlock(xs.foldLeft(List[JBodyStatement]())((b, a) => b ++ extractCalls(a))))
       case JAssignment(x, r) =>
         val (args, ins) = extractHelper(List(r), List[JExpression](), List[JBodyStatement]())
         assert(args.length == 1)
-        ins ++ (JAssignment(x, args(0)) :: acc)
+        ins ++ List(JAssignment(x, args(0)))
       case JBinaryExpression(op, l, r) =>
         val (largs, lins) = extractHelper(List(l), List[JExpression](), List[JBodyStatement]())
         val (rargs, rins) = extractHelper(List(r), List[JExpression](), List[JBodyStatement]())
         assert(largs.length == 1)
         assert(rargs.length == 1)
-        lins ++ rins ++ (JBinaryExpression(op, largs(0), rargs(0)) :: acc)
+        lins ++ rins ++ List(JBinaryExpression(op, largs(0), rargs(0)))
       case JFieldWrite(x, f, v) =>
         val (a, i) = extractHelper(List(v), List[JExpression](), List[JBodyStatement]())
         assert(a.length == 1)
-        i ++ (JFieldWrite(x, f, a(0)) :: acc)
+        i ++ List(JFieldWrite(x, f, a(0)))
       case JConditional(t, c, a) =>
         val (ta, ti) = extractHelper(List(t), List[JExpression](), List[JBodyStatement]())
         assert(ta.length == 1)
         val tst = ta(0)
-        val con = extractCalls(c, List[JBodyStatement]())
+        val con = extractCalls(c)
         val con2 = if (con.length == 1)
                      con(0).asInstanceOf[JBodyStatement]
                    else
                      JBlock(con)
-        val r = extractCalls(a, List[JBodyStatement]())
+        val r = extractCalls(a)
         val alt =
           if (r.length == 1)
             r(0).asInstanceOf[JBodyStatement]
           else
             JBlock(r)
-        JConditional(tst, con2, alt) :: ti ++ acc
+        ti ++ List(JConditional(tst, con2, alt))
       case JCall(variable, name, args) => 
         val (ars, ins) = extractHelper(args, List[JExpression](), List[JBodyStatement]())
         //Console.println("results from extracthelper: " + ars + " ins " + ins)
-        JCall(variable, name, ars) :: ins ++ acc
+        ins ++ List(JCall(variable, name, ars))
       case JNewExpression(name, arguments) =>
         val (ars, ins) = extractHelper(arguments, List[JExpression](), List[JBodyStatement]())
-        JNewExpression(name, ars) :: ins ++ acc
+        ins ++ List(JNewExpression(name, ars))
       case JWhile(test, body) =>
         val (ta, ti) = extractHelper(List(test), List[JExpression](), List[JBodyStatement]())
         assert(ta.length == 1)
-        val newbody = extractCalls(body, List[JBodyStatement]())
+        //Console.println("old body for while is " + body)
+        val newbody = extractCalls(body)
         assert(newbody.length == 1)
         val nn = newbody(0)
         assert(nn.isInstanceOf[JBlock])
-        JWhile(ta(0), nn.asInstanceOf[JBlock]) :: ti ++ acc
+        //Console.println("new body for while is " + nn)
+        ti ++ List(JWhile(ta(0), nn.asInstanceOf[JBlock]))
       case JReturn(e : JVariableAccess) =>
-        JReturn(e) :: acc
+        List(JReturn(e))
       case JReturn(exxx) =>
         val t = Gensym.newsym
         val (ra, ri) = extractHelper(List(exxx), List[JExpression](), List[JBodyStatement]())
@@ -460,15 +462,18 @@ trait JavaToSimpleJava extends JavaStatements {
             val lastr = ra.takeRight(1)
             ri ++ ra.dropRight(1) ++ List(JAssignment(t, lastr(0)))
           }
-        res ++ (JReturn(JVariableAccess(t)) :: acc)
-      case x => x :: acc
+        res ++ List(JReturn(JVariableAccess(t)))
+      case x => {
+        Console.println("extract default case encountered " + x);
+        List(x)
+      }
     }
   }
 
   def extractHelper (xs : List[JExpression], acca : List[JExpression], acci : List[JBodyStatement]) : (List[JExpression], List[JBodyStatement]) = {
     //Console.println("extracthelper called with " + xs + " acca " + acca + " acci " + acci)
     xs match {
-      case Nil => (acca.reverse, acci)
+      case Nil => (acca, acci)
       case JBinaryExpression(op, l, r) :: xs =>
         val (ri, rii) = extractHelper(List(r), List[JExpression](), acci)
         val (le, lei) = extractHelper(List(l), List[JExpression](), rii)
@@ -481,11 +486,11 @@ trait JavaToSimpleJava extends JavaStatements {
       case JCall(variable, name, args) :: rt =>
         val (as, ins) = extractHelper(args, List[JExpression](), List[JBodyStatement]())
         val t = Gensym.newsym
-        extractHelper(rt, JVariableAccess(t) :: acca, JAssignment(t, JCall(variable, name, as)) :: ins ++ acci)
+        extractHelper(rt, JVariableAccess(t) :: acca, ins ++ (JAssignment(t, JCall(variable, name, as)) :: acci))
       case JNewExpression(name, args) :: rt =>
         val (as, ins) = extractHelper(args, List[JExpression](), List[JBodyStatement]())
         val t = Gensym.newsym
-        extractHelper(rt, JVariableAccess(t) :: acca, JAssignment(t, JNewExpression(name, as)) :: ins ++ acci)
+        extractHelper(rt, JVariableAccess(t) :: acca, ins ++ (JAssignment(t, JNewExpression(name, as)) :: acci))
       case JConditional(test, c, a) :: rt =>
         val t = Gensym.newsym
         val (ta, ti) = extractHelper(List(test), List[JExpression](), List[JBodyStatement]())
