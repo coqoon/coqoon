@@ -122,15 +122,15 @@ trait Expression extends ImplicitConversions
   }
 
   def unaryExpression: Parser[Any] =
-    ( "++" ~ unaryExpression
-     | "--" ~ unaryExpression
-     | "-" ~ unaryExpression
-     | "+" ~ unaryExpression
+    ( "++" ~ unaryExpression ^^ UnaryExpr
+     | "--" ~ unaryExpression ^^ UnaryExpr
+     | "-" ~ unaryExpression ^^ UnaryExpr
+     | "+" ~ unaryExpression ^^ UnaryExpr
      | unaryExpressionNotPlusOrMinus
    ) ^^ PrimaryExpr
   def unaryExpressionNotPlusOrMinus: Parser[Any] =
-    ( "~" ~ unaryExpression
-     | "!" ~ unaryExpression
+    ( "~" ~ unaryExpression ^^ UnaryExpr
+     | "!" ~ unaryExpression ^^ UnaryExpr
      | "(" ~ jtype ~ ")" ~ unaryExpression
      | postfixExpression
    )
@@ -151,6 +151,7 @@ trait Expression extends ImplicitConversions
         ) ~ opt(List("++", "--")) ^^ {
       case x~List()~None => PostFixExpression(x)
       case x~None => PostFixExpression(x)
+      case x~List()~Some(k:Key) => PostExpr(k, x)
       case x => PostFixExpression(x)
     }
 

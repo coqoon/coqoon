@@ -247,7 +247,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
   def memberDecl =
     ( genericMethodOrConstructorDecl
      | methodOrFieldDecl
-     | "void" ~> id ~ voidMethodDeclaratorRest
+     | "void" ~> id ~ voidMethodDeclaratorRest ^^ { case id~MethodDeclarator(parameters, throws, body) => MethodDeclaration(id, "void", parameters, throws, body) }
      | id ~ constructorDeclaratorRest ^^ { case id~MethodDeclarator(parameters, throws, body) => ConstructorDeclaration(id, parameters, throws, body) }
      | interfaceDeclaration
      | classDeclaration
@@ -288,7 +288,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
      | interfaceMethodDeclaratorRest
     )
   def methodDeclaratorRest = formalParameterList ~ rep(braces) ~ throwsClause ~ (methodBody | ";") ^^ { case ((arg~br)~throws)~body => MethodDeclarator(arg, throws, body) }
-  def voidMethodDeclaratorRest = formalParameterList ~ throwsClause ~ (methodBody | ";")
+  def voidMethodDeclaratorRest = formalParameterList ~ throwsClause ~ (methodBody | ";") ^^ { case (arg~throws)~body => MethodDeclarator(arg, throws, body) }
   def interfaceMethodDeclaratorRest = formalParameterList ~ rep(braces) ~ throwsClause ~ ";" ^^ { case ((arg~br)~throws)~";" => MethodDeclarator(arg, throws, None) }
   def interfaceGenericMethodDecl = typeParameters ~ (jtype | "void") ~ id ~ interfaceMethodDeclaratorRest
   def voidInterfaceMethodDeclaratorRest = formalParameterList ~ throwsClause <~ ";"

@@ -34,11 +34,13 @@ trait JavaTerms
   case class ParExpr (e : AnyExpr) extends AnyExpr
   case class PrimaryExpr (e : Any) extends AnyExpr
   case class PostFixExpression (e : Any) extends AnyExpr
+  case class PostExpr(k : Key, x : Any) extends AnyExpr
 
   case class NewExpr (e : Any) extends AnyExpr
   case class NewExpression (mtype : Any, arguments : List[AnyExpr]) extends AnyExpr
 
   case class BinaryExpr (op : Key, left : AnyExpr, right : AnyExpr) extends AnyExpr
+  case class UnaryExpr (op : String, expr : Any) extends AnyExpr
 
   // statements
   trait Statement extends AnyExpr

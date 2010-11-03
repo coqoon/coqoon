@@ -61,63 +61,107 @@ trait JavaStatements {
   trait JBodyStatement extends InnerStatement
   case class JBlock (body : List[JBodyStatement]) extends JBodyStatement
   case class JAssignment (left : String, right : JExpression) extends JBodyStatement
-  case class JFieldWrite (variable : String, field : String, value : JExpression) extends JBodyStatement
+  case class JFieldWrite (variable : JExpression, field : String, value : JExpression) extends JBodyStatement
   case class JReturn (ret : JExpression) extends JBodyStatement
-  case class JBinding (name : String, jtype : String, init : JExpression) extends JBodyStatement
+  case class JBinding (name : String, jtype : String, init : Option[JExpression]) extends JBodyStatement
   case class JWhile (test : JExpression, body : JBlock) extends JBodyStatement
 
   trait JExpression extends JBodyStatement
   case class JConditional (test : JExpression, consequent : JBodyStatement, alternative : JBodyStatement) extends JExpression
   case class JBinaryExpression (operation : String, left : JExpression, right : JExpression) extends JExpression
+  case class JUnaryExpression (operation : String, expr : JExpression) extends JExpression
+  case class JPostfixExpression (operation : String, expr : JExpression) extends JExpression
   case class JCall (variable : String, fun : String, arguments : List[JExpression]) extends JExpression
   case class JNewExpression (jtype : String, arguments : List[JExpression]) extends JExpression
   case class JLiteral (value : String) extends JExpression
   case class JVariableAccess (variable : String) extends JExpression
-  case class JFieldAccess (variable : String, field : String) extends JExpression
+  case class JFieldAccess (variable : JExpression, field : String) extends JExpression
 }
 
 object ClassTable {
   import scala.collection.mutable.HashMap
-  private var classtable : HashMap[String,(Option[String], List[String])] = new HashMap[String,(Option[String], List[String])]()
+  var classtable : HashMap[String,(Boolean, Option[String], HashMap[String,String], HashMap[String,(String,HashMap[String,String])])] = new HashMap[String,(Boolean, Option[String], HashMap[String,String], HashMap[String,(String,HashMap[String,String])])]()
 
-  def registerClass (id : String, outer : Option[String], fields : List[String]) = {
+  def registerClass (id : String, outer : Option[String], interface : Boolean) = {
     if (classtable.contains(id))
       Console.println("overwriting of " + id + " in CT not allowed")
     else
-      classtable += id -> (outer, fields)
+      classtable += id -> (interface, outer, new HashMap[String,String](), new HashMap[String,(String,HashMap[String,String])]())
   }
 
-  def updateClass (id : String, fields : List[String]) = {
-    val par = classtable(id)._1
-    classtable -= id
-    registerClass(id, par, fields)
+  def checkkey (id : String, key : String) = {
+    assert(! classtable(id)._3.contains(key))
+    assert(! classtable(id)._4.contains(key))
+  }
+
+  def addField (id : String, key : String, value : String) = {
+    checkkey(id, key)
+    classtable(id)._3 += key -> value
+  }
+
+  def addMethod (id : String, key : String, value : String, lvars : HashMap[String,String]) = {
+    checkkey(id, key)
+    classtable(id)._4 += key -> (value, lvars)
   }
 
   def getOuter (id : String) : Option[String] = {
     if (classtable.contains(id))
-      classtable(id)._1
+      classtable(id)._2
     else
       None
   }
 
-  def getFields (id : String) : Option[List[String]] = {
-    if (classtable.contains(id))
-      Some(classtable(id)._2)
+  def getFields (id : String) : HashMap[String,String] = {
+    classtable(id)._3
+  }
+
+  def getType (classname : String, key : String) : String = {
+    if (classtable.contains(classname)) {
+      val tup = classtable(classname)
+      if (tup._3.contains(key))
+        tup._3(key)
+      else
+        tup._4(key)._1
+    } else {
+      Console.println("CT doesn't contain " + classname)
+      "Object"
+    }
+  }
+
+  def getLocalVar(id : String, method : String, name : String) : String = {
+    if (name == "this")
+      id
     else
-      None
+      if (classtable(id)._4(method)._2.contains(name))
+        classtable(id)._4(method)._2(name)
+      else
+        classtable(id)._3(name)
+  }
+
+  def isInterface (name : String) : Boolean = {
+    classtable(name)._1
+  }
+
+  def getClasses () : List[String] = {
+    classtable.keys.filterNot(isInterface).toList
+  }
+
+  def getInterfaces () : List[String] = {
+    classtable.keys.filter(isInterface).toList
   }
 }
 
 import scala.util.parsing.combinator.Parsers
 object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToSimpleJava with CoqOutputter {
-  private var fields : List[String] = List[String]()
-  private var lvars : List[String] = List[String]()
-  private var outer : Option[String] = None
+  import scala.collection.mutable.HashMap
+
+  private var classid : String = ""
+  private var lvars : HashMap[String,String] = new HashMap[String,String]()
 
   def unpackR (r : Any) : String = {
     r match {
       case x~y => unpackR(x) + unpackR(y)
-      case QualId(xs) => "\"" + xs.map(unpackR).reduceLeft(_ + "." + _) + "\""
+      case QualId(xs) => "\"" + xs.map(unpackR).reduceLeft(_ + "." + _) + "\"" //XXX: ???
       case Some(x) => unpackR(x)
       case Expr(x) => unpackR(x)
       case PrimaryExpr(x) => unpackR(x)
@@ -177,12 +221,36 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
   def transformStatement (x : Any) : JStatement = {
     //Console.println("transformstatement " + x)
     x match {
+      case (x : PrimaryExpr)~(y : List[Any]) =>
+        val rx = transformExpression(x)
+        val rest = unpackR(y).drop(1)
+        rx match {
+          case JVariableAccess(y) =>
+            if (y == "this")
+              if (ClassTable.getFields(classid).contains(rest))
+                JFieldAccess(rx, rest)
+              else {
+                Console.println("dunno what you mean with this (not a field): " + rx + " rest " + rest)
+                null
+              }
+            else {
+              Console.println("access to non-this field (unchecked): " + rx + " fieldname " + rest)
+              JFieldAccess(rx, rest)
+            }
+          case y =>
+            //now we have to lookup type of rx, and look whether rest is a field inside there
+            Console.println("unsafe field access (maybe non-existant?): " + rx + " rest " + rest)
+            JFieldAccess(rx, rest)
+        }
       case Expr(x) => transformStatement(x)
       case PostFixExpression(x) => transformStatement(x)
       case AnyStatement(x) => transformStatement(x)
       case PrimaryExpr(x) => transformStatement(x)
       case ParExpr(x) => transformStatement(x)
       case Some(x) => transformStatement(x)
+      case "this" => JVariableAccess("this")
+      case PostExpr(k, x) => JPostfixExpression(unpackR(k), transformExpression(x))
+      case UnaryExpr(op, v) => JUnaryExpression(unpackR(op), transformExpression(v))
       case NewExpression(ntype, args) => JNewExpression(unpackR(ntype), args.map(transformExpression))
       case Conditional(test, consequence, alternative) =>
         val cs = transformBlock(transformStatement(consequence))
@@ -211,7 +279,7 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
             ("this", funs)
           else
             (funs(0), funs.drop(1))
-        JCall(varia, rst.reduceLeft(_ + "." + _), args.map(transformExpression))
+        JCall(varia, rst.reduceLeft(_ + "." + _), args.map(transformExpression)) //XXX: recurse
       case Return(x) => JReturn(transformExpression(x))
       case QualId(x) =>
         //Console.println("inspecting qualid: " + x)
@@ -220,27 +288,24 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
           val v = vs(0)
           if (lvars.contains(v))
             JVariableAccess(v)
-          else if (fields.contains(v))
-            JFieldAccess("this", v)
+          else if (ClassTable.getFields(classid).contains(v))
+            JFieldAccess(JVariableAccess("this"), v)
           else {
-            Console.println("got a qualid which isn't in lvars or fields " + vs + " (fields: " + fields + ")(lvar: " + lvars + ")")
-            JVariableAccess(vs.reduceLeft(_ + "." + _))
+            Console.println("got a qualid which isn't in lvars or fields " + vs + " (fields: " + ClassTable.getFields(classid) + ")(lvar: " + lvars + ")")
+            JVariableAccess(vs.reduceLeft(_ + "." + _)) //XXX: recurse
           }
         } else
-          JFieldAccess(vs.dropRight(1).reduceLeft(_ + "." + _), vs.takeRight(1)(0))
+          //XXX: recurse
+          JFieldAccess(JVariableAccess(vs.dropRight(1).reduceLeft(_ + "." + _)), vs.takeRight(1)(0))
       case Lit(x) => JLiteral(unpackR(x))
-      case (x : PrimaryExpr)~(y : List[Any]) =>
-        val rx = unpackR(x) //most likely a name (to a class/var)
-        val rest = unpackR(y)
-        if (rx == "this")
-          if (fields.contains(rest.drop(1))) //get rid of first '.'
-            JFieldAccess(rx, rest.drop(1))
-          else
-            Console.println("dunno what you mean with this (not a field): " + rx + " rest " + rest)
-        else
-          //now we have to lookup type of rx, and look whether rest is a field inside there
-          Console.println("unsafe field access (maybe non-existant?): " + rx + " rest " + rest)
-          JFieldAccess(rx, rest.drop(1))
+      case Block(xs) =>
+        val res = walk(xs)
+        if (res.forall(_.isInstanceOf[JBodyStatement]))
+          JBlock(res.map(_.asInstanceOf[JBodyStatement]))
+        else {
+          Console.println("transform: not valid block elements: " + res)
+          null
+        }
       case y => Console.println("transformStatement dunno " + x); null
     }
   }
@@ -251,26 +316,21 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
       case Modifier(_) => None
       case None => None
       case Some(x) => transform(x)
-      case Block(xs) =>
-        val res = walk(xs)
-        if (res.forall(_.isInstanceOf[JBodyStatement]))
-          Some(JBlock(res.map(_.asInstanceOf[JBodyStatement])))
-        else {
-          Console.println("transform: not valid block elements: " + res)
-          None
-        }
       case LocalVar(x) => x match {
         case (mod~jtype)~(decls : List[Any]) =>
+          val typ = unpackR(jtype)
           val vars = decls.map(_ match {
             case (name : Name)~b~Some(y) =>
+              //Console.println("WORKING on lv name " + name + " init is " + y)
               val init = transformExpression(y)
               val realn = unpackR(name)
-              lvars ::= realn
-              Some(JBinding(realn, unpackR(jtype), init))
+              lvars += realn -> typ
+              //Console.println("lv " + realn + " init is " + init)
+              Some(JBinding(realn, typ, Some(init)))
             case (name : Name)~b~None =>
               val realn = unpackR(name)
-              lvars ::= realn
-              Some(JBinding(realn, unpackR(jtype), null))
+              lvars += realn -> typ
+              Some(JBinding(realn, typ, None))
             case x => Console.println("dunno about decl " + x); None
           })
           assert(vars.length == 1)
@@ -280,12 +340,13 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
       case FormalVariable(mods, jtype, name) => Some(JArgument(unpackR(name), unpackR(jtype)))
       case FieldDeclaration(id, jtype, rest) =>
         val name = unpackR(id)
-        fields ::= name
-        Some(JFieldDefinition(name, unpackR(jtype)))
+        val typ = unpackR(jtype)
+        ClassTable.addField(classid, name, typ)
+        Some(JFieldDefinition(name, typ))
       case ConstructorDeclaration(id, parameters, throws, body) =>
-        lvars = List[String]()
+        lvars = new HashMap[String,String]()
         val args = transformOL(parameters, List[JArgument]())
-        lvars ++= args.map(_.id)
+        args.foreach { x => lvars += x.id -> x.jtype }
         //Console.println("walking over body " + body)
         val realbody = walk(body)
         //Console.println("walked over body " + realbody)
@@ -296,12 +357,13 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
             Console.println("cannot convert constructor body " + realbody)
             List[JBodyStatement]()
           }
-        Console.println("MethodDeclaration done, lvars " + lvars) 
-        Some(JMethodDefinition(unpackR(id), args, realrealbody))        
+        //Console.println("MethodDeclaration done, lvars " + lvars)
+        ClassTable.addMethod(classid, "<init>", unpackR(id), lvars)
+        Some(JMethodDefinition("<init>", args, realrealbody))        
       case MethodDeclaration(id, jtype, parameters, throws, body) =>
-        lvars = List[String]()
+        lvars = new HashMap[String,String]()
         val args = transformOL(parameters, List[JArgument]())
-        lvars ++= args.map(_.id)
+        args.foreach { x => lvars += x.id -> x.jtype }
         //Console.println("walking over body " + body)
         val realbody = walk(body)
         //Console.println("walked over body " + realbody)
@@ -312,33 +374,30 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
             Console.println("cannot convert method body " + realbody)
             List[JBodyStatement]()
           }
-        Console.println("MethodDeclaration done, lvars " + lvars) 
-        Some(JMethodDefinition(unpackR(id), args, realrealbody))
+        //Console.println("MethodDeclaration done, lvars " + lvars) 
+        val name = unpackR(id)
+        val typ = unpackR(jtype)
+        ClassTable.addMethod(classid, name, typ, lvars)
+        Some(JMethodDefinition(name, args, realrealbody))
       case JInterface(id, jtype, interfaces, body) =>
         val is = transformOLF(interfaces)
-        Some(JInterfaceDefinition(unpackR(id), is, walk(body)))
+        val myclass = unpackR(id)
+        val outer = if (classid == "") None else Some(classid)
+        classid = myclass
+        ClassTable.registerClass(classid, outer, true)
+        val mybody = walk(body)
+        classid = ClassTable.getOuter(myclass) match { case None => ""; case Some(x) => x }
+        Some(JInterfaceDefinition(myclass, is, mybody))
       case JClass(id, jtype, superclass, interfaces, bodyp) =>
         val is = transformOLF(interfaces)
         val cs = unpackR(superclass)
-        val mid = unpackR(id)
-        outer match {
-          case Some(x) => ClassTable.updateClass(x, fields)
-          case None =>
-        }
-        fields = List[String]()
-        ClassTable.registerClass(mid, outer, fields)
-        outer = Some(mid)
+        val myclassid = unpackR(id)
+        val outer = if (classid == "") None else Some(classid)
+        classid = myclassid
+        ClassTable.registerClass(classid, outer, false)
         val mybody = walk(bodyp)
-        ClassTable.updateClass(mid, fields)
-        outer = ClassTable.getOuter(mid)
-        fields = outer match {
-          case None => List[String]();
-          case Some(x) => ClassTable.getFields(x) match {
-            case None => List[String]()
-            case Some(x) => x
-          }
-        }
-        Some(JClassDefinition(mid, cs, is, mybody, outer))
+        classid = ClassTable.getOuter(myclassid) match { case None => ""; case Some(x) => x }
+        Some(JClassDefinition(myclassid, cs, is, mybody, outer))
       case Expr(y) => Some(transformStatement(y))
       case (x : Conditional) => Some(transformStatement(x))
       case ";" => None
@@ -365,7 +424,7 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
   }
 
   def doit (a : Any, out : PrintWriter) = {
-    Console.println("walking over " + a)
+    //Console.println("walking over " + a)
     val x = walk(a)
     //Console.println("doit, walked " + x)
     var innerclasses : List[JClassDefinition] = List[JClassDefinition]()
@@ -392,7 +451,7 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
       innerclasses = List[JClassDefinition]()
       workset = ci.map(i => convert(List(i)).head.asInstanceOf[JClassDefinition]) ++ workset
     }
-    Console.println("outputting " + main + " inners " + workset)
+    //Console.println("outputting " + main + " inners " + workset)
     coqoutput(workset ++ main, out)
   }
 }
@@ -406,13 +465,33 @@ trait JavaToSimpleJava extends JavaStatements {
       case JAssignment(x, r) =>
         val (arg, ins) = extractHelper(r)
         ins ++ List(JAssignment(x, arg))
+      case JBinding(n, t, i) =>
+        //Console.println("extracting jbinding " + n + " type " + t + " init " + i)
+        i match {
+          case None => List(JBinding(n, t, i))
+          case Some(x) =>
+            val (ih, ins) = extractHelper(x)
+            ins ++ List(JBinding(n, t, Some(ih)))
+        }
       case JBinaryExpression(op, l, r) =>
         val (larg, lins) = extractHelper(l)
         val (rarg, rins) = extractHelper(r)
         lins ++ rins ++ List(JBinaryExpression(op, larg, rarg))
+      case JUnaryExpression(op, v) =>
+        val (va, vis) = extractHelper(v)
+        vis ++ List(JUnaryExpression(op, va))
+      case JPostfixExpression(op, v) =>
+        val (va, vis) = extractHelper(v)
+        val oper = op match {
+          case "++" => "+"
+          case "--" => "-"
+          case x => Console.println("dunno about postfixop " + op); op
+        }
+        vis ++ List(JBinaryExpression(oper, va, JLiteral("1")))
       case JFieldWrite(x, f, v) =>
         val (a, i) = extractHelper(v)
-        i ++ List(JFieldWrite(x, f, a))
+        val (va, vi) = extractHelper(x)
+        vi ++ i ++ List(JFieldWrite(va, f, a))
       case JConditional(t, c, a) =>
         val (ta, ti) = extractHelper(t)
         val con = extractCalls(c)
@@ -471,9 +550,18 @@ trait JavaToSimpleJava extends JavaStatements {
         val (le, lei) = extractHelper(l)
         //Console.println("HELP le " + le + " ri " + ri + " is " + lei)
         (JBinaryExpression(op, le, ri), rii ++ lei)
+      case JUnaryExpression(op, v) =>
+        val (va, vis) = extractHelper(v)
+        (JUnaryExpression(op, va), vis)
+      case JPostfixExpression(op, v) =>
+        val (va, vis) = extractHelper(v)
+        val t = Gensym.newsym
+        val oper = if (op == "++") "+" else if (op == "--") "-" else { Console.println("dunno postfix " + op); op }
+        (JVariableAccess(t), JAssignment(t, va) :: List(JBinaryExpression(oper, va, JLiteral("1"))))
       case JFieldAccess(con, f) =>
         val t = Gensym.newsym
-        (JVariableAccess(t), List(JAssignment(t, JFieldAccess(con, f))))
+        val (a, i) = extractHelper(con)
+        (JVariableAccess(t), i ++ List(JAssignment(t, JFieldAccess(a, f))))
       case JCall(variable, name, args) =>
         val (as, ins) = exL(args)
         //List[pair[JExpression,List[JBodyStatement]]]
@@ -510,15 +598,13 @@ trait JavaToSimpleJava extends JavaStatements {
 
 trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
   import scala.collection.mutable.HashMap
-  var symboltable : HashMap[String,String] = new HashMap[String,String]()
 
-  var classes : List[Pair[String,String]] = List[Pair[String,String]]()
-  var interfaces : List[Pair[String,String]] = List[Pair[String,String]]()
+  private var myclass : String = ""
+  private var mymethod : String = ""
 
   def getArgs (x : List[InnerStatement]) : List[String] = {
     x.flatMap {
       case JArgument(id, jtype) =>
-        symboltable += id -> jtype
         Some(id)
       case (x : JBinaryExpression) =>
         Some(printStatement(x))
@@ -543,6 +629,8 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
     else if (x == "+") "eplus"
     else if (x == "==") "eeq"
     else if (x == "!=") "eneq"
+    else if (x == "!") "enot"
+    else if (x == "&&") "eand"
     else { Console.println("translateOp dunno Key " + x); "" }
   }
 
@@ -554,23 +642,41 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
         val args = value.arguments
         val callpref = value.variable
         val argstring = args.map(printStatement).foldRight("nil")(_ + " :: " + _)
-        val typ = symboltable(callpref)
+        val typ = ClassTable.getType(ClassTable.getLocalVar(myclass, mymethod, callpref), funname)
         "(ccall \"" + name + "\" \"" + callpref + "\" \"" + funname + "\" (" + argstring + ") " + "(TClass \"" + typ + "\")" + ")"
-      case JAssignment(name, value : JNewExpression) =>
-        val t = value.jtype
-        val a = value.arguments.map(printStatement).foldRight("nil")(_ + " :: " + _)
-        symboltable += name -> t
-        "(calloc \"" + name + "\" \"" + t + "\" " + a + ")"
-      case JAssignment(name, value : JFieldAccess) =>
-        //symboltable += name -> 
-        "(cread \"" + name + "\" \"" + value.variable + "\" \"" + value.field + "\")"
+      case JAssignment(name, JNewExpression(typ, arg)) =>
+        val t = typ
+        val init = printStatement(JAssignment(name, JCall("this", "<init>", arg)))
+        "(cseq (calloc \"" + name + "\" \"" + t + "\")" + init + ")"
+      case JAssignment(name, JFieldAccess(variable, field)) =>
+        val v = variable match {
+          case JVariableAccess(x) => x
+          case y =>
+            Console.println("FieldAccess to " + y)
+            y
+        }
+        "(cread \"" + name + "\" \"" + v + "\" \"" + field + "\")"
       case JFieldWrite(v, f, n) =>
+        var va = v match {
+          case JVariableAccess(x) => x
+          case y =>
+            Console.println("FieldWrite to " + y)
+            y
+        }
         "(cwrite \"" + v + "\" \"" + f + "\" " + printStatement(n) + ")"
       case JAssignment(name, value) => "(cassign \"" + name + "\" " + printStatement(value) + ")"
       case JBinaryExpression(op, l, r) =>
         "(" + translateOp(op) + " " + printStatement(l) + " " + printStatement(r) + ")"
+      case JUnaryExpression(op, v) =>
+        "(" + translateOp(op) + " " + printStatement(v) + ")"
       case JLiteral(x) => "\"" + x + "\""
       case JVariableAccess(x) => "\"" + x + "\""
+      case JCall(v, fun, arg) => "(ccall \"ignored\" \"" + v + "\" \"" + fun + "\" (" + arg.map(printStatement).foldRight("nil")(_ + " :: " + _) + ") (TClass \"" + "XXXtypeXXX" + "\"))"
+      case JNewExpression(typ, arg) =>
+        val t = Gensym.newsym
+        freevars += t
+        val init = printStatement(JAssignment(t, JCall("this", "<init>", arg)))
+        "(cseq (calloc \"" + t + "\" \"" + typ + "\")" + init + ")"
       case y => Console.println("printStatement: no handler for " + y); ""
     }
   }
@@ -604,7 +710,12 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
       case JBlock(xs) => Some(xs.map(getBS).flatten.flatten)
       case JWhile(test, body) =>
         Some(List("(cwhile " + printStatement(test) + " " + optPrintBody(getBS(body)) + ")"))
-      case JBinding(x, typ, init) => freevars += x; None
+      case JBinding(x, typ, init) =>
+        freevars += x
+        init match {
+          case None => None
+          case Some(y) => Some(List(printStatement(JAssignment(x, y))))
+        }
       case JReturn(JVariableAccess(r)) => ret = r; None
       case a @ JAssignment(n, x) => freevars += n; Some(List(printStatement(a)))
       case (x : JBodyStatement) => Some(List(printStatement(x)))
@@ -630,6 +741,8 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
   def classMethods (body : List[JStatement]) : List[Pair[String,String]] = {
     body.flatMap {
       case JMethodDefinition(name, params, body) =>
+        //Console.println("starting to print method " + name + " with body " + body)
+        mymethod = name
         val bodyref = name + "_body"
         val args = getArgs(params)
         val (local, returnvar) = getBody(body, bodyref)
@@ -647,23 +760,20 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
     xs.foreach(x => x match {
       case JInterfaceDefinition(id, inters, body) =>
         //Console.println("interfaces are " + inters)
-        interfaces ::= ("\"" + id + "\"", id)
         outp.println("Definition " + id + " :=")
         val methods = interfaceMethods(body)
         outp.println("  Build_Inter " + printFiniteSet(inters) + " " + printFiniteMap(methods) + ".")
       case JClassDefinition(id, supers, inters, body, par) =>
-        classes ::= ("\"" + id + "\"", id)
-        symboltable = new HashMap[String, String]()
-        symboltable += "this" -> id
-        val fields = ClassTable.getFields(id) match { case None => List[String](); case Some(x) => x }
+        myclass = id
+        val fields = ClassTable.getFields(id).keys.toList
         val methods = classMethods(body)
         outp.println("Definition " + id + " :=")
         outp.println("  Build_Class " + printFiniteSet(inters))
         outp.println("              " + printFiniteSet(fields))
         outp.println("              " + printFiniteMap(methods) + ".")
     })
-    val cs = printFiniteMap(classes)
-    val is = printFiniteMap(interfaces)
+    val cs = printFiniteMap(ClassTable.getClasses.map(x => ("\"" + x + "\"", x)))
+    val is = printFiniteMap(ClassTable.getInterfaces.map(x => ("\"" + x + "\"", x)))
     outp.println("Definition P :=")
     outp.println("  Build_Program " + cs)
     outp.println("                " + is + ".")
