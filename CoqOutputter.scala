@@ -1,8 +1,6 @@
 package dk.itu.sdg.javaparser
 
 trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
-  import java.io.PrintWriter
-
   private var myclass : String = ""
   private var mymethod : String = ""
 
@@ -138,10 +136,8 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
       case (x : JBodyStatement) => getBS(x)
     }
     //Console.println("getbody, flattened " + body)
-    outp.println("Definition " + myname + " :=")
     val b = printBody(body.flatten)
-    outp.println(b)
-    outp.println(".")
+    outp ::= "\nDefinition " + myname + " := " + b + "."
     (freevars.toList, "var_expr \"" + ret + "\"")
   }
 
@@ -153,37 +149,38 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
         val bodyref = name + "_body"
         val args = getArgs(params)
         val (local, returnvar) = getBody(body, bodyref)
-        outp.println("Definition " + name + "M :=")
-        outp.println("  Build_Method (" + printArgList(args) + ") (" + printArgList(local) + ") " + bodyref + " (" + returnvar + ").")
+        outp ::= "\nDefinition " + name + "M := Build_Method (" + printArgList(args) + ") (" + printArgList(local) + ") " + bodyref + " (" + returnvar + ")."
         Some(("\"" + name + "\"", name + "M"))
       case _ => None
     }
   }
 
-  private var outp : PrintWriter = null
+  private var outp : List[String] = null
 
-  def coqoutput (xs : List[JStatement], out : PrintWriter) : Unit = {
-    outp = out
+  def coqoutput (xs : List[JStatement]) : List[String] = {
+    outp = List[String]()
     xs.foreach(x => x match {
       case JInterfaceDefinition(id, inters, body) =>
         //Console.println("interfaces are " + inters)
-        outp.println("Definition " + id + " :=")
         val methods = interfaceMethods(body)
-        outp.println("  Build_Inter " + printFiniteSet(inters) + " " + printFiniteMap(methods) + ".")
+        outp ::= "Definition " + id + " := Build_Inter " + printFiniteSet(inters) + " " + printFiniteMap(methods) + "."
       case JClassDefinition(id, supers, inters, body, par) =>
         myclass = id
         val fields = ClassTable.getFields(id).keys.toList
         val methods = classMethods(body)
-        outp.println("Definition " + id + " :=")
-        outp.println("  Build_Class " + printFiniteSet(inters))
-        outp.println("              " + printFiniteSet(fields))
-        outp.println("              " + printFiniteMap(methods) + ".")
+        outp ::= """
+Definition """ + id + """ :=
+  Build_Class """ + printFiniteSet(inters) + """
+              """ + printFiniteSet(fields) + """
+              """ + printFiniteMap(methods) + "."
     })
     val cs = printFiniteMap(ClassTable.getClasses.map(x => ("\"" + x + "\"", x)))
     val is = printFiniteMap(ClassTable.getInterfaces.map(x => ("\"" + x + "\"", x)))
-    outp.println("Definition P :=")
-    outp.println("  Build_Program " + cs)
-    outp.println("                " + is + ".")
+    outp ::= """
+Definition P :=
+  Build_Program """ + cs + """
+                """ + is + "."
+    outp.reverse
   }
 
   def printArgList (l : List[String]) : String = {

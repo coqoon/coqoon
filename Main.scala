@@ -1,28 +1,5 @@
 package dk.itu.sdg.javaparser
 
-import scala.util.parsing.combinator.Parsers
-import scala.util.parsing.input.StreamReader
-
-import java.io.File
-import java.io.FileInputStream
-import java.io.InputStreamReader
-import java.io.PrintWriter
-
-import scala.util.parsing.input._
-
-trait JavaAST extends JavaParser {
-  def parse(r: Reader[Char], out : PrintWriter) : ParseResult[Any] = {
-    val p = phrase(compilationUnit)(new lexical.Scanner(r))
-    p match {
-      case Success(x @ ~(_,_), _) =>
-        val ast = FinishAST.doit(x, out);
-      case Failure(msg, remainder) => Console.println("Failure: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString)
-      case Error(msg, remainder) => Console.println("Error: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString)
-    }
-    p
-  }
-}
-
 /**
  * Parser for an untyped lambda calculus
  *
@@ -34,11 +11,15 @@ trait JavaAST extends JavaParser {
  */
 object Main extends Application with JavaAST
 {
+  import java.io.{FileInputStream,InputStreamReader,PrintWriter,File}
+  import scala.util.parsing.input.StreamReader
+
   override def main(args: Array[String]) = {
     val in = StreamReader(new InputStreamReader(new FileInputStream(new File(args(0))), "ISO-8859-1"))
     val outfile = args(0) + ".v"
     val out = new PrintWriter(new File(outfile))
-    parse(in, out)
+    val res = parse(in)
+    out.println(res)
     out.close
   }
 }

@@ -32,4 +32,17 @@ trait JavaStatements {
   case class JFieldAccess (variable : JExpression, field : String) extends JExpression
 }
 
+trait JavaAST extends JavaParser {
+  import scala.util.parsing.input._
+
+  def parse(r: Reader[Char]) : String = {
+    ClassTable.empty
+    val p = phrase(compilationUnit)(new lexical.Scanner(r))
+    p match {
+      case Success(x @ ~(_,_), _) => FinishAST.doit(x)
+      case Failure(msg, remainder) => Console.println("Failure: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString); ""
+      case Error(msg, remainder) => Console.println("Error: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString); ""
+    }
+  }
+}
 

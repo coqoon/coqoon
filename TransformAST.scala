@@ -2,13 +2,16 @@ package dk.itu.sdg.javaparser
 
 object ClassTable {
   import scala.collection.mutable.HashMap
-  var classtable : HashMap[String,(Boolean, Option[String], HashMap[String,String], HashMap[String,(String,HashMap[String,String])])] = new HashMap[String,(Boolean, Option[String], HashMap[String,String], HashMap[String,(String,HashMap[String,String])])]()
+  val classtable = new HashMap[String,(Boolean, Option[String], HashMap[String,String], HashMap[String,(String,HashMap[String,String])])]()
+  //Class -> (Interface?, Outer, FieldName -> Type, MethodName -> (Returntype, LocalVar -> Type))
 
+  def empty () : Unit = {
+    classtable.clear
+  }
+  
   def registerClass (id : String, outer : Option[String], interface : Boolean) = {
-    if (classtable.contains(id))
-      Console.println("overwriting of " + id + " in CT not allowed")
-    else
-      classtable += id -> (interface, outer, new HashMap[String,String](), new HashMap[String,(String,HashMap[String,String])]())
+    assert(! classtable.contains(id))
+    classtable += id -> (interface, outer, new HashMap[String,String](), new HashMap[String,(String,HashMap[String,String])]())
   }
 
   def checkkey (id : String, key : String) = {
@@ -76,8 +79,6 @@ object ClassTable {
 import scala.util.parsing.combinator.Parsers
 object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToSimpleJava with CoqOutputter {
   import scala.collection.mutable.HashMap
-  import java.io.PrintWriter
-
 
   private var classid : String = ""
   private var lvars : HashMap[String,String] = new HashMap[String,String]()
@@ -347,7 +348,7 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
     }
   }
 
-  def doit (a : Any, out : PrintWriter) = {
+  def doit (a : Any) : String = {
     //Console.println("walking over " + a)
     val x = walk(a)
     //Console.println("doit, walked " + x)
@@ -376,6 +377,6 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
       workset = ci.map(i => convert(List(i)).head.asInstanceOf[JClassDefinition]) ++ workset
     }
     //Console.println("outputting " + main + " inners " + workset)
-    coqoutput(workset ++ main, out)
+    coqoutput(workset ++ main).reduceLeft(_ + "\n" + _)
   }
 }
