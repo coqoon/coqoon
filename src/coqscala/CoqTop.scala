@@ -147,7 +147,7 @@ object CoqTop {
       if (isReady) {
         val datarr = data.getBytes("UTF-8")
         coqin.write(datarr)
-        //Console.println("wrote " + data)
+        Console.println("wrote " + data)
         if (datarr(datarr.length - 1) != '\n'.toByte)
           coqin.write('\n'.toByte)
         coqin.flush

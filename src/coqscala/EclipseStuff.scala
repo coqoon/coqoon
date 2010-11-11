@@ -8,11 +8,64 @@ class CoqEditor extends TextEditor {
   override protected def initializeEditor() : Unit = {
     Console.println("initializeEditor was called")
     super.initializeEditor();
+    setDocumentProvider(CoqJavaDocumentProvider)
     setSourceViewerConfiguration(CoqSourceViewerConfiguration);
   }
 
   def getSource () : ISourceViewer = {
     getSourceViewer();
+  }
+}
+
+import org.eclipse.jface.text.IDocumentListener
+object CoqJavaDocumentChangeListener extends IDocumentListener {
+  import org.eclipse.jface.text.DocumentEvent
+  import scala.collection.mutable.HashMap
+  import org.eclipse.jface.text.IDocument
+  private val docTS = new HashMap[IDocument,Long]()
+
+  override def documentAboutToBeChanged (ev : DocumentEvent) : Unit = {
+  }
+
+  override def documentChanged (ev : DocumentEvent) : Unit = {
+	val doc = ev.getDocument
+    if (!docTS.contains(doc) | docTS(doc) < ev.getModificationStamp) {
+      docTS += doc -> ev.getModificationStamp
+      //ev.getDocument.removeDocumentListener(this)
+      //ev.getDocument.replace(ev.getOffset, ev.getLength, ev.getText)
+      //ev.getDocument.addDocumentListener(this)
+    }
+  }
+}
+
+import org.eclipse.ui.editors.text.FileDocumentProvider
+object CoqJavaDocumentProvider extends FileDocumentProvider {
+  import org.eclipse.jface.text.{IDocument,Document}
+  import dk.itu.sdg.javaparser.JavaAST
+  import scala.util.parsing.input.CharArrayReader
+  import scala.collection.mutable.HashMap
+
+  val docTable = new HashMap[IDocument,Document]()
+
+  object JavaToCoq extends JavaAST { }
+
+  override def getDocument (element : Object) : IDocument = {
+    val doc = super.getDocument(element)
+    if (docTable.contains(doc))
+      docTable(doc)
+    else {
+      val source = doc.get
+      val document = new Document(translate(source))
+      docTable += doc -> document
+      Console.println("added doc " + doc + " mapping into " + document + " into table")
+      //document.addDocumentListener(CoqJavaDocumentChangeListener)
+      document
+    }
+  }
+
+  def translate (s : String) : String = {
+    Console.println("translating " + s)
+    JavaToCoq.parse(new CharArrayReader(s.toArray))
   }
 }
 
@@ -183,9 +236,8 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
     val content = EclipseBoilerPlate.getContent.drop(DocumentState.position)
     if (content.length > 0) {
       val eoc = findEnd(content)
-
       DocumentState.sendlen = eoc
-      //Console.println("command is (" + eoc + "): " + content.take(eoc))
+      Console.println("command is (" + eoc + "): " + content.take(eoc))
       CoqTop.writeToCoq(content.take(eoc))
     } else { Console.println("EOF") }
   }
