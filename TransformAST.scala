@@ -57,10 +57,15 @@ object ClassTable {
     if (name == "this")
       id
     else
-      if (classtable(id)._4(method)._2.contains(name))
+      if (classtable(id)._4(method)._2.contains(name)) //local method variable
         classtable(id)._4(method)._2(name)
-      else
+      else if (classtable(id)._3.contains(name)) //field
         classtable(id)._3(name)
+      //XXX: field of outer class
+      else {
+        Console.println("assuming static class " + name + ", since I couldn't find id " + id + " m " + method + " n " + name + " in CT")
+        name
+      }
   }
 
   def isInterface (name : String) : Boolean = {
@@ -68,7 +73,7 @@ object ClassTable {
   }
 
   def getClasses () : List[String] = {
-    classtable.keys.filterNot(isInterface).toList
+    classtable.keys.filterNot(isInterface).toList.filterNot(_ == "Coq")
   }
 
   def getInterfaces () : List[String] = {
@@ -349,9 +354,9 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
   }
 
   def doit (a : Any) : String = {
-    //Console.println("walking over " + a)
+    Console.println("walking over " + a)
     val x = walk(a)
-    //Console.println("doit, walked " + x)
+    Console.println("doit, walked " + x)
     var innerclasses : List[JClassDefinition] = List[JClassDefinition]()
     val convert = (x : List[JStatement]) =>
       x.map(y => y match {
@@ -378,5 +383,6 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
     }
     //Console.println("outputting " + main + " inners " + workset)
     coqoutput(workset ++ main).reduceLeft(_ + "\n" + _)
+    //workset ++ main
   }
 }

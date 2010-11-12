@@ -4,6 +4,12 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
   private var myclass : String = ""
   private var mymethod : String = ""
 
+  import scala.collection.mutable.HashMap
+  var specs : HashMap[String, (String, String)] = new HashMap[String, (String, String)]()
+  //methodname -> (precondition, postcondition)
+  var ms : HashMap[String, List[String]] = new HashMap[String, List[String]]()
+  //methodname -> arguments
+
   def getArgs (x : List[InnerStatement]) : List[String] = {
     x.flatMap {
       case JArgument(id, jtype) =>
@@ -74,9 +80,26 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
       case JLiteral(x) => "\"" + x + "\""
       case JVariableAccess(x) => "\"" + x + "\""
       case JCall(v, fun, arg) =>
-        val t = ClassTable.getLocalVar(myclass, mymethod, v)
-        val args = arg.map(printStatement).foldRight("nil")(_ + " :: " + _)
-        "(ccall \"ignored\" \"" + v + "\" \"" + fun + "\" (" + args + ") (TClass \"" + t + "\"))"
+        if (v == "Coq") {
+          //better be requires or ensures
+          if (! specs.contains(mymethod))
+            specs(mymethod) = (null, null)
+          assert(arg.length == 1)
+          assert(arg(0).isInstanceOf[JLiteral])
+          val lit = arg(0).asInstanceOf[JLiteral].value
+          if (fun == "requires") {
+            assert(specs(mymethod)._1 == null)
+            specs(mymethod) = (lit, specs(mymethod)._2)
+          } else if (fun == "ensures") {
+            assert(specs(mymethod)._2 == null)
+            specs(mymethod) = (specs(mymethod)._1, lit)
+          } else Console.println("what do you want from me? JCall(" + v + ", " + fun + ", " + arg + ")")
+          ""
+        } else {
+          val t = ClassTable.getLocalVar(myclass, mymethod, v)
+          val args = arg.map(printStatement).foldRight("nil")(_ + " :: " + _)
+          "(ccall \"ignored\" \"" + v + "\" \"" + fun + "\" (" + args + ") (TClass \"" + t + "\"))"
+        }
       case JNewExpression(typ, arg) =>
         val t = Gensym.newsym
         freevars += t
@@ -150,6 +173,7 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
         val args = getArgs(params)
         val (local, returnvar) = getBody(body, bodyref)
         outp ::= "\nDefinition " + name + "M := Build_Method (" + printArgList(args) + ") (" + printArgList(local) + ") " + bodyref + " (" + returnvar + ")."
+        ms += name -> args
         Some(("\"" + name + "\"", name + "M"))
       case _ => None
     }
@@ -159,13 +183,24 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
 
   def coqoutput (xs : List[JStatement]) : List[String] = {
     outp = List[String]()
+    outp ::= """Add LoadPath "/Users/hannes/tomeso/git/semantics/Coq".
+Require Import Tactics.
+Require Import Ascii.
+Require Import LiftOp.
+Open Scope string_scope.
+Open Scope list_scope.
+"""
+
+    outp ::= "Module Fac <: PROGRAM."
     xs.foreach(x => x match {
       case JInterfaceDefinition(id, inters, body) =>
         //Console.println("interfaces are " + inters)
         val methods = interfaceMethods(body)
         outp ::= "Definition " + id + " := Build_Inter " + printFiniteSet(inters) + " " + printFiniteMap(methods) + "."
+      case JClassDefinition("Coq", supers, inters, body, par) =>
       case JClassDefinition(id, supers, inters, body, par) =>
         myclass = id
+        specs = new HashMap[String, (String, String)]()
         val fields = ClassTable.getFields(id).keys.toList
         val methods = classMethods(body)
         outp ::= """
@@ -180,8 +215,41 @@ Definition """ + id + """ :=
 Definition P :=
   Build_Program """ + cs + """
                 """ + is + "."
+    outp ::= "End Fac."
+    outp ::= "Module Fac_spec <: PROG_SPEC Fac.\nImport Fac.\n"
+    //method specs go here
+    specs.keys.foreach(x =>
+      outp ::= "Definition " + x + """_spec :=
+  Build_spec unit (fun _ => (""" + specs(x)._1.replace("'", "\"") + ",\n" + specs(x)._2.replace("'", "\"") + ")).")
+    //now we need to connect implementation class (methods) to specs
+    //Spec: Class/Interface -> Method -> Arguments * specT
+    val spcs = printFiniteMap(specs.keys.map(x => ("\"" + x + "\"", "(" + printArgList(ms(x)) + ", " + x + "_spec" + ")")).toList)
+    outp ::= "Definition Spec := TM.add (TClass \"" + myclass + "\") " + spcs + " (TM.empty _)."
+    //output static blobs (calls to Coq)
+    xs.foreach(outputStaticBlobs(_))
+    outp ::= "End Fac_spec."
+    //now we can introduce the lemma!
+    outp ::= "Lemma fac_valid : |= G {{ spec_g Fac_spec.fac_spec () }} Fac.fac_body {{ spec_qret Fac_spec.fac_spec () 'x'}}.".replace("'", "\"")
     outp.reverse
   }
+
+  def outputStaticBlobs (x : JStatement) : Unit = {
+    x match {
+      case JClassDefinition(name, supers, inters, body, par) => body.foreach(outputStaticBlobs)
+      case JBlock(xs) => xs.foreach(outputStaticBlobs(_))
+      case JCall("Coq", "def", args) =>
+        assert(args.length == 1)
+        outp ::= exString(args(0)).replace("'", "\"")
+      case _ =>
+    }
+  }
+
+  def exString (x : JExpression) : String =
+    x match {
+      case JLiteral(s) => s
+      case JBinaryExpression("+", l, r) => exString(l) + "\n" + exString(r)
+      case y => Console.println("dunno how to extract from " + y); ""
+    }
 
   def printArgList (l : List[String]) : String = {
     l.foldRight("nil")("\"" + _ + "\" :: " + _)
