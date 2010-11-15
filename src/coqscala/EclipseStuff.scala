@@ -6,6 +6,7 @@ class CoqEditor extends TextEditor {
   import org.eclipse.jface.text.source.ISourceViewer
 
   override protected def initializeEditor() : Unit = {
+    System.setProperty("file.encoding", "UTF-8")
     Console.println("initializeEditor was called")
     super.initializeEditor();
     setDocumentProvider(CoqJavaDocumentProvider)
@@ -48,6 +49,8 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
   val docTable = new HashMap[IDocument,Document]()
 
   object JavaToCoq extends JavaAST { }
+
+  override def getDefaultEncoding () : String = { "UTF-8" }
 
   override def getDocument (element : Object) : IDocument = {
     val doc = super.getDocument(element)
