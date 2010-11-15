@@ -354,9 +354,9 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
   }
 
   def doit (a : Any) : String = {
-    Console.println("walking over " + a)
+    //Console.println("walking over " + a)
     val x = walk(a)
-    Console.println("doit, walked " + x)
+    //Console.println("doit, walked " + x)
     var innerclasses : List[JClassDefinition] = List[JClassDefinition]()
     val convert = (x : List[JStatement]) =>
       x.map(y => y match {

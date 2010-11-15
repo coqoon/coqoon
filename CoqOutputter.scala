@@ -183,6 +183,7 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
 
   def coqoutput (xs : List[JStatement]) : List[String] = {
     outp = List[String]()
+    val name = "Fac"
     outp ::= """Add LoadPath "/Users/hannes/tomeso/git/semantics/Coq".
 Require Import Tactics.
 Require Import Ascii.
@@ -191,7 +192,7 @@ Open Scope string_scope.
 Open Scope list_scope.
 """
 
-    outp ::= "Module Fac <: PROGRAM."
+    outp ::= "Module " + name + " <: PROGRAM."
     xs.foreach(x => x match {
       case JInterfaceDefinition(id, inters, body) =>
         //Console.println("interfaces are " + inters)
@@ -215,8 +216,8 @@ Definition """ + id + """ :=
 Definition P :=
   Build_Program """ + cs + """
                 """ + is + "."
-    outp ::= "End Fac."
-    outp ::= "Module Fac_spec <: PROG_SPEC Fac.\nImport Fac.\n"
+    outp ::= "End " + name + "."
+    outp ::= "Module " + name + "_spec <: PROG_SPEC " + name + ".\nImport " + name + ".\n"
     //method specs go here
     specs.keys.foreach(x =>
       outp ::= "Definition " + x + """_spec :=
@@ -227,7 +228,7 @@ Definition P :=
     outp ::= "Definition Spec := TM.add (TClass \"" + myclass + "\") " + spcs + " (TM.empty _)."
     //output static blobs (calls to Coq)
     xs.foreach(outputStaticBlobs(_))
-    outp ::= "End Fac_spec."
+    outp ::= "End " + name + "_spec."
     //now we can introduce the lemma!
     outp ::= "Lemma fac_valid : |= G {{ spec_g Fac_spec.fac_spec () }} Fac.fac_body {{ spec_qret Fac_spec.fac_spec () 'x'}}.".replace("'", "\"")
     outp.reverse
