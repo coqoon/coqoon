@@ -9,13 +9,31 @@ object Gensym {
 }
 
 trait JavaToSimpleJava extends JavaStatements {
+  def getUsedVars (x : JExpression) : List[String] = {
+    x match {
+      case JConditional(t, c, a) => getUsedVars(t)
+      case JBinaryExpression(op, l, r) => getUsedVars(l) ++ getUsedVars(r)
+      case JUnaryExpression(op, e) => getUsedVars(e)
+      case JPostfixExpression(op, e) => getUsedVars(e)
+      case JCall(v, f, arg) => List(v) ++ arg.map(getUsedVars).flatten
+      case JNewExpression(t, a) => a.map(getUsedVars).flatten
+      case JLiteral(x) => List[String]()
+      case JVariableAccess(v) => List(v)
+      case JFieldAccess(v, f) => getUsedVars(v)
+    }
+  }
+
+  var tmp : String = null
 
   def extractCalls (statement : JBodyStatement) : List[JBodyStatement] = {
     //Console.println("calling extract for " + statement)
     statement match {
       case JBlock(xs) => List(JBlock(xs.foldLeft(List[JBodyStatement]())((b, a) => b ++ extractCalls(a))))
       case JAssignment(x, r) =>
+        if (! getUsedVars(r).contains(x))
+          tmp = x
         val (arg, ins) = extractHelper(r)
+        tmp = null
         ins ++ List(JAssignment(x, arg))
       case JBinding(n, t, i) =>
         //Console.println("extracting jbinding " + n + " type " + t + " init " + i)
@@ -79,8 +97,7 @@ trait JavaToSimpleJava extends JavaStatements {
       case JReturn(exxx) =>
         val t = Gensym.newsym
         val (ra, ri) = extractHelper(exxx)
-        val res : List[JBodyStatement] =
-          ri ++ List(JAssignment(t, ra))
+        val res : List[JBodyStatement] = ri ++ List(JAssignment(t, ra))
         res ++ List(JReturn(JVariableAccess(t)))
       case x => {
         Console.println("extract default case encountered " + x);
@@ -92,6 +109,13 @@ trait JavaToSimpleJava extends JavaStatements {
   def exL (xs : List[JExpression]) : (List[JExpression], List[JBodyStatement]) = {
     val vals = xs.map(extractHelper)
     (vals.map(z => z._1), vals.map(z => z._2).flatten)
+  }
+
+  def sym () : String = {
+    if (tmp != null)
+      tmp
+    else
+      Gensym.newsym
   }
 
   def extractHelper (x : JExpression) : (JExpression, List[JBodyStatement]) = {
@@ -107,24 +131,24 @@ trait JavaToSimpleJava extends JavaStatements {
         (JUnaryExpression(op, va), vis)
       case JPostfixExpression(op, v) =>
         val (va, vis) = extractHelper(v)
-        val t = Gensym.newsym
+        val t = sym
         val oper = if (op == "++") "+" else if (op == "--") "-" else { Console.println("dunno postfix " + op); op }
         (JVariableAccess(t), JAssignment(t, va) :: List(JBinaryExpression(oper, va, JLiteral("1"))))
       case JFieldAccess(con, f) =>
-        val t = Gensym.newsym
+        val t = sym
         val (a, i) = extractHelper(con)
         (JVariableAccess(t), i ++ List(JAssignment(t, JFieldAccess(a, f))))
       case JCall(variable, name, args) =>
         val (as, ins) = exL(args)
         //List[pair[JExpression,List[JBodyStatement]]]
-        val t = Gensym.newsym
+        val t = sym
         (JVariableAccess(t), ins ++ List(JAssignment(t, JCall(variable, name, as))))
       case JNewExpression(name, args) =>
         val (as, ins) = exL(args)
-        val t = Gensym.newsym
+        val t = sym
         (JVariableAccess(t), ins ++ List(JAssignment(t, JNewExpression(name, as))))
       case JConditional(test, c, a) =>
-        val t = Gensym.newsym
+        val t = sym
         val (ta, ti) = extractHelper(test)
         val getb = (x : JBodyStatement) => {
           //Console.println("extracting conditional, body is " + x)
