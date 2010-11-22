@@ -48,7 +48,7 @@ class JavaLexer extends StdLexical
         if (source.charAt(j) == '\\') j += 1
         j += 1
       }
-      Success(source.subSequence(offset, j).toString, in.drop(j - offset))
+      Success(source.subSequence(offset, j).toString.replace("\\\"", "\""), in.drop(j - offset))
     }
   }
 
