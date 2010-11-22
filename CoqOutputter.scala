@@ -159,14 +159,8 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
 
   def coqoutput (xs : List[JStatement]) : List[String] = {
     outp = List[String]()
-    val name = "Fac"
-    outp ::= """Add LoadPath "/Users/hannes/tomeso/git/semantics/Coq".
-Require Import Tactics.
-Require Import Ascii.
-Require Import LiftOp.
-Open Scope string_scope.
-Open Scope list_scope.
-"""
+    val name = "Fac" //XXX: that's hardcoded
+    outp = ClassTable.getCoq("PRELUDE") ++ outp
 
     outp ::= "Module " + name + " <: PROGRAM."
     xs.foreach(x => x match {
@@ -191,9 +185,10 @@ Definition """ + id + """ :=
 Definition P :=
   Build_Program """ + cs + """
                 """ + is + "."
-    //unique_names has to go in here! - so we need a notation where sth goes (program, spec or toplevel module)
+    outp = ClassTable.getCoq(myclass, "PROGRAM") ++ outp
     outp ::= "End " + name + "."
     outp ::= "Module " + name + "_spec <: PROG_SPEC " + name + ".\nImport " + name + ".\n"
+    outp = ClassTable.getCoq(myclass, "BEFORESPEC") ++ outp
     //method specs go here
     val specs = ClassTable.getSpecs(myclass)
     specs.keys.foreach(x =>
@@ -203,17 +198,9 @@ Definition P :=
     //Spec: Class/Interface -> Method -> Arguments * specT
     val spcs = printFiniteMap(specs.keys.map(x => ("\"" + x + "\"", "(" + printArgList(ClassTable.getArguments(myclass, x).keys.toList) + ", " + x + "_spec" + ")")).toList)
     outp ::= "Definition Spec := TM.add (TClass \"" + myclass + "\") " + spcs + " (TM.empty _)."
-    //local stuff goes here (mfac/fac_step/...)
-    //specs_params_eq needs to go here
-    //static_spec goes here
-    //free_pre_params
-    //free_post_params
-    //params_not_modified
+    outp = ClassTable.getCoq(myclass, "AFTERSPEC") ++ outp
     outp ::= "End " + name + "_spec."
-    //module import MVerify
-    //sg, substs_fac, Morphism fac_Z .. ge_eq_fac_Z_m
-    //unify, unify2, assign_forward, forward, fac_valid, vg, Fac_valid
-    outp = ClassTable.getCoq(myclass) ++ outp
+    outp = ClassTable.getCoq("TOP") ++ outp
     outp.reverse
   }
 

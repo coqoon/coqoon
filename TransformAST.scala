@@ -6,18 +6,23 @@ object ClassTable {
   //Class -> (Interface?, Outer, FieldName -> Type, MethodName -> (Returntype, LocalVar -> Type, argument -> type)
 
   import scala.collection.mutable.ListBuffer
-  val spectable = new HashMap[String, (HashMap[String,(String,String)], ListBuffer[String])]()
-  //class -> (method -> (pre, post), coq)
+  val spectable = new HashMap[String, (HashMap[String,(String,String)], HashMap[String,ListBuffer[String]])]()
+  //class -> (method -> (pre, post), module -> coq)
+  val gspecs = new HashMap[String, ListBuffer[String]]()
+  //TOP -> topcoq; PRELUDE -> preludecoq
 
   def empty () : Unit = {
     classtable.clear
     spectable.clear
+    gspecs.clear
+    gspecs += "TOP" -> new ListBuffer[String]()
+    gspecs += "PRELUDE" -> new ListBuffer[String]()
   }
   
   def registerClass (id : String, outer : Option[String], interface : Boolean) = {
     assert(! classtable.contains(id))
     classtable += id -> (interface, outer, new HashMap[String,String](), new HashMap[String,(String,HashMap[String,String],HashMap[String,String])]())
-    spectable += id -> (new HashMap[String,(String,String)](), new ListBuffer[String]())
+    spectable += id -> (new HashMap[String,(String,String)](), new HashMap[String,ListBuffer[String]]())
   }
 
   def checkkey (id : String, key : String) = {
@@ -91,8 +96,15 @@ object ClassTable {
     spectable(id)._1(method) = (spectable(id)._1(method)._1, postcon)
   }
 
-  def addCoq (id : String, data : String) : Unit = {
-    spectable(id)._2.append(data)
+  def addCoq (id : String, module : String, data : String) : Unit = {
+    if (module == "PRELUDE" || module == "TOP")
+      gspecs(module).append(data)
+    else {
+      if (! spectable(id)._2.contains(module))
+        spectable(id)._2(module) = new ListBuffer[String]()
+      val lb = spectable(id)._2(module)
+      lb.append(data)
+    }
   }
 
   def getSpecs (id : String) : HashMap[String,(String,String)] = {
@@ -102,8 +114,12 @@ object ClassTable {
     res
   }
 
-  def getCoq (id : String) : List[String] = {
-    spectable(id)._2.toList.reverse
+  def getCoq (id : String, module : String) : List[String] = {
+    spectable(id)._2(module).toList.reverse
+  }
+
+  def getCoq (module : String) : List[String] = {
+    gspecs(module).toList.reverse
   }
 
   def getArguments (id : String, method : String) : HashMap[String,String] = {
@@ -256,16 +272,21 @@ object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToS
             (funs(0), funs.drop(1))
         if (varia == "Coq") {
           assert(rst.length == 1)
-          assert(args.length == 1)
-          val arg = exString(transformExpression(args(0)))
-          if (rst(0) == "requires")
-            ClassTable.setPrecondition(classid, methodid, arg)
-          else if (rst(0) == "ensures")
-            ClassTable.setPostcondition(classid, methodid, arg)
-          else if (rst(0) == "def")
-            ClassTable.addCoq(classid, arg)
-          else
-            Console.println("dunno what this can be " + varia + " rst " + rst + " args " + args)
+          if (rst(0) == "requires" || rst(0) == "ensures") {
+            assert(args.length == 1)
+            val arg = exString(transformExpression(args(0)))
+            if (rst(0) == "requires")
+              ClassTable.setPrecondition(classid, methodid, arg)
+            else if (rst(0) == "ensures")
+              ClassTable.setPostcondition(classid, methodid, arg)
+          } else {
+            assert(rst(0) == "def")
+            assert(args.length == 2)
+            val mod : JFieldAccess = transformExpression(args(0)).asInstanceOf[JFieldAccess] //Coq.M.FOO -> JFieldAccess("Coq", "M.FOO")
+            val module = mod.field //get rid of "Coq.M."
+            val arg = exString(transformExpression(args(1)))
+            ClassTable.addCoq(classid, module, arg)
+          }
           None
         } else
           Some(JCall(varia, rst.reduceLeft(_ + "." + _), args.map(transformExpression))) //XXX: recurse

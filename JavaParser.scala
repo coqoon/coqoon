@@ -206,9 +206,9 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
   def bound = rep1sep(jtype, "&")
 
   def enumDeclaration = "enum" ~> id ~ opt("implements" ~> typeList) ~ enumBody
-  def enumBody = rep(opt(enumConstants) <~ opt(",") ~ opt(enumBodyDeclarations))
+  def enumBody = "{" ~> (opt(enumConstants) <~ opt(",")) ~ opt(enumBodyDeclarations) <~ "}"
   def enumConstants = rep1sep(enumConstant, ",")
-  def enumConstant = annotations ~ id ~ opt(arguments) ~ opt(classBody)
+  def enumConstant = opt(annotations) ~ id ~ opt(arguments) ~ opt(classBody)
   def enumBodyDeclarations = ";" ~ rep(classBodyDeclaration)
   def interfaceDeclaration: Parser[Any] =
     ( normalInterfaceDeclaration

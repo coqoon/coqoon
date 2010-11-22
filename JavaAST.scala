@@ -37,7 +37,9 @@ trait JavaAST extends JavaParser { // with CoqOutputter {
 
   def parse(r: Reader[Char]) : String = {
     ClassTable.empty
+    //Console.println("scanning " + r)
     val p = phrase(compilationUnit)(new lexical.Scanner(r))
+    //Console.println("scanned " + p)
     p match {
       case Success(x @ ~(_,_), _) =>
         val conv = FinishAST.doit(x)
