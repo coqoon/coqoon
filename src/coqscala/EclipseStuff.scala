@@ -29,7 +29,7 @@ object CoqJavaDocumentChangeListener extends IDocumentListener {
   }
 
   override def documentChanged (ev : DocumentEvent) : Unit = {
-	val doc = ev.getDocument
+    val doc = ev.getDocument
     if (!docTS.contains(doc) | docTS(doc) < ev.getModificationStamp) {
       docTS += doc -> ev.getModificationStamp
       //ev.getDocument.removeDocumentListener(this)
@@ -238,7 +238,7 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
     }
     val content = EclipseBoilerPlate.getContent.drop(DocumentState.position)
     if (content.length > 0) {
-      val eoc = findEnd(content)
+      val eoc = findEnd(content).min(content.length)
       DocumentState.sendlen = eoc
       Console.println("command is (" + eoc + "): " + content.take(eoc))
       CoqTop.writeToCoq(content.take(eoc))
@@ -321,6 +321,7 @@ object EclipseConsole {
       outputconsole = mycon
     }
     out = outputconsole.newMessageStream
+    out.setEncoding("UTF-8")
   }
 
 //   display console in workbench!
@@ -385,7 +386,7 @@ object CoqOutputDispatcher extends CoqCallback {
           val ht = if (hy.length > 0) hy.reduceLeft(_ + "\n" + _) else ""
           val subd = res.findIndexOf(_.contains("subgoal "))
           val (g, r) = if (subd > 0) res.splitAt(subd) else (res, List[String]())
-          val gt = g.drop(1).reduceLeft(_ + " " + _)
+          val gt = if (g.length > 1) g.drop(1).reduceLeft(_ + " " + _) else ""
           val ot = if (r.length > 0) {
             val r2 = r.map(x => { if (x.contains("subgoal ")) x.drop(1) else x })
             r2.reduceLeft(_ + "\n" + _)
