@@ -34,9 +34,27 @@ class JavaLexer extends StdLexical
      | ("[0-9]+" + exponentPart + floatType + "?").r // decimal case 4
     )
 
-  def stringLiteral =
-    // '"' ~> rep(chrExcept('"', '\n', EofCh)) <~ '"'
-    '\"' ~> """[^\"\n]*""".r <~ '\"' // XXX
+  //def stringLiteral =
+  //  '\"' ~> """([^"\p{Cntrl}\\]|\\[\\/bfnrt]|\\u[a-fA-F0-9]{4})*""".r <~ '\"'
+
+  def stringLiteral = '\"' ~> sLit <~ '\"'
+
+  implicit def sLit(): Parser[String] = new Parser[String] {
+    def apply(in: Input) = {
+      val source = in.source
+      val offset = in.offset
+      var j = offset
+      while (j < source.length && '\"' != source.charAt(j)) {
+        if (source.charAt(j) == '\\') j += 1
+        j += 1
+      }
+      Success(source.subSequence(offset, j).toString, in.drop(j - offset))
+    }
+  }
+
+  //def stringLiteral =
+    //'\"' ~> rep(chrExcept('\"', '\n', EofCh)) <~ '\"'
+  //  '\"' ~> """(\"|[^"\n])*""".r <~ '\"' // XXX
 
   def charLiteral =
     """'[^\'\\]'""".r
@@ -50,9 +68,10 @@ class JavaLexer extends StdLexical
      | floatLiteral ^^ NumericLit
      | intLiteral ^^ NumericLit
      | stringLiteral ^^ StringLit
+// { case (x : List[Char]) => StringLit(x.map(_.toString).reduceLeft(_ + _)) }
      | charLiteral ^^ CharLit
      | EofCh ^^^ EOF
-     | '\"' ~> failure("unclosed quote")
+     //| '\"' ~> failure("unclosed quote")
      | delim
      | failure("illegal character")
     )

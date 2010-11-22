@@ -92,7 +92,7 @@ object ClassTable {
   }
 
   def addCoq (id : String, data : String) : Unit = {
-    spectable(id)._2.append(data.replace("'", "\""))
+    spectable(id)._2.append(data.replace("\\\"", "\""))
   }
 
   def getSpecs (id : String) : HashMap[String,(String,String)] = {
@@ -103,7 +103,7 @@ object ClassTable {
   }
 
   def getCoq (id : String) : List[String] = {
-    spectable(id)._2.toList
+    spectable(id)._2.toList.reverse
   }
 
   def getArguments (id : String, method : String) : HashMap[String,String] = {

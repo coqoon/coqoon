@@ -71,8 +71,8 @@ trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
         "(" + translateOp(op) + " " + printStatement(l) + " " + printStatement(r) + ")"
       case JUnaryExpression(op, v) =>
         "(" + translateOp(op) + " " + printStatement(v) + ")"
-      case JLiteral(x) => "\"" + x + "\""
-      case JVariableAccess(x) => "\"" + x + "\""
+      case JLiteral(x) => x
+      case JVariableAccess(x) => "(var_expr \"" + x + "\")"
       case JCall(v, fun, arg) =>
         val t = ClassTable.getLocalVar(myclass, mymethod, v)
         val args = arg.map(printStatement).foldRight("nil")(_ + " :: " + _)
@@ -191,6 +191,7 @@ Definition """ + id + """ :=
 Definition P :=
   Build_Program """ + cs + """
                 """ + is + "."
+    //unique_names has to go in here! - so we need a notation where sth goes (program, spec or toplevel module)
     outp ::= "End " + name + "."
     outp ::= "Module " + name + "_spec <: PROG_SPEC " + name + ".\nImport " + name + ".\n"
     //method specs go here
@@ -202,11 +203,17 @@ Definition P :=
     //Spec: Class/Interface -> Method -> Arguments * specT
     val spcs = printFiniteMap(specs.keys.map(x => ("\"" + x + "\"", "(" + printArgList(ClassTable.getArguments(myclass, x).keys.toList) + ", " + x + "_spec" + ")")).toList)
     outp ::= "Definition Spec := TM.add (TClass \"" + myclass + "\") " + spcs + " (TM.empty _)."
-    //output static blobs (calls to Coq)
-    outp = ClassTable.getCoq(myclass) ++ outp
+    //local stuff goes here (mfac/fac_step/...)
+    //specs_params_eq needs to go here
+    //static_spec goes here
+    //free_pre_params
+    //free_post_params
+    //params_not_modified
     outp ::= "End " + name + "_spec."
-    //now we can introduce the lemma!
-    outp ::= "Lemma fac_valid : |= G {{ spec_g Fac_spec.fac_spec () }} Fac.fac_body {{ spec_qret Fac_spec.fac_spec () 'x'}}.".replace("'", "\"")
+    //module import MVerify
+    //sg, substs_fac, Morphism fac_Z .. ge_eq_fac_Z_m
+    //unify, unify2, assign_forward, forward, fac_valid, vg, Fac_valid
+    outp = ClassTable.getCoq(myclass) ++ outp
     outp.reverse
   }
 
