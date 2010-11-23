@@ -140,7 +140,7 @@ object ClassTable {
 }
 
 import scala.util.parsing.combinator.Parsers
-object FinishAST extends JavaTerms with Parsers with JavaStatements with JavaToSimpleJava with CoqOutputter {
+object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOutputter {
   import scala.collection.mutable.HashMap
 
   private var classid : String = ""

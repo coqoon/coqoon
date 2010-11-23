@@ -8,7 +8,7 @@ object Gensym {
   }
 }
 
-trait JavaToSimpleJava extends JavaStatements {
+trait JavaToSimpleJava {
   def getUsedVars (x : JExpression) : List[String] = {
     x match {
       case JConditional(t, c, a) => getUsedVars(t)

@@ -1,6 +1,6 @@
 package dk.itu.sdg.javaparser
 
-trait CoqOutputter extends JavaToSimpleJava with JavaStatements {
+trait CoqOutputter extends JavaToSimpleJava {
   private var myclass : String = ""
   private var mymethod : String = ""
 
