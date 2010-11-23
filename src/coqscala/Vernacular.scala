@@ -9,36 +9,37 @@ case class VernacularSentence (data : List[String]) extends VernacularRegion { }
 case class VernacularNamespace (head : String, tail : String) extends VernacularRegion { }
 case class VernacularDots (left : List[String], right : List[String]) extends VernacularRegion { }
 
-import scala.util.parsing.combinator.lexical._
+import scala.util.parsing.combinator.lexical.StdLexical
+import scala.util.parsing.combinator.syntactical.StdTokenParsers
+import scala.util.parsing.combinator.ImplicitConversions
 import scala.util.parsing.combinator.RegexParsers
-import scala.util.matching.Regex
 
-object VernacularParser extends RegexParsers {
-  override def skipWhitespace = false
+class VernacularLexer extends StdLexical { //with ImplicitConversions {
+  import scala.util.parsing.input.CharArrayReader.EofCh
 
-  //nothing is holy! apart from .
-  val anything = """[!\"#$%&'()\*\+,-/:;<=>?\[\\\]\^_`\{\|\}~a-zA-Z0-9]+\s*""".r 
+  override def whitespace : Parser[Any] = rep('(' ~ '*' ~ comment)
+  override def comment : Parser[Any] = (
+    '*' ~ ')' ^^ { case _ => ' ' }
+    | chrExcept(EofCh) ~ comment
+  )
+}
 
-  val nocomment = "[^\\*)]+".r
+trait VernacularParser extends StdTokenParsers with ImplicitConversions {
+  val lexical = new VernacularLexer
+  type Tokens = VernacularLexer
+
+  lexical.delimiters ++= ".; ".split(";").toList
+  import lexical.Identifier
 
   def top = rep1(sentence)
 
-  def sentence = comment | toplevelcommand 
+  def sentence = toplevelcommand // | toplevelcommand 
     //declaration | definition | syntax | module | comment | proof
 
-  def comment = "(*" ~> rep1(nocomment) <~ "*)" ^^ VernacularComment
-  def toplevelcommand = rep1(commandfragment) <~ dotws ^^ VernacularSentence
+  //def comment = "(*" ~> rep1(nocomment) <~ "*)" ^^ VernacularComment
+  def toplevelcommand = rep1(commandfragment) ~ (("." ~ " ") | ("." ~ "." ~ "." ~ " "))
   
-  def commandfragment = anything | dot | dotdot | dotdotdot
-
-  val dotdotdot = "..."
-  val dotdot = ".."
-  val dot = "."
-  val dotws = """\.\s+""".r
-
-  def parseItem(s:String) = {
-    parse(top, s)
-  }
+  def commandfragment = ident | "." ~ "." ~ ident
 }
 /*  def declaration = (
     "Axiom"
@@ -94,3 +95,20 @@ object VernacularParser extends RegexParsers {
   def sideeffects = "Print" | "Eval" | "Check"
 */
 
+object ParseV extends VernacularParser {
+  import scala.util.parsing.input.CharArrayReader
+  def parse (s : String) : Unit = {
+    val in = new CharArrayReader(s.toArray)
+    val p = phrase(top)(new lexical.Scanner(in))
+    p match {
+      case Success(x @ _,_) => Console.println("success: " + x)
+      case _ => Console.println("Fail " + p)
+    }
+  }
+}
+
+object Main extends Application {
+  override def main (args : Array[String]) = {
+    ParseV.parse(args(0))
+  }
+}
