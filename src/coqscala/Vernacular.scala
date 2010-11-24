@@ -66,16 +66,16 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions {
 
   //def comment = "(*" ~> rep1(nocomment) <~ "*)" ^^ VernacularComment
   //da (.|...) only valid in proof-mode?
-  def toplevelcommand = commandfragment ~ (("." ~ ws) | ("." ~ "." ~ "." ~ ws))
+  def toplevelcommand = commandfragment ~ (("." <~ ws) | ("." ~ "." ~ ("." <~ ws)))
   //what do we need here?
   // -> Module XXX <: PROGRAM
   // -> Definition...
   // -> Build_Class/_Program/_Interface/_Method
   // -> Build_spec (translate to pre/post)
 
-  def commandfragment = assumption | definition | assertion | syntax | module | end ~ ws ~ ident | proof
+  def commandfragment = assumption | definition | assertion | syntax | module | (end <~ ws) ~ ident | proof
 
-  def term : Parser[Any] = ident ~ "." ~ ident | ident | "(" ~ opt(ws) ~ rep1sep(term, rep(ws)) ~ opt(ws) ~ ")" | string | numericLit | "::" | "_" | "," | "->" | "++" | "match" | "with" | "|" | "=>" | "*" | ">" | "=" | "end" | "-" | ";" | "fun" | ":" ~ rep(ws)~ term | "?=" | "%" ~ term | ">=" | "<-" | "[" ~ opt(ws) ~ rep1sep(term, rep(ws)) ~ "]" | "/" | "\\" | "!" | "·=·" | "/\\" | "in" | "forall" | "{" ~ rep1sep(term, rep(ws)) ~ "}" | "as" | "@" | ":=" | "'" | "|-" | "()"
+  def term : Parser[Any] = ident ~ "." ~ ident | ident | ("(" ~ opt(ws)) ~> rep1sep(term, rep(ws)) <~ (opt(ws) ~ ")") | string | numericLit | "::" | "_" | "," | "->" | "++" | "match" | "with" | "|" | "=>" | "*" | ">" | "=" | "end" | "-" | ";" | "fun" | (":" <~ rep(ws)) ~ term | "?=" | "%" ~ term | ">=" | "<-" | ("[" <~ opt(ws)) ~ rep1sep(term, rep(ws)) ~ "]" | "/" | "\\" | "!" | "·=·" | "/\\" | "in" | "forall" | "{" ~ rep1sep(term, rep(ws)) ~ "}" | "as" | "@" | ":=" | "'" | "|-" | "()"
 
   def assumption = assumptionStart ~ assRest
 
@@ -92,7 +92,8 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions {
     | "Hypotheses"
     )
 
-  def definition = definitionStart ~ ws ~ rep1sep(ident, rep1(ws)) ~ ws ~ ":=" ~ rep(ws) ~ rep1sep(term, rep(ws))
+  def definition = (definitionStart <~ ws) ~ rep1sep(ident, rep1(ws)) ~ ((ws ~ ":=" ~ rep(ws)) ~> rep1sep(term, rep(ws))) ^^ { case "Definition"~id~t => Console.println("found definition " + id + " to " + t); new ~(id, t)
+                                                                                                                    case a => a }
 
   def definitionStart = (
     "Definition"
@@ -106,7 +107,7 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions {
     | "Let"
   )
 
-  def assertion = assertionStart ~ ws ~ ident ~ rep(ws) ~ ":" ~ rep(ws) ~ rep1sep(term, rep(ws)) ~ "." ~ rep1(ws) ~ opt(proofStart) ~ proofBody
+  def assertion = (assertionStart <~ ws) ~ (ident <~ rep(ws)) ~ (":" <~ rep(ws)) ~ rep1sep(term, rep(ws)) ~ ("." <~ rep1(ws)) ~ opt(proofStart) ~ proofBody
 
   def assertionStart = (
     "Remark"
@@ -117,7 +118,7 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions {
     | "Theorem"
   )
 
-  def syntax = syntaxStart ~ ws ~ rep1sep(term, rep(ws))
+  def syntax = (syntaxStart <~ ws) ~ rep1sep(term, rep(ws))
 
   def syntaxStart = (
     "Tactic"
@@ -132,19 +133,19 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions {
   def module = moduleStart
 
   def moduleStart = (
-    "Section" ~ ws ~ ident
-    | "Module" ~ ws ~ "Import" ~ ws ~ ident ~ ws ~ ":=" ~ ws ~ rep1sep(ident, rep(ws))
-    | "Module" ~ ws ~ ident ~ ws ~ "<:" ~ ws ~ rep1sep(ident, rep(ws))
-    | "Require" ~ ws ~ ("Import" | "Export") ~ ws ~ ident
-    | "Import" ~ ws ~ ident
-    | "Open" ~ ws ~ ident ~ ws ~ ident
+    ("Section" <~ ws) ~ ident
+    | ("Module" <~ ws) ~ ("Import" <~ ws) ~ (ident <~ ws) ~ (":=" <~ ws) ~ rep1sep(ident, rep(ws))
+    | ("Module" <~ ws) ~ (ident <~ ws) ~ ("<:" <~ ws) ~ rep1sep(ident, rep(ws))
+    | ("Require" <~ ws) ~ (("Import" | "Export") <~ ws) ~ ident
+    | ("Import" <~ ws) ~ ident
+    | ("Open" <~ ws) ~ (ident <~ ws) ~ ident
     )
 
-  def proofStart = "Proof" ~ "." ~ rep1(ws)
+  def proofStart = "Proof" ~ ("." <~ rep1(ws))
   def proofBody = rep(tactics) ~ end
   def proof = proofStart ~ proofBody
 
-  def tactics = rep1sep(term, rep(ws)) ~ ("." | ";") ~ rep1(ws)
+  def tactics = rep1sep(term, rep(ws)) ~ (("." | ";") <~ rep1(ws))
 
   def end = "End" | "Qed" | "Admitted" | "Save" | "Defined"
 
