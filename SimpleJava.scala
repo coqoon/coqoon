@@ -34,7 +34,10 @@ trait JavaToSimpleJava {
           tmp = x
         val (arg, ins) = extractHelper(r)
         tmp = null
-        ins ++ List(JAssignment(x, arg))
+        if (arg.isInstanceOf[JVariableAccess] && arg.asInstanceOf[JVariableAccess].variable == x)
+          ins
+        else
+          ins ++ List(JAssignment(x, arg))
       case JBinding(n, t, i) =>
         //Console.println("extracting jbinding " + n + " type " + t + " init " + i)
         i match {
