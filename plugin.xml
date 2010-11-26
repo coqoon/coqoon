@@ -37,6 +37,14 @@
             id="coqscala.CoqEditor"
             name="Coq Editor">
       </editor>
+      <editor
+            class="coqscala.CoqJavaEditor"
+            contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
+            extensions="java"
+            icon="icons/sample.gif"
+            id="coqscala.CoqJavaEditor"
+            name="Coq Java Editor">
+      </editor>
    </extension>
    <extension
          point="org.eclipse.ui.views">
