@@ -18,7 +18,49 @@ class CoqEditor extends TextEditor {
   }
 }
 
+//import org.eclipse.jdt.internal.ui.javaeditor.CompilationUnitEditor
+class CoqJavaEditor extends TextEditor {
+  override protected def initializeEditor() : Unit = {
+    System.setProperty("file.encoding", "UTF-8")
+    super.initializeEditor();
+    setDocumentProvider(MyJavaDocumentProvider)
+  }
+}
+
 import org.eclipse.jface.text.IDocumentListener
+object MyJavaDocumentListener extends IDocumentListener {
+  import org.eclipse.jface.text.DocumentEvent
+  override def documentAboutToBeChanged (ev : DocumentEvent) : Unit = {
+  }
+
+  override def documentChanged (ev : DocumentEvent) : Unit = {
+    val doc = ev.getDocument
+    val t = doc.get
+    CoqJavaDocumentProvider.up(t) //t.substring(0, ev.getOffset) + ev.getText + t.substring(ev.getOffset + ev.getLength))
+  }
+}
+
+import org.eclipse.ui.editors.text.FileDocumentProvider
+object MyJavaDocumentProvider extends FileDocumentProvider {
+  import org.eclipse.jface.text.{IDocument,Document}
+  import scala.collection.mutable.HashMap
+
+  val docTable = new HashMap[IDocument,IDocument]()
+
+  override def getDefaultEncoding () : String = { "UTF-8" }
+
+  override def getDocument (element : Object) : IDocument = {
+    val doc = super.getDocument(element)
+    if (docTable.contains(doc))
+      doc
+    else {
+      docTable += doc -> doc
+      doc.addDocumentListener(MyJavaDocumentListener)
+      doc
+    }
+  }
+}
+
 object CoqJavaDocumentChangeListener extends IDocumentListener {
   import org.eclipse.jface.text.DocumentEvent
   import scala.collection.mutable.HashMap
@@ -39,7 +81,6 @@ object CoqJavaDocumentChangeListener extends IDocumentListener {
   }
 }
 
-import org.eclipse.ui.editors.text.FileDocumentProvider
 object CoqJavaDocumentProvider extends FileDocumentProvider {
   import org.eclipse.jface.text.{IDocument,Document}
   import dk.itu.sdg.javaparser.JavaAST
@@ -67,8 +108,16 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
   }
 
   def translate (s : String) : String = {
-    Console.println("translating " + s)
+    //Console.println("translating " + s)
     JavaToCoq.parse(new CharArrayReader(s.toArray))
+  }
+  
+  import dk.itu.sdg.javaparser.FinishAST
+  def up (s : String) : Unit = {
+	Console.println("updating " + s)
+	val (dat, off, len) = FinishAST.update(FinishAST.doitHelper(JavaToCoq.parseH(new CharArrayReader(s.toArray))))
+	Console.println("received at offset " + off + "(old len " + len + ") data " + dat)
+	docTable(docTable.keys.toList(0)).replace(off, len, dat)
   }
 }
 
