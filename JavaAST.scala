@@ -35,17 +35,21 @@ trait JavaAST extends JavaParser { // with CoqOutputter {
   import scala.util.parsing.input._
 
   def parse(r: Reader[Char]) : String = {
+	 FinishAST.doit(parseH(r))
+  }
+  def parseH(r: Reader[Char]) : Any = {
     ClassTable.empty
     //Console.println("scanning " + r)
     val p = phrase(compilationUnit)(new lexical.Scanner(r))
     //Console.println("scanned " + p)
     p match {
       case Success(x @ ~(_,_), _) =>
-        val conv = FinishAST.doit(x)
+        x
+        //val conv = FinishAST.doit(x)
         //coqoutput(conv).reduceLeft(_ + "\n" + _)
-        conv
-      case Failure(msg, remainder) => Console.println("Failure: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString); ""
-      case Error(msg, remainder) => Console.println("Error: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString); ""
+        //conv
+      case Failure(msg, remainder) => Console.println("Failure: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString); null
+      case Error(msg, remainder) => Console.println("Error: "+msg+"\n"+"Remainder: \n"+remainder.pos.longString); null
     }
   }
 }

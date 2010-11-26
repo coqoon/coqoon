@@ -446,8 +446,8 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
         res match { case None => List[JStatement](); case Some(x) => List(x) }
     }
   }
-
-  def doit (a : Any) : String = {
+  
+  def doitHelper (a : Any) : List[JStatement] = {
     //Console.println("walking over " + a)
     val x = walk(a)
     //Console.println("doit, walked " + x)
@@ -475,8 +475,14 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
       innerclasses = List[JClassDefinition]()
       workset = ci.map(i => convert(List(i)).head.asInstanceOf[JClassDefinition]) ++ workset
     }
+    //Console.println("outputting Class in Java\n" + JavaOutputter.out(main(1)))
     //Console.println("outputting " + main + " inners " + workset)
-    coqoutput(workset ++ main).reduceLeft(_ + "\n" + _)
+    workset ++ main
+  }
+
+  def doit (a : Any) : String = {
+	val w = doitHelper(a)
+    coqoutput(w).reduceLeft(_ + "\n" + _)
     //workset ++ main
   }
 }
