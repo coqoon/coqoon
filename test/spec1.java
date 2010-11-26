@@ -285,8 +285,8 @@ class FacC {
   }
 
   public int fac (int n) {
-    Coq.requires("ege 'n' 0 //\\ !(('this':expr) ·=· (null:expr))");
-    Coq.ensures("((('ret':expr) ·=· (fac_Z ('n':expr))):asn) //\\ ege 'n' 0");
+    Coq.requires("ege \"n\" 0 //\\ !((\"this\":expr) ·=· (null:expr))");
+    Coq.ensures("(((\"ret\":expr) ·=· (fac_Z (\"n\":expr))):asn) //\\ ege \"n\" 0");
     int x;
     if (n > 0)
       x = n * fac(n - 1);
