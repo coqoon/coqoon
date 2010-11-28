@@ -1,0 +1,28 @@
+*error on multiple returns
+  (rewrite would change control structure a lot, global changes)
+*error on overloading (one method with multiple implementations in the same class)
+  -> our coq formalization could handle this at the moment, but it isn't specifically nice
+
+*FOR
+*do we need alpha-conversion of local variables/arguments which clash with field names?
+
+*specification of pre/postconditions + loop invariants
+  -> syntax for that, not only a string
+*copy fields + methods bodies from superclasses
+
+*a = foo.bar.baz() ~~> tmp1 = foo.bar; a = tmp1.baz ~~> tmp1 should be recorded into CT/LV-table
+
+*inner classes have access to fields of outer classes
+
+*lookup of a function return type needs access to standard-library of Java...
+
+* <init> doesn't work in coq!
+
+FUTURE
+*static { } blocks - and other { } top-level-blocks
+*field initializers
+*dynamic casts
+*exceptions
+*generics
+*multiple fields/local variables: int foo, bar, baz
+*array types
