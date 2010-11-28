@@ -108,9 +108,10 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions {
         Console.println("     ++++++>>>> " + c)
         VernacularDefinitions.defs += id(0) -> c
       } else
-        if (id(0) == "Spec")
+        if (id(0) == "Spec") {
+          //TM.add (class name) (SM mname (arg, spec)
           Console.println("spec definition" + "TM.add (TClass name) (SM.add method (arg, spec))")
-        else {
+        } else {
         val p =
         s(0) match {
           case SAtom("Build_Method") => //args, lvar, body, return
@@ -130,7 +131,11 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions {
           case SAtom("Build_spec") => //unit, fun
             val prepo = s(2).asInstanceOf[SList].x(3).asInstanceOf[SList].x
             //separator is now ","
-            
+            val sep = prepo.findIndexOf(x => x == SAtom(","))
+            var pre = prepo.slice(0, sep)
+            val pos = prepo.slice(sep + 1, prepo.length)
+            Console.println("pre " + sexpLS(pre))
+            Console.println("pos " + sexpLS(pos))
             "arg?, (anonfun => (pre), (post))"
           case x => "dunno: " + x
         }
@@ -138,6 +143,18 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions {
       }
       new ~(id, t)
     case a => a
+  }
+
+  def sexpLS (x : List[SExpression]) : String = {
+    x.map(sexpString).reduceLeft(_ + " " + _)
+  }
+
+  def sexpString (x : SExpression) : String = {
+    x match {
+      case SList(x) => "(" + x.map(sexpString).reduceLeft(_ + " " + _) + ")"
+      case SAtom(x) => x
+      case NAtom(x) => x.toString
+    }
   }
 
   def findDefs (x : SExpression) : List[JMethodDefinition] = {
