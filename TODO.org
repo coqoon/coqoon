@@ -1,0 +1,94 @@
+*error on multiple returns
+  (rewrite would change control structure a lot, global changes)
+*error on overloading (one method with multiple implementations in the same class)
+  -> our coq formalization could handle this at the moment, but it isn't specifically nice
+
+*FOR
+*do we need alpha-conversion of local variables/arguments which clash with field names?
+
+*specification of pre/postconditions + loop invariants
+  -> syntax for that, not only a string
+*copy fields + methods bodies from superclasses
+
+*a = foo.bar.baz() ~~> tmp1 = foo.bar; a = tmp1.baz ~~> tmp1 should be recorded into CT/LV-table
+
+*inner classes have access to fields of outer classes
+
+*lookup of a function return type needs access to standard-library of Java...
+
+* <init> doesn't work in coq!
+
+FUTURE
+*static { } blocks - and other { } top-level-blocks
+*field initializers
+*dynamic casts
+*exceptions
+*generics
+*multiple fields/local variables: int foo, bar, baz
+*array types
+
+* Completion for proofs
+* sometimes command is sent to Coq when it is still busy
+** leads to superfluous warnings
+* Parser:
+** parsing of coq output fails sometimes, when it is broken apart in multiple parts (safe parsing state, retry)
+** parse of coq commands should be more robust, use a real parser
+** syntax highlighting for coq
+* Outline:
+** CoqTheoremDefined should add an item to the non-existing outline
+* Warnings:
+** remove once retransmitted/code changed
+** present warnings only in CoqEditor, even though file is open in multiple editors (rename resource for CoqEditor?)
+* Undo:
+** Disable undo action if coq told "undo stack exhausted"
+** retract definition(s) for more steps of undo / look what Proof General does in that case
+;; Simplified version of backtracking which uses state numbers, proof stack depth and
+;; pending proofs put inside the coq (> v8.1) prompt. It uses the new coq command
+;; "Backtrack". The prompt is like this:
+;;      state                        proof stack
+;;      num                           depth
+;;       __                              _
+;; aux < 12 |aux|SmallStepAntiReflexive| 4 < ù
+;; ^^^^^^   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^     ^
+;; usual           pending proofs           usual 
+;;                                          special char
+;; exemple:
+;; to go (back) from 12 |lema1|lema2...|leman| xx
+;; to                8  |lemb1|lemb2...|lembm| 5
+;; we must do "Backtrack 8 5 naborts" 
+;; where naborts is the number of lemais that are not lembis
+
+;; Rem: We could deal with suspend and resume with more work. We would need a new coq
+;; command, because it is better to backtrack with *one* command (because
+;; proof-change-hook used above is not exactly called at right times).
+
+(defun  coq-find-and-forget-v81 (span)
+  "Backtrack to SPAN.  Using the \"Backtrack n m p\" coq command."
+  (let* (ans (naborts 0) (nundos 0)
+            (proofdepth (coq-get-span-proofnum span))
+            (proofstack (coq-get-span-proofstack span))
+            (span-staten (coq-get-span-statenum span))
+            (naborts (count-not-intersection coq-last-but-one-proofstack proofstack))
+            )
+    (setq ans
+          (if (and ; this is more efficient as backtrack x y z may be slow
+               (equal coq-last-but-one-proofstack proofstack)
+               (= coq-last-but-one-proofnum proofdepth)
+               (= coq-last-but-one-statenum span-staten))
+              ""
+            (format "Backtrack %s %s %s . " 
+                    (int-to-string span-staten)
+                    (int-to-string proofdepth)
+                    naborts)))
+    (if (string-equal ans "") proof-no-command ; not here because if
+      ;; we backtrack a state preserving command, we must do
+      ;; *nothing*, not even a CR (in > v74, no prompt is returned
+      ;; with "\n")
+      ans)
+    )
+  )
+
+** or use the suspend/resume - might be good for the incremental case (or even insert admitted)
+* Eclipse Console:
+** buffer doesn't seem to like UTF-8? For some reason Coq's ?===== is displayed as <?>
+* "This compilation Unit is not on the build path of a Java Project"
