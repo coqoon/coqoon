@@ -1,0 +1,15 @@
+;; This config was generated using ensime-config-gen. Feel free to customize its contents manually. 
+
+(
+
+:server-root "/Users/hannes/ensime_2.8.0-0.2.9/"
+
+:project-package "coqscala"
+
+:sources ("./")
+
+:compile-jars ("./" "/opt/local/share/scala-2.8/lib/" "/Users/hannes/eclipse/plugins/")
+
+:target "./"
+
+)
