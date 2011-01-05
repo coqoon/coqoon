@@ -8,7 +8,7 @@
             label="Sample Action Set"
             visible="true">
          <action
-               class="kopitiam.CoqStepAction"
+               class="dk.itu.sdg.kopitiam.CoqStepAction"
                icon="icons/down.gif"
                id="kopitiam.actions.StepAction"
                label="&amp;Step Actiontion"
@@ -17,7 +17,7 @@
                tooltip="CoqStepAction">
          </action>
          <action
-               class="kopitiam.CoqUndoAction"
+               class="dk.itu.sdg.kopitiam.CoqUndoAction"
                icon="icons/up.gif"
                id="kopitiam.actions.UndoStepAction"
                label="&amp;Undo Step Action"
@@ -30,7 +30,7 @@
    <extension
          point="org.eclipse.ui.editors">
       <editor
-            class="kopitiam.CoqEditor"
+            class="dk.itu.sdg.kopitiam.CoqEditor"
             contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
             extensions="v"
             icon="icons/sample.gif"
@@ -38,7 +38,7 @@
             name="Coq Editor">
       </editor>
       <editor
-            class="kopitiam.CoqJavaEditor"
+            class="dk.itu.sdg.kopitiam.CoqJavaEditor"
             contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
             extensions="java"
             icon="icons/sample.gif"
@@ -55,7 +55,7 @@
       <view
             allowMultiple="false"
             category="Kopitiam"
-            class="kopitiam.GoalViewer"
+            class="dk.itu.sdg.kopitiam.GoalViewer"
             icon="icons/sample.gif"
             id="kopitiam.GoalViewer"
             name="Goal Viewer">
