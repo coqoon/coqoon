@@ -4,7 +4,7 @@
 
 :server-root "/Users/hannes/ensime_2.8.0-0.2.9/"
 
-:project-package "coqscala"
+:project-package "kopitiam"
 
 :sources ("./")
 

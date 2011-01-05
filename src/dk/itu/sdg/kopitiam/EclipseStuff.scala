@@ -1,4 +1,4 @@
-package coqscala
+package dk.itu.sdg.kopitiam
 
 import org.eclipse.ui.editors.text.TextEditor
 

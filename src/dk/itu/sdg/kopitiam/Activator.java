@@ -1,10 +1,10 @@
-package coqscala;
+package dk.itu.sdg.kopitiam;
 
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
 public class Activator extends AbstractUIPlugin {
-  public final static String PLUGIN_ID = "CoqScala";
+  public final static String PLUGIN_ID = "Kopitiam";
 	
   private Activator single = null;
 	

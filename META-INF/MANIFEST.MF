@@ -1,9 +1,9 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Name: CoqScala
-Bundle-SymbolicName: CoqScala;singleton:=true
+Bundle-Name: Kopitiam
+Bundle-SymbolicName: Kopitiam;singleton:=true
 Bundle-Version: 1.0.0.qualifier
-Bundle-Activator: coqscala.Activator
+Bundle-Activator: dk.itu.sdg.kopitiam.Activator
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,
  org.scala-ide.scala.library,

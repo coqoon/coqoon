@@ -1,4 +1,4 @@
-package coqscala
+package dk.itu.sdg.kopitiam
 
 import java.io.InputStream
 import scala.actors._

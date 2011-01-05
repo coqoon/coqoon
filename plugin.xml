@@ -4,22 +4,22 @@
    <extension
          point="org.eclipse.ui.actionSets">
       <actionSet
-            id="CoqScala.actionSet"
+            id="Kopitiam.actionSet"
             label="Sample Action Set"
             visible="true">
          <action
-               class="coqscala.CoqStepAction"
+               class="kopitiam.CoqStepAction"
                icon="icons/down.gif"
-               id="coqscala.actions.StepAction"
+               id="kopitiam.actions.StepAction"
                label="&amp;Step Actiontion"
                menubarPath="sampleMenu/sampleGroup"
                toolbarPath="CoqGroup"
                tooltip="CoqStepAction">
          </action>
          <action
-               class="coqscala.CoqUndoAction"
+               class="kopitiam.CoqUndoAction"
                icon="icons/up.gif"
-               id="coqscala.actions.UndoStepAction"
+               id="kopitiam.actions.UndoStepAction"
                label="&amp;Undo Step Action"
                menubarPath="sampleMenu/sampleGroup"
                toolbarPath="CoqGroup"
@@ -30,34 +30,34 @@
    <extension
          point="org.eclipse.ui.editors">
       <editor
-            class="coqscala.CoqEditor"
+            class="kopitiam.CoqEditor"
             contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
             extensions="v"
             icon="icons/sample.gif"
-            id="coqscala.CoqEditor"
+            id="kopitiam.CoqEditor"
             name="Coq Editor">
       </editor>
       <editor
-            class="coqscala.CoqJavaEditor"
+            class="kopitiam.CoqJavaEditor"
             contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
             extensions="java"
             icon="icons/sample.gif"
-            id="coqscala.CoqJavaEditor"
+            id="kopitiam.CoqJavaEditor"
             name="Coq Java Editor">
       </editor>
    </extension>
    <extension
          point="org.eclipse.ui.views">
       <category
-            id="CoqScala"
+            id="Kopitiam"
             name="Coq Views">
       </category>
       <view
             allowMultiple="false"
-            category="CoqScala"
-            class="coqscala.GoalViewer"
+            category="Kopitiam"
+            class="kopitiam.GoalViewer"
             icon="icons/sample.gif"
-            id="coqscala.GoalViewer"
+            id="kopitiam.GoalViewer"
             name="Goal Viewer">
       </view>
    </extension>
@@ -66,7 +66,7 @@
       <perspectiveExtension
             targetID="org.eclipse.jdt.ui.JavaPerspective">
          <view
-               id="coqscala.GoalViewer"
+               id="kopitiam.GoalViewer"
                ratio="0.5"
                relationship="right"
                relative="org.eclipse.ui.views.ContentOutline">
