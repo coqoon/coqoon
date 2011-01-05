@@ -1,11 +1,13 @@
-/* (c) 2010-2011 Hannes Mehnert */
-
 package dk.itu.sdg.javaparser
 
 /**
  * Parser for an untyped lambda calculus: abstract syntax tree
  *
  * @author Miles Sabin (adapted slightly by Adriaan Moors)
+ *
+ * adapted by Paul Phillips (https://github.com/paulp/scala-lang-combinators)
+ *
+ * adapted by Hannes Mehnert (https://github.com/hannesm/Kopitiam)
  */
 
 trait JavaTerms

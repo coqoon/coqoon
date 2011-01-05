@@ -1,4 +1,7 @@
-/* (c) 2010-2011 Hannes Mehnert */
+/*
+ * originally developed by Paul Phillips (https://github.com/paulp/scala-lang-combinators)
+ * adapted by Hannes Mehnert (https://github.com/hannesm/Kopitiam)
+ */
 
 package dk.itu.sdg.javaparser
 

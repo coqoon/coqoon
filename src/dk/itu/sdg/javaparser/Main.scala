@@ -1,5 +1,3 @@
-/* (c) 2010-2011 Hannes Mehnert */
-
 package dk.itu.sdg.javaparser
 
 /**
@@ -10,6 +8,10 @@ package dk.itu.sdg.javaparser
  * (example files: see test/ *.kwi)
  *
  * @author Miles Sabin (adapted slightly by Adriaan Moors)
+ *
+ * adapted by Paul Phillips (https://github.com/paulp/scala-lang-combinators)
+ *
+ * adapted by Hannes Mehnert (https://github.com/hannesm/Kopitiam)
  */
 object Main extends Application with JavaAST
 {

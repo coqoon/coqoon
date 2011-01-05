@@ -1,5 +1,3 @@
-/* (c) 2010-2011 Hannes Mehnert */
-
 package dk.itu.sdg.javaparser
 
 import scala.util.parsing.input.Reader
@@ -23,7 +21,13 @@ import scala.util.parsing.combinator.RegexParsers
  * Parser for an untyped lambda calculus
  *
  * @author Miles Sabin (adapted slightly by Adriaan Moors)
+ *
+ * adapted by Paul Phillips (https://github.com/paulp/scala-lang-combinators)
+ *
+ * adapted by Hannes Mehnert (https://github.com/hannesm/Kopitiam)
+ *
  */
+
 trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms with Expression
 {
   type Tokens = JavaLexer
