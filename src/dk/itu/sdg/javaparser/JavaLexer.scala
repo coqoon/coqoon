@@ -1,3 +1,5 @@
+/* (c) 2010-2011 Hannes Mehnert */
+
 package dk.itu.sdg.javaparser
 
 import scala.util.parsing.combinator.lexical.StdLexical

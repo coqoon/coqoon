@@ -1,3 +1,5 @@
+/* (c) 2010-2011 Hannes Mehnert */
+
 package dk.itu.sdg.kopitiam
 
 import java.io.InputStream
