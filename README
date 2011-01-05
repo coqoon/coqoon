@@ -1,0 +1,13 @@
+Kopitiam - modular incremental interactive full functional static verification of Java code
+
+Prerequisites:
+* Eclipse SDK (from http://download.eclipse.org/eclipse/downloads/) tested is 3.6
+* Scala IDE (from http://www.scala-ide.org/) tested is 201009062352
+* runtime: Coq (from http://coq.inria.fr/download) tested is 8.3pl1
+
+Setup:
+1) checkout git repository
+2) eclipse -> File -> Import -> Existing Projects into Workspace -> root == git checkout -> uncheck 'copy projects into workspace'
+3) Build project (takes some time, especially at 4%)
+4) Run Configurations -> Plug-ins -> Workspace -> Kopitiam -> Auto-start == true
+5) Run
