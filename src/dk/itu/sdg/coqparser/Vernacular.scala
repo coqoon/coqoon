@@ -1,6 +1,6 @@
 /* (c) 2010-2011 Hannes Mehnert */
 
-package dk.itu.sdg.javaparser
+package dk.itu.sdg.coqparser
 
 trait VernacularRegion { }
 case class VernacularDeclaration () extends VernacularRegion { }

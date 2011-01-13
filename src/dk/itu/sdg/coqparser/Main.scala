@@ -1,4 +1,4 @@
-package dk.itu.sdg.javaparser
+package dk.itu.sdg.coqparser
 
 /**
  * Parser for an untyped lambda calculus
@@ -21,11 +21,6 @@ object Main extends Application with JavaAST
   override def main(args: Array[String]) = {
     System.setProperty("file.encoding", "UTF-8")
     val in = StreamReader(new InputStreamReader(new FileInputStream(new File(args(0))), "UTF-8"))
-    val outfile = args(0) + ".v"
-    //val out = new OutputStreamWriter(new FileOutputStream(outfile), "UTF-8")
-    //ParseV.parse(in)
-    val res = parse(in)
-    //out.write(res, 0, res.length)
-    //out.close
+    ParseV.parse(in)
   }
 }
