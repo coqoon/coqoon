@@ -11,7 +11,7 @@
                class="dk.itu.sdg.kopitiam.CoqStepAction"
                icon="icons/down.gif"
                id="kopitiam.actions.StepAction"
-               label="&amp;Step Actiontion"
+               label="&amp;Step Action"
                menubarPath="sampleMenu/sampleGroup"
                toolbarPath="CoqGroup"
                tooltip="CoqStepAction">
