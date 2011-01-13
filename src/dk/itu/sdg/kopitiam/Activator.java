@@ -1,9 +1,10 @@
 package dk.itu.sdg.kopitiam;
 
+import org.eclipse.ui.IStartup;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
-public class Activator extends AbstractUIPlugin {
+public class Activator extends AbstractUIPlugin implements IStartup {
   public final static String PLUGIN_ID = "Kopitiam";
 	
   private Activator single = null;
@@ -19,4 +20,9 @@ public class Activator extends AbstractUIPlugin {
   }
     
   public Activator getDefault () { return single; }
+  
+  public void earlyStartup () {
+	System.out.println("earlystartup called");
+    DocumentMonitor.init();
+  }
 }
