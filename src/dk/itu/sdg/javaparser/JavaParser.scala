@@ -191,7 +191,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
   def constantDeclaratorRest = rep(braces) ~ "=" ~ variableInitializer
   def variableDeclaratorId = id <~ rep(braces)  // see 14.20 for "correct" version
   def compilationUnit = opt(opt(annotations) <~ "package" ~> qualifiedId <~ ";") ~>
-    rep(importDeclaration) ~ rep(typeDeclaration)
+    rep(importDeclaration) ~ rep(typeDeclaration) //that's the main entry!
   def importDeclaration = "import" ~> optb("static") ~ qualifiedId ~ optb("." ~> "*") <~ ";" ^^ Import
   def typeDeclaration =
     ( classOrInterfaceDeclaration

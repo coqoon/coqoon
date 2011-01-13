@@ -483,7 +483,7 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
   }
 
   def doit (a : Any) : String = {
-	val w = doitHelper(a)
+    val w = doitHelper(a)
     coqoutput(w).reduceLeft(_ + "\n" + _)
     //workset ++ main
   }

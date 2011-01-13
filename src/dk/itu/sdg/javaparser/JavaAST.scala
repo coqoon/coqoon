@@ -37,7 +37,7 @@ trait JavaAST extends JavaParser { // with CoqOutputter {
   import scala.util.parsing.input._
 
   def parse(r: Reader[Char]) : String = {
-	 FinishAST.doit(parseH(r))
+    FinishAST.doit(parseH(r))
   }
   def parseH(r: Reader[Char]) : Any = {
     ClassTable.empty
