@@ -90,7 +90,6 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
 	Console.println("updating " + s)
 	val (dat, off, len) = FinishAST.update(FinishAST.doitHelper(JavaToCoq.parseH(new CharArrayReader(s.toArray))))
 	Console.println("received at offset " + off + "(old len " + len + ") data " + dat)
-        //TODO: hardcoded 0
 	coq.replace(off, len, dat)
   }
 }
