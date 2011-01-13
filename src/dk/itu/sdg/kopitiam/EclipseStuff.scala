@@ -42,10 +42,15 @@ object CoqJavaDocumentChangeListener extends IDocumentListener {
   }
 }
 
+import org.eclipse.jface.text.Document
+class CoqDocument extends Document {
+  var coqstate = "not"
+}
+
 import org.eclipse.ui.editors.text.FileDocumentProvider
 
 object CoqJavaDocumentProvider extends FileDocumentProvider {
-  import org.eclipse.jface.text.{IDocument,Document}
+  import org.eclipse.jface.text.IDocument
   import dk.itu.sdg.javaparser.JavaAST
   import scala.util.parsing.input.CharArrayReader
   import scala.collection.mutable.HashMap
@@ -56,15 +61,20 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
 
   override def getDefaultEncoding () : String = { "UTF-8" }
 
-  override def getDocument (element : Object) : IDocument = {
+  import org.eclipse.ui.part.FileEditorInput
+  override def getDocument (ele : Object) : IDocument = {
+    assert(ele.isInstanceOf[FileEditorInput])
+    val element = ele.asInstanceOf[FileEditorInput]
     val doc = super.getDocument(element)
     if (docTable.contains(doc))
       docTable(doc)
     else {
       val source = doc.get
-      val document = new Document(translate(source))
+      val document = new CoqDocument()
+      document.set(translate(source))
       docTable += doc -> document
       Console.println("added doc " + doc + " mapping into " + document + " into table")
+      EclipseTables.StringToDoc += element.getName -> document
       //document.addDocumentListener(CoqJavaDocumentChangeListener)
       document
     }
@@ -76,12 +86,12 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
   }
   
   import dk.itu.sdg.javaparser.FinishAST
-  def up (s : String) : Unit = {
+  def up (coq : IDocument, s : String) : Unit = {
 	Console.println("updating " + s)
 	val (dat, off, len) = FinishAST.update(FinishAST.doitHelper(JavaToCoq.parseH(new CharArrayReader(s.toArray))))
 	Console.println("received at offset " + off + "(old len " + len + ") data " + dat)
         //TODO: hardcoded 0
-	docTable(docTable.keys.toList(0)).replace(off, len, dat)
+	coq.replace(off, len, dat)
   }
 }
 
@@ -131,6 +141,14 @@ object CoqSourceViewerConfiguration extends SourceViewerConfiguration {
     val ddr = new DefaultDamagerRepairer(CoqTokenScanner, new TextAttribute(new Color(Display.getDefault, new RGB(0, 0, 220))))
     pr
   }
+}
+
+object EclipseTables {
+  import scala.collection.mutable.HashMap
+  import org.eclipse.jface.text.IDocument
+
+  val DocToString = new HashMap[IDocument,String]()
+  val StringToDoc = new HashMap[String,IDocument]()
 }
 
 object EclipseBoilerPlate {

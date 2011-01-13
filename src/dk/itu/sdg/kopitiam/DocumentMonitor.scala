@@ -10,6 +10,8 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   import org.eclipse.ui.texteditor.ITextEditor
   import org.eclipse.jface.text.DocumentEvent
 
+  import org.eclipse.jface.text.IDocument
+
   def handlePartRef (p : IWorkbenchPartReference) : Unit = {
     val t = p.getPart(false)
     handlePart(t)
@@ -20,12 +22,15 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       val txt = t.asInstanceOf[ITextEditor]
       val ed = txt.getEditorInput
       val doc = txt.getDocumentProvider.getDocument(ed)
+      val nam = ed.getName
+      if (nam.endsWith(".java") && !doc.isInstanceOf[CoqDocument]) //HACK: coqdocument should only have .v
+        EclipseTables.DocToString += doc -> ed.getName
       doc.addDocumentListener(this)
     }
   }
 
   def init () : Unit = {
-	Console.println("initializing DocumentMonitor")
+    Console.println("initializing DocumentMonitor")
     val wins = PlatformUI.getWorkbench.getWorkbenchWindows
     wins.map(x => x.getPartService.addPartListener(this))
     wins.map(x => x.getPages.toList.map(y => y.getEditorReferences.toList.map(z => handlePart(z.getEditor(false)))))
@@ -55,6 +60,16 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   override def documentChanged (event : DocumentEvent) : Unit = {
     val doc = event.getDocument
     Console.println("doc " + doc + " changed [@" + event.getOffset + "]: " + event.getText)
+    if (EclipseTables.DocToString.contains(doc)) {
+      val docstring = EclipseTables.DocToString(doc)
+      Console.println("I know it's " + docstring + " you changed")
+      if (EclipseTables.StringToDoc.contains(docstring)) {
+        val coq = EclipseTables.StringToDoc(docstring)
+        val java = doc.get
+        Console.println("found coq buffer for same file!")
+        CoqJavaDocumentProvider.up(coq, java)
+      }
+    }
   }
   override def documentAboutToBeChanged (event : DocumentEvent) : Unit = { }
 }

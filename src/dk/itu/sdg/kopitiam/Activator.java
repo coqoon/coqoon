@@ -22,7 +22,7 @@ public class Activator extends AbstractUIPlugin implements IStartup {
   public Activator getDefault () { return single; }
   
   public void earlyStartup () {
-	System.out.println("earlystartup called");
+    System.out.println("earlystartup called");
     DocumentMonitor.init();
   }
 }
