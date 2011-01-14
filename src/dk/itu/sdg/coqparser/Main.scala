@@ -13,7 +13,7 @@ package dk.itu.sdg.coqparser
  *
  * adapted by Hannes Mehnert (https://github.com/hannesm/Kopitiam)
  */
-object Main extends Application with JavaAST
+object Main extends Application
 {
   import java.io.{FileInputStream,InputStreamReader,OutputStreamWriter,FileOutputStream,File}
   import scala.util.parsing.input.StreamReader

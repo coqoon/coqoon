@@ -92,3 +92,7 @@ FUTURE
 * Eclipse Console:
 ** buffer doesn't seem to like UTF-8? For some reason Coq's ?===== is displayed as <?>
 * "This compilation Unit is not on the build path of a Java Project"
+
+* there's an alternative way to get the source of an editor:
+  final IEditorInput editorInput = window.getActivePage().getActiveEditor().getEditorInput();
+  final IFile selectedFile = (IFile) editorInput.getAdapter(IFile.class);

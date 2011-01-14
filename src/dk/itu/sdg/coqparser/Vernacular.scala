@@ -99,6 +99,8 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions {
     | "Hypotheses"
     )
 
+  import dk.itu.sdg.javaparser._
+  
   def definition = (definitionStart <~ ws) ~ rep1sep(ident, rep1(ws)) ~ ((ws ~ ":=" ~ rep(ws)) ~> rep1sep(term, rep(ws))) ^^ {
     case "Definition"~id~t =>
       //Console.println("found definition " + id + " to " + t);
