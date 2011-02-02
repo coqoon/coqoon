@@ -115,7 +115,7 @@ object ErrorOutputActor extends Actor with OutputChannel[String] {
             context = tokens
           }
           case None => if (msg.filterNot(_ == '\n').length > 0)
-                         Console.println("couldn't parse X" + msg + "X")
+                         Console.println("couldn't parse on stderr: " + msg)
         }
       }
     }

@@ -71,7 +71,7 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
     else {
       val source = doc.get
       val document = new CoqDocument()
-      document.set(translate(source))
+      document.set(translate(source)) //only do that if it's a .java!
       docTable += doc -> document
       Console.println("added doc " + doc + " mapping into " + document + " into table")
       EclipseTables.StringToDoc += element.getName -> document
