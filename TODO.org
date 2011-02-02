@@ -18,14 +18,13 @@
 
 * <init> doesn't work in coq!
 
-FUTURE
-*static { } blocks - and other { } top-level-blocks
-*field initializers
-*dynamic casts
-*exceptions
-*generics
-*multiple fields/local variables: int foo, bar, baz
-*array types
+* static { } blocks - and other { } top-level-blocks
+* field initializers
+* dynamic casts
+* exceptions
+* generics
+* multiple fields/local variables: int foo, bar, baz
+* array types
 
 * Completion for proofs
 * sometimes command is sent to Coq when it is still busy

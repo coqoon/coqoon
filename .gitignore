@@ -1,2 +1,6 @@
 *.class
 .scala_dependencies
+*.aux 
+*.log 
+*.out 
+*.pdf
