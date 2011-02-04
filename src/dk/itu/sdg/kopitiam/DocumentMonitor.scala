@@ -23,7 +23,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       val ed = txt.getEditorInput
       val doc = txt.getDocumentProvider.getDocument(ed)
       val nam = ed.getName
-      if (nam.endsWith(".java") && !doc.isInstanceOf[CoqDocument]) //HACK: coqdocument should only have .v
+      if (nam.endsWith(".java") && !doc.isInstanceOf[CoqDocument]) //HACK: coqdocument should end with .v
         EclipseTables.DocToString += doc -> ed.getName
       doc.addDocumentListener(this)
     }

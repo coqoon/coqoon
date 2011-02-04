@@ -44,7 +44,8 @@ object CoqJavaDocumentChangeListener extends IDocumentListener {
 
 import org.eclipse.jface.text.Document
 class CoqDocument extends Document {
-  var coqstate = "not"
+  //val state = new DocumentState()
+  var isJavaSource : Boolean = false
 }
 
 import org.eclipse.ui.editors.text.FileDocumentProvider
@@ -71,9 +72,13 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
     else {
       val source = doc.get
       val document = new CoqDocument()
-      document.set(translate(source)) //only do that if it's a .java!
+      if (element.getName.endsWith(".java")) {
+        document.set(translate(source))
+        document.isJavaSource = true
+      } else
+        document.set(source)
       docTable += doc -> document
-      Console.println("added doc " + doc + " mapping into " + document + " into table")
+      Console.println("adding doc " + doc + " mapping into " + document + " into table")
       EclipseTables.StringToDoc += element.getName -> document
       //document.addDocumentListener(CoqJavaDocumentChangeListener)
       document
