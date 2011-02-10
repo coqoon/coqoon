@@ -1,45 +1,20 @@
-* error on multiple returns
-  (rewrite would change control structure a lot, global changes)
-* error on overloading (one method with multiple implementations in the same class)
-  -> our coq formalization could handle this at the moment, but it isn't specifically nice
-
-* FOR
-* do we need alpha-conversion of local variables/arguments which clash with field names?
-
-* specification of pre/postconditions + loop invariants
-  -> syntax for that, not only a string
-* copy fields + methods bodies from superclasses
-
-* a = foo.bar.baz() ~~> tmp1 = foo.bar; a = tmp1.baz ~~> tmp1 should be recorded into CT/LV-table
-
-* inner classes have access to fields of outer classes
-
-* lookup of a function return type needs access to standard-library of Java
-
-* <init> doesn't work in coq!
-
-* static { } blocks - and other { } top-level-blocks
-* field initializers
-* dynamic casts
-* exceptions
-* generics
-* multiple fields/local variables: int foo, bar, baz
-* array types
-
-* Completion for proofs
-* sometimes command is sent to Coq when it is still busy
-** leads to superfluous warnings
-* Parser:
-** parsing of coq output fails sometimes, when it is broken apart in multiple parts (safe parsing state, retry)
-** parse of coq commands should be more robust, use a real parser
-** syntax highlighting for coq
-* Outline:
-** CoqTheoremDefined should add an item to the non-existing outline
-* Warnings:
-** remove once retransmitted/code changed
-** present warnings only in CoqEditor, even though file is open in multiple editors (rename resource for CoqEditor?)
-* Undo:
-** Disable undo action if coq told "undo stack exhausted"
+* General
+** remove the introduced global state - DocumentState - plus everything that depends on that
+** keep it simple, only one connection to a Coq binary
+** remove hack that first method of first class is in update
+** future: incrementally run proofer in the background, annoy user then with unproven stuff (when code is changed)
+** test cases/coverage - at least for parsers
+* Coq side
+** sometimes subgoals are only partially received, leading to CoqUnknown and partial/no display of subgoals (CoqTop/CoqResponse)
+** outline for eclipse
+** syntax highlighting based on coq parser
+*** source location information (hints at the bottom) - http://scala.sygneca.com/libs/parsing
+** debug coq parser
+** remove hack that searches for '. ' to send command
+** remove warning if it's void (source location has changed)
+** disable undo if no undo possible
+** retract proof/leave for later
+** proof completion
 ** retract definition(s) for more steps of undo / look what Proof General does in that case
 ;; Simplified version of backtracking which uses state numbers, proof stack depth and
 ;; pending proofs put inside the coq (> v8.1) prompt. It uses the new coq command
@@ -87,11 +62,23 @@
     )
   )
 
-** or use the suspend/resume - might be good for the incremental case (or even insert admitted)
-* Eclipse Console:
-** buffer doesn't seem to like UTF-8? For some reason Coq's ?===== is displayed as <?>
-* "This compilation Unit is not on the build path of a Java Project"
-
-* there's an alternative way to get the source of an editor:
+* Java side
+** loop invariants
+** proper syntax (not only a string) for pre/postcondition and loop invariants - plus completion!
+** for loops
+** foo.bar.baz() doesn't work properly (need to introduce multiple temporary variables and register these)
+** error on multiple returns and overloading of the same method name
+** return type of java methods from java standard library (and other external libraries)
+** static { } blocks
+** field initializers
+** multiple local variables and fields: int foo, bar, baz
+** copy fields + methods bodies from superclasses (once we have a strategy for class-to-class inheritance)
+** dynamic casts
+** there's an alternative way to get the source of an editor:
   final IEditorInput editorInput = window.getActivePage().getActiveEditor().getEditorInput();
   final IFile selectedFile = (IFile) editorInput.getAdapter(IFile.class);
+* Java features
+** Generics
+** Exceptions
+** array types
+
