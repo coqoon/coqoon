@@ -82,7 +82,9 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions {
 
   def commandfragment = assumption | definition | assertion | syntax | module | (end <~ ws) ~ ident | proof
 
-  def term : Parser[Any] = ident ~ "." ~ ident | ident | ("(" <~ opt(ws)) ~ rep1sep(term, rep(ws)) ~ (opt(ws) ~> ")") | string | numericLit ^^ { case x => x.toInt } | "::" | "_" | "," | "->" | "++" | "match" | "with" | "|" | "=>" | "*" | ">" | "=" | "end" | "-" | ";" | "fun" | (":" <~ rep(ws)) ~ term | "?=" | "%" ~ term | ">=" | "<-" | ("[" <~ opt(ws)) ~ rep1sep(term, rep(ws)) ~ "]" | "/" | "\\" | "!" | "·=·" | "/\\" | "in" | "forall" | "{" ~ rep1sep(term, rep(ws)) ~ "}" | "as" | "@" | ":=" | "'" | "|-" | "()" | "//\\\\"
+  def term : Parser[Any] = ident ~ "." ~ ident | ident | ("(" <~ opt(ws)) ~ rep1sep(term, rep(ws)) ~ (opt(ws) ~> ")") | string | numericLit ^^ { case x => x.toInt } | "::" | "_" | "," | "->" | "++" | "match" | "with" | "|" | "=>" | "*" | ">" | "=" | "end" | "-" | ";" | "fun" | (":" <~ rep(ws)) ~ term | "?=" | "%" ~ term | ">=" | "<-" | ("[" <~ opt(ws)) ~ rep1sep(term, rep(ws)) ~ "]" | "/" | "\\" | "!" | "·=·" | "/\\" | "in" | "forall" | "{" ~ rep1sep(term, rep(ws)) ~ "}" | "as" | "@" | ":=" | "'" | "|-" | "()" | "//\\\\" | sort
+
+  def sort = "Prop" | "Set" | "Type"
 
   def assumption = assumptionStart ~ assRest
 
@@ -100,8 +102,16 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions {
     )
 
   import dk.itu.sdg.javaparser._
-  
-  def definition = (definitionStart <~ ws) ~ rep1sep(ident, rep1(ws)) ~ ((ws ~ ":=" ~ rep(ws)) ~> rep1sep(term, rep(ws))) ^^ {
+
+  def name = ( ident | "_" )
+
+  def binders = rep1(binder)
+
+  def binder = ( name
+  | "(" ~ rep1(name ~ rep(ws)) ~ ":" ~ rep(ws) ~ term ~ ")"
+  | "(" ~ name ~ opt(rep(ws) ~ ":" ~ term) ~ rep(ws) ~ ":=" ~ rep(ws) ~ term)
+
+  def definition = (definitionStart <~ ws) ~ rep1sep(ident, rep1(ws)) ~ (opt(binders) ~ opt(ws ~ ":" ~ rep(ws) ~ term) ~> ((ws ~ ":=" ~ rep(ws)) ~> rep1sep(term, rep(ws)))) ^^ {
     case "Definition"~id~t =>
       //Console.println("found definition " + id + " to " + t);
       val s = transform(t)
