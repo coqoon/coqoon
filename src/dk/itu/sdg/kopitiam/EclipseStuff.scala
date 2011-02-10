@@ -60,10 +60,8 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
     val element = ele.asInstanceOf[FileEditorInput]
     val document = super.getDocument(element)
     val source = document.get
-    if (element.getName.endsWith(".java"))
+    if (element.getName.endsWith(".java") && !(EclipseTables.StringToDoc contains element.getName ))
       document.set(translate(source))
-    else
-      document.set(source)
     Console.println("adding doc " + document + " mapping into " + document + " into table")
     EclipseTables.StringToDoc += element.getName -> document
     //document.addDocumentListener(CoqJavaDocumentChangeListener)
