@@ -74,9 +74,9 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions {
   // -> Build_Class/_Program/_Interface/_Method
   // -> Build_spec (translate to pre/post)
 
-  def commandfragment = assumption | definition | assertion | syntax | module | (end <~ ws) ~ ident | proof
+  def commandfragment = assumption | definition | assertion | syntax | module | (end <~ ws) ~ ident | proof | sideeffect
 
-  def term : Parser[Any] = ident ~ "." ~ ident | ident | ("(" <~ opt(ws)) ~ rep1sep(term, rep(ws)) ~ (opt(ws) ~> ")") | string | numericLit ^^ { case x => x.toInt } | "::" | "_" | "," | "->" | "++" | "match" | "with" | "|" | "=>" | "*" | ">" | "=" | "end" | "-" | ";" | "fun" | (":" <~ rep(ws)) ~ term | "?=" | "%" ~ term | ">=" | "<-" | ("[" <~ opt(ws)) ~ rep1sep(term, rep(ws)) ~ "]" | "/" | "\\" | "!" | "·=·" | "/\\" | "in" | "forall" | "{" ~ rep1sep(term, rep(ws)) ~ "}" | "as" | "@" | ":=" | "'" | "|-" | "()" | "//\\\\" | sort
+  def term : Parser[Any] = ident ~ "." ~ ident | ident | ("(" <~ opt(ws)) ~ rep1sep(term, rep(ws)) ~ (opt(ws) ~> ")") | string | numericLit ^^ { case x => x.toInt } | "::" | "_" | "," | "->" | "++" | "match" ~ rep(ws) ~ term ~ rep(ws) ~ "with" ~ rep(ws) ~ rep1sep(term, rep(ws)) ~ rep(ws) ~ "end" | "|" | "=>" | "*" | ">" | "=" | "-" | ";" | "fun" | (":" <~ rep(ws)) ~ term | "?=" | "%" ~ term | ">=" | "<-" | ("[" <~ opt(ws)) ~ rep1sep(term, rep(ws)) ~ "]" | "/" | "\\" | "!" | "·=·" | "/\\" | "in" | "forall" | "{" ~ rep1sep(term, rep(ws)) ~ "}" | "as" | "@" | ":=" | "'" | "|-" | "()" | "//\\\\" | sort
 
   def sort = "Prop" | "Set" | "Type"
 
@@ -99,11 +99,13 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions {
 
   def binders = rep1(binder)
 
-  def binder = ( name
-  | "(" ~ rep1(name ~ rep(ws)) ~ ":" ~ rep(ws) ~ term ~ ")"
-  | "(" ~ name ~ opt(rep(ws) ~ ":" ~ term) ~ rep(ws) ~ ":=" ~ rep(ws) ~ term)
+  def binder = (
+    name
+    | "(" ~ name ~ ":" ~ term ~ ")"
+    | "(" ~ name ~ opt(rep(ws) ~ ":" ~ term) ~ rep(ws) ~ ":=" ~ rep(ws) ~ term
+  )
 
-  def definition = (definitionStart <~ ws) ~ rep1sep(ident, rep1(ws)) ~ opt(binders) ~ opt(ws ~ ":" ~ rep(ws) ~ term) ~ ((ws ~ ":=" ~ rep(ws)) ~ rep1sep(term, rep(ws)))
+  def definition = (definitionStart <~ ws) ~ ident ~ rep(ws) ~ opt(binders) ~ opt(opt(ws) ~ ":" ~ rep(ws) ~ term) ~ ws ~ ":=" ~ rep(ws) ~ rep1sep(term, rep(ws))
 
   def definitionStart = (
     "Definition"
@@ -159,7 +161,8 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions {
 
   def end = "End" | "Qed" | "Admitted" | "Save" | "Defined"
 
-  def sideeffects = "Print" | "Eval" | "Check"
+  def sideeffect = sideeffectstart ~ rep(ws) ~ rep1sep(term, rep(ws))
+  def sideeffectstart = "Print" | "Eval" | "Check"
 }
 
 object VernacularDefinitions {
