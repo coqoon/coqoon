@@ -14,7 +14,7 @@
 
 * inner classes have access to fields of outer classes
 
-* lookup of a function return type needs access to standard-library of Java...
+* lookup of a function return type needs access to standard-library of Java
 
 * <init> doesn't work in coq!
 

@@ -4,7 +4,7 @@ import scala.util.parsing.input.Reader
 import scala.util.parsing.combinator.lexical.StdLexical
 import scala.util.parsing.combinator.syntactical.StdTokenParsers
 import scala.util.parsing.combinator.ImplicitConversions
-
+import scala.util.parsing.input.Positional
 import scala.util.parsing.combinator.RegexParsers
 
 // put all the AST generation code in a subclass, where the grammar production accessors are overridden
@@ -205,8 +205,8 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
     )
 
   // p593
-  def normalClassDeclaration = "class" ~> id ~ opt(typeParameters) ~ opt("extends" ~> jtype) ~
-    opt("implements" ~> typeList) ~ classBody ^^ flatten5(JClass)
+  def normalClassDeclaration = positioned("class" ~> id ~ opt(typeParameters) ~ opt("extends" ~> jtype) ~
+    opt("implements" ~> typeList) ~ classBody ^^ flatten5(JClass))
   def typeParameters = "<" ~> rep1sep(typeParameter, ",") <~ ">"
   def typeParameter = id ~ opt("extends" ~> bound)
   def bound = rep1sep(jtype, "&")
@@ -253,8 +253,8 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
   def memberDecl =
     ( genericMethodOrConstructorDecl
      | methodOrFieldDecl
-     | "void" ~> id ~ voidMethodDeclaratorRest ^^ { case id~MethodDeclarator(parameters, throws, body) => MethodDeclaration(id, "void", parameters, throws, body) }
-     | id ~ constructorDeclaratorRest ^^ { case id~MethodDeclarator(parameters, throws, body) => ConstructorDeclaration(id, parameters, throws, body) }
+     | positioned("void" ~> id ~ voidMethodDeclaratorRest ^^ { case id~MethodDeclarator(parameters, throws, body) => MethodDeclaration(id, "void", parameters, throws, body) })
+     | positioned(id ~ constructorDeclaratorRest ^^ { case id~MethodDeclarator(parameters, throws, body) => ConstructorDeclaration(id, parameters, throws, body) })
      | interfaceDeclaration
      | classDeclaration
     )
@@ -266,10 +266,10 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
      | id ~ constructorDeclaratorRest
     )
 
-  def methodOrFieldDecl = jtype ~ id ~ methodOrFieldRest ^^ {
+  def methodOrFieldDecl = positioned(jtype ~ id ~ methodOrFieldRest ^^ {
     case (jtype~id)~MethodDeclarator(parameters, throws, body) => MethodDeclaration(id, jtype, parameters, throws, body)
     case (jtype~id)~initializer => FieldDeclaration(id, jtype, initializer)
-  }
+  })
   def methodOrFieldRest =
     ( methodDeclaratorRest
      | variableDeclaratorRest

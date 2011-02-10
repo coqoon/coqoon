@@ -358,11 +358,13 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
       }
       case FormalVariable(mods, jtype, name) => Some(JArgument(unpackR(name), unpackR(jtype)))
       case FieldDeclaration(id, jtype, rest) =>
+        Console.println("field pos info " + x.asInstanceOf[FieldDeclaration].pos)
         val name = unpackR(id)
         val typ = unpackR(jtype)
         ClassTable.addField(classid, name, typ)
         Some(JFieldDefinition(name, typ))
       case ConstructorDeclaration(id, parameters, throws, body) =>
+        Console.println("constructor pos info: " + x.asInstanceOf[ConstructorDeclaration].pos)
         lvars = new HashMap[String,String]()
         argmap = new HashMap[String,String]()
         methodid = "<init>"
@@ -383,6 +385,7 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
         ClassTable.addLocals(classid, methodid, lvars)
         Some(JMethodDefinition(methodid, args, realrealbody))        
       case MethodDeclaration(id, jtype, parameters, throws, body) =>
+        Console.println("method pos info: " + x.asInstanceOf[MethodDeclaration].pos)
         lvars = new HashMap[String,String]()
         argmap = new HashMap[String,String]()
         val name = unpackR(id)
@@ -414,6 +417,7 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
         classid = ClassTable.getOuter(myclass) match { case None => ""; case Some(x) => x }
         Some(JInterfaceDefinition(myclass, is, mybody))
       case JClass(id, jtype, superclass, interfaces, bodyp) =>
+        Console.println("transforming a JClass, ranging (pos) " + x.asInstanceOf[JClass].pos)
         val is = transformOLF(interfaces)
         val cs = unpackR(superclass)
         val myclassid = unpackR(id)
