@@ -42,11 +42,6 @@ object CoqJavaDocumentChangeListener extends IDocumentListener {
 }
 
 import org.eclipse.jface.text.Document
-class CoqDocument extends Document {
-  //val state = new DocumentState()
-  var isJavaSource : Boolean = false
-}
-
 import org.eclipse.ui.editors.text.FileDocumentProvider
 
 object CoqJavaDocumentProvider extends FileDocumentProvider {
@@ -54,8 +49,6 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
   import dk.itu.sdg.javaparser.JavaAST
   import scala.util.parsing.input.CharArrayReader
   import scala.collection.mutable.HashMap
-
-  val docTable = new HashMap[IDocument,Document]()
 
   object JavaToCoq extends JavaAST { }
 
@@ -65,23 +58,14 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
   override def getDocument (ele : Object) : IDocument = {
     assert(ele.isInstanceOf[FileEditorInput])
     val element = ele.asInstanceOf[FileEditorInput]
-    val doc = super.getDocument(element)
-    if (docTable.contains(doc))
-      docTable(doc)
-    else {
-      val source = doc.get
-      val document = new CoqDocument()
-      if (element.getName.endsWith(".java")) {
-        document.set(translate(source))
-        document.isJavaSource = true
-      } else
-        document.set(source)
-      docTable += doc -> document
-      Console.println("adding doc " + doc + " mapping into " + document + " into table")
-      EclipseTables.StringToDoc += element.getName -> document
-      //document.addDocumentListener(CoqJavaDocumentChangeListener)
-      document
-    }
+    val document = super.getDocument(element)
+    val source = document.get
+    if (element.getName.endsWith(".java") && !(EclipseTables.StringToDoc contains element.getName ))
+      document.set(translate(source))
+    Console.println("adding doc " + document + " mapping into " + document + " into table")
+    EclipseTables.StringToDoc += element.getName -> document
+    //document.addDocumentListener(CoqJavaDocumentChangeListener)
+    document
   }
 
   def translate (s : String) : String = {
