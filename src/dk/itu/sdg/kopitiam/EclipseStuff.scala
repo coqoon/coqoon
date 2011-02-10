@@ -28,8 +28,7 @@ object CoqJavaDocumentChangeListener extends IDocumentListener {
   import org.eclipse.jface.text.IDocument
   private val docTS = new HashMap[IDocument,Long]()
 
-  override def documentAboutToBeChanged (ev : DocumentEvent) : Unit = {
-  }
+  override def documentAboutToBeChanged (ev : DocumentEvent) : Unit = ()
 
   override def documentChanged (ev : DocumentEvent) : Unit = {
     val doc = ev.getDocument
@@ -60,7 +59,7 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
 
   object JavaToCoq extends JavaAST { }
 
-  override def getDefaultEncoding () : String = { "UTF-8" }
+  override def getDefaultEncoding () : String = "UTF-8"
 
   import org.eclipse.ui.part.FileEditorInput
   override def getDocument (ele : Object) : IDocument = {
@@ -249,9 +248,9 @@ class CoqUndoAction extends IWorkbenchWindowActionDelegate {
     last + 1 //don't color "."
   }
 
-  override def selectionChanged (action : IAction, selection : ISelection) : Unit = { }
+  override def selectionChanged (action : IAction, selection : ISelection) : Unit = ()
 
-  override def dispose () : Unit = { }	
+  override def dispose () : Unit = ()
 }
 
 object CoqUndoAction extends CoqUndoAction { }
@@ -261,8 +260,7 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.viewers.ISelection
 
-  override def init (window_ : IWorkbenchWindow) : Unit = {
-  }
+  override def init (window_ : IWorkbenchWindow) : Unit = ()
 
   override def run (action : IAction) : Unit = {
     if (! CoqTop.isStarted) {
@@ -296,9 +294,9 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
     endofcommand + 2 //". "
   }
 
-  override def selectionChanged (action : IAction, selection : ISelection) : Unit = { }
+  override def selectionChanged (action : IAction, selection : ISelection) : Unit = ()
 
-  override def dispose () : Unit = { }	
+  override def dispose () : Unit = ()
 }
 
 object CoqStepAction extends CoqStepAction { }
@@ -474,9 +472,9 @@ object CoqContentAssistantProcessor extends IContentAssistProcessor {
 	return result;
     }
 
-  def computeContextInformation(viewer : ITextViewer, offset : Int) : Array[IContextInformation] = { null }
-  def getCompletionProposalAutoActivationCharacters() : Array[Char] = { Array('.') }
-  def getContextInformationAutoActivationCharacters() : Array[Char] = { null }
-  def getContextInformationValidator() : IContextInformationValidator = { null }
-  def getErrorMessage() : String = { "not yet implemented" }
+  def computeContextInformation(viewer : ITextViewer, offset : Int) : Array[IContextInformation] = null
+  def getCompletionProposalAutoActivationCharacters() : Array[Char] = Array('.')
+  def getContextInformationAutoActivationCharacters() : Array[Char] = null
+  def getContextInformationValidator() : IContextInformationValidator = null
+  def getErrorMessage() : String = "not yet implemented"
 }

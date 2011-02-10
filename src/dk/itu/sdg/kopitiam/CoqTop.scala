@@ -58,11 +58,7 @@ object PrintActor extends Actor with OutputChannel[String] {
   }
 }
 
-class CoqShellTokens (theorem_ : String, globalStep_ : Int, innerTheorem_ : String, localStep_ : Int) {
-  val theorem : String = theorem_
-  val globalStep : Int = globalStep_
-  val innerTheorem : String = innerTheorem_
-  val localStep : Int = localStep_
+case class CoqShellTokens (theorem : String, globalStep : Int, innerTheorem : String, localStep : Int) {
   override def toString = theorem + " " + globalStep + " " + innerTheorem + " " + localStep
 }
 
@@ -85,7 +81,7 @@ object ValidCoqShell {
 
 class BoolRef {
   private var value : Boolean = false
-  def getValue () : Boolean = { return value }
+  def getValue () : Boolean = value
   def setValue (newval : Boolean) : Unit = {
     value = newval
     //Console.println("ready? " + newval)
