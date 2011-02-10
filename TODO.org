@@ -8,6 +8,7 @@
 ** sometimes subgoals are only partially received, leading to CoqUnknown and partial/no display of subgoals (CoqTop/CoqResponse)
 ** outline for eclipse
 ** syntax highlighting based on coq parser
+*** source location information (hints at the bottom) - http://scala.sygneca.com/libs/parsing
 ** debug coq parser
 ** remove hack that searches for '. ' to send command
 ** remove warning if it's void (source location has changed)
