@@ -12,8 +12,9 @@ import scala.util.parsing.combinator.lexical.StdLexical
 import scala.util.parsing.combinator.syntactical.StdTokenParsers
 import scala.util.parsing.combinator.ImplicitConversions
 
+import dk.itu.sdg.javaparser._
+
 trait TransformCoqJavaToSimpleJava extends StdTokenParsers {
-  import dk.itu.sdg.javaparser._
 
   def transdefinition (x : Any) = x match {
     case "Definition"~(id : List[String])~t =>
