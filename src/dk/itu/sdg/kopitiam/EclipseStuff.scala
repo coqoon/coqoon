@@ -89,13 +89,23 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
 }
 
 import org.eclipse.jface.text.rules.ITokenScanner
+import dk.itu.sdg.coqparser.VernacularReserved
 
-object CoqTokenScanner extends ITokenScanner {
+object CoqTokenScanner extends ITokenScanner with VernacularReserved {
   import org.eclipse.jface.text.rules.{IToken,Token}
-  import org.eclipse.jface.text.IDocument
+  import org.eclipse.jface.text.{IDocument, TextAttribute}
+  import org.eclipse.swt.graphics.Color
+  import org.eclipse.swt.widgets.Display
+  import org.eclipse.swt.SWT.{BOLD, ITALIC}
 
   private var off : Int = 0
   private var len : Int = 0
+
+  private val display = Display getCurrent
+  private def color(r : Int, g : Int, b : Int) = new Color(display, r, g, b)
+  implicit def tuple2Color(vals : (Int, Int, Int)) : Color = color(vals._1, vals._2, vals._3)
+  private val keywordToken : IToken = new Token(new TextAttribute((0, 0, 0), (255, 255, 255), BOLD))
+
 
   override def getTokenLength () : Int = len
   override def getTokenOffset () : Int = off
@@ -132,6 +142,8 @@ object CoqSourceViewerConfiguration extends SourceViewerConfiguration {
   override def getPresentationReconciler (v : ISourceViewer) : IPresentationReconciler = {
     val pr = new PresentationReconciler
     val ddr = new DefaultDamagerRepairer(CoqTokenScanner, new TextAttribute(new Color(Display.getDefault, new RGB(0, 0, 220))))
+    pr.setDamager(ddr, IDocument.DEFAULT_CONTENT_TYPE)
+    pr.setRepairer(ddr, IDocument.DEFAULT_CONTENT_TYPE)
     pr
   }
 }

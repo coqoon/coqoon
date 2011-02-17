@@ -25,19 +25,13 @@ class VernacularLexer extends StdLexical { //with ImplicitConversions {
   )
 }
 
-trait VernacularParser extends StdTokenParsers with ImplicitConversions {
-  val lexical = new VernacularLexer
-  type Tokens = VernacularLexer
-
-  lexical.delimiters ++= ".; ;\n;\t;\r".split(";").toList
-  import lexical.{Identifier,StringLit,NumericLit}
-
+trait VernacularReserved {
+  // Not technically reserved words, but they work as such. Used to start top-level forms.
   val keyword = """Axiom Conjecture Parameter Parameters Variable Variables Hypothesis
                    Hypotheses Definition Example Inductive CoInductive Fixpoint CoFixpoint
                    Program Goal Let Remark Fact Corollary Proposition Lemma Theorem Tactic
                    Ltac Notation Infix Add Record Section Module Require Import Export Open
                    Proof End Qed Admitted Save Defined Print Eval Check Hint""".split("""\s+""").toList
-  lexical.reserved ++= keyword
 
   val operator = List("!", "%", "&", "&&", "(", "()", ")",
                       "*", "+", "++", ",", "-", "->", ".",
@@ -47,14 +41,25 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions {
                       ">=", "?", "?=", "@", "[", "\\/", "]",
                       "^", "{", "|", "|-", "||", "}", "~", "\\", "·=·", "'")
 
-  lexical.delimiters ++= operator
-
+  // The reserved words as listed in the reference manual
   val keywords = List("_", "as", "at", "cofix", "else", "end",
                       "exists", "exists2", "fix", "for", "forall", "fun",
                       "if", "IF", "in", "let", "match", "mod",
                       "Prop", "return", "Set", "then", "Type", "using",
                       "where", "with")
-  
+}
+
+trait VernacularParser extends StdTokenParsers with ImplicitConversions with VernacularReserved {
+  val lexical = new VernacularLexer
+  type Tokens = VernacularLexer
+
+  lexical.delimiters ++= ".; ;\n;\t;\r".split(";").toList
+  import lexical.{Identifier,StringLit,NumericLit}
+
+  lexical.reserved ++= keyword
+
+  lexical.delimiters ++= operator
+
   lexical.reserved ++= keywords
 
   def string = stringLit ^^ { case x => "\"" + x + "\"" }
