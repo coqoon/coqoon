@@ -110,7 +110,7 @@ object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
   import org.eclipse.jface.text.{IDocument, TextAttribute}
   import org.eclipse.swt.graphics.Color
   import org.eclipse.swt.widgets.Display
-  import org.eclipse.swt.SWT.{BOLD, ITALIC, DEFAULT}
+  import org.eclipse.swt.SWT.{BOLD, ITALIC}
 
   Console.println("Initializing CoqTokenScanner")
 
@@ -122,8 +122,8 @@ object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
 
   private val keywordToken : IToken = new Token(new TextAttribute(black, white, BOLD))
   private val definerToken : IToken = new Token(new TextAttribute((0, 30, 0), white, BOLD))
-  private val opToken : IToken = new Token(new TextAttribute((0, 0, 30), white, DEFAULT))
-  private val otherToken : IToken = new Token(new TextAttribute(black, white, DEFAULT))
+  private val opToken : IToken = new Token(new TextAttribute((0, 0, 30), white, 0))
+  private val otherToken : IToken = new Token(new TextAttribute(black, white, 0))
 
   private val wordRule = new WordRule(CoqWordDetector, otherToken)
   for (k <- keyword) wordRule.addWord(k, definerToken)
