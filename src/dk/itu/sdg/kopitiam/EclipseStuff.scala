@@ -10,9 +10,12 @@ class CoqEditor extends TextEditor {
   override protected def initializeEditor() : Unit = {
     System.setProperty("file.encoding", "UTF-8")
     Console.println("initializeEditor was called")
-    super.initializeEditor();
+    Console.println(" - initializeEditor called super")
     setDocumentProvider(CoqJavaDocumentProvider)
+    Console.println(" - document provider set")
     setSourceViewerConfiguration(CoqSourceViewerConfiguration);
+    Console.println(" - source viewer configuration set")
+    super.initializeEditor();
   }
 
   def getSource () : ISourceViewer = {
@@ -88,32 +91,46 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
   }
 }
 
-import org.eclipse.jface.text.rules.ITokenScanner
+import org.eclipse.jface.text.rules.{ITokenScanner, RuleBasedScanner}
 import dk.itu.sdg.coqparser.VernacularReserved
+import org.eclipse.jface.text.rules.IWordDetector
 
-object CoqTokenScanner extends ITokenScanner with VernacularReserved {
-  import org.eclipse.jface.text.rules.{IToken,Token}
+object CoqWordDetector extends IWordDetector {
+  // TODO: Look up in spec...
+  def isWordStart(character : Char) =
+    (character >= 'a' && character <= 'z') ||
+    (character >= 'A' && character <= 'Z') ||
+    (character >= '0' && character <= '9')
+
+  def isWordPart(character : Char) = isWordStart(character)
+}
+
+object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
+  import org.eclipse.jface.text.rules.{IToken, Token, WordRule}
   import org.eclipse.jface.text.{IDocument, TextAttribute}
   import org.eclipse.swt.graphics.Color
   import org.eclipse.swt.widgets.Display
-  import org.eclipse.swt.SWT.{BOLD, ITALIC}
+  import org.eclipse.swt.SWT.{BOLD, ITALIC, DEFAULT}
 
-  private var off : Int = 0
-  private var len : Int = 0
+  Console.println("Initializing CoqTokenScanner")
 
   private val display = Display getCurrent
-  private def color(r : Int, g : Int, b : Int) = new Color(display, r, g, b)
-  implicit def tuple2Color(vals : (Int, Int, Int)) : Color = color(vals._1, vals._2, vals._3)
-  private val keywordToken : IToken = new Token(new TextAttribute((0, 0, 0), (255, 255, 255), BOLD))
+  private def color (r : Int, g : Int, b : Int) = new Color(display, r, g, b)
+  implicit def tuple2Color (vals : (Int, Int, Int)) : Color = color(vals._1, vals._2, vals._3)
+  private val black = color(0, 0, 0)
+  private val white = color(255, 255, 255)
 
+  private val keywordToken : IToken = new Token(new TextAttribute(black, white, BOLD))
+  private val definerToken : IToken = new Token(new TextAttribute((0, 30, 0), white, BOLD))
+  private val opToken : IToken = new Token(new TextAttribute((0, 0, 30), white, DEFAULT))
+  private val otherToken : IToken = new Token(new TextAttribute(black, white, DEFAULT))
 
-  override def getTokenLength () : Int = len
-  override def getTokenOffset () : Int = off
-  override def nextToken () : IToken = Token.UNDEFINED
-  override def setRange (doc : IDocument, offset : Int, length : Int) : Unit = {
-    off = offset
-    len = length
-  }
+  private val wordRule = new WordRule(CoqWordDetector, otherToken)
+  for (k <- keyword) wordRule.addWord(k, definerToken)
+  for (k <- keywords) wordRule.addWord(k, keywordToken)
+  for (o <- operator) wordRule.addWord(o, opToken)
+
+  setRules(Seq(wordRule).toArray)
 }
 
 //import org.eclipse.jface.text.rules.DefaultDamageRepairer
@@ -141,7 +158,9 @@ object CoqSourceViewerConfiguration extends SourceViewerConfiguration {
 
   override def getPresentationReconciler (v : ISourceViewer) : IPresentationReconciler = {
     val pr = new PresentationReconciler
+    println("About to create damager/repairer")
     val ddr = new DefaultDamagerRepairer(CoqTokenScanner, new TextAttribute(new Color(Display.getDefault, new RGB(0, 0, 220))))
+    println("Created damager/repairer successfully")
     pr.setDamager(ddr, IDocument.DEFAULT_CONTENT_TYPE)
     pr.setRepairer(ddr, IDocument.DEFAULT_CONTENT_TYPE)
     pr
