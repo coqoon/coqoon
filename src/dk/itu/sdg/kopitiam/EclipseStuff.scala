@@ -106,7 +106,7 @@ object CoqWordDetector extends IWordDetector {
 }
 
 object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
-  import org.eclipse.jface.text.rules.{IToken, Token, WordRule}
+  import org.eclipse.jface.text.rules.{IToken, MultiLineRule, SingleLineRule, Token, WordRule}
   import org.eclipse.jface.text.{IDocument, TextAttribute}
   import org.eclipse.swt.graphics.Color
   import org.eclipse.swt.widgets.Display
@@ -123,14 +123,20 @@ object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
   private val keywordToken : IToken = new Token(new TextAttribute(black, white, BOLD))
   private val definerToken : IToken = new Token(new TextAttribute((0, 30, 0), white, BOLD))
   private val opToken : IToken = new Token(new TextAttribute((0, 0, 30), white, 0))
+  private val commentToken : IToken = new Token(new TextAttribute((30, 30, 0), white, ITALIC))
   private val otherToken : IToken = new Token(new TextAttribute(black, white, 0))
+
+  private val rules = Seq(
+    new MultiLineRule("(*", "*)", commentToken),
+    new SingleLineRule("(*", "*)", commentToken)
+  )
 
   private val wordRule = new WordRule(CoqWordDetector, otherToken)
   for (k <- keyword) wordRule.addWord(k, definerToken)
   for (k <- keywords) wordRule.addWord(k, keywordToken)
   for (o <- operator) wordRule.addWord(o, opToken)
 
-  setRules(Seq(wordRule).toArray)
+  setRules((rules ++ Seq(wordRule)).toArray)
 }
 
 //import org.eclipse.jface.text.rules.DefaultDamageRepairer
