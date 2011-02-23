@@ -47,7 +47,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         val callpref = value.variable
         val argstring = args.map(printStatement).foldRight("nil")(_ + " :: " + _)
         val typ = ClassTable.getLocalVar(myclass, mymethod, callpref)
-        "(ccall \"" + name + "\" \"" + callpref + "\" \"" + funname + "\" (" + argstring + ") " + "(TClass \"" + typ + "\")" + ")"
+        "(ccall \"" + name + "\" \"" + callpref + "\" \"" + funname + "\" (" + argstring + "))"
       case JAssignment(name, JNewExpression(typ, arg)) =>
         val t = typ
         val init = printStatement(JAssignment(name, JCall("this", "<init>", arg)))
@@ -78,7 +78,7 @@ trait CoqOutputter extends JavaToSimpleJava {
       case JCall(v, fun, arg) =>
         val t = ClassTable.getLocalVar(myclass, mymethod, v)
         val args = arg.map(printStatement).foldRight("nil")(_ + " :: " + _)
-        "(ccall \"ignored\" \"" + v + "\" \"" + fun + "\" (" + args + ") (TClass \"" + t + "\"))"
+        "(ccall \"ignored\" \"" + v + "\" \"" + fun + "\" (" + args + "))"
       case JNewExpression(typ, arg) =>
         val t = Gensym.newsym
         freevars += t
@@ -183,7 +183,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         val (local, returnvar) = getBody(body, bodyref)
         oldlen = outp.map(_.length).reduceLeft(_ + _) - offset
         Console.println("   length: " + oldlen)
-        outp ::= "\nDefinition " + name + "M := Build_Method (" + printArgList(args) + ") (" + printArgList(local) + ") " + bodyref + " (" + returnvar + ")."
+        outp ::= "\nDefinition " + name + "M := Build_Method (" + printArgList(args) + ") " + bodyref + " (" + returnvar + ")."
         Some(("\"" + name + "\"", name + "M"))
       case _ => None
     }
@@ -193,7 +193,7 @@ trait CoqOutputter extends JavaToSimpleJava {
 
   def coqoutput (xs : List[JStatement]) : List[String] = {
     outp = List[String]()
-    val name = "Fac" //XXX: that's hardcoded
+    val name = "Fac" //TODO: that's hardcoded
     outp = ClassTable.getCoq("PRELUDE") ++ outp
 
     outp ::= "Module " + name + " <: PROGRAM."
@@ -209,29 +209,24 @@ trait CoqOutputter extends JavaToSimpleJava {
         val methods = classMethods(body)
         outp ::= """
 Definition """ + id + """ :=
-  Build_Class """ + printFiniteSet(inters) + """
-              """ + printFiniteSet(fields) + """
+  Build_Class """ + printFiniteSet(fields) + """
               """ + printFiniteMap(methods) + "."
     })
     val cs = printFiniteMap(ClassTable.getClasses.map(x => ("\"" + x + "\"", x)))
-    val is = printFiniteMap(ClassTable.getInterfaces.map(x => ("\"" + x + "\"", x)))
-    outp ::= """
-Definition P :=
-  Build_Program """ + cs + """
-                """ + is + "."
+    outp ::= "\nDefinition Prog := Build_Program " + cs + "."
     outp = ClassTable.getCoq(myclass, "PROGRAM") ++ outp
     outp ::= "End " + name + "."
-    outp ::= "Module " + name + "_spec <: PROG_SPEC " + name + ".\nImport " + name + ".\n"
+    outp ::= "Module " + name + "_spec.\nImport " + name + ".\n"
     outp = ClassTable.getCoq(myclass, "BEFORESPEC") ++ outp
     //method specs go here
     val specs = ClassTable.getSpecs(myclass)
-    specs.keys.foreach(x =>
-      outp ::= "Definition " + x + """_spec :=
-  Build_spec unit (fun _ => (""" + specs(x)._1 + ",\n" + specs(x)._2 + ")).")
-    //now we need to connect implementation class (methods) to specs
-    //Spec: Class/Interface -> Method -> Arguments * specT
-    val spcs = printFiniteMap(specs.keys.map(x => ("\"" + x + "\"", "(" + printArgList(ClassTable.getArguments(myclass, x).keys.toList) + ", " + x + "_spec" + ")")).toList)
-    outp ::= "Definition Spec := TM.add (TClass \"" + myclass + "\") " + spcs + " (TM.empty _)."
+    specs.keys.foreach(x => {
+      outp ::= "Definition " + x + "_pre : hasn :=\n  (" + specs(x)._1 + ")%asn."
+      outp ::= "Definition " + x + "_post : hasn := \n  (" + specs(x)._2 + ")%asn."
+    })
+    val spcs = specs.keys.map(x =>
+      "\"" + myclass + "\" :.: \"" + x + "\" |->  (" + printArgList(ClassTable.getArguments(myclass, x).keys.toList) + ") {{ " + x + "_pre }}-{{ \"ret\", " + x + "_post }}.")
+    outp ::= "Definition " + myclass + "_spec := " + spcs.reduceLeft(_ + "\n    [/\\]\n" + _)
     outp = ClassTable.getCoq(myclass, "AFTERSPEC") ++ outp
     outp ::= "End " + name + "_spec."
     outp = ClassTable.getCoq("TOP") ++ outp

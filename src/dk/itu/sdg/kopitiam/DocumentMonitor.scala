@@ -25,8 +25,9 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       val nam = ed.getName
       //add java files to doc2str table - but not the ones automatically translated
       //to Coq code by Kopitiam (present in str2doc table)
-      if (nam.endsWith(".java") && (! EclipseTables.StringToDoc.contains(nam) || EclipseTables.StringToDoc(nam) != doc))
-        EclipseTables.DocToString += doc -> ed.getName
+      if (nam.endsWith(".java") &&
+          (! EclipseTables.StringToDoc.contains(nam) || EclipseTables.StringToDoc(nam) != doc))
+        EclipseTables.DocToString += doc -> nam
       doc.addDocumentListener(this)
     }
   }
