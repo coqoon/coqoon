@@ -84,7 +84,7 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
   
   import dk.itu.sdg.javaparser.FinishAST
   def up (coq : IDocument, s : String) : Unit = {
-	Console.println("updating " + s)
+	//Console.println("updating " + s)
 	val (dat, off, len) = FinishAST.update(FinishAST.doitHelper(JavaToCoq.parseH(new CharArrayReader(s.toArray))))
 	Console.println("received at offset " + off + "(old len " + len + ") data[" + dat.length + "] " + dat)
 	coq.replace(off, len, dat) //somehow off-by-two...

@@ -23,21 +23,23 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       val ed = txt.getEditorInput
       val doc = txt.getDocumentProvider.getDocument(ed)
       val nam = ed.getName
-      if (nam.endsWith(".java") && (EclipseTables.StringToDoc.contains(nam) && EclipseTables.StringToDoc(nam) != doc))
+      //add java files to doc2str table - but not the ones automatically translated
+      //to Coq code by Kopitiam (present in str2doc table)
+      if (nam.endsWith(".java") && (! EclipseTables.StringToDoc.contains(nam) || EclipseTables.StringToDoc(nam) != doc))
         EclipseTables.DocToString += doc -> ed.getName
       doc.addDocumentListener(this)
     }
   }
 
   def init () : Unit = {
-    Console.println("initializing DocumentMonitor")
     val wins = PlatformUI.getWorkbench.getWorkbenchWindows
     wins.map(x => x.getPartService.addPartListener(this))
     wins.map(x => x.getPages.toList.map(y => y.getEditorReferences.toList.map(z => handlePart(z.getEditor(false)))))
   }
 
   override def partActivated (part : IWorkbenchPartReference) : Unit = {
-    handlePartRef(part)
+    //Console.println("part activated " + part)
+    //switch some global state here - like coq communication etc
   }
 
   override def partOpened (part : IWorkbenchPartReference) : Unit = {
@@ -48,8 +50,20 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     window.getPartService.addPartListener(this)
   }
 
+  override def partClosed (part : IWorkbenchPartReference) : Unit = {
+    val p = part.getPart(false)
+    if (p.isInstanceOf[ITextEditor]) {
+      val txt = p.asInstanceOf[ITextEditor]
+      val ed = txt.getEditorInput
+      val nam = ed.getName
+      val doc = txt.getDocumentProvider.getDocument(ed)
+      if (EclipseTables.DocToString.contains(doc))
+        EclipseTables.DocToString.remove(doc)
+      if (EclipseTables.StringToDoc.contains(nam))
+        EclipseTables.StringToDoc.remove(nam)
+    }
+  }
   override def partBroughtToTop (part : IWorkbenchPartReference) : Unit = { }
-  override def partClosed (part : IWorkbenchPartReference) : Unit = { }
   override def partDeactivated (part : IWorkbenchPartReference) : Unit = { }
   override def partHidden (part : IWorkbenchPartReference) : Unit = { }
   override def partInputChanged (part : IWorkbenchPartReference) : Unit = { }
