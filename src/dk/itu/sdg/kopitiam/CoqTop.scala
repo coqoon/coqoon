@@ -58,20 +58,22 @@ object PrintActor extends Actor with OutputChannel[String] {
   }
 }
 
-case class CoqShellTokens (theorem : String, globalStep : Int, innerTheorem : String, localStep : Int) {
-  override def toString = theorem + " " + globalStep + " " + innerTheorem + " " + localStep
+case class CoqShellTokens (theorem : String, globalStep : Int, context : List[String], localStep : Int) {
+  override def toString = theorem + " " + globalStep + " " + context + " " + localStep
 }
 
 object ValidCoqShell {
   def getTokens (s : String) : Option[CoqShellTokens] = {
     val tokens0 = s.split('\n')
     if (tokens0.length > 0) {
-      val tokens1 = tokens0(tokens0.length - 1).trim.split('<')
+      val tokens1 = tokens0(tokens0.length - 1).trim.split('<') //Thm < gstep |con|text| lstep < ?
       if (tokens1.length == 3) {
-        val tokens2 = tokens1(1).split('|')
-        if (tokens2.length == 3)
-          Some(new CoqShellTokens(tokens1(0).trim, Integer.parseInt(tokens2(0).trim),
-                                  tokens2(1).trim, Integer.parseInt(tokens2(2).trim)))
+        val tokens2 = tokens1(1).split('|') //gstep |con|text| lstep
+        if (tokens2.length >= 2)
+          Some(new CoqShellTokens(tokens1(0).trim,
+                                  Integer.parseInt(tokens2(0).trim),
+                                  tokens2.drop(1).toList.dropRight(1),
+                                  Integer.parseInt(tokens2.takeRight(1)(0).trim)))
         else
           None
       } else None
@@ -90,7 +92,7 @@ class BoolRef {
 
 object ErrorOutputActor extends Actor with OutputChannel[String] {
   private var ready : BoolRef = null
-  private var context : CoqShellTokens = new CoqShellTokens("Coq", 0, "", 0)
+  private var context : CoqShellTokens = new CoqShellTokens("Coq", 0, List(""), 0)
 
   def setBoolRef (n : BoolRef) : Unit = { ready = n }
 
