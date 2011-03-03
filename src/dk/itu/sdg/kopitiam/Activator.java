@@ -18,9 +18,9 @@ public class Activator extends AbstractUIPlugin implements IStartup {
   public void stop (BundleContext context) throws Exception {
     super.stop(context);
   }
-    
-  public Activator getDefault () { return single; }
   
+  public Activator getDefault () { return single; }
+
   public void earlyStartup () {
     System.out.println("earlystartup called");
     DocumentMonitor.init();
