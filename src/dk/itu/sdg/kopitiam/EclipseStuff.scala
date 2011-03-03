@@ -249,30 +249,12 @@ class CoqUndoAction extends IWorkbenchWindowActionDelegate {
 
   override def run (action : IAction) : Unit = {
     val content = EclipseBoilerPlate.getContent()
-    val l = findPrevious(content, DocumentState.position)
-    //Console.println("prev (" + DocumentState.position + " [" + content(DocumentState.position) + "]): " + l)
+    val l = CoqTop.findPreviousCommand(content, DocumentState.position)
+    Console.println("prev (" + DocumentState.position + " [" + content(DocumentState.position) + "]): " + l)
     if (l > -1) {
       DocumentState.sendlen = DocumentState.position - l
-      CoqTop.writeToCoq("Undo.")
+      CoqTop.writeToCoq("Undo. ") //wrong - only right in Proof mode - and even there Backtrack is more popular
     }
-  }
-
-  def findPrevious (content : String, pos : Int) : Int = {
-    var cont = true
-    var last = pos - 2
-    val clco = content.lastIndexOf("*)", pos)
-    if (clco > content.lastIndexOf(".", pos))
-      last = content.lastIndexOf("(*", clco - 2)
-    while (cont) {
-      val newend = content.lastIndexOf(".", last - 1)
-      if (newend <= 0) { cont = false; last = -1 }
-      else {
-        last = newend
-        if (content(last - 1) != '.' && (content.startsWith(" ", last + 1) || content.startsWith("\n", last + 1)))
-          cont = false
-      }
-    }
-    last + 1 //don't color "."
   }
 
   override def selectionChanged (action : IAction, selection : ISelection) : Unit = ()
@@ -298,27 +280,16 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
     }
     val content = EclipseBoilerPlate.getContent.drop(DocumentState.position)
     if (content.length > 0) {
-      val eoc = findEnd(content).min(content.length)
-      DocumentState.sendlen = eoc
-      Console.println("command is (" + eoc + "): " + content.take(eoc))
-      CoqTop.writeToCoq(content.take(eoc))
-    } else { Console.println("EOF") }
-  }
-
-  def findEnd (content : String) : Int = {
-    var cont = true
-    val comment = content.indexOf("(*")
-    var endofcommand = 0
-    if (comment < content.indexOf("."))
-      endofcommand = content.indexOf("*)", comment + 2)
-    while (cont) {
-      val newend = content.indexOf(".", endofcommand + 1)
-      if (newend == -1) cont = false
-      else endofcommand = newend
-      if (content(endofcommand - 1) != '.' && (content.startsWith(" ", endofcommand + 1) || content.startsWith("\n", endofcommand + 1)))
-        cont = false
+      val eoc = CoqTop.findNextCommand(content)
+      Console.println("eoc is " + eoc)
+      if (eoc == -1)
+        Console.println("EOF")
+      else {
+        DocumentState.sendlen = eoc
+        //Console.println("command is (" + eoc + "): " + content.take(eoc))
+        CoqTop.writeToCoq(content.take(eoc)) //sends comments over the line
+      }
     }
-    endofcommand + 2 //". "
   }
 
   override def selectionChanged (action : IAction, selection : ISelection) : Unit = ()
@@ -440,7 +411,13 @@ object CoqOutputDispatcher extends CoqCallback {
   var goalviewer : GoalViewer = null
 	
   override def dispatch (x : CoqResponse) : Unit = {
+    Console.println("received in dispatch " + x)
     x match {
+      case CoqShellReady() =>
+        if (CoqState.monoton)
+          DocumentState.commit
+        else
+          DocumentState.undo
       case CoqGoal(n, goals) => {
           val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
           val ht = if (hy.length > 0) hy.reduceLeft(_ + "\n" + _) else ""
