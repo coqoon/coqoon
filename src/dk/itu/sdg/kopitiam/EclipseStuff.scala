@@ -4,6 +4,18 @@ package dk.itu.sdg.kopitiam
 
 import org.eclipse.ui.editors.text.TextEditor
 
+object EclipseUtils {
+  //Handy implicits and functions that make dealing with Eclipse less verbose
+  import org.eclipse.swt.graphics.Color
+  import org.eclipse.swt.widgets.Display
+
+  private def display = Display getCurrent
+  def color (r : Int, g : Int, b : Int) = new Color(display, r, g, b)
+
+  implicit def tuple2Color (vals : (Int, Int, Int)) : Color = color(vals._1, vals._2, vals._3)
+}
+import EclipseUtils.{color, tuple2Color}
+
 class CoqEditor extends TextEditor {
   import org.eclipse.jface.text.source.ISourceViewer
 
@@ -146,15 +158,10 @@ object CoqWordDetector extends IWordDetector {
 object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
   import org.eclipse.jface.text.rules.{IToken, MultiLineRule, SingleLineRule, Token, WordRule}
   import org.eclipse.jface.text.{IDocument, TextAttribute}
-  import org.eclipse.swt.graphics.Color
-  import org.eclipse.swt.widgets.Display
   import org.eclipse.swt.SWT.{BOLD, ITALIC}
 
   Console.println("Initializing CoqTokenScanner")
 
-  private val display = Display getCurrent
-  private def color (r : Int, g : Int, b : Int) = new Color(display, r, g, b)
-  implicit def tuple2Color (vals : (Int, Int, Int)) : Color = color(vals._1, vals._2, vals._3)
   private val black = color(0, 0, 0)
   private val white = color(255, 255, 255)
 
