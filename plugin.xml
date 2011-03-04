@@ -8,6 +8,15 @@
             label="Sample Action Set"
             visible="true">
          <action
+               class="dk.itu.sdg.kopitiam.CoqStepAllAction"
+               icon="icons/downtoo.gif"
+               id="kopitiam.actions.StepAllAction"
+               label="&amp;Step All Action"
+               menubarPath="sampleMenu/sampleGroup"
+               toolbarPath="CoqGroup"
+               tooltip="CoqStepAllAction">
+         </action>
+         <action
                class="dk.itu.sdg.kopitiam.CoqStepAction"
                icon="icons/down.gif"
                id="kopitiam.actions.StepAction"

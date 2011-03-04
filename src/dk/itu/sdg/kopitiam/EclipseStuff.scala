@@ -268,25 +268,24 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
   import org.eclipse.ui.IWorkbenchWindow
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.viewers.ISelection
+  var fini : Boolean = false //need to set to false somewhere (when doc changed)
 
   override def init (window_ : IWorkbenchWindow) : Unit = ()
 
   override def run (action : IAction) : Unit = {
-    if (! CoqTop.isStarted) {
-      CoqTop.startCoq
-      if (EclipseConsole.out == null)
-        EclipseConsole.initConsole
-      PrintActor.stream = EclipseConsole.out
-    }
+    Console.println("run called, sending a command")
+    CoqStartUp.start()
+    Console.println("searching in content (start @" + DocumentState.position + ")")
     val content = EclipseBoilerPlate.getContent.drop(DocumentState.position)
     if (content.length > 0) {
       val eoc = CoqTop.findNextCommand(content)
       Console.println("eoc is " + eoc)
-      if (eoc == -1)
+      if (eoc == -1) {
+        fini = true
         Console.println("EOF")
-      else {
+      } else {
         DocumentState.sendlen = eoc
-        //Console.println("command is (" + eoc + "): " + content.take(eoc))
+        Console.println("command is (" + eoc + "): " + content.take(eoc))
         CoqTop.writeToCoq(content.take(eoc)) //sends comments over the line
       }
     }
@@ -298,6 +297,70 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
 }
 
 object CoqStepAction extends CoqStepAction { }
+
+object CoqStartUp extends CoqCallback {
+  private var st : Boolean = false
+
+  def start () : Unit = {
+    if (! CoqTop.isStarted) {
+      PrintActor.register(CoqStartUp)
+      CoqTop.startCoq
+      if (EclipseConsole.out == null)
+        EclipseConsole.initConsole
+      PrintActor.stream = EclipseConsole.out
+      while (!st) { }
+      PrintActor.deregister(CoqStartUp)
+    }
+  }
+
+  override def dispatch (x : CoqResponse) : Unit = {
+    x match {
+      case CoqShellReady(m, t) => st = true
+      case y =>
+    }
+  }
+}
+
+object CoqStepNotifier extends CoqCallback {
+  var err : Boolean = false
+
+  override def dispatch (x : CoqResponse) : Unit = {
+    x match {
+      case CoqError(m) => err = true
+      case CoqShellReady(monoton, tokens) =>
+        if (! err) {
+          DocumentState.commit
+          CoqStepAction.run(null)
+          if (CoqStepAction.fini)
+            PrintActor.deregister(CoqStepNotifier)
+        } else
+          PrintActor.deregister(CoqStepNotifier)
+      case x => Console.println("got something, try again player 1 " + x)
+    }
+  }
+}
+
+class CoqStepAllAction extends IWorkbenchWindowActionDelegate {
+  import org.eclipse.ui.IWorkbenchWindow
+  import org.eclipse.jface.action.IAction
+  import org.eclipse.jface.viewers.ISelection
+
+  override def init (window_ : IWorkbenchWindow) : Unit = ()
+
+  override def run (action : IAction) : Unit = {
+    CoqStartUp.start()
+    Console.println("registering CoqStepNotifier to PrintActor, now stepping")
+    PrintActor.register(CoqStepNotifier)
+    //we need to provoke first message to start callback loops
+    CoqStepAction.run(null)
+  }
+
+  override def selectionChanged (action : IAction, selection : ISelection) : Unit = ()
+
+  override def dispose () : Unit = ()
+}
+
+object CoqStepAllAction extends CoqStepAllAction { }
 
 object DocumentState {
   import org.eclipse.jface.text.{ITextViewer}
@@ -311,24 +374,31 @@ object DocumentState {
   //def position : Int = position_
   //def position_= (x : Int) { Console.println("new pos is " + x + " (old was " + position_ + ")"); position_ = x }
 
-  def undo () : Unit = {
-    val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
-    Display.getDefault.syncExec(
-      new Runnable() {
-        def run() = sourceview.setTextColor(bl, position - sendlen, sendlen, true)
-    });
-    position -= sendlen
-    sendlen = 0
+  def undo () : Unit = synchronized {
+    //Console.println("undo (@" + position + ", " + sendlen + ")")
+    if (sendlen != 0) {
+      val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
+      Display.getDefault.syncExec(
+        new Runnable() {
+          def run() = sourceview.setTextColor(bl, position - sendlen, sendlen, true)
+        });
+      position -= sendlen
+      sendlen = 0
+    }
   }
 
-  def commit () : Unit = {
-    val bl = new Color(Display.getDefault, new RGB(0, 0, 220))
-    Display.getDefault.syncExec(
-      new Runnable() {
-        def run() = sourceview.setTextColor(bl, position, sendlen, true)
-    });
-    position += sendlen
-    sendlen = 0
+  def commit () : Unit = synchronized {
+    //Console.println("commited (@" + position + ", " + sendlen + ")")
+    if (sendlen != 0) {
+      //Console.println("commited - and doing some work")
+      val bl = new Color(Display.getDefault, new RGB(0, 0, 220))
+      Display.getDefault.syncExec(
+        new Runnable() {
+          def run() = sourceview.setTextColor(bl, position, sendlen, true)
+        });
+      position += sendlen
+      sendlen = 0
+    }
   }
 }
 
@@ -413,8 +483,8 @@ object CoqOutputDispatcher extends CoqCallback {
   override def dispatch (x : CoqResponse) : Unit = {
     Console.println("received in dispatch " + x)
     x match {
-      case CoqShellReady() =>
-        if (CoqState.monoton)
+      case CoqShellReady(monoton, token) =>
+        if (monoton)
           DocumentState.commit
         else
           DocumentState.undo

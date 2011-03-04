@@ -43,6 +43,7 @@ object PrintActor extends Actor with OutputChannel[String] {
   private var callbacks : List[CoqCallback] = List[CoqCallback]() //why not actors?
 
   def register (c : CoqCallback) : Unit = { callbacks = c :: callbacks }
+  def deregister (c : CoqCallback) : Unit = { callbacks = callbacks.filterNot(_ == c) }
 
   def distribute (c : CoqResponse) : Unit = {
     callbacks.foreach(_.dispatch(c))
@@ -102,28 +103,25 @@ object ValidCoqShell {
 }
 
 object CoqState {
-  private var monotonic : Boolean = false
   private var readyforinput : Boolean = false
   private var context : CoqShellTokens = new CoqShellTokens("Coq", 0, List(), 0)
 
-  def monoton () : Boolean = { monotonic }
-
   def readyForInput () : Boolean = { readyforinput }
 
-  def shell () : CoqShellTokens = { context }
-  def setShell (tokens : CoqShellTokens) : Unit = {
+  def setShell (tokens : CoqShellTokens) : Unit = synchronized {
     val oldc = context
     context = tokens
     readyforinput = true
-    if (oldc.globalStep < tokens.globalStep) //got no error
-      //TODO: should actually be subset, not != in the latter comparison
-      //also strictly greater in first comparison, shouldn't be it?
+    var monotonic = false
+    if (oldc.globalStep < tokens.globalStep)
+      //TODO: strictly greater in first, subset in the latter comparison
       if (oldc.localStep <= tokens.localStep || oldc.theorem != tokens.theorem)
         monotonic = true
-    PrintActor.distribute(CoqShellReady())
+    Console.println("distributing shell ready " + monotonic + " shell " + tokens)
+    PrintActor.distribute(CoqShellReady(monotonic, tokens))
   }
 
-  def sendCommand () : Unit = { Console.println("all false now"); readyforinput = false; monotonic = false }
+  def sendCommand () : Unit = { Console.println("all false now"); readyforinput = false }
 }
 
 object ErrorOutputActor extends Actor with OutputChannel[String] {
