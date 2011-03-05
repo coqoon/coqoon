@@ -17,6 +17,15 @@
                tooltip="CoqStepAllAction">
          </action>
          <action
+               class="dk.itu.sdg.kopitiam.CoqStepUntilAction"
+               icon="icons/icon_lego.gif"
+               id="kopitiam.actions.StepUntilAction"
+               label="&amp;Step Until Action"
+               menubarPath="sampleMenu/sampleGroup"
+               toolbarPath="CoqGroup"
+               tooltip="CoqStepUntilAction">
+         </action>
+         <action
                class="dk.itu.sdg.kopitiam.CoqStepAction"
                icon="icons/down.gif"
                id="kopitiam.actions.StepAction"

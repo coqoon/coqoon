@@ -184,9 +184,15 @@ object EclipseTables {
 object EclipseBoilerPlate {
   import org.eclipse.ui.{IWorkbenchWindow,IEditorPart}
   import org.eclipse.ui.texteditor.{ITextEditor,IDocumentProvider,AbstractTextEditor}
-  import org.eclipse.jface.text.IDocument
+  import org.eclipse.jface.text.{IDocument,ITextSelection}
 
   var window : IWorkbenchWindow = null
+
+  def getCaretPosition () : Int = {
+    val sel = window.getActivePage.getActiveEditor.asInstanceOf[CoqEditor].getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
+    Console.println("cursor position is " + sel.getLength + " @" + sel.getOffset)
+    sel.getOffset
+  }
 
   def getContent () : String = {
     val editorpart = window.getActivePage.getActiveEditor
@@ -275,6 +281,7 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
   override def run (action : IAction) : Unit = {
     Console.println("run called, sending a command")
     CoqStartUp.start()
+    //EclipseBoilerPlate.getCaretPosition()
     Console.println("searching in content (start @" + DocumentState.position + ")")
     val content = EclipseBoilerPlate.getContent.drop(DocumentState.position)
     if (content.length > 0) {
@@ -321,8 +328,11 @@ object CoqStartUp extends CoqCallback {
   }
 }
 
-object CoqStepNotifier extends CoqCallback {
+
+
+class CoqStepNotifier extends CoqCallback {
   var err : Boolean = false
+  var test : Option[(Int) => Boolean] = None
 
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
@@ -330,11 +340,15 @@ object CoqStepNotifier extends CoqCallback {
       case CoqShellReady(monoton, tokens) =>
         if (! err) {
           DocumentState.commit
-          CoqStepAction.run(null)
-          if (CoqStepAction.fini)
-            PrintActor.deregister(CoqStepNotifier)
+          if (test.isDefined && test.get(DocumentState.position))
+            PrintActor.deregister(this)            
+          else {
+            CoqStepAction.run(null)
+            if (CoqStepAction.fini)
+              PrintActor.deregister(this)
+          }
         } else
-          PrintActor.deregister(CoqStepNotifier)
+          PrintActor.deregister(this)
       case x => Console.println("got something, try again player 1 " + x)
     }
   }
@@ -350,7 +364,7 @@ class CoqStepAllAction extends IWorkbenchWindowActionDelegate {
   override def run (action : IAction) : Unit = {
     CoqStartUp.start()
     Console.println("registering CoqStepNotifier to PrintActor, now stepping")
-    PrintActor.register(CoqStepNotifier)
+    PrintActor.register(new CoqStepNotifier())
     //we need to provoke first message to start callback loops
     CoqStepAction.run(null)
   }
@@ -361,6 +375,27 @@ class CoqStepAllAction extends IWorkbenchWindowActionDelegate {
 }
 
 object CoqStepAllAction extends CoqStepAllAction { }
+
+class CoqStepUntilAction extends IWorkbenchWindowActionDelegate {
+  import org.eclipse.ui.IWorkbenchWindow
+  import org.eclipse.jface.action.IAction
+  import org.eclipse.jface.viewers.ISelection
+
+  override def init (window_ : IWorkbenchWindow) : Unit = ()
+
+  override def run (action : IAction) : Unit = {
+    CoqStartUp.start()
+    val coqs = new CoqStepNotifier()
+    val togo = EclipseBoilerPlate.getCaretPosition
+    coqs.test = Some((x : Int) => x >= togo)
+    PrintActor.register(coqs)
+    CoqStepAction.run(null)
+  }
+
+  override def selectionChanged (action : IAction, selection : ISelection) : Unit = ()
+
+  override def dispose () : Unit = ()
+}
 
 object DocumentState {
   import org.eclipse.jface.text.{ITextViewer}
