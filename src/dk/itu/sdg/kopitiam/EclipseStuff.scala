@@ -386,10 +386,14 @@ class CoqStepUntilAction extends IWorkbenchWindowActionDelegate {
   override def run (action : IAction) : Unit = {
     CoqStartUp.start()
     val coqs = new CoqStepNotifier()
-    val togo = EclipseBoilerPlate.getCaretPosition
-    coqs.test = Some((x : Int) => x >= togo)
-    PrintActor.register(coqs)
-    CoqStepAction.run(null)
+    //need to go back one more step
+    val togo = CoqTop.findPreviousCommand(EclipseBoilerPlate.getContent, EclipseBoilerPlate.getCaretPosition + 2)
+    //Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition)
+    if (DocumentState.position < togo) {
+      coqs.test = Some((x : Int) => x >= togo)
+      PrintActor.register(coqs)
+      CoqStepAction.run(null)
+    }
   }
 
   override def selectionChanged (action : IAction, selection : ISelection) : Unit = ()
