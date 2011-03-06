@@ -385,11 +385,11 @@ class CoqStepUntilAction extends IWorkbenchWindowActionDelegate {
 
   override def run (action : IAction) : Unit = {
     CoqStartUp.start()
-    val coqs = new CoqStepNotifier()
     //need to go back one more step
     val togo = CoqTop.findPreviousCommand(EclipseBoilerPlate.getContent, EclipseBoilerPlate.getCaretPosition + 2)
     //Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition)
     if (DocumentState.position < togo) {
+      val coqs = new CoqStepNotifier()
       coqs.test = Some((x : Int) => x >= togo)
       PrintActor.register(coqs)
       CoqStepAction.run(null)
