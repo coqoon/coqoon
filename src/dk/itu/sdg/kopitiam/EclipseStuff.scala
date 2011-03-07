@@ -273,6 +273,31 @@ class CoqUndoAction extends IWorkbenchWindowActionDelegate {
 
 object CoqUndoAction extends CoqUndoAction { }
 
+class CoqRetractAction extends IWorkbenchWindowActionDelegate {
+  import org.eclipse.ui.IWorkbenchWindow
+  import org.eclipse.jface.action.IAction
+  import org.eclipse.jface.viewers.ISelection
+
+  override def init (window_ : IWorkbenchWindow) : Unit = ()
+
+  override def run (action : IAction) : Unit = {
+    CoqStartUp.start()
+    PrintActor.callbacks = List(CoqOutputDispatcher)
+    DocumentState.position = 0
+    DocumentState.sendlen = 0
+    PrintActor.register(CoqStartUp)
+    val shell = CoqState.getShell
+    DocumentState.undoAll
+    CoqTop.writeToCoq("Backtrack " + DocumentState.coqstart + " 0 " + shell.context.length + ".")
+  }
+
+  override def selectionChanged (action : IAction, selection : ISelection) : Unit = ()
+
+  override def dispose () : Unit = ()
+}
+
+object CoqRetractAction extends CoqRetractAction { }
+
 class CoqStepAction extends IWorkbenchWindowActionDelegate {
   import org.eclipse.ui.IWorkbenchWindow
   import org.eclipse.jface.action.IAction
@@ -434,6 +459,8 @@ class RestartCoqAction extends IWorkbenchWindowActionDelegate {
   override def dispose () : Unit = ()
 }
 
+object RestartCoqAction extends RestartCoqAction { }
+
 object DocumentState {
   import org.eclipse.jface.text.{ITextViewer}
   import org.eclipse.swt.graphics.{Color,RGB}
@@ -447,6 +474,14 @@ object DocumentState {
 
   //def position : Int = position_
   //def position_= (x : Int) { Console.println("new pos is " + x + " (old was " + position_ + ")"); position_ = x }
+
+  def undoAll () : Unit = synchronized {
+    val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
+    Display.getDefault.syncExec(
+      new Runnable() {
+        def run() = sourceview.setTextColor(bl, 0, totallen, true)
+      });
+  }
 
   def undo () : Unit = synchronized {
     //Console.println("undo (@" + position + ", " + sendlen + ")")

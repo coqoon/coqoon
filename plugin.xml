@@ -44,6 +44,15 @@
                tooltip="CoqStepAction">
          </action>
          <action
+               class="dk.itu.sdg.kopitiam.CoqRetractAction"
+               icon="icons/uptoo.gif"
+               id="kopitiam.actions.CoqRetractAction"
+               label="&amp;Coq Retract Action"
+               menubarPath="sampleMenu/sampleGroup"
+               toolbarPath="CoqGroup"
+               tooltip="CoqRetractAction">
+         </action>
+         <action
                class="dk.itu.sdg.kopitiam.CoqUndoAction"
                icon="icons/up.gif"
                id="kopitiam.actions.UndoStepAction"

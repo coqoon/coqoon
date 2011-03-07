@@ -44,10 +44,11 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     val ed = part.getPart(false)
     if (ed.isInstanceOf[ITextEditor])
       if (activeeditor != ed) {
-        Console.println("part activated " + ed)
+        //Console.println("part activated " + ed)
         activeeditor = ed.asInstanceOf[ITextEditor]
         DocumentState.position = 0
         DocumentState.sendlen = 0
+        DocumentState.undoAll
         DocumentState.totallen = EclipseBoilerPlate.getContent.length
         PrintActor.callbacks = List(CoqOutputDispatcher)
         if (! CoqTop.isStarted) {
@@ -57,8 +58,8 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
           PrintActor.register(CoqStartUp)
           CoqTop.writeToCoq("Backtrack " + DocumentState.coqstart + " 0 " + shell.context.length + ".")
         }
-      } else
-        Console.println("didn't expect to come here, activation of an already activated editor")
+      } //else
+        //Console.println("didn't expect to come here, activation of an already activated editor")
   }
 
   override def partOpened (part : IWorkbenchPartReference) : Unit = {
