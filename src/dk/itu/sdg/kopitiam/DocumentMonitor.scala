@@ -39,16 +39,17 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   }
 
 
-  var activeeditor : ITextEditor = null
+  var activeeditor : CoqEditor = null
   override def partActivated (part : IWorkbenchPartReference) : Unit = {
     val ed = part.getPart(false)
-    if (ed.isInstanceOf[ITextEditor])
+    if (ed.isInstanceOf[CoqEditor])
       if (activeeditor != ed) {
         //Console.println("part activated " + ed)
-        activeeditor = ed.asInstanceOf[ITextEditor]
+        activeeditor = ed.asInstanceOf[CoqEditor]
         DocumentState.position = 0
         DocumentState.sendlen = 0
         DocumentState.undoAll
+        DocumentState.sourceview = activeeditor.getSource
         DocumentState.totallen = EclipseBoilerPlate.getContent.length
         PrintActor.callbacks = List(CoqOutputDispatcher)
         if (! CoqTop.isStarted) {

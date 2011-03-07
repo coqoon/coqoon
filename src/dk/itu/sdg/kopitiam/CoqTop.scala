@@ -170,8 +170,8 @@ object CoqTop {
       if (CoqState.readyForInput) {
         val datarr = data.getBytes("UTF-8")
         coqin.write(datarr)
-        if (data.length < 10)
-          Console.println("wrote ..." + data)
+        if (data.length < 20)
+          Console.println("wrote " + data)
         else
           Console.println("wrote " + data.take(10) + "..." + data.takeRight(10))
         if (data.endsWith(".")) //we've EOF or command, need whitespace
@@ -248,35 +248,24 @@ object CoqTop {
   }
 
   def findNextCommand (s : String) : Int = {
-    def aftercomment (pos : Int) : Int = {
-      //Console.println("afterc called with " + pos)
-      val commsta = s.indexOf("(*", pos) + 1
-      if (commsta == 0)
-        commsta
-      else {
-        val commend = s.indexOf("*)", commsta) + 1
-        if (commend > s.indexOf("(*", commsta)) //nested comment
-          s.indexOf("*)", aftercomment(commsta)) + 1
-        else
-          if (commend == 0) s.length else commend
+    if (s == "") -1
+    else {
+      var cdepth : Int = 0
+      var i : Int = 0
+      var found : Boolean = false
+      while (i < s.length && ! found) {
+        val c = s(i)
+        if (c == '(' && s(i + 1) == '*')
+          cdepth += 1
+        else if (c == '*' && s(i + 1) == ')')
+          cdepth -= 1
+        else if (cdepth == 0 && c == '.' && (i + 1 == s.length || s(i + 1) == '\n' || s(i + 1) == ' ') && (i == 0 || s(i - 1) != '.'))
+          found = true
+        i += 1
       }
+      //Console.println("find next returns " + i)
+      i
     }
-    def finddotspace (pos : Int) : Int = {
-      //Console.println("finddotspace called with " + pos)
-      val dot = s.indexOf(".", pos)
-      if (dot != -1) {
-        val cstart = s.indexOf("(*", pos)
-        //search whether dot is inside of comment
-        if (cstart != -1 && cstart < dot)
-          finddotspace(aftercomment(pos))
-        else if (s(dot - 1) != '.' && (dot + 1 == s.length || s(dot + 1) == ' ' || s(dot + 1) == '\n')) //ws (EOF, SP, NL)
-          dot + 2
-        else //no ws
-          finddotspace(dot + 1)
-      } else
-        -1
-    }
-    finddotspace(0)
   }
 }
 
@@ -287,18 +276,19 @@ object Outputter extends CoqCallback {
       case CoqTheoremDefined(n) =>
       case CoqVariablesAssumed(n) =>
       case CoqError(m) => Console.println("error " + m)
-      case x => Console.println("received " + x)
+      case x => //Console.println("received " + x)
     }
   }
 }
 
 object Main extends Application {
-  import java.io.{FileReader,BufferedReader}
+  import java.io.{File,FileInputStream,InputStreamReader,BufferedReader}
 
   override def main (args : Array[String]) = {
     System.setProperty("file.encoding", "UTF-8")
+    CoqTop.init()
     CoqTop.startCoq()
-    val in = new BufferedReader(new FileReader(args(0)))
+    val in = new BufferedReader(new InputStreamReader(new FileInputStream(new File(args(0))), "UTF-8"))
     var line : String = in.readLine()
     var buf = ""
     while (line != null) {
@@ -311,9 +301,10 @@ object Main extends Application {
     var fini : Boolean = false
     while (! fini) {
       val noff = CoqTop.findNextCommand(buf)
-      if (noff == -1)
+      if (noff == -1) {
+        Console.println("no next command")
         fini = true
-      else {
+      } else {
         CoqTop.writeToCoq(buf.take(noff))
         buf = buf.drop(noff)
       }

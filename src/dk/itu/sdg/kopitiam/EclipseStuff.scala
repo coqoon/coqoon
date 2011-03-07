@@ -200,7 +200,6 @@ object EclipseBoilerPlate {
       val texteditor = editorpart.asInstanceOf[CoqEditor]
       val dp : IDocumentProvider = texteditor.getDocumentProvider
       val doc : IDocument = dp.getDocument(texteditor.getEditorInput)
-      DocumentState.sourceview = texteditor.getSource //should only be called once, somehow!
       doc.get
     } else {
       Console.println("not a CoqEditor!")
@@ -254,6 +253,8 @@ class CoqUndoAction extends IWorkbenchWindowActionDelegate {
 
   override def init (window_ : IWorkbenchWindow) : Unit = {
     EclipseBoilerPlate.window = window_
+    if (window_.getActivePage.getActiveEditor.isInstanceOf[CoqEditor])
+      DocumentState.sourceview = window_.getActivePage.getActiveEditor.asInstanceOf[CoqEditor].getSource
   }
 
   override def run (action : IAction) : Unit = {
@@ -316,12 +317,10 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
     if (content.length > 0) {
       val eoc = CoqTop.findNextCommand(content)
       //Console.println("eoc is " + eoc)
-      if (eoc == -1) {
-        Console.println("EOF")
-      } else {
+      if (eoc > 0) {
         DocumentState.sendlen = eoc
         //Console.println("command is (" + eoc + "): " + content.take(eoc))
-        CoqTop.writeToCoq(content.take(eoc)) //sends comments over the line
+        CoqTop.writeToCoq(content.take(eoc).trim) //sends comments over the line
       }
     }
   }
@@ -450,6 +449,7 @@ class RestartCoqAction extends IWorkbenchWindowActionDelegate {
     CoqTop.killCoq
     DocumentState.position = 0
     DocumentState.sendlen = 0
+    DocumentState.undoAll
     PrintActor.callbacks = List(CoqOutputDispatcher)
     CoqStartUp.start
   }
@@ -476,11 +476,13 @@ object DocumentState {
   //def position_= (x : Int) { Console.println("new pos is " + x + " (old was " + position_ + ")"); position_ = x }
 
   def undoAll () : Unit = synchronized {
-    val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
-    Display.getDefault.syncExec(
-      new Runnable() {
-        def run() = sourceview.setTextColor(bl, 0, totallen, true)
-      });
+    if (sourceview != null) {
+      val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
+      Display.getDefault.syncExec(
+        new Runnable() {
+          def run() = sourceview.setTextColor(bl, 0, totallen, true)
+        });
+    }
   }
 
   def undo () : Unit = synchronized {
