@@ -190,7 +190,7 @@ object EclipseBoilerPlate {
 
   def getCaretPosition () : Int = {
     val sel = window.getActivePage.getActiveEditor.asInstanceOf[CoqEditor].getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
-    Console.println("cursor position is " + sel.getLength + " @" + sel.getOffset)
+    //Console.println("cursor position is " + sel.getLength + " @" + sel.getOffset)
     sel.getOffset
   }
 
@@ -226,6 +226,10 @@ object EclipseBoilerPlate {
     } else null
   }
 
+  def getProjectDir () : String = {
+    getResource.getProject.getLocation.toOSString
+  }
+
   import org.eclipse.core.resources.IMarker
 
   def mark (text : String) : Unit = {
@@ -250,7 +254,6 @@ class CoqUndoAction extends IWorkbenchWindowActionDelegate {
 
   override def init (window_ : IWorkbenchWindow) : Unit = {
     EclipseBoilerPlate.window = window_
-    Console.println("init called")
   }
 
   override def run (action : IAction) : Unit = {
@@ -259,7 +262,7 @@ class CoqUndoAction extends IWorkbenchWindowActionDelegate {
     Console.println("prev (" + DocumentState.position + " [" + content(DocumentState.position) + "]): " + l)
     if (l > -1) {
       DocumentState.sendlen = DocumentState.position - l
-      CoqTop.writeToCoq("Undo. ") //wrong - only right in Proof mode - and even there Backtrack is more popular
+      CoqTop.writeToCoq("Undo.") //wrong - only right in Proof mode - and even there Backtrack is more popular
     }
   }
 
@@ -274,25 +277,25 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
   import org.eclipse.ui.IWorkbenchWindow
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.viewers.ISelection
-  var fini : Boolean = false //need to set to false somewhere (when doc changed)
 
   override def init (window_ : IWorkbenchWindow) : Unit = ()
 
   override def run (action : IAction) : Unit = {
-    Console.println("run called, sending a command")
+    //Console.println("run called, sending a command")
     CoqStartUp.start()
     //EclipseBoilerPlate.getCaretPosition()
-    Console.println("searching in content (start @" + DocumentState.position + ")")
-    val content = EclipseBoilerPlate.getContent.drop(DocumentState.position)
+    //Console.println("searching in content (start @" + DocumentState.position + ")")
+    val con = EclipseBoilerPlate.getContent
+    DocumentState.totallen = con.length
+    val content = con.drop(DocumentState.position)
     if (content.length > 0) {
       val eoc = CoqTop.findNextCommand(content)
-      Console.println("eoc is " + eoc)
+      //Console.println("eoc is " + eoc)
       if (eoc == -1) {
-        fini = true
         Console.println("EOF")
       } else {
         DocumentState.sendlen = eoc
-        Console.println("command is (" + eoc + "): " + content.take(eoc))
+        //Console.println("command is (" + eoc + "): " + content.take(eoc))
         CoqTop.writeToCoq(content.take(eoc)) //sends comments over the line
       }
     }
@@ -306,7 +309,8 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
 object CoqStepAction extends CoqStepAction { }
 
 object CoqStartUp extends CoqCallback {
-  private var st : Boolean = false
+  private var first : Boolean = true
+  private var fini : Boolean = false
 
   def start () : Unit = {
     if (! CoqTop.isStarted) {
@@ -315,20 +319,28 @@ object CoqStartUp extends CoqCallback {
       if (EclipseConsole.out == null)
         EclipseConsole.initConsole
       PrintActor.stream = EclipseConsole.out
-      while (!st) { }
+      while (!fini) { }
+      fini = false
       PrintActor.deregister(CoqStartUp)
     }
   }
 
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
-      case CoqShellReady(m, t) => st = true
+      case CoqShellReady(m, t) =>
+        if (first) {
+          DocumentState.coqstart = t.globalStep
+          CoqTop.writeToCoq("Add LoadPath \"" + EclipseBoilerPlate.getProjectDir + "\".")
+          first = false
+        } else {
+          PrintActor.deregister(CoqStartUp)
+          first = true
+          fini = true
+        }
       case y =>
     }
   }
 }
-
-
 
 class CoqStepNotifier extends CoqCallback {
   var err : Boolean = false
@@ -344,12 +356,13 @@ class CoqStepNotifier extends CoqCallback {
             PrintActor.deregister(this)            
           else {
             CoqStepAction.run(null)
-            if (CoqStepAction.fini)
+            val drops = DocumentState.position + DocumentState.sendlen
+            if (drops >= DocumentState.totallen || CoqTop.findNextCommand(EclipseBoilerPlate.getContent.drop(drops)) == -1)
               PrintActor.deregister(this)
           }
         } else
           PrintActor.deregister(this)
-      case x => Console.println("got something, try again player 1 " + x)
+      case x => //Console.println("got something, try again player 1 " + x)
     }
   }
 }
@@ -401,6 +414,26 @@ class CoqStepUntilAction extends IWorkbenchWindowActionDelegate {
   override def dispose () : Unit = ()
 }
 
+class RestartCoqAction extends IWorkbenchWindowActionDelegate {
+  import org.eclipse.ui.IWorkbenchWindow
+  import org.eclipse.jface.action.IAction
+  import org.eclipse.jface.viewers.ISelection
+
+  override def init (window_ : IWorkbenchWindow) : Unit = ()
+
+  override def run (action : IAction) : Unit = {
+    CoqTop.killCoq
+    DocumentState.position = 0
+    DocumentState.sendlen = 0
+    PrintActor.callbacks = List(CoqOutputDispatcher)
+    CoqStartUp.start
+  }
+
+  override def selectionChanged (action : IAction, selection : ISelection) : Unit = ()
+
+  override def dispose () : Unit = ()
+}
+
 object DocumentState {
   import org.eclipse.jface.text.{ITextViewer}
   import org.eclipse.swt.graphics.{Color,RGB}
@@ -409,6 +442,8 @@ object DocumentState {
   var sourceview : ITextViewer = null
   var position : Int = 0
   var sendlen : Int = 0
+  var totallen : Int = 0
+  var coqstart : Int = 0
 
   //def position : Int = position_
   //def position_= (x : Int) { Console.println("new pos is " + x + " (old was " + position_ + ")"); position_ = x }
@@ -417,11 +452,12 @@ object DocumentState {
     //Console.println("undo (@" + position + ", " + sendlen + ")")
     if (sendlen != 0) {
       val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
+      val start = scala.math.max(position - sendlen, 0)
       Display.getDefault.syncExec(
         new Runnable() {
-          def run() = sourceview.setTextColor(bl, position - sendlen, sendlen, true)
+          def run() = sourceview.setTextColor(bl, start, sendlen, true)
         });
-      position -= sendlen
+      position = start
       sendlen = 0
     }
   }
@@ -431,11 +467,13 @@ object DocumentState {
     if (sendlen != 0) {
       //Console.println("commited - and doing some work")
       val bl = new Color(Display.getDefault, new RGB(0, 0, 220))
+      val end = scala.math.min(sendlen, totallen - position)
+      //Console.println("commiting, end is " + end + " (pos + len: " + (position + sendlen) + ")" + ", pos:" + position + " sourceview: " + sourceview)
       Display.getDefault.syncExec(
         new Runnable() {
-          def run() = sourceview.setTextColor(bl, position, sendlen, true)
+          def run() = sourceview.setTextColor(bl, position, end, true)
         });
-      position += sendlen
+      position += end
       sendlen = 0
     }
   }
@@ -520,7 +558,7 @@ object CoqOutputDispatcher extends CoqCallback {
   var goalviewer : GoalViewer = null
 	
   override def dispatch (x : CoqResponse) : Unit = {
-    Console.println("received in dispatch " + x)
+    //Console.println("received in dispatch " + x)
     x match {
       case CoqShellReady(monoton, token) =>
         if (monoton)
@@ -545,7 +583,7 @@ object CoqOutputDispatcher extends CoqCallback {
         val ps = msg.drop(msg.findIndexOf(_.startsWith("Error")))
         EclipseBoilerPlate.mark(ps.reduceLeft(_ + " " + _))
       }
-      case x => EclipseConsole.out.println("received: " + x)
+      case x => //EclipseConsole.out.println("received: " + x)
     }
   }
 

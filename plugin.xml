@@ -8,6 +8,15 @@
             label="Sample Action Set"
             visible="true">
          <action
+               class="dk.itu.sdg.kopitiam.RestartCoqAction"
+               icon="icons/dead.gif"
+               id="kopitiam.actions.RestartAction"
+               label="&amp;Restart Coq Action"
+               menubarPath="sampleMenu/sampleGroup"
+               toolbarPath="CoqGroup"
+               tooltip="RestartCoqAction">
+         </action>
+         <action
                class="dk.itu.sdg.kopitiam.CoqStepAllAction"
                icon="icons/downtoo.gif"
                id="kopitiam.actions.StepAllAction"

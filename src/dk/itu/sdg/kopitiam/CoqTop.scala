@@ -40,7 +40,7 @@ object PrintActor extends Actor with OutputChannel[String] {
   type Printable = { def println (x : String) : Unit }
   var stream : Printable = PCons
 
-  private var callbacks : List[CoqCallback] = List[CoqCallback]() //why not actors?
+  var callbacks : List[CoqCallback] = List[CoqCallback]() //why not actors?
 
   def register (c : CoqCallback) : Unit = { callbacks = c :: callbacks }
   def deregister (c : CoqCallback) : Unit = { callbacks = callbacks.filterNot(_ == c) }
@@ -72,7 +72,7 @@ object PrintActor extends Actor with OutputChannel[String] {
             */
             //stream.println("received (parsed):" + coqr)
             coqr.foreach(x => callbacks.foreach(_.dispatch(x)))
-          } else Console.println("filling buffer with " + msg)
+          } //else Console.println("filling buffer with " + msg)
         }
       }
     }
@@ -93,7 +93,7 @@ object ValidCoqShell {
         if (tokens2.length >= 2)
           Some(new CoqShellTokens(tokens1(0).trim,
                                   Integer.parseInt(tokens2(0).trim),
-                                  tokens2.drop(1).toList.dropRight(1),
+                                  tokens2.drop(1).toList.dropRight(1).toList.filterNot(_ == ""),
                                   Integer.parseInt(tokens2.takeRight(1)(0).trim)))
         else
           None
@@ -108,33 +108,42 @@ object CoqState {
 
   def readyForInput () : Boolean = { readyforinput }
 
+  def getShell () : CoqShellTokens = context
+
   def setShell (tokens : CoqShellTokens) : Unit = synchronized {
     val oldc = context
     context = tokens
+    //Console.println("ready!")
     readyforinput = true
     var monotonic = false
     if (oldc.globalStep < tokens.globalStep)
       //TODO: strictly greater in first, subset in the latter comparison
       if (oldc.localStep <= tokens.localStep || oldc.theorem != tokens.theorem)
         monotonic = true
-    Console.println("distributing shell ready " + monotonic + " shell " + tokens)
+    //Console.println("distributing shell ready " + monotonic + " shell " + tokens)
     PrintActor.distribute(CoqShellReady(monotonic, tokens))
   }
 
-  def sendCommand () : Unit = { Console.println("all false now"); readyforinput = false }
+  def sendCommand () : Unit = {
+    //Console.println("not ready :/")
+    readyforinput = false
+  }
 }
 
 object ErrorOutputActor extends Actor with OutputChannel[String] {
   def act() {
     while (true) {
       receive {
-        case msg : String => ValidCoqShell.getTokens(msg) match {
-          case Some(tokens : CoqShellTokens) => {
-            Console.println("set coq ready " + tokens)
-            CoqState.setShell(tokens)
-          }
-          case None => if (msg.filterNot(_ == '\n').length > 0)
-                         Console.println("couldn't parse on stderr: " + msg)
+        case msg : String =>
+          Console.println("receiving shell " + msg)
+          ValidCoqShell.getTokens(msg) match {
+            case Some(tokens : CoqShellTokens) => {
+              //Console.println("set coq ready " + tokens)
+              CoqState.setShell(tokens)
+            }
+            case None =>
+              if (msg.filterNot(_ == '\n').length > 0)
+                Console.println("couldn't parse on stderr: " + msg)
         }
       }
     }
@@ -149,6 +158,7 @@ object CoqTop {
   private var coqerr : BusyStreamReader = null
   private var coqin : OutputStream = null
   private var started : Boolean = false
+  private var coqprocess : Process = null
 
   private val coqtopbinary = "coqtop -emacs"
 
@@ -156,10 +166,16 @@ object CoqTop {
     if (data != null && data.length > 0) {
       if (coqin == null)
         Console.println("coqin is null")
+      //Console.println("ready? " + CoqState.readyForInput + ", sending " + data.take(10) + "..." + data.takeRight(10))
       if (CoqState.readyForInput) {
         val datarr = data.getBytes("UTF-8")
         coqin.write(datarr)
-        Console.println("wrote ..." + data.takeRight(10))
+        if (data.length < 10)
+          Console.println("wrote ..." + data)
+        else
+          Console.println("wrote " + data.take(10) + "..." + data.takeRight(10))
+        if (data.endsWith(".")) //we've EOF or command, need whitespace
+          coqin.write("\n".getBytes("UTF-8"))
         coqin.flush
         CoqState.sendCommand
       } else {
@@ -170,13 +186,23 @@ object CoqTop {
     }
   }
 
-  def startCoq () = {
+  def init () : Unit = {
     PrintActor.start
     ErrorOutputActor.start
-    val coqproc = Runtime.getRuntime.exec(coqtopbinary)
-    coqin = coqproc.getOutputStream
-    coqout = new BusyStreamReader(coqproc.getInputStream)
-    coqerr = new BusyStreamReader(coqproc.getErrorStream)
+  }
+
+  def killCoq () : Unit = {
+    started = false
+    if (coqprocess != null)
+      coqprocess.destroy
+    coqprocess = null
+  }
+
+  def startCoq () : Unit = {
+    coqprocess = Runtime.getRuntime.exec(coqtopbinary)
+    coqin = coqprocess.getOutputStream
+    coqout = new BusyStreamReader(coqprocess.getInputStream)
+    coqerr = new BusyStreamReader(coqprocess.getErrorStream)
     coqout.addActor(PrintActor)
     coqerr.addActor(ErrorOutputActor)
     new Thread(coqout).start
@@ -190,7 +216,7 @@ object CoqTop {
 
   def findPreviousCommand (s : String, pos : Int) : Int = {
     def beforecomment (p : Int) : Int = {
-      Console.println("beforec " + p)
+      //Console.println("beforec " + p)
       val commend = s.lastIndexOf("*)", p)
       if (commend == -1)
         commend
@@ -203,7 +229,7 @@ object CoqTop {
       }
     }
     def finddotspace (p : Int) : Int = {
-      Console.println("findd " + p)
+      //Console.println("findd " + p)
       val dot = s.lastIndexOf(".", p)
       if (dot != -1) {
         val cend = s.lastIndexOf("*)", p)

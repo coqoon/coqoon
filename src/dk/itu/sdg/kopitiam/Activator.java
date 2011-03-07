@@ -24,5 +24,6 @@ public class Activator extends AbstractUIPlugin implements IStartup {
   public void earlyStartup () {
     System.out.println("earlystartup called");
     DocumentMonitor.init();
+    CoqTop.init();
   }
 }

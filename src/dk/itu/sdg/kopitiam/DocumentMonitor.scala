@@ -38,9 +38,27 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     wins.map(x => x.getPages.toList.map(y => y.getEditorReferences.toList.map(z => handlePart(z.getEditor(false)))))
   }
 
+
+  var activeeditor : ITextEditor = null
   override def partActivated (part : IWorkbenchPartReference) : Unit = {
-    //Console.println("part activated " + part)
-    //switch some global state here - like coq communication etc
+    val ed = part.getPart(false)
+    if (ed.isInstanceOf[ITextEditor])
+      if (activeeditor != ed) {
+        Console.println("part activated " + ed)
+        activeeditor = ed.asInstanceOf[ITextEditor]
+        DocumentState.position = 0
+        DocumentState.sendlen = 0
+        DocumentState.totallen = EclipseBoilerPlate.getContent.length
+        PrintActor.callbacks = List(CoqOutputDispatcher)
+        if (! CoqTop.isStarted) {
+          CoqStartUp.start()
+        } else {
+          val shell = CoqState.getShell
+          PrintActor.register(CoqStartUp)
+          CoqTop.writeToCoq("Backtrack " + DocumentState.coqstart + " 0 " + shell.context.length + ".")
+        }
+      } else
+        Console.println("didn't expect to come here, activation of an already activated editor")
   }
 
   override def partOpened (part : IWorkbenchPartReference) : Unit = {
