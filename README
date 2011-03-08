@@ -11,3 +11,6 @@ Setup:
 3) Build project (takes some time, especially at 4%)
 4) Run Configurations -> Plug-ins -> Workspace -> Kopitiam -> Auto-start == true
 5) Run
+
+Useful links
+http://www.assembla.com/wiki/show/scala-ide/Eclipse_Plugin_Development_using_the_Scala_IDE (especially deployment: check "use class files from workspace"!)
