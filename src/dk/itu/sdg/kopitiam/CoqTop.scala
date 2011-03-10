@@ -273,7 +273,10 @@ object CoqTop {
         i += 1
       }
       //Console.println("find next returns " + i)
-      i
+      if (found)
+        i
+      else
+        -1
     }
   }
 }

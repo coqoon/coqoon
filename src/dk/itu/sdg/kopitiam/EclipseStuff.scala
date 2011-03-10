@@ -281,10 +281,14 @@ object EclipseBoilerPlate {
     marker.setAttribute(IMarker.MESSAGE, text)
     marker.setAttribute(IMarker.LOCATION, file.getName)
     marker.setAttribute(IMarker.CHAR_START, DocumentState.position)
-    marker.setAttribute(IMarker.CHAR_END, DocumentState.position + DocumentState.sendlen - 1) //for tha whitespace
+    marker.setAttribute(IMarker.CHAR_END, DocumentState.position + DocumentState.oldsendlen - 1) //for tha whitespace
     DocumentState.sendlen = 0
     marker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_ERROR)
     marker.setAttribute(IMarker.TRANSIENT, true)
+  }
+
+  def unmark () : Unit = {
+    getResource.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
   }
 }
 
@@ -307,7 +311,9 @@ class CoqUndoAction extends IWorkbenchWindowActionDelegate {
     Console.println("prev (" + DocumentState.position + " [" + content(DocumentState.position) + "]): " + l)
     if (l > -1) {
       DocumentState.sendlen = DocumentState.position - l
+      DocumentState.realundo = true
       ActionDisabler.disableAll
+      EclipseBoilerPlate.unmark
       CoqTop.writeToCoq("Undo.") //wrong - only right in Proof mode - and even there Backtrack is more popular
     }
   }
@@ -341,6 +347,7 @@ class CoqRetractAction extends IWorkbenchWindowActionDelegate {
     val shell = CoqState.getShell
     DocumentState.undoAll
     ActionDisabler.disableAll
+    EclipseBoilerPlate.unmark
     CoqTop.writeToCoq("Backtrack " + DocumentState.coqstart + " 0 " + shell.context.length + ".")
   }
 
@@ -544,6 +551,7 @@ class RestartCoqAction extends IWorkbenchWindowActionDelegate {
     DocumentState.position = 0
     DocumentState.sendlen = 0
     DocumentState.undoAll
+    EclipseBoilerPlate.unmark
     PrintActor.callbacks = List(CoqOutputDispatcher)
     CoqStartUp.start
   }
@@ -573,6 +581,7 @@ object ActionDisabler {
   }
 
   def enableMaybe () = {
+    Console.println("maybe enable " + DocumentState.position + " len " + DocumentState.totallen)
     if (DocumentState.position == 0)
       starts.zip(specials.zip(actions)).filterNot(_._1).map(_._2).filter(_._1()).map(_._2).foreach(_.setEnabled(true))
     else if (DocumentState.position + 1 >= DocumentState.totallen)
@@ -592,6 +601,7 @@ object DocumentState {
   var sendlen : Int = 0
   var totallen : Int = 0
   var coqstart : Int = 0
+  var realundo : Boolean = false
 
   //def position : Int = position_
   //def position_= (x : Int) { Console.println("new pos is " + x + " (old was " + position_ + ")"); position_ = x }
@@ -606,17 +616,24 @@ object DocumentState {
     }
   }
 
+  var oldsendlen : Int = 0
   def undo () : Unit = synchronized {
     //Console.println("undo (@" + position + ", " + sendlen + ")")
     if (sendlen != 0) {
-      val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
-      val start = scala.math.max(position - sendlen, 0)
-      Display.getDefault.syncExec(
-        new Runnable() {
-          def run() = sourceview.setTextColor(bl, start, sendlen, true)
-        });
-      position = start
-      sendlen = 0
+      if (realundo) {
+        realundo = false
+        val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
+        val start = scala.math.max(position - sendlen, 0)
+        Display.getDefault.syncExec(
+          new Runnable() {
+            def run() = sourceview.setTextColor(bl, start, sendlen, true)
+          });
+        position = start
+        sendlen = 0
+      } else { //just an error
+        oldsendlen = sendlen
+        sendlen = 0
+      }
     }
   }
 
@@ -720,9 +737,10 @@ object CoqOutputDispatcher extends CoqCallback {
     x match {
       case CoqShellReady(monoton, token) =>
         EclipseBoilerPlate.finishedProgress
-        if (monoton)
+        if (monoton) {
           DocumentState.commit
-        else
+          EclipseBoilerPlate.unmark
+        } else
           DocumentState.undo
         ActionDisabler.enableMaybe
       case CoqGoal(n, goals) => {
@@ -743,7 +761,7 @@ object CoqOutputDispatcher extends CoqCallback {
         val ps = msg.drop(msg.findIndexOf(_.startsWith("Error")))
         EclipseBoilerPlate.mark(ps.reduceLeft(_ + " " + _))
       }
-      case x => //EclipseConsole.out.println("received: " + x)
+      case x => EclipseConsole.out.println("received: " + x)
     }
   }
 

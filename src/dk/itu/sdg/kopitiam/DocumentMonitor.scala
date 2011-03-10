@@ -39,12 +39,16 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   }
 
 
+  import org.eclipse.ui.IFileEditorInput
+  import org.eclipse.core.resources.{IResource, IMarker}
   var activeeditor : CoqEditor = null
   override def partActivated (part : IWorkbenchPartReference) : Unit = {
     val ed = part.getPart(false)
     if (ed.isInstanceOf[CoqEditor])
       if (activeeditor != ed) {
         //Console.println("part activated " + ed)
+        if (activeeditor != null)
+          activeeditor.getEditorInput.asInstanceOf[IFileEditorInput].getFile.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
         activeeditor = ed.asInstanceOf[CoqEditor]
         ActionDisabler.disableAll
         DocumentState.position = 0
