@@ -104,8 +104,16 @@
    <extension
          point="org.eclipse.ui.startup">
       <startup
-            class="dk.itu.sdg.kopitiam.Activator">
+            class="dk.itu.sdg.kopitiam.Startup">
       </startup>
+   </extension>
+   <extension
+         point="org.eclipse.ui.preferencePages">
+      <page
+            class="dk.itu.sdg.kopitiam.KopitiamPreferencePage"
+            id="Kopitiam.settings"
+            name="Kopitiam">
+      </page>
    </extension>
 
 </plugin>

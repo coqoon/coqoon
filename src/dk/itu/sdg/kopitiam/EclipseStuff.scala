@@ -229,6 +229,15 @@ object EclipseBoilerPlate {
     getResource.getProject.getLocation.toOSString
   }
 
+  import org.eclipse.swt.widgets.Display
+  import org.eclipse.jface.dialogs.MessageDialog
+  def warnUser (title : String, message : String) : Unit = {
+    Display.getDefault.syncExec(
+      new Runnable() {
+        def run() = MessageDialog.openWarning(Display.getDefault.getActiveShell, title, message)
+      })
+  }
+
   import org.eclipse.core.resources.IMarker
 
   def mark (text : String) : Unit = {
@@ -339,7 +348,8 @@ object CoqStartUp extends CoqCallback {
   def start () : Unit = {
     if (! CoqTop.isStarted) {
       PrintActor.register(CoqStartUp)
-      CoqTop.startCoq
+      if (! CoqTop.startCoq)
+        EclipseBoilerPlate.warnUser("No Coq", "No Coq binary found, please specify one in the Kopitiam preferences page")
       if (EclipseConsole.out == null)
         EclipseConsole.initConsole
       PrintActor.stream = EclipseConsole.out

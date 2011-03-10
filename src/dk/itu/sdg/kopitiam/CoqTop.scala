@@ -159,6 +159,7 @@ object CoqTop {
   private var coqin : OutputStream = null
   private var started : Boolean = false
   private var coqprocess : Process = null
+  var coqpath : String = ""
 
   private val coqtopbinary = "coqtop -emacs"
 
@@ -198,16 +199,23 @@ object CoqTop {
     coqprocess = null
   }
 
-  def startCoq () : Unit = {
-    coqprocess = Runtime.getRuntime.exec(coqtopbinary)
-    coqin = coqprocess.getOutputStream
-    coqout = new BusyStreamReader(coqprocess.getInputStream)
-    coqerr = new BusyStreamReader(coqprocess.getErrorStream)
-    coqout.addActor(PrintActor)
-    coqerr.addActor(ErrorOutputActor)
-    new Thread(coqout).start
-    new Thread(coqerr).start
-    started = true
+  import java.io.File
+  def startCoq () : Boolean = {
+    if (! new File(coqpath + coqtopbinary).exists) {
+      Console.println("can't find coqtop binary")
+      false
+    } else {
+      coqprocess = Runtime.getRuntime.exec(coqpath + coqtopbinary)
+      coqin = coqprocess.getOutputStream
+      coqout = new BusyStreamReader(coqprocess.getInputStream)
+      coqerr = new BusyStreamReader(coqprocess.getErrorStream)
+      coqout.addActor(PrintActor)
+      coqerr.addActor(ErrorOutputActor)
+      new Thread(coqout).start
+      new Thread(coqerr).start
+      started = true
+      true
+    }
   }
   
   def isStarted () : Boolean = {
