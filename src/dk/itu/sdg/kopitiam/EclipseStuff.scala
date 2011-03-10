@@ -244,26 +244,30 @@ object EclipseBoilerPlate {
   import org.eclipse.swt.widgets.Composite
   private var p : IProgressMonitor = null
   private var pmd : ProgressMonitorDialog = null
+  var multistep : Boolean = false
   def startProgress () : Unit = {
-    Console.println("Starting progress monitor")
-    assert(p == null)
-    assert(pmd == null)
-    pmd = new ProgressMonitorDialog(Display.getDefault.getActiveShell)
-    p = pmd.getProgressMonitor
-    pmd.open
-    p.beginTask("Coq interaction", IProgressMonitor.UNKNOWN)
+    //Console.println("Starting progress monitor")
+    if (p == null) {
+    //assert(pmd == null)
+      pmd = new ProgressMonitorDialog(Display.getDefault.getActiveShell)
+      p = pmd.getProgressMonitor
+      pmd.open
+      p.beginTask("Coq interaction", IProgressMonitor.UNKNOWN)
+    }
   }
 
   def finishedProgress () : Unit = {
-    Console.println("Finished progress monitor " + p)
-    if (p != null) {
+    //Console.println("Finished progress monitor " + p)
+    if (p != null && !multistep) {
+      val oldp = p
+      val oldpmd = pmd
+      p = null
+      pmd = null
       Display.getDefault.asyncExec(
         new Runnable() {
           def run() = {
-            p.done
-            pmd.close
-            p = null
-            pmd = null
+            oldp.done
+            oldpmd.close
           }
         })
     }
@@ -303,11 +307,18 @@ class CoqUndoAction extends IWorkbenchWindowActionDelegate {
     Console.println("prev (" + DocumentState.position + " [" + content(DocumentState.position) + "]): " + l)
     if (l > -1) {
       DocumentState.sendlen = DocumentState.position - l
+      ActionDisabler.disableAll
       CoqTop.writeToCoq("Undo.") //wrong - only right in Proof mode - and even there Backtrack is more popular
     }
   }
 
-  override def selectionChanged (action : IAction, selection : ISelection) : Unit = ()
+  private var first : Boolean = true
+  override def selectionChanged (action : IAction, selection : ISelection) : Unit = {
+    if (first) {
+      first = false
+      ActionDisabler.registeraction(action, true, () => true) //and in proof mode
+    }
+  }
 
   override def dispose () : Unit = ()
 }
@@ -329,10 +340,17 @@ class CoqRetractAction extends IWorkbenchWindowActionDelegate {
     PrintActor.register(CoqStartUp)
     val shell = CoqState.getShell
     DocumentState.undoAll
+    ActionDisabler.disableAll
     CoqTop.writeToCoq("Backtrack " + DocumentState.coqstart + " 0 " + shell.context.length + ".")
   }
 
-  override def selectionChanged (action : IAction, selection : ISelection) : Unit = ()
+  private var first : Boolean = true
+  override def selectionChanged (action : IAction, selection : ISelection) : Unit = {
+    if (first) {
+      first = false
+      ActionDisabler.registeraction(action, true, () => true)
+    }
+  }
 
   override def dispose () : Unit = ()
 }
@@ -359,14 +377,21 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
       //Console.println("eoc is " + eoc)
       if (eoc > 0) {
         DocumentState.sendlen = eoc
-        //Console.println("command is (" + eoc + "): " + content.take(eoc))
+        Console.println("command is (" + eoc + "): " + content.take(eoc))
         EclipseBoilerPlate.startProgress
+        ActionDisabler.disableAll
         CoqTop.writeToCoq(content.take(eoc).trim) //sends comments over the line
       }
     }
   }
 
-  override def selectionChanged (action : IAction, selection : ISelection) : Unit = ()
+  private var first : Boolean = true
+  override def selectionChanged (action : IAction, selection : ISelection) : Unit = {
+    if (first) {
+      first = false
+      ActionDisabler.registeraction(action, false, () => true)
+    }
+  }
 
   override def dispose () : Unit = ()
 }
@@ -388,6 +413,7 @@ object CoqStartUp extends CoqCallback {
       else {
         while (!fini) { }
         fini = false
+        ActionDisabler.enableMaybe
       }
       PrintActor.deregister(CoqStartUp)
     }
@@ -420,16 +446,24 @@ class CoqStepNotifier extends CoqCallback {
       case CoqShellReady(monoton, tokens) =>
         if (! err) {
           DocumentState.commit
-          if (test.isDefined && test.get(DocumentState.position))
-            PrintActor.deregister(this)            
-          else {
+          if (test.isDefined && test.get(DocumentState.position)) {
+            EclipseBoilerPlate.multistep = false
+            EclipseBoilerPlate.finishedProgress
+            PrintActor.deregister(this)
+          } else {
             CoqStepAction.run(null)
             val drops = DocumentState.position + DocumentState.sendlen
-            if (drops >= DocumentState.totallen || CoqTop.findNextCommand(EclipseBoilerPlate.getContent.drop(drops)) == -1)
+            if (drops >= DocumentState.totallen || CoqTop.findNextCommand(EclipseBoilerPlate.getContent.drop(drops)) == -1) {
               PrintActor.deregister(this)
+              EclipseBoilerPlate.multistep = false
+              EclipseBoilerPlate.finishedProgress
+            }
           }
-        } else
+        } else {
           PrintActor.deregister(this)
+          EclipseBoilerPlate.multistep = false
+          EclipseBoilerPlate.finishedProgress
+        }
       case x => //Console.println("got something, try again player 1 " + x)
     }
   }
@@ -444,13 +478,20 @@ class CoqStepAllAction extends IWorkbenchWindowActionDelegate {
 
   override def run (action : IAction) : Unit = {
     CoqStartUp.start()
-    Console.println("registering CoqStepNotifier to PrintActor, now stepping")
+    //Console.println("registering CoqStepNotifier to PrintActor, now stepping")
+    EclipseBoilerPlate.multistep = true
     PrintActor.register(new CoqStepNotifier())
     //we need to provoke first message to start callback loops
     CoqStepAction.run(null)
   }
 
-  override def selectionChanged (action : IAction, selection : ISelection) : Unit = ()
+  private var first : Boolean = true
+  override def selectionChanged (action : IAction, selection : ISelection) : Unit = {
+    if (first) {
+      first = false
+      ActionDisabler.registeraction(action, false, () => true)
+    }
+  }
 
   override def dispose () : Unit = ()
 }
@@ -470,6 +511,7 @@ class CoqStepUntilAction extends IWorkbenchWindowActionDelegate {
     val togo = CoqTop.findPreviousCommand(EclipseBoilerPlate.getContent, EclipseBoilerPlate.getCaretPosition + 2)
     //Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition)
     if (DocumentState.position < togo) {
+      EclipseBoilerPlate.multistep = true
       val coqs = new CoqStepNotifier()
       coqs.test = Some((x : Int) => x >= togo)
       PrintActor.register(coqs)
@@ -477,10 +519,18 @@ class CoqStepUntilAction extends IWorkbenchWindowActionDelegate {
     }
   }
 
-  override def selectionChanged (action : IAction, selection : ISelection) : Unit = ()
+  private var first : Boolean = true
+  override def selectionChanged (action : IAction, selection : ISelection) : Unit = {
+    if (first) {
+      first = false
+      ActionDisabler.registeraction(action, false, () => true) //EclipseBoilerPlate.getCaretPosition > DocumentState.position) //actually modulo last ". "
+    }
+  }
 
   override def dispose () : Unit = ()
 }
+
+object CoqStepUntilAction extends CoqStepUntilAction { }
 
 class RestartCoqAction extends IWorkbenchWindowActionDelegate {
   import org.eclipse.ui.IWorkbenchWindow
@@ -498,12 +548,39 @@ class RestartCoqAction extends IWorkbenchWindowActionDelegate {
     CoqStartUp.start
   }
 
-  override def selectionChanged (action : IAction, selection : ISelection) : Unit = ()
+  override def selectionChanged (action : IAction, selection : ISelection) : Unit = {
+    //Console.println("selection of restartcoq changed " + action + " sel now " + selection)
+  }
 
   override def dispose () : Unit = ()
 }
 
 object RestartCoqAction extends RestartCoqAction { }
+
+object ActionDisabler {
+  import org.eclipse.jface.action.IAction
+  var actions : List[IAction] = List()
+  var starts : List[Boolean] = List()
+  var specials : List[Function0[Boolean]] = List()
+  def registeraction (act : IAction, start : Boolean, special : Function0[Boolean]) : Unit = {
+    actions ::= act
+    starts ::= start
+    specials ::= special
+  }
+
+  def disableAll () = {
+    actions.foreach(_.setEnabled(false))
+  }
+
+  def enableMaybe () = {
+    if (DocumentState.position == 0)
+      starts.zip(specials.zip(actions)).filterNot(_._1).map(_._2).filter(_._1()).map(_._2).foreach(_.setEnabled(true))
+    else if (DocumentState.position + 1 >= DocumentState.totallen)
+      starts.zip(specials.zip(actions)).filter(_._1).map(_._2).filter(_._1()).map(_._2).foreach(_.setEnabled(true))
+    else
+      specials.zip(actions).filter(_._1()).map(_._2).foreach(_.setEnabled(true))
+  }
+}
 
 object DocumentState {
   import org.eclipse.jface.text.{ITextViewer}
@@ -647,6 +724,7 @@ object CoqOutputDispatcher extends CoqCallback {
           DocumentState.commit
         else
           DocumentState.undo
+        ActionDisabler.enableMaybe
       case CoqGoal(n, goals) => {
           val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
           val ht = if (hy.length > 0) hy.reduceLeft(_ + "\n" + _) else ""

@@ -181,7 +181,7 @@ object CoqTop {
         coqin.flush
         CoqState.sendCommand
       } else {
-        //Console.println("please wait a bit longer")
+        Console.println("please wait a bit longer")
         Thread.sleep(10)
         writeToCoq(data)
       }

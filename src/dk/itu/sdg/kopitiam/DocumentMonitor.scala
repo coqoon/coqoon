@@ -46,6 +46,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       if (activeeditor != ed) {
         //Console.println("part activated " + ed)
         activeeditor = ed.asInstanceOf[CoqEditor]
+        ActionDisabler.disableAll
         DocumentState.position = 0
         DocumentState.sendlen = 0
         DocumentState.undoAll
@@ -58,8 +59,12 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
           val shell = CoqState.getShell
           PrintActor.register(CoqStartUp)
           CoqTop.writeToCoq("Backtrack " + DocumentState.coqstart + " 0 " + shell.context.length + ".")
+          ActionDisabler.enableMaybe
         }
-      } //else
+      } else
+        ActionDisabler.enableMaybe
+    else
+      ActionDisabler.disableAll
         //Console.println("didn't expect to come here, activation of an already activated editor")
   }
 

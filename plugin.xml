@@ -5,61 +5,61 @@
          point="org.eclipse.ui.actionSets">
       <actionSet
             id="Kopitiam.actionSet"
-            label="Sample Action Set"
+            label="Kopitiam Action Set"
             visible="true">
          <action
                class="dk.itu.sdg.kopitiam.RestartCoqAction"
                icon="icons/dead.gif"
                id="kopitiam.actions.RestartAction"
-               label="&amp;Restart Coq Action"
-               menubarPath="sampleMenu/sampleGroup"
+               label="&amp;Restart Coq"
+               menubarPath="Coq"
                toolbarPath="CoqGroup"
-               tooltip="RestartCoqAction">
+               tooltip="Restart Coq">
          </action>
          <action
                class="dk.itu.sdg.kopitiam.CoqStepAllAction"
                icon="icons/downtoo.gif"
                id="kopitiam.actions.StepAllAction"
-               label="&amp;Step All Action"
-               menubarPath="sampleMenu/sampleGroup"
+               label="&amp;Step All"
+               menubarPath="Coq"
                toolbarPath="CoqGroup"
-               tooltip="CoqStepAllAction">
+               tooltip="Step All">
          </action>
          <action
                class="dk.itu.sdg.kopitiam.CoqStepUntilAction"
                icon="icons/icon_lego.gif"
                id="kopitiam.actions.StepUntilAction"
-               label="&amp;Step Until Action"
-               menubarPath="sampleMenu/sampleGroup"
+               label="&amp;Step Until Cursor"
+               menubarPath="Coq"
                toolbarPath="CoqGroup"
-               tooltip="CoqStepUntilAction">
+               tooltip="Step Until Cursor">
          </action>
          <action
                class="dk.itu.sdg.kopitiam.CoqStepAction"
                icon="icons/down.gif"
                id="kopitiam.actions.StepAction"
-               label="&amp;Step Action"
-               menubarPath="sampleMenu/sampleGroup"
+               label="&amp;Step"
+               menubarPath="Coq"
                toolbarPath="CoqGroup"
-               tooltip="CoqStepAction">
+               tooltip="Step">
          </action>
          <action
                class="dk.itu.sdg.kopitiam.CoqRetractAction"
                icon="icons/uptoo.gif"
                id="kopitiam.actions.CoqRetractAction"
-               label="&amp;Coq Retract Action"
-               menubarPath="sampleMenu/sampleGroup"
+               label="&amp;Retract"
+               menubarPath="Coq"
                toolbarPath="CoqGroup"
-               tooltip="CoqRetractAction">
+               tooltip="Retract">
          </action>
          <action
                class="dk.itu.sdg.kopitiam.CoqUndoAction"
                icon="icons/up.gif"
                id="kopitiam.actions.UndoStepAction"
-               label="&amp;Undo Step Action"
-               menubarPath="sampleMenu/sampleGroup"
+               label="&amp;Undo"
+               menubarPath="Coq"
                toolbarPath="CoqGroup"
-               tooltip="CoqUndoAction">
+               tooltip="Undo">
          </action>
       </actionSet>
    </extension>
