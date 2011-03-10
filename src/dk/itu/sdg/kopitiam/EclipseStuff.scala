@@ -238,6 +238,37 @@ object EclipseBoilerPlate {
       })
   }
 
+  import org.eclipse.core.runtime.IProgressMonitor
+  import org.eclipse.jface.dialogs.ProgressMonitorDialog
+  import org.eclipse.swt.layout.GridLayout
+  import org.eclipse.swt.widgets.Composite
+  private var p : IProgressMonitor = null
+  private var pmd : ProgressMonitorDialog = null
+  def startProgress () : Unit = {
+    Console.println("Starting progress monitor")
+    assert(p == null)
+    assert(pmd == null)
+    pmd = new ProgressMonitorDialog(Display.getDefault.getActiveShell)
+    p = pmd.getProgressMonitor
+    pmd.open
+    p.beginTask("Coq interaction", IProgressMonitor.UNKNOWN)
+  }
+
+  def finishedProgress () : Unit = {
+    Console.println("Finished progress monitor " + p)
+    if (p != null) {
+      Display.getDefault.asyncExec(
+        new Runnable() {
+          def run() = {
+            p.done
+            pmd.close
+            p = null
+            pmd = null
+          }
+        })
+    }
+  }
+
   import org.eclipse.core.resources.IMarker
 
   def mark (text : String) : Unit = {
@@ -329,6 +360,7 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
       if (eoc > 0) {
         DocumentState.sendlen = eoc
         //Console.println("command is (" + eoc + "): " + content.take(eoc))
+        EclipseBoilerPlate.startProgress
         CoqTop.writeToCoq(content.take(eoc).trim) //sends comments over the line
       }
     }
@@ -610,6 +642,7 @@ object CoqOutputDispatcher extends CoqCallback {
     //Console.println("received in dispatch " + x)
     x match {
       case CoqShellReady(monoton, token) =>
+        EclipseBoilerPlate.finishedProgress
         if (monoton)
           DocumentState.commit
         else

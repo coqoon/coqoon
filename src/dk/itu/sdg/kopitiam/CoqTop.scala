@@ -161,10 +161,11 @@ object CoqTop {
   private var coqprocess : Process = null
   var coqpath : String = ""
 
-  private val coqtopbinary = "coqtop -emacs"
+  private val coqtopbinary = "coqtop"
+  private val coqarguments = "-emacs"
 
   def writeToCoq (data : String) : Unit = {
-    if (data != null && data.length > 0) {
+    if (started && data != null && data.length > 0) {
       if (coqin == null)
         Console.println("coqin is null")
       //Console.println("ready? " + CoqState.readyForInput + ", sending " + data.take(10) + "..." + data.takeRight(10))
@@ -202,10 +203,10 @@ object CoqTop {
   import java.io.File
   def startCoq () : Boolean = {
     if (! new File(coqpath + coqtopbinary).exists) {
-      Console.println("can't find coqtop binary")
+      Console.println("can't find coqtop binary (in: " + coqpath + coqtopbinary + ")")
       false
     } else {
-      coqprocess = Runtime.getRuntime.exec(coqpath + coqtopbinary)
+      coqprocess = Runtime.getRuntime.exec(coqpath + coqtopbinary + " " + coqarguments)
       coqin = coqprocess.getOutputStream
       coqout = new BusyStreamReader(coqprocess.getInputStream)
       coqerr = new BusyStreamReader(coqprocess.getErrorStream)

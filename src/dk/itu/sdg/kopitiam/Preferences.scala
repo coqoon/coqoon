@@ -7,6 +7,7 @@ class Startup extends IStartup {
   override def earlyStartup () : Unit = {
     Console.println("earlyStartup called")
     DocumentMonitor.init()
+    CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + System.getProperty("file.separator")
     CoqTop.init()
   }
 }
