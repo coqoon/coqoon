@@ -348,13 +348,15 @@ object CoqStartUp extends CoqCallback {
   def start () : Unit = {
     if (! CoqTop.isStarted) {
       PrintActor.register(CoqStartUp)
-      if (! CoqTop.startCoq)
-        EclipseBoilerPlate.warnUser("No Coq", "No Coq binary found, please specify one in the Kopitiam preferences page")
       if (EclipseConsole.out == null)
         EclipseConsole.initConsole
       PrintActor.stream = EclipseConsole.out
-      while (!fini) { }
-      fini = false
+      if (! CoqTop.startCoq)
+        EclipseBoilerPlate.warnUser("No Coq", "No Coq binary found, please specify one in the Kopitiam preferences page")
+      else {
+        while (!fini) { }
+        fini = false
+      }
       PrintActor.deregister(CoqStartUp)
     }
   }

@@ -33,7 +33,7 @@ class KopitiamPreferencePage extends FieldEditorPreferencePage with IWorkbenchPr
     if (new File(coqp + System.getProperty("file.separator") + "coqtop").exists)
       CoqTop.coqpath = coqp + System.getProperty("file.separator")
     else
-      EclipseBoilerPlate.warnUser("coqpath wrong", "couldn't find coqtop in the specified path")
+      setErrorMessage("couldn't find coqtop in the specified path")
     true
   }
 }
