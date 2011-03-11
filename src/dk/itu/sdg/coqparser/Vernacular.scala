@@ -2,7 +2,7 @@
 
 package dk.itu.sdg.coqparser
 
-trait VernacularRegion { }
+trait VernacularRegion 
 case class VernacularDeclaration () extends VernacularRegion { }
 case class VernacularDefinition () extends VernacularRegion { }
 case class VernacularSyntax () extends VernacularRegion { }
@@ -10,20 +10,12 @@ case class VernacularModule () extends VernacularRegion { }
 case class VernacularSentence (data : List[String]) extends VernacularRegion { }
 case class VernacularNamespace (head : String, tail : String) extends VernacularRegion { }
 
-import scala.util.parsing.combinator.lexical.StdLexical
-import scala.util.parsing.combinator.syntactical.StdTokenParsers
-import scala.util.parsing.combinator.ImplicitConversions
+import scala.util.parsing.combinator.lexical.Lexical
+import scala.util.parsing.combinator.syntactical.TokenParsers
+import scala.util.parsing.combinator.{ImplicitConversions, RegexParsers, Parsers}
+import scala.util.parsing.combinator.token.Tokens
 //import scala.util.parsing.combinator.RegexParsers
 
-class VernacularLexer extends StdLexical { //with ImplicitConversions {
-  import scala.util.parsing.input.CharArrayReader.EofCh
-
-  override def whitespace : Parser[Any] = rep('(' ~ '*' ~ comment)
-  override def comment : Parser[Any] = (
-    '*' ~ ')' ^^ { case _ => ' ' }
-    | chrExcept(EofCh) ~ comment
-  )
-}
 
 trait VernacularReserved {
   // Not technically reserved words, but they work as such. Used to start top-level forms.
@@ -49,22 +41,107 @@ trait VernacularReserved {
                       "where", "with")
 }
 
-trait VernacularParser extends StdTokenParsers with ImplicitConversions with VernacularReserved {
+trait CoqTokens extends Tokens {
+  case class Ident (chars : String) extends Token
+  case class AccessIdent (chars : String) extends Token
+  case class Delim(chars : String) extends Token //the "special tokens" in the Coq reference
+  case class Num (chars : String) extends Token
+  case class StringLit (chars : String) extends Token
+  case class Comment (chars: String) extends Token
+  case class Keyword (chars : String) extends Token
+}
+
+class VernacularLexer extends Lexical with VernacularReserved with CoqTokens with RegexParsers { //with ImplicitConversions {
+  import scala.util.parsing.input.CharArrayReader.EofCh
+
+  type Tokens <: CoqTokens
+  override type Elem = Char
+
+  def whitespace = """[\t\n\ ]*""".r
+  
+  def ident : Parser[Token] = """[\p{L}_][\p{L}_0-9']*""".r ^^ processIdent// TODO: unicode-id-part from Coq reference
+  private def processIdent(name : String) : Token =
+	if (keywords contains name)
+	  Keyword(name)
+	else
+      Ident(name)
+  
+  def accessIdent : Parser[Token] = """\.[\p{L}_][\p{L}_0-9']*""".r ^^ AccessIdent
+  
+  def num : Parser[Token] = """-?\d+""".r ^^ Num
+  
+  def string : Parser[Token] = '"'~>inString ^^ {chars => StringLit(chars.mkString)}
+  private def inString : Parser[List[Char]] =
+    ( '"' ~ '"' ~ inString ^^ {case '"'~'"'~rest => '"' :: rest}
+    | chrExcept(EofCh, '"') ~ inString ^^ {case ch~rest => ch :: rest}
+    | '"' ^^^ Nil
+    | failure("String not properly terminated")
+    )
+    
+  def comment : Parser[Token] =
+	('('~'*')~>commentContents ^^ {chars => Comment("(*" + chars.mkString)}
+  private def commentContents : Parser[List[Char]] =
+	( '('~'*'~commentContents~commentContents ^^ {case '('~'*'~nested~rest => '(' :: '*' :: (nested ++ rest)}
+	| '*'~')' ^^^ List('*', ')')
+	| chrExcept(EofCh)~commentContents ^^ {case char~contents => char :: contents}
+	| failure("Comment not finished")
+    )
+  
+  // Based on technique from scala/util/parsing/combinator/lexical/StdLexical.scala
+  private lazy val _delim : Parser[Token] = {
+	def parseDelim(s : String): Parser[Token] = accept(s.toList) ^^ {x => Delim(x mkString)}
+	operator.sortWith(_<_).map(parseDelim).foldRight(failure("no matching special token"): Parser[Token]) {
+		(x, y) => y | x
+	}
+  }
+  def delim : Parser[Token] = _delim
+  
+  def token = ident | accessIdent | num | string | comment | delim
+}
+
+object TestLexer extends VernacularLexer with Application {
+  def test () : Unit = {
+    print("> ")
+    val input = Console.readLine()
+    if (input != "q") {
+      var scan = new Scanner(input)
+      var result = collection.mutable.ListBuffer[Token]()
+      while (!scan.atEnd) {
+        result += scan.first
+        scan = scan.rest
+      }
+      println(result.toList)
+      test()
+    }
+  }
+  test()
+}
+
+
+trait VernacularParser extends TokenParsers with ImplicitConversions with VernacularReserved {
   val lexical = new VernacularLexer
   type Tokens = VernacularLexer
 
-  lexical.delimiters ++= ".; ;\n;\t;\r".split(";").toList
-  import lexical.{Identifier,StringLit,NumericLit}
+  import lexical.{Ident, StringLit, Num, Keyword, Delim}
 
-  lexical.reserved ++= keyword
+  def ident = elem("identifier", _.isInstanceOf[Ident])
+    
+  def ident(str : String) = elem("identifier " + str, {
+    case Ident(name) if name == str => true
+    case _ => false
+  })
 
-  lexical.delimiters ++= operator
-
-  lexical.reserved ++= keywords
-
-  def string = stringLit ^^ { case x => "\"" + x + "\"" }
-
-  def ws = " " | "\n" | "\t" | "\r"
+  def keyword(str : String) = elem("keyword " + str, {
+    case Keyword(name) if name == str => true
+    case _ => false
+  })
+  
+  def delim(str : String) = elem("delimiter " + str, {
+    case Delim(name) if name == str => true
+    case _ => false
+  })
+  
+  def string = elem("string", _.isInstanceOf[StringLit])
 
   def top = rep1(sentence)
 
@@ -81,13 +158,13 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions with Ver
 
   def commandfragment = assumption | definition | assertion | syntax | module | (end <~ ws) ~ ident | proof | sideeffect
 
-  def term : Parser[Any] = ident ~ "." ~ ident | ident | ("(" <~ opt(ws)) ~ rep1sep(term, rep(ws)) ~ (opt(ws) ~> ")") | string | numericLit ^^ { case x => x.toInt } | "::" | "_" | "," | "->" | "++" | "match" ~ rep(ws) ~ term ~ rep(ws) ~ "with" ~ rep(ws) ~ rep1sep(term, rep(ws)) ~ rep(ws) ~ "end" | "|" | "=>" | "*" | ">" | "=" | "-" | ";" | "fun" | (":" <~ rep(ws)) ~ term | "?=" | "%" ~ term | ">=" | "<-" | ("[" <~ opt(ws)) ~ rep1sep(term, rep(ws)) ~ "]" | "/" | "\\" | "!" | "·=·" | "/\\" | "in" | "forall" | "{" ~ rep1sep(term, rep(ws)) ~ "}" | "as" | "@" | ":=" | "'" | "|-" | "()" | "//\\\\" | sort
+  def term : Parser[Any] = ident ~ delim(".") ~ ident | ident | (delim("(") <~ opt(ws)) ~ rep1sep(term, rep(ws)) ~ (opt(ws) ~> ")") | string | numericLit ^^ { case x => x.toInt } | "::" | "_" | "," | "->" | "++" | "match" ~ rep(ws) ~ term ~ rep(ws) ~ "with" ~ rep(ws) ~ rep1sep(term, rep(ws)) ~ rep(ws) ~ "end" | "|" | "=>" | "*" | ">" | "=" | "-" | ";" | "fun" | (":" <~ rep(ws)) ~ term | "?=" | "%" ~ term | ">=" | "<-" | ("[" <~ opt(ws)) ~ rep1sep(term, rep(ws)) ~ "]" | "/" | "\\" | "!" | "·=·" | "/\\" | "in" | "forall" | "{" ~ rep1sep(term, rep(ws)) ~ "}" | "as" | "@" | ":=" | "'" | "|-" | "()" | "//\\\\" | sort
 
-  def sort = "Prop" | "Set" | "Type"
+  def sort = ident("Prop") | ident("Set") | ident("Type")
 
   def assumption = assumptionStart ~ assRest
 
-  def assRest = rep1(ident) ~ ":" ~ ident //term
+  def assRest = rep1(ident) ~ delim(":") ~ ident //term
 
   def assumptionStart = (
     "Axiom"
@@ -100,7 +177,7 @@ trait VernacularParser extends StdTokenParsers with ImplicitConversions with Ver
     | "Hypotheses"
     )
 
-  def name = ( ident | "_" )
+  def name = ( ident | keyword("_") )
 
   def binders = rep1(binder)
 
@@ -197,3 +274,4 @@ object Main extends Application {
   }
 }
 */
+
