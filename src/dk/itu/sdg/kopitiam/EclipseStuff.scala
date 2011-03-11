@@ -245,6 +245,7 @@ object EclipseBoilerPlate {
   private var p : IProgressMonitor = null
   private var pmd : ProgressMonitorDialog = null
   var multistep : Boolean = false
+  private val nam = "Coq interaction"
   def startProgress () : Unit = {
     //Console.println("Starting progress monitor")
     if (p == null) {
@@ -252,8 +253,18 @@ object EclipseBoilerPlate {
       pmd = new ProgressMonitorDialog(Display.getDefault.getActiveShell)
       p = pmd.getProgressMonitor
       pmd.open
-      p.beginTask("Coq interaction", IProgressMonitor.UNKNOWN)
+      p.beginTask(nam, IProgressMonitor.UNKNOWN)
     }
+  }
+
+  def nameProgress (n : String) : Unit = {
+    if (p != null)
+      Display.getDefault.asyncExec(
+        new Runnable() {
+          def run() = {
+            if (p != null)
+              p.setTaskName(nam + ": " + n)
+          }})
   }
 
   def finishedProgress () : Unit = {
@@ -384,10 +395,12 @@ class CoqStepAction extends IWorkbenchWindowActionDelegate {
       //Console.println("eoc is " + eoc)
       if (eoc > 0) {
         DocumentState.sendlen = eoc
-        Console.println("command is (" + eoc + "): " + content.take(eoc))
+        val cmd = content.take(eoc).trim
+        Console.println("command is (" + eoc + "): " + cmd)
         EclipseBoilerPlate.startProgress
         ActionDisabler.disableAll
-        CoqTop.writeToCoq(content.take(eoc).trim) //sends comments over the line
+        EclipseBoilerPlate.nameProgress(cmd)
+        CoqTop.writeToCoq(cmd) //sends comments over the line
       }
     }
   }

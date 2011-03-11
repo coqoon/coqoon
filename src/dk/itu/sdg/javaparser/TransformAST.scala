@@ -117,7 +117,10 @@ object ClassTable {
   }
 
   def getCoq (id : String, module : String) : List[String] = {
-    spectable(id)._2(module).toList.reverse
+    if (spectable(id)._2.contains(module))
+      spectable(id)._2(module).toList.reverse
+    else
+      List()
   }
 
   def getCoq (module : String) : List[String] = {

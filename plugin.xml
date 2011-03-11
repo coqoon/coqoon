@@ -12,7 +12,6 @@
                icon="icons/dead.gif"
                id="kopitiam.actions.RestartAction"
                label="&amp;Restart Coq"
-               menubarPath="Coq"
                toolbarPath="CoqGroup"
                tooltip="Restart Coq">
          </action>
@@ -21,7 +20,6 @@
                icon="icons/downtoo.gif"
                id="kopitiam.actions.StepAllAction"
                label="&amp;Step All"
-               menubarPath="Coq"
                toolbarPath="CoqGroup"
                tooltip="Step All">
          </action>
@@ -30,7 +28,6 @@
                icon="icons/icon_lego.gif"
                id="kopitiam.actions.StepUntilAction"
                label="&amp;Step Until Cursor"
-               menubarPath="Coq"
                toolbarPath="CoqGroup"
                tooltip="Step Until Cursor">
          </action>
@@ -39,7 +36,6 @@
                icon="icons/down.gif"
                id="kopitiam.actions.StepAction"
                label="&amp;Step"
-               menubarPath="Coq"
                toolbarPath="CoqGroup"
                tooltip="Step">
          </action>
@@ -48,7 +44,6 @@
                icon="icons/uptoo.gif"
                id="kopitiam.actions.CoqRetractAction"
                label="&amp;Retract"
-               menubarPath="Coq"
                toolbarPath="CoqGroup"
                tooltip="Retract">
          </action>
@@ -57,7 +52,6 @@
                icon="icons/up.gif"
                id="kopitiam.actions.UndoStepAction"
                label="&amp;Undo"
-               menubarPath="Coq"
                toolbarPath="CoqGroup"
                tooltip="Undo">
          </action>

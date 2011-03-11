@@ -225,8 +225,9 @@ Definition """ + id + """ :=
       outp ::= "Definition " + x + "_post : hasn := \n  (" + specs(x)._2 + ")%asn."
     })
     val spcs = specs.keys.map(x =>
-      "\"" + myclass + "\" :.: \"" + x + "\" |->  (" + printArgList(ClassTable.getArguments(myclass, x).keys.toList) + ") {{ " + x + "_pre }}-{{ \"ret\", " + x + "_post }}.")
-    outp ::= "Definition " + myclass + "_spec := " + spcs.reduceLeft(_ + "\n    [/\\]\n" + _)
+      "\"" + myclass + "\" :.: \"" + x + "\" |->  (" + printArgList(ClassTable.getArguments(myclass, x).keys.toList) + ") {{ " + x + "_pre }}-{{ \"ret\", " + x + "_post }}")
+    val spstr = if (spcs.toList.length == 0) "" else spcs.reduceLeft(_ + "\n    [/\\]\n" + _)
+    outp ::= "Definition " + myclass + "_spec := " + spstr + "."
     outp = ClassTable.getCoq(myclass, "AFTERSPEC") ++ outp
     outp ::= "End " + name + "_spec."
     outp = ClassTable.getCoq("TOP") ++ outp

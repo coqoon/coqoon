@@ -56,7 +56,7 @@ object PrintActor extends Actor with OutputChannel[String] {
         case msg : String => {
           buf = buf + msg
           if (msg.endsWith("\n")) {
-            //stream.println("received:" + msg)
+            stream.println("received message:" + msg)
             val coqr = ParseCoqResponse.parse(buf)
             buf = ""
 /*            coqr.foreach(x => x match {
@@ -138,7 +138,7 @@ object ErrorOutputActor extends Actor with OutputChannel[String] {
           Console.println("receiving shell " + msg)
           ValidCoqShell.getTokens(msg) match {
             case Some(tokens : CoqShellTokens) => {
-              //Console.println("set coq ready " + tokens)
+              Console.println("set coq ready " + tokens)
               CoqState.setShell(tokens)
             }
             case None =>
