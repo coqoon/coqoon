@@ -50,7 +50,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         "(ccall \"" + name + "\" \"" + callpref + "\" \"" + funname + "\" (" + argstring + "))"
       case JAssignment(name, JNewExpression(typ, arg)) =>
         val t = typ
-        val init = printStatement(JAssignment(name, JCall("this", "<init>", arg)))
+        val init = printStatement(JAssignment(name, JCall("this", "init_", arg)))
         "(cseq (calloc \"" + name + "\" \"" + t + "\")" + init + ")"
       case JAssignment(name, JFieldAccess(variable, field)) =>
         val v = variable match {

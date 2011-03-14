@@ -370,7 +370,7 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
         Console.println("constructor pos info: " + x.asInstanceOf[ConstructorDeclaration].pos)
         lvars = new HashMap[String,String]()
         argmap = new HashMap[String,String]()
-        methodid = "<init>"
+        methodid = "init_"
         val args = transformOL(parameters, List[JArgument]())
         args.foreach { x => argmap += x.id -> x.jtype }
         ClassTable.addMethod(classid, methodid, unpackR(id), argmap)
