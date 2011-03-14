@@ -10,6 +10,7 @@ case class CoqError (message : List[String]) extends CoqResponse { }
 case class CoqProofCompleted () extends CoqResponse { }
 case class CoqTheoremDefined (theorem : String) extends CoqResponse { }
 case class CoqUnknown (stuff : String) extends CoqResponse { }
+case class CoqUserInterrupt () extends CoqResponse { }
 case class CoqShellReady (mono : Boolean, tokens : CoqShellTokens) extends CoqResponse { }
 
 import scala.util.parsing.combinator.syntactical._
@@ -25,6 +26,7 @@ trait CoqResponseParser extends JavaTokenParsers {
   def vars = ident <~ "is assumed" ^^ CoqVariablesAssumed
   def comp = "Proof completed." ^^ { _ => CoqProofCompleted() }
   def thmd = ident <~ "is defined" ^^ CoqTheoremDefined
+  def inte = "User interrupt." ^^ { _ => CoqUserInterrupt() }
   def erro = (
     "Error:" ~> rep1(anything) 
     | "Toplevel input" ~> rep1(anything)

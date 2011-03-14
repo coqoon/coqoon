@@ -240,19 +240,30 @@ object EclipseBoilerPlate {
 
   import org.eclipse.core.runtime.IProgressMonitor
   import org.eclipse.jface.dialogs.ProgressMonitorDialog
-  import org.eclipse.swt.layout.GridLayout
-  import org.eclipse.swt.widgets.Composite
+  import org.eclipse.swt.widgets.Shell
+  class MyProgressMonitorDialog (parent : Shell) extends ProgressMonitorDialog(parent) {
+    import org.eclipse.swt.widgets.Button
+    def getC () : Button = cancel
+  }
+
+  import org.eclipse.swt.events.{MouseListener, MouseEvent}
   private var p : IProgressMonitor = null
-  private var pmd : ProgressMonitorDialog = null
+  private var pmd : MyProgressMonitorDialog = null
   var multistep : Boolean = false
   private val nam = "Coq interaction"
   def startProgress () : Unit = {
     //Console.println("Starting progress monitor")
     if (p == null) {
     //assert(pmd == null)
-      pmd = new ProgressMonitorDialog(Display.getDefault.getActiveShell)
-      p = pmd.getProgressMonitor
+      pmd = new MyProgressMonitorDialog(Display.getDefault.getActiveShell)
+      pmd.setCancelable(true)
       pmd.open
+      pmd.getC.addMouseListener(new MouseListener() {
+        override def mouseDoubleClick (m : MouseEvent) : Unit = ()
+        override def mouseDown (m : MouseEvent) : Unit = CoqTop.interruptCoq
+        override def mouseUp (m : MouseEvent) : Unit = ()
+      })
+      p = pmd.getProgressMonitor
       p.beginTask(nam, IProgressMonitor.UNKNOWN)
     }
   }
