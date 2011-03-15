@@ -10,31 +10,33 @@ class FacC {
     Coq.def(Coq.M.PRELUDE,
             "Add LoadPath \"/Users/hannes/tomeso/git/semantics/Coq\"." +
             "Require Import Tactics." +
-            "Require Import Ascii." +
             "Require Import LiftOp." +
+            "Require Import SubstAbstractAsn." +
             "Open Scope string_scope." +
             "Open Scope list_scope.");
     Coq.def(Coq.M.PROGRAM,
             "Lemma unique_names :" +
             "      forall C m mrec," +
-            "      method_lookup P C m mrec ->" +
-            "      NoDup (\"this\" :: \"ret\" :: m_params mrec ++ m_locals mrec)." +
+            "      method_lookup Prog C m mrec ->" +
+            "      NoDup (\"this\" :: m_params mrec)." +
             "Proof." +
-            "  search (search_unique_names P)." +
+            "  search (search_unique_names Prog)." +
             "Qed.");
   }
 
   static {
     Coq.def(Coq.M.BEFORESPEC,
-            "Fixpoint mfac n :=" +
+            "Module Import SR := Rules Fac.");
+    Coq.def(Coq.M.BEFORESPEC,
+            "Fixpoint fac n :=" +
             "  match n with" +
-            "      | S n => (S n) * mfac n" +
+            "      | S n => (S n) * fac n" +
             "      | 0 => 1" +
             "  end.");
     Coq.def(Coq.M.BEFORESPEC,
             "Lemma fac_step : forall n," +
             "  n > 0 ->" +
-            "  (n * (mfac (n - 1))) = mfac n." +
+            "  (n * (fac (n - 1))) = fac n." +
             "Proof." +
             "  induction n." +
             "  - intuition." +
@@ -45,14 +47,14 @@ class FacC {
             "Definition facZ := fun (n:Z) =>" +
             "  match ((n ?= 0)%Z) with" +
             "      | Lt => 0" +
-            "      | _ => Z_of_nat (mfac (Zabs_nat n))" +
+            "      | _ => Z_of_nat (fac (Zabs_nat n))" +
             "  end.");
-    Coq.def(Coq.M.BEFORESPEC, "Definition fac_Z := ge_un (fun v => vint (facZ (val_to_int v))).");
+    Coq.def(Coq.M.BEFORESPEC, "Definition fac_Z : expr -> expr := sm_un (fun v => vint (facZ (val_to_int v))).");
 
     Coq.def(Coq.M.BEFORESPEC,
             "Lemma fac_Z_nat : forall n," +
             "  (n >= 0)%Z ->" +
-            "  facZ n = Z_of_nat(mfac(Zabs_nat n))." +
+            "  facZ n = Z_of_nat(fac(Zabs_nat n))." +
             "Proof." +
             "  destruct n. simpl." +
             "  - unfold facZ. simpl. reflexivity." +
@@ -101,192 +103,80 @@ class FacC {
 
 //inside Fac_spec
     Coq.def(Coq.M.AFTERSPEC,
-            "Lemma specs_params_eq : spec_params_eq_type P Spec." +
-            "Proof." +
-            "  search (test_spec_params_eq P Spec)." +
-            "Qed.");
-
-    Coq.def(Coq.M.AFTERSPEC,
-            "Lemma static_spec : static_spec_type P Spec." +
-            "Proof." +
-            "  search (test_static_spec P Spec)." +
-            "Qed.");
-
-    Coq.def(Coq.M.AFTERSPEC,
-            "Lemma free_pre_params : forall I m parI specI," +
-            "  mspec Spec I m parI specI ->" +
-            "  forall u y," +
-            "  free (spec_p specI u) y ->" +
-            "  In y (\"this\"%string :: parI)." +
-            "Proof." +
-            "  intros. mspec_backwards_compat." +
-            "  reduce_tm_context; simpl in *; subst; try contradiction." +
-            "  reduce_sm_context; simpl in *; subst; try contradiction; simpl in *." +
-            "  inversion Hval; subst; simpl in *." +
-            "  intuition (try (symmetry; tauto))." +
-            "Qed.");
-
-    Coq.def(Coq.M.AFTERSPEC,
-            "Lemma free_post_params : free_post_params_type Spec." +
-            "Proof." +
-            "  unfold free_post_params_type." +
-            "  intros. mspec_backwards_compat." +
-            "  reduce_tm_context; simpl in *; subst; try contradiction." +
-            "  reduce_sm_context; simpl in *; subst; try contradiction; simpl in *." +
-            "  inversion Hval; subst; simpl in *." +
-            "  intuition (try (symmetry; tauto))." +
-            "Qed.");
-
-    Coq.def(Coq.M.AFTERSPEC,
-            "Lemma params_not_modified : params_not_modified_type P Spec." +
-            "Proof." +
-            "  search (test_params_not_modified P Spec)." +
-            "Qed.");
-
-  }
-
-  static {
-    //on top level
-    Coq.def(Coq.M.TOP, "Module Import V := MVerify Fac Fac_spec.");
-
-    Coq.def(Coq.M.TOP,
-            "Lemma sg : specs_grow." +
-            "  unfold specs_grow; intros. mspec_backwards_compat." +
-            "  reduce_tm_context; try contradiction; simpl in *; subst; simpl in *." +
-            "  reduce_sm_context; try contradiction; simpl in *; subst; try discriminate." +
-            "  red; inversion Hval0; inversion Hval; subst; clear Hval Hval0; auto." +
-            "Qed.");
-
-    Coq.def(Coq.M.TOP,
             "Lemma substs_fac : forall {e:expr} {es}," +
-            "  ge_eq ((Fac_spec.fac_Z e) // es) (Fac_spec.fac_Z (e // es))." +
+            "  sm_eq ((Fac_spec.fac_Z e) // es) (Fac_spec.fac_Z (e // es))." +
             "Proof." +
             "  split;  intros s h HPre; simpl in *; auto." +
             "Qed.");
 
-    Coq.def(Coq.M.TOP,
+    Coq.def(Coq.M.AFTERSPEC,
             "Add Morphism Fac_spec.fac_Z with signature" +
-            "  ge_eq ==> ge_eq" +
-            "  as ge_eq_fac_Z_m." +
+            "  @sm_eq _ _ ==> @sm_eq _ _" +
+            "  as sm_eq_fac_Z_m." +
             "Proof." +
-            "  unfold ge_eq; simpl; intros x y H s. rewrite H. reflexivity." +
+            "  unfold sm_eq; simpl; intros x y H s. rewrite H. reflexivity." +
             "Qed.");
 
-    Coq.def(Coq.M.TOP, "Hint Rewrite @substs_fac : subst_rewrites.");
+    Coq.def(Coq.M.AFTERSPEC,
+            "Open Scope spec_scope." +
+            "Open Scope asn_scope.");
 
-    Coq.def(Coq.M.TOP,
-            "Lemma unify : forall (p : asn) (v : var) (e : expr) (q:asn)" +
-            "  (Heq: p |= (v:expr) ·=· e)" +
-            "  (Hsubst: ge_subst_expr p e v |= ge_subst_expr q e v)," +
-            "  p |= q." +
+    Coq.def(Coq.M.AFTERSPEC,
+            "  Ltac frame r :=" +
+            "    match type of r with" +
+            "      | vpure =>" +
+            "        match goal with" +
+            "          | |- (_ |= c_triple ?p ?q ?c)%spec =>" +
+            "            eapply roc_pre with (P' := p <*> <pure>r); [" +
+            "              rewrite <- pure_and_sc_asnR; simplify_asn |" +
+            "                eapply roc_post; [" +
+            "                  (apply rule_frame; [try frame_free|]) |" +
+            "                    try (apply bientails_asn_alt; apply pure_and_sc_asnR)" +
+            "                ]" +
+            "            ]" +
+            "        end" +
+            "    end.");
+
+    Coq.def(Coq.M.AFTERSPEC,
+            "Lemma valid_Fac : |= FacC_spec." +
             "Proof." +
-            "  intros." +
-            "  introv s h Hp." +
-            "  unfold entails in *." +
-            "  specialize (Heq _ _ Hp). simpl in *." +
-            "  specialize (Hsubst s h)." +
-            "  assert (p s =  p (SM.add v (e s) s))." +
-            "  apply ge_prop. unfold agree_on. intros." +
-            "  destruct (string_dec x v)." +
-            "  subst." +
-            "  rewrite stack_lookup_add. intuition." +
-            "  rewrite stack_lookup_add2. reflexivity. intuition." +
-            "  rewrite <- H in Hsubst. specialize (Hsubst Hp)." +
-            "  assert (q s =  q (SM.add v (e s) s))." +
-            "  apply ge_prop. unfold agree_on. intros." +
-            "  destruct (string_dec x v)." +
-            "  subst." +
-            "  rewrite stack_lookup_add. intuition." +
-            "  rewrite stack_lookup_add2. reflexivity. intuition." +
-            "  rewrite H0. assumption." +
+            "  lob." +
+            "  - unfold FacC_spec." +
+            "    unfold_method_spec_zero." +
+            "  - unfold FacC_spec at 2." +
+            "    unfold_method_spec." +
+            "    unfold fac_body; spec_substitution." +
+            "    forward." +
+            "    forward." +
+            "    frame  (expr_pure (egt (vvar_expr \"n\") (val_to_int 0%Z)))." +
+            "    - asn_solve. (* TODO: Fix reflection to kill this *)" +
+            "    (* TODO: fix forward and kill the following *)" +
+            "    eapply roc; [| | apply rule_call_old]; [" +
+            "          subst_h |" +
+            "            apply xist_asnEIL; intro; subst_h" +
+            "        ]." +
+            "    unfold fac_pre. subst_h." +
+            "    asn_solve." +
+            "    solve [unentail; intuition]." +
+            "    unfold fac_post. subst_h. subst_h. reflexivity." +
+            "    forward." +
+            "    subst_h. unentail. intros. intuition. subst." +
+            "    rewrite Fac_spec.facZ_step. reflexivity. assumption." +
+            "    (* TODO: Fix forward *)" +
+            "    eapply rule_assign_fwd2; [apply xist_asnEIL; intro; subst_h; asn_unify]." +
+            "    unentail; simpl in *." +
+            "    destruct (Z_dec (val_to_int k) 0)%Z as [[HLt | HGt] | HEq];" +
+            "    intros [[HGe Heq] HLe]." +
+            "  - apply Zlt_not_le in HLt; intuition." +
+            "  - apply Zgt_not_le in HGt; apply Zge_le in HGe; intuition." +
+            "  rewrite HEq; reflexivity." +
             "Qed.");
 
-    Coq.def(Coq.M.TOP,
-            "Lemma unify2 : forall (p : asn) (v : var) (e : expr) (q r:asn)" +
-            "  (Heq: p |= r //\\ (v:expr) ·=· e)" +
-            "  (Hsubst: ge_subst_expr r e v |= ge_subst_expr q e v)," +
-            "  p |= q." +
-            "Proof." +
-            "  intros." +
-            "  introv s h Hp." +
-            "  unfold entails in *." +
-            "  specialize (Heq _ _ Hp). simpl in *." +
-            "  specialize (Hsubst s h)." +
-            "  assert (r s =  r (SM.add v (e s) s))." +
-            "  apply ge_prop. unfold agree_on. intros." +
-            "  destruct (string_dec x v)." +
-            "  subst." +
-            "  rewrite stack_lookup_add. intuition." +
-            "  rewrite stack_lookup_add2. reflexivity. intuition." +
-            "  assert (q s =  q (SM.add v (e s) s))." +
-            "  apply ge_prop. unfold agree_on. intros." +
-            "  destruct (string_dec x v)." +
-            "  subst." +
-            "  rewrite stack_lookup_add. intuition." +
-            "  rewrite stack_lookup_add2. reflexivity. intuition." +
-            "  rewrite H0. apply Hsubst. rewrite <- H. intuition." +
-            "Qed.");
-
-    Coq.def(Coq.M.TOP,
-            "Ltac assign_forward := " +
-            "  eapply roc_post'; [apply rule_assign_forward| " +
-            "    apply xist_left; intros; substitution;" +
-            "      (eapply unify2; [reflexivity|substitution])].");
-
-    Coq.def(Coq.M.TOP,
-            "Ltac forward :=" +
-            "  match goal with" +
-            "    | |- |=G {{_}} cif _ _ _ {{_}} => apply rule_if'" +
-            "    | |- |=G {{_}} cseq _ _ {{_}} => eapply rule_seq'" +
-            "    | |- |=G {{_}} cassign _ _ {{_}} => assign_forward" +
-            "  end.");
-
-    Coq.def(Coq.M.TOP,
-            "Lemma fac_valid : |=G {{spec_p Fac_spec.fac_spec ()}}Fac.fac_body" +
-            "  {{spec_qret Fac_spec.fac_spec () \"x\"}}." +
-            "Proof." +
-            "  unfold_valid." +
-            "  forward. forward." +
-            "  call_rule (TClass \"FacC\") ()." +
-            "  - substitution. unentail. intuition." +
-            "  - reflexivity. substitution." +
-
-            "  forward." +
-            "    unentail. intuition. subst. simpl." +
-            "    rewrite Fac_spec.facZ_step; [reflexivity | omega]." +
-
-            "  forward." +
-            "    unentail. intuition. subst. destruct (Z_dec (val_to_int k) 0)." +
-            "    assert False; [|intuition]. destruct s; intuition." +
-            "    rewrite e. intuition." +
-
-            "  Existential 1:=()." +
-            "Qed.");
-
-    Coq.def(Coq.M.TOP,
-            "Lemma vg : valid_G." +
-            "  unfold valid_G. introv Hlookup Hmspec. mspec_backwards_compat." +
-            "  destruct Hlookup as [Crec [HClass HMeth]]." +
-            "  reduce_tm_context; try contradiction; simpl in *; subst." +
-            "  inversion Hkey; subst; clear Hkey." +
-            "  reduce_sm_context; try contradiction; simpl in *; subst." +
-            "  inversion Hval0; subst; clear Hval0 Hkey; simpl in *." +
-            "  repeat rewrite InA_cons in *; rewrite InA_nil in *; destruct_sm_eqs;" +
-            "    simpl in *; subst; [ | contradiction]; clear Hkey H0." +
-            "  apply fac_valid." +
-            "Qed.");
-
-    Coq.def(Coq.M.TOP,
-            "Theorem Fac_valid : program_valid." +
-            "  split." +
-            "  apply sg." +
-            "  apply vg." +
-            "Qed.");
   }
 
   public int fac (int n) {
-    Coq.requires("ege \"n\" 0 //\\ !((\"this\":expr) ·=· (null:expr))");
-    Coq.ensures("(((\"ret\":expr) ·=· (fac_Z (\"n\":expr))):asn) //\\ ege \"n\" 0");
+    Coq.requires("<pure> (ege \"n\" 0) </\> <pure> (((\"this\":expr) ::: \"FacC\"))");
+    Coq.ensures("<pure> ((\"ret\":expr) ·=· (fac_Z (\"n\":expr)))");
     int x;
     if (n > 0)
       x = n * fac(n - 1);
