@@ -116,8 +116,14 @@ class CoqUndoAction extends KAction {
       DocumentState.sendlen = DocumentState.position - l
       DocumentState.realundo = true
       EclipseBoilerPlate.unmark
-      CoqTop.writeToCoq("Undo.") //wrong - only right in Proof mode - and even there Backtrack is more popular
-    }
+      val sh = CoqState.getShell
+      if (sh.localStep > 1)
+        CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1)  + " " + (sh.localStep - 1) + " 0.")
+      else
+        //actually, we need to be smarter - and go possibly before the previous proof
+        CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1) + " 0 " + sh.context.length + ".")
+    } else
+      ActionDisabler.enableMaybe
   }
   override def start () : Boolean = true
   override def end () : Boolean = false

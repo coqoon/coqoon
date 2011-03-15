@@ -261,36 +261,26 @@ object CoqTop {
   }
 
   def findPreviousCommand (s : String, pos : Int) : Int = {
-    def beforecomment (p : Int) : Int = {
-      //Console.println("beforec " + p)
-      val commend = s.lastIndexOf("*)", p)
-      if (commend == -1)
-        commend
-      else {
-        val commstart = s.lastIndexOf("(*", commend)
-        if (commstart < s.lastIndexOf("*)", commend - 1))
-          s.lastIndexOf("(*", beforecomment(commend))
-        else
-          commstart
+    if (pos == 0) -1
+    else {
+      var cdepth : Int = 0
+      var i : Int = pos - 2
+      var found : Boolean = false
+      while (i > 0 && ! found) {
+        val c = s(i)
+        if (c == ')' && s(i - 1) == '*')
+          cdepth += 1
+        else if (c == '*' && s(i - 1) == '(')
+          cdepth -= 1
+        else if (cdepth == 0 && (c == ' ' || c == '\n') && s(i - 1) == '.')
+          found = true
+        i -= 1
       }
+      if (found)
+        i + 1
+      else
+        0
     }
-    def finddotspace (p : Int) : Int = {
-      //Console.println("findd " + p)
-      val dot = s.lastIndexOf(".", p)
-      if (dot != -1) {
-        val cend = s.lastIndexOf("*)", p)
-        if (cend != -1 && cend > dot)
-          finddotspace(beforecomment(p))
-        else if (s(dot - 1) != '.' && (s(dot + 1) == ' ' || s(dot + 1) == '\n'))
-          dot + 1
-        else
-          -1
-      } else dot
-    }
-    if (pos > 2)
-      finddotspace(pos - 3)
-    else
-      -1
   }
 
   def findNextCommand (s : String) : Int = {
