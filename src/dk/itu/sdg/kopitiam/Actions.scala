@@ -108,20 +108,38 @@ object ActionDisabler {
 }
 
 class CoqUndoAction extends KAction {
+  val endkeys = List("End", "Qed", "Admitted", "Defined")
+
   override def doit () : Unit = {
     val content = EclipseBoilerPlate.getContent()
     val l = CoqTop.findPreviousCommand(content, DocumentState.position)
     Console.println("prev (" + DocumentState.position + " [" + content(DocumentState.position) + "]): " + l)
     if (l > -1) {
-      DocumentState.sendlen = DocumentState.position - l
       DocumentState.realundo = true
       EclipseBoilerPlate.unmark
       val sh = CoqState.getShell
-      if (sh.localStep > 1)
-        CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1)  + " " + (sh.localStep - 1) + " 0.")
-      else
-        //actually, we need to be smarter - and go possibly before the previous proof
-        CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1) + " 0 " + sh.context.length + ".")
+      val mn = endkeys.map(content.indexOf(_, l)).filterNot(_ == -1).reduceLeft(scala.math.min(_, _))
+      //Console.println("qed distance is " + (mn - l))
+      if (mn - l < 3) {
+        Console.println("found qed-word nearby, better loop before last proof.")
+        var step : Int = 2
+        var off : Int = l
+        while (! ((content.indexOf("Proof.", off) - off) < 2)) {
+          off = CoqTop.findPreviousCommand(content, off)
+          step += 1
+        }
+        off = CoqTop.findPreviousCommand(content, off)
+        Console.println("found proof before  @" + off + "(" + step + "): " + content.drop(off).take(20))
+        DocumentState.sendlen = DocumentState.position - off
+        CoqTop.writeToCoq("Backtrack " + (sh.globalStep - step) + " 0 0.")
+      } else {
+        DocumentState.sendlen = DocumentState.position - l
+        if (sh.localStep > 1)
+          CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1)  + " " + (sh.localStep - 1) + " 0.")
+        else
+          //actually, we need to be smarter - and go possibly before the previous proof
+          CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1) + " 0 " + sh.context.length + ".")
+      }
     } else
       ActionDisabler.enableMaybe
   }
@@ -188,12 +206,21 @@ class CoqStepUntilAction extends KAction {
     //need to go back one more step
     val togo = CoqTop.findPreviousCommand(EclipseBoilerPlate.getContent, EclipseBoilerPlate.getCaretPosition + 2)
     //Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition)
+    if (DocumentState.position == togo) { } else
     if (DocumentState.position < togo) {
       EclipseBoilerPlate.multistep = true
       val coqs = new CoqStepNotifier()
       coqs.test = Some((x : Int) => x >= togo)
       PrintActor.register(coqs)
       CoqStepAction.doit()
+    } else { //Backtrack
+      EclipseBoilerPlate.multistep = true
+      val coqs = new CoqStepNotifier()
+      coqs.test = Some((x : Int) => x <= togo)
+      coqs.walker = CoqUndoAction.doit
+      coqs.undo = true
+      PrintActor.register(coqs)
+      CoqUndoAction.doit()
     }
   }
   override def start () : Boolean = false

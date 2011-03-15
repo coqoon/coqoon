@@ -54,6 +54,7 @@ object PrintActor extends Actor with OutputChannel[String] {
     while (true) {
       receive {
         case msg : String => {
+          Console.println("received " + msg)
           buf = buf + msg
           if (msg.endsWith("\n")) {
             stream.println("received message:" + msg)

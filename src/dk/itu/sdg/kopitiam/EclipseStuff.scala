@@ -360,6 +360,10 @@ object CoqStartUp extends CoqCallback {
 class CoqStepNotifier extends CoqCallback {
   var err : Boolean = false
   var test : Option[(Int) => Boolean] = None
+  var walker : () => Unit = CoqStepAction.doit
+  var undo : Boolean = false
+
+  import org.eclipse.swt.widgets.Display
 
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
@@ -368,10 +372,15 @@ class CoqStepNotifier extends CoqCallback {
       case CoqShellReady(monoton, id, tokens) =>
         if (! err) {
           if (monoton) DocumentState.commit(id) else DocumentState.undo(id)
-          if (test.isDefined && test.get(DocumentState.position))
+          if (test.isDefined && test.get(DocumentState.position)) {
             fini
-          else if (monoton) {
-            CoqStepAction.doit()
+            if (undo)
+              Display.getDefault.syncExec(
+                new Runnable() {
+                  def run() = CoqStepUntilAction.doit
+                });
+          } else if (monoton || undo) {
+            walker()
             val drops = DocumentState.position + DocumentState.sendlen
             if (drops >= DocumentState.totallen || CoqTop.findNextCommand(EclipseBoilerPlate.getContent.drop(drops)) == -1)
               fini
