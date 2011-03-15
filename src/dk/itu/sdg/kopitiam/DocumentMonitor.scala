@@ -39,44 +39,19 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   }
 
 
-  import org.eclipse.ui.IFileEditorInput
-  import org.eclipse.core.resources.{IResource, IMarker}
   var activeeditor : CoqEditor = null
   override def partActivated (part : IWorkbenchPartReference) : Unit = {
     val ed = part.getPart(false)
-    if (EclipseBoilerPlate.window == null)
-      EclipseBoilerPlate.window = PlatformUI.getWorkbench.getActiveWorkbenchWindow
     Console.println("activated: " + ed)
-    activated(ed)
-  }
-
-  def activated (ed : IWorkbenchPart) : Unit = {
     if (ed.isInstanceOf[CoqEditor])
       if (activeeditor != ed) {
         //Console.println("part activated " + ed)
-        if (activeeditor != null)
-          activeeditor.getEditorInput.asInstanceOf[IFileEditorInput].getFile.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
-        activeeditor = ed.asInstanceOf[CoqEditor]
         ActionDisabler.disableAll
-        DocumentState.position = 0
-        DocumentState.sendlen = 0
-        DocumentState.undoAll
-        DocumentState.sourceview = activeeditor.getSource
-        DocumentState.totallen = EclipseBoilerPlate.getContent.length
-        PrintActor.callbacks = List(CoqOutputDispatcher)
-        if (! CoqTop.isStarted) {
-          CoqStartUp.start()
-        } else {
-          val shell = CoqState.getShell
-          PrintActor.register(CoqStartUp)
-          CoqTop.writeToCoq("Backtrack " + DocumentState.coqstart + " 0 " + shell.context.length + ".")
-          ActionDisabler.enableMaybe
-        }
+        ActionDisabler.enableStart
       } else
         ActionDisabler.enableMaybe
     else
       ActionDisabler.disableAll
-        //Console.println("didn't expect to come here, activation of an already activated editor")
   }
 
   override def partOpened (part : IWorkbenchPartReference) : Unit =

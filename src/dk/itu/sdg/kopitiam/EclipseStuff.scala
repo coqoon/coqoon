@@ -320,7 +320,7 @@ object EclipseBoilerPlate {
 
 object CoqStartUp extends CoqCallback {
   private var first : Boolean = true
-  private var fini : Boolean = false
+  var fini : Boolean = false
 
   def start () : Unit = {
     if (! CoqTop.isStarted) {
@@ -348,6 +348,7 @@ object CoqStartUp extends CoqCallback {
           first = false
         } else {
           PrintActor.deregister(CoqStartUp)
+          PrintActor.register(CoqOutputDispatcher)
           first = true
           fini = true
         }
@@ -370,7 +371,7 @@ class CoqStepNotifier extends CoqCallback {
           if (test.isDefined && test.get(DocumentState.position))
             fini
           else if (monoton) {
-            CoqStepAction.run(null)
+            CoqStepAction.doit()
             val drops = DocumentState.position + DocumentState.sendlen
             if (drops >= DocumentState.totallen || CoqTop.findNextCommand(EclipseBoilerPlate.getContent.drop(drops)) == -1)
               fini
@@ -497,7 +498,7 @@ class GoalViewer extends ViewPart {
 
 
   var hypos : Text = null
-  var goal : Label = null
+  var goal : Text = null
   var othersubs : Text = null
   var comp : Composite = null
 
@@ -508,8 +509,7 @@ class GoalViewer extends ViewPart {
     hypos.setLayoutData(new GridData(GridData.FILL_HORIZONTAL))
     //hypos.setText("foo\nbar")
     new Label(comp, SWT.SEPARATOR | SWT.HORIZONTAL).setLayoutData(new GridData(GridData.FILL_HORIZONTAL))
-    goal = new Label(comp, SWT.READ_ONLY)
-    goal.setBackground(new Color(Display.getDefault, new RGB(255, 255, 255)))
+    goal = new Text(comp, SWT.READ_ONLY | SWT.MULTI)
     goal.setLayoutData(new GridData(GridData.FILL_HORIZONTAL))
     //goal.setText("baz")
     val other = new Label(comp, SWT.READ_ONLY)
@@ -519,7 +519,18 @@ class GoalViewer extends ViewPart {
     othersubs.setLayoutData(new GridData(GridData.FILL_HORIZONTAL))
     //othersubs.setText("buz\nfoobar")
     CoqOutputDispatcher.goalviewer = this
-    PrintActor.register(CoqOutputDispatcher)
+  }
+
+  def clear () : Unit = {
+    Display.getDefault.syncExec(
+      new Runnable() {
+        def run() = {
+          hypos.setText("")
+          goal.setText("")
+          othersubs.setText("")
+          comp.layout
+        }
+      })
   }
 
   def setFocus() : Unit = {
@@ -550,7 +561,7 @@ object CoqOutputDispatcher extends CoqCallback {
           val ht = if (hy.length > 0) hy.reduceLeft(_ + "\n" + _) else ""
           val subd = res.findIndexOf(_.contains("subgoal "))
           val (g, r) = if (subd > 0) res.splitAt(subd) else (res, List[String]())
-          val gt = if (g.length > 1) g.drop(1).reduceLeft(_ + " " + _) else ""
+          val gt = if (g.length > 1) g.drop(1).reduceLeft(_ + "\n" + _) else ""
           val ot = if (r.length > 0) {
             val r2 = r.map(x => { if (x.contains("subgoal ")) x.drop(1) else x })
             r2.reduceLeft(_ + "\n" + _)
@@ -572,7 +583,7 @@ object CoqOutputDispatcher extends CoqCallback {
       new Runnable() {
         def run() = {
           goalviewer.hypos.setText(assumptions)
-          goalviewer.goal.setText(" " + goal)
+          goalviewer.goal.setText(goal)
           goalviewer.othersubs.setText(othergoals)
           goalviewer.comp.layout
         }

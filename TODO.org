@@ -12,8 +12,6 @@
 *** Now works but based on Eclipse scanner rather than Coq parser.
 ** debug coq parser
 ** remove hack that searches for '. ' to send command
-** remove warning if it's void (source location has changed)
-** disable undo if no undo possible
 ** retract proof/leave for later
 ** proof completion
 ** retract definition(s) for more steps of undo / look what Proof General does in that case
