@@ -341,7 +341,7 @@ object CoqStartUp extends CoqCallback {
 
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
-      case CoqShellReady(m, t) =>
+      case CoqShellReady(m, id, t) =>
         if (first) {
           DocumentState.coqstart = t.globalStep
           CoqTop.writeToCoq("Add LoadPath \"" + EclipseBoilerPlate.getProjectDir + "\".")
@@ -363,27 +363,21 @@ class CoqStepNotifier extends CoqCallback {
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqError(m) => err = true
-      case CoqShellReady(monoton, tokens) =>
+      case CoqUserInterrupt() => err = true
+      case CoqShellReady(monoton, id, tokens) =>
         if (! err) {
-          DocumentState.commit
-          if (test.isDefined && test.get(DocumentState.position)) {
-            EclipseBoilerPlate.multistep = false
-            EclipseBoilerPlate.finishedProgress
-            PrintActor.deregister(this)
-          } else {
+          if (monoton) DocumentState.commit(id) else DocumentState.undo(id)
+          if (test.isDefined && test.get(DocumentState.position))
+            fini
+          else if (monoton) {
             CoqStepAction.run(null)
             val drops = DocumentState.position + DocumentState.sendlen
-            if (drops >= DocumentState.totallen || CoqTop.findNextCommand(EclipseBoilerPlate.getContent.drop(drops)) == -1) {
-              PrintActor.deregister(this)
-              EclipseBoilerPlate.multistep = false
-              EclipseBoilerPlate.finishedProgress
-            }
-          }
-        } else {
-          PrintActor.deregister(this)
-          EclipseBoilerPlate.multistep = false
-          EclipseBoilerPlate.finishedProgress
-        }
+            if (drops >= DocumentState.totallen || CoqTop.findNextCommand(EclipseBoilerPlate.getContent.drop(drops)) == -1)
+              fini
+          } else
+            fini
+        } else
+          fini
       case x => //Console.println("got something, try again player 1 " + x)
     }
   }
@@ -420,10 +414,12 @@ object DocumentState {
     }
   }
 
+  var lastcommit : Int = 0
   var oldsendlen : Int = 0
-  def undo () : Unit = synchronized {
+  def undo (id : Int) : Unit = synchronized {
     //Console.println("undo (@" + position + ", " + sendlen + ")")
-    if (sendlen != 0) {
+    if (sendlen != 0 && id > lastcommit) {
+      lastcommit = id
       if (realundo) {
         realundo = false
         val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
@@ -435,16 +431,18 @@ object DocumentState {
         position = start
         sendlen = 0
       } else { //just an error
+        Console.println("undo: barf")
         oldsendlen = sendlen
         sendlen = 0
       }
     }
   }
 
-  def commit () : Unit = synchronized {
+  def commit (id : Int) : Unit = synchronized {
     //Console.println("commited (@" + position + ", " + sendlen + ")")
-    if (sendlen != 0) {
-      //Console.println("commited - and doing some work")
+    if (sendlen != 0 && id > lastcommit) {
+      lastcommit = id
+      Console.println("commited - and doing some work")
       val bl = new Color(Display.getDefault, new RGB(0, 0, 220))
       val end = scala.math.min(sendlen, totallen - position)
       //Console.println("commiting, end is " + end + " (pos + len: " + (position + sendlen) + ")" + ", pos:" + position + " sourceview: " + sourceview)
@@ -539,13 +537,13 @@ object CoqOutputDispatcher extends CoqCallback {
   override def dispatch (x : CoqResponse) : Unit = {
     //Console.println("received in dispatch " + x)
     x match {
-      case CoqShellReady(monoton, token) =>
+      case CoqShellReady(monoton, id, token) =>
         EclipseBoilerPlate.finishedProgress
         if (monoton) {
-          DocumentState.commit
+          DocumentState.commit(id)
           EclipseBoilerPlate.unmark
         } else
-          DocumentState.undo
+          DocumentState.undo(id)
         ActionDisabler.enableMaybe
       case CoqGoal(n, goals) => {
           val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))

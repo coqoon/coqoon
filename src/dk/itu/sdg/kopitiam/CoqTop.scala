@@ -105,6 +105,7 @@ object ValidCoqShell {
 object CoqState {
   private var readyforinput : Boolean = false
   private var context : CoqShellTokens = new CoqShellTokens("Coq", 0, List(), 0)
+  private var id : Int = 0
 
   def readyForInput () : Boolean = { readyforinput }
 
@@ -120,8 +121,10 @@ object CoqState {
       //TODO: strictly greater in first, subset in the latter comparison
       if (oldc.localStep <= tokens.localStep || oldc.theorem != tokens.theorem)
         monotonic = true
-    //Console.println("distributing shell ready " + monotonic + " shell " + tokens)
-    PrintActor.distribute(CoqShellReady(monotonic, tokens))
+    Console.println("distributing shell ready " + monotonic + " shell " + tokens)
+    id += 1
+    PrintActor.distribute(CoqShellReady(monotonic, id, tokens))
+    Console.println(" -> done distributing " + tokens)
   }
 
   def sendCommand () : Unit = {
