@@ -58,6 +58,39 @@
       </actionSet>
    </extension>
    <extension
+         point="org.eclipse.ui.bindings">
+      <key
+            commandId="Kopitiam.step_forward"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="Ctrl+N">
+      </key>
+      <key
+            commandId="Kopitiam.step_cursor"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="Ctrl+Enter">
+      </key>
+      <key
+            commandId="Kopitiam.step_backward"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="Ctrl+U">
+      </key>
+      <key
+            commandId="Kopitiam.retract"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="Ctrl+R">
+      </key>
+      <key
+            commandId="Kopitiam.step_all"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="Ctrl+B">
+      </key>
+   </extension>
+   <extension
          point="org.eclipse.ui.editors">
       <editor
             class="dk.itu.sdg.kopitiam.CoqEditor"
@@ -108,6 +141,58 @@
             id="Kopitiam.settings"
             name="Kopitiam">
       </page>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commands">
+      <category
+            id="Kopitiam.category"
+            name="Kopitiam">
+      </category>
+      <command
+            categoryId="Kopitiam.category"
+            defaultHandler="dk.itu.sdg.kopitiam.CoqStepAction"
+            id="Kopitiam.step_forward"
+            name="Step forward command">
+      </command>
+      <command
+            categoryId="Kopitiam.category"
+            defaultHandler="dk.itu.sdg.kopitiam.CoqUndoAction"
+            id="Kopitiam.step_backward"
+            name="Step backward command">
+      </command>
+      <command
+            categoryId="Kopitiam.category"
+            defaultHandler="dk.itu.sdg.kopitiam.CoqStepUntilAction"
+            id="Kopitiam.step_cursor"
+            name="Step to cursor command">
+      </command>
+      <command
+            categoryId="Kopitiam.category"
+            defaultHandler="dk.itu.sdg.kopitiam.CoqStepAllAction"
+            id="Kopitiam.step_all"
+            name="Step all command">
+      </command>
+      <command
+            categoryId="Kopitiam.category"
+            defaultHandler="dk.itu.sdg.kopitiam.CoqRetractAction"
+            id="Kopitiam.retract"
+            name="Retract all command">
+      </command>
+      <command
+            categoryId="Kopitiam.category"
+            defaultHandler="dk.itu.sdg.kopitiam.RestartCoqAction"
+            id="Kopitiam.restart_coq"
+            name="Restart Coq command">
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.contexts">
+      <context
+            description="Context for Kopitiam files"
+            id="Kopitiam.context"
+            name="In Kopitiam"
+            parentId="org.eclipse.ui.textEditorScope">
+      </context>
    </extension>
 
 </plugin>

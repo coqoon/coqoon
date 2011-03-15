@@ -204,7 +204,6 @@ object CoqTop {
   def interruptCoq () : Unit = {
     if (coqprocess != null) {
       Console.println("sending ctrl-c to coq (pid: " + pid + ")")
-      started = false
       Runtime.getRuntime.exec("/bin/kill -INT " + pid)
     }
   }

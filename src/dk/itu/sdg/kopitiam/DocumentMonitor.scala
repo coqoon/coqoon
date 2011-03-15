@@ -44,6 +44,13 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   var activeeditor : CoqEditor = null
   override def partActivated (part : IWorkbenchPartReference) : Unit = {
     val ed = part.getPart(false)
+    if (EclipseBoilerPlate.window == null)
+      EclipseBoilerPlate.window = PlatformUI.getWorkbench.getActiveWorkbenchWindow
+    Console.println("activated: " + ed)
+    activated(ed)
+  }
+
+  def activated (ed : IWorkbenchPart) : Unit = {
     if (ed.isInstanceOf[CoqEditor])
       if (activeeditor != ed) {
         //Console.println("part activated " + ed)
@@ -72,13 +79,11 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         //Console.println("didn't expect to come here, activation of an already activated editor")
   }
 
-  override def partOpened (part : IWorkbenchPartReference) : Unit = {
-    handlePartRef(part)
-  }
+  override def partOpened (part : IWorkbenchPartReference) : Unit =
+    { handlePartRef(part) }
 
-  override def windowActivated (window : IWorkbenchWindow) : Unit = {
-    window.getPartService.addPartListener(this)
-  }
+  override def windowActivated (window : IWorkbenchWindow) : Unit =
+    { window.getPartService.addPartListener(this) }
 
   override def partClosed (part : IWorkbenchPartReference) : Unit = {
     val p = part.getPart(false)
