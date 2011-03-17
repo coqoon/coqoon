@@ -125,21 +125,25 @@ class CoqUndoAction extends KAction {
         var step : Int = 2
         var off : Int = l
         //Console.println("before loop " + content.take(content.indexOf("Proof.", off)).drop(off).trim.size)
-        while (content.take(content.indexOf("Proof.", off)).drop(off).trim.size != 0) {
+        var deep : Int = 0
+        while (content.take(content.indexOf("Proof.", off)).drop(off).trim.size != 0 || deep != 0) {
           //Console.println("in loop " + content.take(content.indexOf("Proof.", off)).drop(off).trim.size)
+          if (content.take(content.indexOf("Proof.", off)).drop(off).trim.size == 0)
+            deep -= 1
           off = CoqTop.findPreviousCommand(content, off)
+          if (content.take(endkeys.map(content.indexOf(_, off)).filterNot(_ == -1).reduceLeft(scala.math.min(_, _))).drop(off).trim.size == 0)
+            deep += 1
           step += 1
         }
         off = CoqTop.findPreviousCommand(content, off)
         Console.println("found proof before  @" + off + "(" + step + "): " + content.drop(off).take(20))
         DocumentState.sendlen = DocumentState.position - off
-        CoqTop.writeToCoq("Backtrack " + (sh.globalStep - step) + " 0 0.")
+        CoqTop.writeToCoq("Backtrack " + (sh.globalStep - step) + " " + sh.localStep + " 0.")
       } else {
         DocumentState.sendlen = DocumentState.position - l
         if (sh.localStep > 1)
           CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1)  + " " + (sh.localStep - 1) + " 0.")
         else
-          //actually, we need to be smarter - and go possibly before the previous proof
           CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1) + " 0 " + sh.context.length + ".")
       }
     } else
