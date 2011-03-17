@@ -119,12 +119,14 @@ class CoqUndoAction extends KAction {
       EclipseBoilerPlate.unmark
       val sh = CoqState.getShell
       val mn = endkeys.map(content.indexOf(_, l)).filterNot(_ == -1).reduceLeft(scala.math.min(_, _))
-      //Console.println("qed distance is " + (mn - l))
-      if (mn - l < 3) {
+      Console.println("qed distance is " + (mn - l) + " siz " + content.take(mn).drop(l).trim.size + " (" + content.take(mn).drop(l).trim + ")")
+      if (content.take(mn).drop(l).trim.size == 0) {
         Console.println("found qed-word nearby, better loop before last proof.")
         var step : Int = 2
         var off : Int = l
-        while (! ((content.indexOf("Proof.", off) - off) < 2)) {
+        //Console.println("before loop " + content.take(content.indexOf("Proof.", off)).drop(off).trim.size)
+        while (content.take(content.indexOf("Proof.", off)).drop(off).trim.size != 0) {
+          //Console.println("in loop " + content.take(content.indexOf("Proof.", off)).drop(off).trim.size)
           off = CoqTop.findPreviousCommand(content, off)
           step += 1
         }
