@@ -333,7 +333,6 @@ object CoqStartUp extends CoqCallback {
       else {
         while (!fini) { }
         fini = false
-        ActionDisabler.enableMaybe
       }
       PrintActor.deregister(CoqStartUp)
     }
@@ -351,6 +350,7 @@ object CoqStartUp extends CoqCallback {
           PrintActor.register(CoqOutputDispatcher)
           first = true
           fini = true
+          ActionDisabler.enableMaybe
         }
       case y =>
     }
