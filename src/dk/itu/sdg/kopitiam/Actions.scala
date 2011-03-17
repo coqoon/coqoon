@@ -110,6 +110,21 @@ object ActionDisabler {
 class CoqUndoAction extends KAction {
   val endkeys = List("End", "Qed", "Admitted", "Defined")
 
+  def lastqed (content : String, off : Int) : Int = {
+    val lks = endkeys.map(content.indexOf(_, off)).filterNot(_ == -1)
+    if (lks.length == 0)
+      -1
+    else
+      lks.reduceLeft(scala.math.min(_, _))
+  }
+
+  def eqmodws (content : String, off1 : Int, off2 : Int) : Boolean = {
+    if (off2 == -1)
+      true
+    else
+      content.take(off2).drop(off1).trim.size == 0
+  }
+
   override def doit () : Unit = {
     val content = EclipseBoilerPlate.getContent()
     val l = CoqTop.findPreviousCommand(content, DocumentState.position)
@@ -118,20 +133,20 @@ class CoqUndoAction extends KAction {
       DocumentState.realundo = true
       EclipseBoilerPlate.unmark
       val sh = CoqState.getShell
-      val mn = endkeys.map(content.indexOf(_, l)).filterNot(_ == -1).reduceLeft(scala.math.min(_, _))
-      Console.println("qed distance is " + (mn - l) + " siz " + content.take(mn).drop(l).trim.size + " (" + content.take(mn).drop(l).trim + ")")
-      if (content.take(mn).drop(l).trim.size == 0) {
+      val mn = lastqed(content, l)
+      Console.println("qed distance is " + (mn - l))
+      if (mn > 0 && eqmodws(content, l, mn)) {
         Console.println("found qed-word nearby, better loop before last proof.")
         var step : Int = 2
         var off : Int = l
         //Console.println("before loop " + content.take(content.indexOf("Proof.", off)).drop(off).trim.size)
         var deep : Int = 0
-        while (content.take(content.indexOf("Proof.", off)).drop(off).trim.size != 0 || deep != 0) {
+        while (! eqmodws(content, off, content.indexOf("Proof.", off)) || deep != 0) {
           //Console.println("in loop " + content.take(content.indexOf("Proof.", off)).drop(off).trim.size)
-          if (content.take(content.indexOf("Proof.", off)).drop(off).trim.size == 0)
+          if (eqmodws(content, off, content.indexOf("Proof.", off)))
             deep -= 1
           off = CoqTop.findPreviousCommand(content, off)
-          if (content.take(endkeys.map(content.indexOf(_, off)).filterNot(_ == -1).reduceLeft(scala.math.min(_, _))).drop(off).trim.size == 0)
+          if (eqmodws(content, off, lastqed(content, off)))
             deep += 1
           step += 1
         }
@@ -143,8 +158,11 @@ class CoqUndoAction extends KAction {
         DocumentState.sendlen = DocumentState.position - l
         if (sh.localStep > 1)
           CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1)  + " " + (sh.localStep - 1) + " 0.")
-        else
-          CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1) + " 0 " + sh.context.length + ".")
+        else {
+          val ctx = if (sh.context.length == 0) 0 else 1
+          val loc = if (ctx == 1 && sh.context.length != 1) sh.localStep else 0
+          CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1) + " " + loc + " " + ctx + ".")
+        }
       }
     } else
       ActionDisabler.enableMaybe

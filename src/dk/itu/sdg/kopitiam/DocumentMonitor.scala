@@ -94,6 +94,25 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         CoqJavaDocumentProvider.up(coq, java)
       }
     }
+    if (activeeditor != null && activeeditor == PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.getActiveEditor) {
+      val txt = doc.get
+      val len = event.getLength
+      val off = event.getOffset
+      DocumentState.totallen += (event.getText.length - len)
+      if (off < DocumentState.position) {
+        DocumentState.position = scala.math.max(DocumentState.position, DocumentState.totallen - 1)
+        //retract to before
+        Console.println("retracting to " + off + " (from " + DocumentState.position + ")")
+        CoqStepUntilAction.doit
+      }
+      val con = doc.get.take(off + len).drop(off)
+      Console.println("in active coq buffer, replace :" + con + ": with :" + event.getText + ":")
+      //also, remove markers around here
+      Console.println("upgraded totallen with " + (event.getText.length - len))
+      EclipseBoilerPlate.maybeunmark(off)
+      Console.println("may have unmarked stuff")
+      ActionDisabler.enableMaybe
+    }
   }
   override def documentAboutToBeChanged (event : DocumentEvent) : Unit = { }
 }

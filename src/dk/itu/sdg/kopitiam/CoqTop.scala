@@ -267,7 +267,7 @@ object CoqTop {
       var cdepth : Int = 0
       var i : Int = pos - 2
       var found : Boolean = false
-      while (i > 0 && ! found) {
+      while (i > 0 && ! found && i < s.length) {
         val c = s(i)
         if (c == ')' && s(i - 1) == '*')
           cdepth += 1

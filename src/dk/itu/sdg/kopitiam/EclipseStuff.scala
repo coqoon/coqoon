@@ -308,13 +308,17 @@ object EclipseBoilerPlate {
     marker.setAttribute(IMarker.LOCATION, file.getName)
     marker.setAttribute(IMarker.CHAR_START, DocumentState.position)
     marker.setAttribute(IMarker.CHAR_END, DocumentState.position + DocumentState.oldsendlen - 1) //for tha whitespace
-    DocumentState.sendlen = 0
     marker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_ERROR)
     marker.setAttribute(IMarker.TRANSIENT, true)
   }
 
   def unmark () : Unit = {
     getResource.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
+  }
+
+  def maybeunmark (until : Int) : Unit = {
+    val marks = getResource.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
+    marks.foreach(x => if (x.getAttribute(IMarker.CHAR_START, 0) < until) x.delete)
   }
 }
 
