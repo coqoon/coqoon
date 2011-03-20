@@ -6,6 +6,8 @@ import org.eclipse.ui.IStartup
 class Startup extends IStartup {
   override def earlyStartup () : Unit = {
     Console.println("earlyStartup called")
+    System.setProperty("file.encoding", "UTF-8")
+    System.setProperty("sun.jnu.encoding", "UTF-8")
     ActionDisabler.disableAll
     DocumentMonitor.init()
     CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + System.getProperty("file.separator")

@@ -7,23 +7,29 @@ import org.eclipse.ui.editors.text.TextEditor
 class CoqEditor extends TextEditor {
   import org.eclipse.jface.text.source.ISourceViewer
 
-  override protected def initializeEditor() : Unit = {
-    System.setProperty("file.encoding", "UTF-8")
+  override protected def initializeEditor () : Unit = {
     Console.println("initializeEditor was called")
-    Console.println(" - initializeEditor called super")
     setDocumentProvider(CoqJavaDocumentProvider)
     Console.println(" - document provider set")
-    setSourceViewerConfiguration(CoqSourceViewerConfiguration);
+    setSourceViewerConfiguration(CoqSourceViewerConfiguration)
     Console.println(" - source viewer configuration set")
-    super.initializeEditor();
+    super.initializeEditor()
+    Console.println(" - initializeEditor called super")
   }
 
   def getSource () : ISourceViewer = {
-    getSourceViewer();
+    getSourceViewer()
   }
 
   override def initializeKeyBindingScopes () : Unit = {
     setKeyBindingScopes(List("Kopitiam.context").toArray)
+  }
+}
+
+class SimpleJavaEditor extends TextEditor {
+  override def initializeEditor () : Unit = {
+    setDocumentProvider(SimpleJavaDocumentProvider)
+    super.initializeEditor()
   }
 }
 
@@ -92,6 +98,34 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
 	val (dat, off, len) = FinishAST.update(FinishAST.doitHelper(JavaToCoq.parseH(new CharArrayReader(s.toArray))))
 	Console.println("received at offset " + off + "(old len " + len + ") data[" + dat.length + "] " + dat)
 	coq.replace(off, len, dat) //somehow off-by-two...
+  }
+}
+
+object SimpleJavaDocumentProvider extends FileDocumentProvider {
+  import dk.itu.sdg.javaparser.JavaOutput
+  import org.eclipse.ui.part.FileEditorInput
+  import org.eclipse.jface.text.IDocument
+  import scala.collection.mutable.HashMap
+
+  val docs : HashMap[String,IDocument] = new HashMap[String,IDocument]()
+
+  override def getDefaultEncoding () : String = "UTF-8"
+
+  override def getDocument (ele : Object) : IDocument = {
+    assert(ele.isInstanceOf[FileEditorInput])
+    val elem = ele.asInstanceOf[FileEditorInput]
+    val nam = elem.getName
+    if (docs.contains(nam))
+      docs(nam)
+    else {
+      val document = super.getDocument(ele)
+      //Console.println("getdocument received " + document.get)
+      val newt = JavaOutput.parseandoutput(document.get)
+      Console.println("getDocument called, translated to " + newt)
+      document.set(newt)
+      docs += nam -> document
+      document
+    }
   }
 }
 

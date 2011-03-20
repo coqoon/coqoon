@@ -9,7 +9,7 @@ case class JInterfaceDefinition (id : String, interfaces : List[String], body : 
 trait InnerStatement extends JStatement
 
 case class JFieldDefinition (id : String, jtype : String) extends InnerStatement
-case class JMethodDefinition (id : String, parameters : List[JArgument], body : List[JBodyStatement]) extends InnerStatement
+case class JMethodDefinition (id : String, jtype : String, parameters : List[JArgument], body : List[JBodyStatement]) extends InnerStatement
 
 case class JArgument (id : String, jtype : String) extends InnerStatement
 

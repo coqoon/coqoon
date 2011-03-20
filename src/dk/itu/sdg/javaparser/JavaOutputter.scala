@@ -2,14 +2,23 @@
 
 package dk.itu.sdg.javaparser
 
-object JavaOutputter {
+trait JavaOutputter {
   private var myclass : String = ""
 
   def coqout (loc : String, msg : String) : String = {
     "Coq.def(Coq.M." + loc + ", \"" + msg.replace("\"", "\\\"").replace("\n", "\" +\n \"") + "\");" 
   }
 
-  def out (x : JStatement) : String = { //add pepper: specs according to CT (+ static blocks for CT.coqstuff)
+  def red (x : List[String], sep : String) : String = {
+    if (x.length == 0)
+      ""
+    else
+      x.reduceLeft(_ + sep + _)
+  }
+
+  def mr (x : List[String]) : String = { red(x, "\n") }
+
+  def out (x : JStatement) : String = {
     x match {
       case JClassDefinition(id, s, i, b, o) =>
         myclass = id
@@ -18,22 +27,26 @@ object JavaOutputter {
         val specb = ClassTable.getCoq(id, "BEFORESPEC").reverse.map(x => coqout("BEFORESPEC", x))
         val speca = ClassTable.getCoq(id, "AFTERSPEC").reverse.map(x => coqout("AFTERSPEC", x))
         val spect = ClassTable.getCoq("TOP").reverse.map(x => coqout("TOP", x))
-        val st = "static {\n" + specp.reduceLeft(_ + "\n" + _) + spect.reduceLeft(_ + "\n" + _) + specpr.reduceLeft(_ + "\n" + _) + specb.reduceLeft(_ + "\n" + _) + speca.reduceLeft(_ + "\n" + _) + "\n}"
+        val st = "static {\n" + mr(specp) + mr(spect) + mr(specpr) + mr(specb) + mr(speca) + "\n}"
         val is = if (i.length > 0) " implements " + i.reduceLeft(_ + ", " + _) else " "
-        "class " + id + is + "{\n" + st + b.map(out).reduceLeft(_ + "\n" + _) + "\n}"
+        "class " + id + is + "{\n" + st + mr(b.map(out)) + "\n}"
       case JFieldDefinition(id, t) => t + " " + id + ";"
-      case JMethodDefinition(id, ar, b) =>
+      case JMethodDefinition(id, typ, ar, b) =>
         val sp = ClassTable.getSpecs(myclass)
-        val pre = "Coq.requires(\"" + sp(id)._1.replace("\"", "\\\"") + "\");\n"
-        val pos = "Coq.ensures(\"" + sp(id)._2.replace("\"", "\\\"") + "\");\n"
-        //XXX: return type!
+        val (pre, pos) =
+          if (sp.contains(id) && sp(id)._1 != null && sp(id)._2 != null) {
+            Console.println("sp contains id (" + id + "): " + sp)
+            ("Coq.requires(\"" + sp(id)._1.replace("\"", "\\\"") + "\");\n",
+             "Coq.ensures(\"" + sp(id)._2.replace("\"", "\\\"") + "\");\n")
+          } else
+            ("", "")
         val bo = if (b.length == 1 && b(0).isInstanceOf[JBlock])
                    b(0).asInstanceOf[JBlock].body
                  else
                    b
-        "int " + id + "(" + ar.map(out).reduceLeft(_ + ", " + _) + ") {\n " + pre + pos + bo.map(out).reduceLeft(_ + ";\n" + _) + "\n}"
+      typ + " " + id + "(" + red(ar.map(out), ", ") + ") {\n " + pre + pos + red(bo.map(out), ";\n") + ";\n}"
       case JArgument(id, t) => t + " " + id
-      case JBlock(xs) => if (xs.length > 1) "{ " + xs.map(out).reduceLeft(_ + ";\n" + _) + "; }" else if (xs.length == 1) out(xs(0)) else  ""
+      case JBlock(xs) => if (xs.length > 1) "{ " + red(xs.map(out), ";\n") + "; }" else if (xs.length == 1) out(xs(0)) else  ""
       case JAssignment(l, r) => l + " = " + out(r)
       case JFieldWrite(va, f, v) => out(va) + "." + f + " = " + out(v)
       case JReturn(r) => "return " + out(r)
@@ -48,8 +61,8 @@ object JavaOutputter {
       case JPostfixExpression(op, e) => out(e) + op
       case JCall(v, f, as) =>
         val va = if (v != "this") v + "." else ""
-        va + f + "(" + as.map(out).reduceLeft(_ + "," + _) + ")"
-      case JNewExpression(t, a) => "new " + t + "(" + a.map(out).reduceLeft(_ + "," + _) + ")"
+        va + f + "(" + red(as.map(out), ",") + ")"
+      case JNewExpression(t, a) => "new " + t + "(" + red(a.map(out), ",") + ")"
       case JLiteral(x) =>
         try {
           x.toInt.toString
@@ -59,5 +72,14 @@ object JavaOutputter {
       case JVariableAccess(x) => x
       case JFieldAccess(v, f) => v + "." + f
     }
+  }
+}
+
+object JavaOutput extends JavaOutputter with JavaAST {
+  import scala.util.parsing.input.CharArrayReader
+
+  def parseandoutput (s : String) : String = {
+    val intermediate = FinishAST.doitHelper(parseH(new CharArrayReader(s.toArray)))
+    intermediate.map(out).reduceLeft(_ + "" + _)
   }
 }

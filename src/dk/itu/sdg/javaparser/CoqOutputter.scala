@@ -18,7 +18,7 @@ trait CoqOutputter extends JavaToSimpleJava {
 
   def interfaceMethods (body : List[JStatement]) : List[Pair[String,String]] = {
     body.flatMap {
-      case JMethodDefinition(name, params, body) =>
+      case JMethodDefinition(name, typ, params, body) =>
         val ps = getArgs(params)
         val f = "(" + printArgList(ps) + ")"
         Some(("\"" + name + "\"", f))
@@ -142,7 +142,7 @@ trait CoqOutputter extends JavaToSimpleJava {
 	 	  case JClassDefinition(id, supers, inters, body, par) =>
 	 	   myclass = id
 	 	   body foreach {
-	 	  	   case JMethodDefinition(name, params, body) =>
+	 	  	   case JMethodDefinition(name, typ, params, body) =>
 	 	  	     mymethod = name
 	 	  	     val (x0, x1, x2) = getBodyHelper(body, name + "_body")
 	 	  	     res = x0
@@ -173,7 +173,7 @@ trait CoqOutputter extends JavaToSimpleJava {
   
   def classMethods (body : List[JStatement]) : List[Pair[String,String]] = {
     body.flatMap {
-      case JMethodDefinition(name, params, body) =>
+      case JMethodDefinition(name, typ, params, body) =>
         //Console.println("starting to print method " + name + " with body " + body)
         mymethod = name
         val bodyref = name + "_body"

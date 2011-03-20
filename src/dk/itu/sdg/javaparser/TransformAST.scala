@@ -386,7 +386,7 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
           }
         //Console.println("MethodDeclaration done, lvars " + lvars)
         ClassTable.addLocals(classid, methodid, lvars)
-        Some(JMethodDefinition(methodid, args, realrealbody))        
+        Some(JMethodDefinition(methodid, classid, args, realrealbody))        
       case MethodDeclaration(id, jtype, parameters, throws, body) =>
         Console.println("method pos info: " + x.asInstanceOf[MethodDeclaration].pos)
         lvars = new HashMap[String,String]()
@@ -409,7 +409,7 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
           }
         //Console.println("MethodDeclaration done, lvars " + lvars) 
         ClassTable.addLocals(classid, name, lvars)
-        Some(JMethodDefinition(name, args, realrealbody))
+        Some(JMethodDefinition(name, typ, args, realrealbody))
       case JInterface(id, jtype, interfaces, body) =>
         val is = transformOLF(interfaces)
         val myclass = unpackR(id)
@@ -467,11 +467,11 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
           val nb = body.flatMap(z => z match {
             case (x : JClassDefinition) =>
               innerclasses ::= x; None
-            case JMethodDefinition(name, params, body) =>
+            case JMethodDefinition(name, typ, params, body) =>
               //Console.println("body: " + body)
               val tb = body.foldLeft(List[JBodyStatement]())((b,a) => b ++ extractCalls(a))
               //Console.println("body translated: " + tb)
-              Some(JMethodDefinition(name, params, tb))
+              Some(JMethodDefinition(name, typ, params, tb))
             case x => Some(x)
           })
           JClassDefinition(name, supers, interf, nb, outer)

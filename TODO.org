@@ -1,6 +1,6 @@
 unreliable with keyboard shortcuts -> look whether in action or not (otherwise risk error messages from coq)
 marker for coqposition
-
+static methods are now supported by coq formalization!
 * General
 ** remove the introduced global state - DocumentState - plus everything that depends on that
 ** keep it simple, only one connection to a Coq binary
