@@ -73,7 +73,7 @@ trait JavaOutputter {
         val init = in match { case None => ""
                               case Some(x) => " = " + out(x, 0) }
         indent(ind) + t + " " + n + init
-      case JWhile(t,b) => indent(ind) + "while (" + out(t, 0) + ")" + out(b, ind + 2)
+      case JWhile(t,b) => indent(ind) + "while (" + out(t, 0) + ")" + out(b, ind)
       case JConditional(t, c, a) =>
         val alt = out(a, ind)
         val altb = if (alt.length == 0) "" else "else" + alt
@@ -90,10 +90,12 @@ trait JavaOutputter {
         try {
           indent(ind) + x.toInt.toString
         } catch {
-          case e : Exception => indent(ind) + "\"" + x + "\""
+          case e : Exception =>
+            val res = if (x == "null") "null" else "\"" + x + "\"" //are there more reserved words?
+            indent(ind) + res
         }
       case JVariableAccess(x) => indent(ind) + x
-      case JFieldAccess(v, f) => indent(ind) + v + "." + f
+      case JFieldAccess(v, f) => indent(ind) + out(v, 0) + "." + f
     }
   }
 }

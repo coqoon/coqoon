@@ -266,10 +266,18 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
      | id ~ constructorDeclaratorRest
     )
 
-  def methodOrFieldDecl = positioned(jtype ~ id ~ methodOrFieldRest ^^ {
-    case (jtype~id)~MethodDeclarator(parameters, throws, body) => MethodDeclaration(id, jtype, parameters, throws, body)
-    case (jtype~id)~initializer => FieldDeclaration(id, jtype, initializer)
-  })
+  def methodOrFieldDecl = jtype ~ rep1sep(id ~ methodOrFieldRest, ",") ^^ {
+    case jtype~(xs:List[Any]) =>
+      if (xs.length == 1)
+        xs(0) match {
+          case id~MethodDeclarator(parameters, throws, body) => MethodDeclaration(id, jtype, parameters, throws, body)
+          case id~initializer => FieldDeclaration(id, jtype, initializer)
+        }
+      else
+        xs.map(x => x match {
+          case id~initializer => FieldDeclaration(id, jtype, initializer)
+        })
+  }
   def methodOrFieldRest =
     ( methodDeclaratorRest
      | variableDeclaratorRest

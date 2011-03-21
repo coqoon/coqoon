@@ -3,6 +3,7 @@ marker for coqposition
 static methods are now supported by coq formalization!
 remember adjectives of definitions (public/private/...)
 ignore Coq class in java output (at least partially)
+types for tmp_xx
 * General
 ** remove the introduced global state - DocumentState - plus everything that depends on that
 ** keep it simple, only one connection to a Coq binary
