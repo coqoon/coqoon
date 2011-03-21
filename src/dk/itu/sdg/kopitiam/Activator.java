@@ -10,7 +10,11 @@ public class Activator extends AbstractUIPlugin {
 
   private static Activator single = null;
 
-  public Activator () { single = this; }
+  public Activator () {
+    System.setProperty("file.encoding", "UTF-8");
+    System.setProperty("sun.jnu.encoding", "UTF-8");
+    single = this;
+  }
 
   public void start (BundleContext context) throws Exception {
     super.start(context);
