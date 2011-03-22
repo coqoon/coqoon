@@ -2,13 +2,64 @@
 
 package dk.itu.sdg.coqparser
 
-trait VernacularRegion 
-case class VernacularDeclaration () extends VernacularRegion { }
-case class VernacularDefinition () extends VernacularRegion { }
-case class VernacularSyntax () extends VernacularRegion { }
-case class VernacularModule () extends VernacularRegion { }
-case class VernacularSentence (data : List[String]) extends VernacularRegion { }
-case class VernacularNamespace (head : String, tail : String) extends VernacularRegion { }
+import scala.util.parsing.input.Positional
+
+trait VernacularRegion extends Positional
+
+trait GallinaSyntax {
+  sealed abstract class Name extends VernacularRegion
+  case class StringName (name : String) extends Name
+  case class UnderscoreName () extends Name 
+  
+  sealed abstract class Binder extends VernacularRegion
+  case class NameBinder (name : Name) extends Binder
+  case class TypedNameBinder (names: List[Name], `type` : Term) extends Binder
+  case class ColonEqualBinder (name : Name, `type` : Option[Term], binding : Term) extends Binder
+  
+  sealed abstract class Arg extends VernacularRegion
+  case class SimpleArg (term : Term) extends Arg
+  case class NamedArg (name : Name, term : Term) extends Arg
+  
+  case class MatchItem(term : Term, as : Option[Name], in : Option[Term]) extends VernacularRegion
+  case class MatchEquation(patterns : List[Pattern], rhs : Term) extends VernacularRegion
+  
+  sealed abstract class Pattern extends VernacularRegion
+  case class MultPattern (patterns : List[Pattern]) extends Pattern
+  case class AsPattern (pattern : Pattern, name : StringName) extends Pattern
+  case class ScopePattern (pattern : Pattern, scope : StringName) extends Pattern
+  case class IdentPattern (id : QualId, patterns : List[Pattern]) extends Pattern
+  case class DontCarePattern () extends Pattern // underscore
+  case class NumericPattern (num : Int) extends Pattern
+  case class OrPattern (patterns : List[Pattern]) extends Pattern
+  
+  
+  sealed abstract class Term extends VernacularRegion
+  case class Forall (binders : List[Binder], term : Term) extends Term
+  case class Fun (binders : List[Binder], body : Term) extends Term
+  /* more */
+  case class Ascription(term : Term, `type` : Term) extends Term
+  case class Arrow (from : Term, to : Term) extends Term
+  case class Application (op : Term, args : List[Arg]) extends Term
+  /* more */
+  case class QualId (path : List[StringName]) extends Term
+  
+  sealed abstract class Sort extends Term
+  // These are not case objects because they extend Positional
+  case class Prop () extends Sort
+  case class Set () extends Sort
+  case class Type () extends Sort
+  
+  case class Scope (term : Term, name : String) extends Term
+  
+  case class Match (items : List[MatchItem], returnType : Option[Term], body : List[MatchEquation]) extends Term
+  
+  case class Num (value : Int) extends Term
+  case class Inferrable () extends Term /* this is _ */
+}
+
+trait VernacularSyntax extends GallinaSyntax {
+
+}
 
 import scala.util.parsing.combinator.lexical.Lexical
 import scala.util.parsing.combinator.syntactical.TokenParsers
@@ -40,6 +91,7 @@ trait VernacularReserved {
                       "Prop", "return", "Set", "then", "Type", "using",
                       "where", "with")
 }
+
 
 trait CoqTokens extends Tokens {
   case class Ident (chars : String) extends Token
@@ -118,6 +170,183 @@ object TestLexer extends VernacularLexer with Application {
 }
 
 
+trait VernacularParser extends TokenParsers  with VernacularSyntax {
+  val lexical = new VernacularLexer
+  type Tokens = VernacularLexer
+  
+  
+  /* Parsers for particular tokens */
+  def ident = elem("identifier", _.isInstanceOf[lexical.Ident])
+    
+  def ident(str : String) = elem("identifier " + str, {
+    case lexical.Ident(name) if name == str => true
+    case _ => false
+  })
+  
+  def accessIdent = elem("access identifier", _.isInstanceOf[lexical.AccessIdent])
+
+  def keyword(str : String) = elem("keyword " + str, {
+    case lexical.Keyword(name) if name == str => true
+    case _ => false
+  })
+  
+  def delim(str : String) = elem("delimiter " + str, {
+    case lexical.Delim(name) if name == str => true
+    case _ => false
+  })
+  
+  def num : Parser[Int] = elem("number", _.isInstanceOf[lexical.Num]) ^^ {
+    case lexical.Num(digits) => digits.toInt
+  }
+  
+  def string = elem("string", _.isInstanceOf[lexical.StringLit])
+  
+  /* Utility parsers */
+  def inParens[T](p : Parser[T]) : Parser[T] = delim("(")~>(p<~delim(")"))
+  
+  /* Parsers for Gallina */
+  
+  def term : Parser[Term] =
+    positioned(
+      ( forall
+      | fun
+      | sort
+      | num ^^ Num
+      | qualid
+      | patternMatch
+      | inParens(term) //not present in spec but seems necessary
+      )~opt(
+        delim(":")~term
+      | delim("->")~term
+      | rep1(arg)
+      | delim("%")~ident
+      ) ^^ {
+        case t~None => t
+        case t~Some(lexical.Delim(":")~(t2 : Term)) => Ascription(t, t2)
+        case t~Some(lexical.Delim("->")~(t2 : Term)) => Arrow(t, t2)
+        case t~Some(args : List[Arg]) => Application(t, args)
+        case t~Some(lexical.Delim("%")~lexical.Ident(scope)) => Scope(t, scope)
+      }
+    )
+  
+  def forall : Parser[Term] = keyword("forall")~rep1(binder)~delim(",")~term ^^ {
+    case kwd~binds~comma~body => Forall(binds, body)
+  }
+  
+  def binder : Parser[Binder] =
+    positioned(
+      name ^^ NameBinder
+    | inParens(rep1(name)~delim(":")~term) ^^ {
+        case names~colon~typ => TypedNameBinder(names, typ)
+      }
+    | inParens(name~opt(delim(":")~>term)~delim(":=")~term) ^^ {
+        case name~typ~colonEqual~binding => ColonEqualBinder(name, typ, binding)
+      }
+    )
+  
+  def fun : Parser[Term] = (keyword("fun")~>rep1(binder))~(delim("=>")~>term) ^^ {
+    case binders~body => Fun(binders, body)
+  }
+
+  def name : Parser[Name] =
+    positioned(
+      ident ^^ {case lexical.Ident(id) => StringName(id)}
+    | delim("_") ^^^ UnderscoreName()
+    )
+  
+  def qualid : Parser[QualId] = ident~rep(accessIdent) ^^ {
+    case id~rest => QualId(StringName(id.chars) :: rest.map({(aID) => StringName(aID.chars)}))
+  }
+  
+  def patternMatch : Parser[Term] = keyword("match")~>(
+    ((rep1sep(matchItem, delim(","))<~ keyword("with"))~//missing return type
+     opt(delim("|")) ~ repsep(matchEquation, delim("|")))<~keyword("end")
+  ) ^^ {
+    case items~_~equations => Match(items, None, equations)
+  }
+  
+  def matchItem : Parser[MatchItem] =
+    positioned(term~opt(keyword("as")~>name)~opt(keyword("in")~>term) ^^ {
+      case t~as~in => MatchItem(t, as, in)
+    })
+  
+  def matchEquation : Parser[MatchEquation] =
+    positioned(
+      rep1sep(rep1sep(pattern, delim(",")), delim("|"))~delim("=>")~term ^^ {
+        case patterns~arrow~result => MatchEquation(patterns map MultPattern, result)
+      }
+    )
+  
+  def pattern : Parser[Pattern] =
+    positioned(
+      ( qualid~rep(pattern) ^^ {
+          case id~Nil => IdentPattern(id, Nil) 
+          case id~patterns => IdentPattern(id, patterns)
+        }
+      | num ^^ NumericPattern
+      | keyword("_") ^^^ DontCarePattern()
+      | inParens(rep1sep(rep1sep(pattern, delim("|")), delim(","))) ^^ {
+          case (pattern :: Nil) :: Nil => pattern
+          case patterns :: nil => OrPattern(patterns)
+          case orPatterns => MultPattern(orPatterns map OrPattern)
+        }
+      )~opt(
+        keyword("as")~ident
+      | delim("%")~>ident
+      ) ^^ {
+        case pattern~Some(as~(id : lexical.Ident)) => AsPattern(pattern, StringName(id.chars))
+        case pattern~Some(scope : lexical.Ident) => ScopePattern(pattern, StringName(scope.chars))
+        case pattern~None => pattern
+      }
+    )
+  
+  def sort : Parser[Sort] = propSort | setSort | typeSort  
+  def propSort : Parser[Prop] = keyword("Prop") ^^^ Prop()
+  def setSort : Parser[Set] = keyword("Set") ^^^ Set()
+  def typeSort : Parser[Type] = keyword("Type") ^^^ Type()
+  
+  def arg : Parser[Arg] = (term | inParens(name~delim(":=")~term)) ^^ {
+    case t : Term => SimpleArg(t)
+    case (name : Name)~colonEquals~(t : Term) => NamedArg(name, t)
+  }
+  
+  /* Parsers for Vernacular */
+}
+
+object TestParser extends VernacularParser with Application {
+  
+  import scala.util.parsing.input.Reader
+  def parse (in : Reader[Char]) : Unit = {
+    val p = phrase(term)(new lexical.Scanner(in))
+    p match {
+      case Success(x @ _,_) => Console.println("Parse Success: " + x)
+      case _ => Console.println("Parse Fail " + p)
+    }
+  }
+
+  def test () : Unit = {
+    print("> ")
+    val input = Console.readLine()
+    if (input != "q") {
+      var scan = new lexical.Scanner(input)
+      var lexResult = collection.mutable.ListBuffer[lexical.Token]()
+      while (!scan.atEnd) {
+        lexResult += scan.first
+        scan = scan.rest
+      }
+      print("Lexer: ")
+      println(lexResult.toList)
+      
+      import scala.util.parsing.input.CharSequenceReader
+      parse(new CharSequenceReader(input))
+      test()
+    }
+  }
+  test()
+}
+
+
+/*
 trait VernacularParser extends TokenParsers with ImplicitConversions with VernacularReserved {
   val lexical = new VernacularLexer
   type Tokens = VernacularLexer
@@ -166,15 +395,15 @@ trait VernacularParser extends TokenParsers with ImplicitConversions with Vernac
 
   def assRest = rep1(ident) ~ delim(":") ~ ident //term
 
-  def assumptionStart = (
-    "Axiom"
-    | "Conjecture"
-    | "Parameter"
-    | "Parameters"
-    | "Variable"
-    | "Variables"
-    | "Hypothesis"
-    | "Hypotheses"
+  def assumptionStart =
+    ( ident("Axiom")
+    | ident("Conjecture")
+    | ident("Parameter")
+    | ident("Parameters")
+    | ident("Variable")
+    | ident("Variables")
+    | ident("Hypothesis")
+    | ident("Hypotheses")
     )
 
   def name = ( ident | keyword("_") )
@@ -183,8 +412,8 @@ trait VernacularParser extends TokenParsers with ImplicitConversions with Vernac
 
   def binder = (
     name
-    | "(" ~ name ~ ":" ~ term ~ ")"
-    | "(" ~ name ~ opt(rep(ws) ~ ":" ~ term) ~ rep(ws) ~ ":=" ~ rep(ws) ~ term
+    | delim("(") ~ name ~ delim(":") ~ term ~ delim(")")
+    | delim("(") ~ name ~ opt(rep(ws) ~ ":" ~ term) ~ rep(ws) ~ delim(":=") ~ rep(ws) ~ term
   )
 
   def definition = (definitionStart <~ ws) ~ ident ~ rep(ws) ~ opt(binders) ~ opt(opt(ws) ~ ":" ~ rep(ws) ~ term) ~ ws ~ ":=" ~ rep(ws) ~ rep1sep(term, rep(ws))
@@ -263,7 +492,7 @@ object ParseV extends VernacularParser {
   }
 }
 
-/*
+
 object Main extends Application {
   import java.io.{FileInputStream,InputStreamReader,File}
   import scala.util.parsing.input.StreamReader
