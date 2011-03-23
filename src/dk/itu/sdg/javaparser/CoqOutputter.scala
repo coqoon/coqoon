@@ -46,7 +46,6 @@ trait CoqOutputter extends JavaToSimpleJava {
         val args = value.arguments
         val callpref = value.variable
         val argstring = args.map(printStatement).foldRight("nil")(_ + " :: " + _)
-        val typ = ClassTable.getLocalVar(myclass, mymethod, callpref)
         "(ccall \"" + name + "\" \"" + callpref + "\" \"" + funname + "\" (" + argstring + "))"
       case JAssignment(name, JNewExpression(typ, arg)) =>
         val t = typ
@@ -76,7 +75,6 @@ trait CoqOutputter extends JavaToSimpleJava {
       case JLiteral(x) => x
       case JVariableAccess(x) => "(var_expr \"" + x + "\")"
       case JCall(v, fun, arg) =>
-        val t = ClassTable.getLocalVar(myclass, mymethod, v)
         val args = arg.map(printStatement).foldRight("nil")(_ + " :: " + _)
         "(ccall \"ignored\" \"" + v + "\" \"" + fun + "\" (" + args + "))"
       case JNewExpression(typ, arg) =>

@@ -70,8 +70,11 @@ trait JavaOutputter {
       case JFieldWrite(va, f, v) => indent(ind) + out(va, 0) + "." + f + " = " + out(v, 0)
       case JReturn(r) => indent(ind) + "return " + out(r, 0)
       case JBinding(n, t, in) =>
-        val init = in match { case None => ""
-                              case Some(x) => " = " + out(x, 0) }
+        val init =
+          in match {
+            case None => ""
+            case Some(x) => " = " + out(x, 0)
+          }
         indent(ind) + t + " " + n + init
       case JWhile(t,b) => indent(ind) + "while (" + out(t, 0) + ")" + out(b, ind)
       case JConditional(t, c, a) =>
@@ -91,6 +94,7 @@ trait JavaOutputter {
           indent(ind) + x.toInt.toString
         } catch {
           case e : Exception =>
+            //todo: handle literal char and boolean at least
             val res = if (x == "null") "null" else "\"" + x + "\"" //are there more reserved words?
             indent(ind) + res
         }

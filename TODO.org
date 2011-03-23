@@ -19,17 +19,25 @@ types for tmp_xx
 ** debug coq parser
 ** remove hack that searches for '. ' to send command
 ** retract proof/leave for later
+*** especially Admitted/Abort/Abort All/Suspend/Resume
+** Restore State/Write State support
+*** to fight performance issues - being able to load current state again
+*** might also help for background proofs
+** interrupt on windows (custom c code which sends ctrl-c)
+*** http://msdn.microsoft.com/en-us/library/ms811896
+*** http://msdn.microsoft.com/en-us/library/ms683155(v=vs.85).aspx
+** Reset ident <- undefines everything back to ident
 ** proof completion
 * Java side
 ** loop invariants
 ** proper syntax (not only a string) for pre/postcondition and loop invariants - plus completion!
-** for loops
+** for loops -> translate to while
 ** foo.bar.baz() doesn't work properly (need to introduce multiple temporary variables and register these)
 ** error on multiple returns and overloading of the same method name
 ** return type of java methods from java standard library (and other external libraries)
 ** static { } blocks
 ** field initializers
-** multiple local variables and fields: int foo, bar, baz
+** multiple local variables: int foo, bar, baz
 ** copy fields + methods bodies from superclasses (once we have a strategy for class-to-class inheritance)
 ** dynamic casts
 ** there's an alternative way to get the source of an editor:

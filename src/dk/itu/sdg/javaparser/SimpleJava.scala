@@ -11,6 +11,34 @@ object Gensym {
 }
 
 trait JavaToSimpleJava {
+  private var cname : String = ""
+  private var mname : String = ""
+  private var mtype : String = ""
+
+  def translate (classname : String, x : JMethodDefinition) : JMethodDefinition = {
+    mname = x.id
+    mtype = x.jtype
+    val mbody = x.body
+    val margs = x.parameters
+    cname = classname
+    //Console.println("body: " + body)
+    Gensym.count = 0
+    val tb = mbody.foldLeft(List[JBodyStatement]())((b,a) => b ++ extractCalls(a))
+    //Console.println("body translated: " + tb)
+    JMethodDefinition(mname, mtype, margs, tb)
+  }
+
+  def exprtotype (x : JExpression) : String = {
+    x match {
+      case JBinaryExpression(op, l, r) => exprtotype(l) //assumption: typeof(x op y) == typeof(x) == typeof(y)
+      case JUnaryExpression(op, e) => exprtotype(e) //assumption: typeof(op x) == typeof(x)
+      case JPostfixExpression(op, e) => exprtotype(e)
+      case JLiteral(x) => if (x == "null") "Object" else try { x.toInt.toString; "int" } catch { case e => "String" }
+      case JVariableAccess(v) => ClassTable.getLocalVar(cname, mname, v)
+      case x => Console.println("didn't expect to need to convert this expr to a type: " + x); "Object"
+    }
+  }
+
   def getUsedVars (x : JExpression) : List[String] = {
     x match {
       case JConditional(t, c, a) => getUsedVars(t)
@@ -99,10 +127,13 @@ trait JavaToSimpleJava {
         ti ++ List(JWhile(ta, nn.asInstanceOf[JBlock]))
       case JReturn(e : JVariableAccess) =>
         List(JReturn(e))
+      case JReturn(e : JLiteral) =>
+        List(JReturn(e))
       case JReturn(exxx) =>
-        val t = Gensym.newsym
+        Console.println("return of an expression " + exxx)
+        val (t, fresh) = sym(mtype)
         val (ra, ri) = extractHelper(exxx)
-        val res : List[JBodyStatement] = ri ++ List(JAssignment(t, ra))
+        val res : List[JBodyStatement] = ri ++ List(JBinding(t, mtype, Some(ra)))
         res ++ List(JReturn(JVariableAccess(t)))
       case x => {
         Console.println("extract default case encountered " + x);
@@ -116,11 +147,14 @@ trait JavaToSimpleJava {
     (vals.map(z => z._1), vals.map(z => z._2).flatten)
   }
 
-  def sym () : String = {
+  def sym (t : String) : (String, Boolean) = {
     if (tmp != null)
-      tmp
-    else
-      Gensym.newsym
+      (tmp, false)
+    else {
+      val nt = Gensym.newsym
+      ClassTable.addLocal(cname, mname, nt, t)
+      (nt, true)
+    }
   }
 
   def extractHelper (x : JExpression) : (JExpression, List[JBodyStatement]) = {
@@ -136,25 +170,42 @@ trait JavaToSimpleJava {
         (JUnaryExpression(op, va), vis)
       case JPostfixExpression(op, v) =>
         val (va, vis) = extractHelper(v)
-        val t = sym
+        val typ = "int"
+        val (t, fresh) = sym(typ)
         val oper = if (op == "++") "+" else if (op == "--") "-" else { Console.println("dunno postfix " + op); op }
-        (JVariableAccess(t), JAssignment(t, va) :: List(JBinaryExpression(oper, va, JLiteral("1"))))
+        if (fresh)
+          (JVariableAccess(t),
+           JBinding(t, typ, Some(va)) :: List(JBinaryExpression(oper, va, JLiteral("1"))))
+        else
+          (JVariableAccess(t),
+           JAssignment(t, va) :: List(JBinaryExpression(oper, va, JLiteral("1"))))
       case JFieldAccess(con, f) =>
-        val t = sym
         val (a, i) = extractHelper(con)
-        (JVariableAccess(t), i ++ List(JAssignment(t, JFieldAccess(a, f))))
+        val tclass = ClassTable.getFieldType(ClassTable.getLocalVar(cname, mname, exprtotype(a)), f)
+        val (t, fresh) = sym(tclass)
+        if (fresh)
+          (JVariableAccess(t), i ++ List(JBinding(t, tclass, Some(JFieldAccess(a, f)))))
+        else
+          (JVariableAccess(t), i ++ List(JAssignment(t, JFieldAccess(a, f))))
       case JCall(variable, name, args) =>
         val (as, ins) = exL(args)
-        //List[pair[JExpression,List[JBodyStatement]]]
-        val t = sym
-        (JVariableAccess(t), ins ++ List(JAssignment(t, JCall(variable, name, as))))
+        val ttype = ClassTable.getMethodType(cname, mname, variable, name)
+        val (t, fresh) = sym(ttype)
+        if (fresh)
+          (JVariableAccess(t), ins ++ List(JBinding(t, ttype, Some(JCall(variable, name, as)))))
+        else
+          (JVariableAccess(t), ins ++ List(JAssignment(t, JCall(variable, name, as))))
       case JNewExpression(name, args) =>
         val (as, ins) = exL(args)
-        val t = sym
-        (JVariableAccess(t), ins ++ List(JAssignment(t, JNewExpression(name, as))))
+        val (t, fresh) = sym(name)
+        if (fresh)
+          (JVariableAccess(t), ins ++ List(JBinding(t, name, Some(JNewExpression(name, as)))))
+        else
+          (JVariableAccess(t), ins ++ List(JAssignment(t, JNewExpression(name, as))))
       case JConditional(test, c, a) =>
-        val t = sym
+        val (t, fresh) = sym("Object")
         val (ta, ti) = extractHelper(test)
+        var ttyp : String = ""
         val getb = (x : JBodyStatement) => {
           //Console.println("extracting conditional, body is " + x)
           assert(x.isInstanceOf[JBlock])
@@ -164,6 +215,7 @@ trait JavaToSimpleJava {
           val (ca, ci) = exL(bs)
           //Console.println("extracted ca: " + ca + "\nci: " + ci)
           val lastc = ca.takeRight(1)(0)
+          ttyp = lowerBound(ttyp, ClassTable.getLocalVar(cname, mname, exprtotype(lastc)))
           if (ca.length == 1)
             JBlock(ci ++ List(JAssignment(t, lastc)))
           else
@@ -171,8 +223,22 @@ trait JavaToSimpleJava {
         }
         val newc = getb(c)
         val newa = getb(a)
-        (JVariableAccess(t), ti ++ List(JConditional(ta, newc, newa)))
+        if (fresh) {
+          ClassTable.addLocal(cname, mname, t, ttyp)
+          (JVariableAccess(t), ti ++ List(JBinding(t, ttyp, None), JConditional(ta, newc, newa)))
+        } else
+          (JVariableAccess(t), ti ++ List(JConditional(ta, newc, newa)))
       case x => (x, List[JBodyStatement]())
+    }
+  }
+
+  def lowerBound (typea : String, typeb : String) : String = {
+    if (typea.length == 0) typeb
+    else if (typeb.length == 0) typea
+    else if (typea.matches(typeb)) typea
+    else {
+      //do the real comparison at some point
+      typea
     }
   }
 }

@@ -41,6 +41,10 @@ object ClassTable {
     classtable(id)._4(method)._2 ++= lvars
   }
 
+  def addLocal (id : String, method : String, lvar : String, typ : String) {
+    classtable(id)._4(method)._2 += lvar -> typ
+  }
+
   def addMethod (id : String, key : String, value : String, args : HashMap[String,String]) = {
     checkkey(id, key)
     classtable(id)._4 += key -> (value, new HashMap[String,String](), args)
@@ -69,6 +73,49 @@ object ClassTable {
       Console.println("CT doesn't contain " + classname)
       "Object"
     }
+  }
+
+  import java.lang.{Class,ClassNotFoundException}
+  import java.lang.reflect._
+
+  def getJClass (name : String) : Class[_] = {
+    name match {
+      case "byte" => java.lang.Byte.TYPE
+      case "short" => java.lang.Short.TYPE
+      case "int" => java.lang.Integer.TYPE
+      case "long" => java.lang.Long.TYPE
+      case "float" => java.lang.Float.TYPE
+      case "double" => java.lang.Double.TYPE
+      case "boolean" => java.lang.Boolean.TYPE
+      case "char" => java.lang.Character.TYPE
+      case x => try Class.forName(name) catch {
+        case e : ClassNotFoundException =>
+          try Class.forName("java.lang." + name) catch {
+            case e : ClassNotFoundException =>
+              try Class.forName("java.util." + name) catch {
+                case e =>
+                  Console.println("Can't find class for " + name)
+                  null
+              }
+          }
+      }
+    }
+  }
+
+  def getMethodType (classname : String, methodname : String, variable : String, mname: String) : String = {
+    //class and methodname are the scope, whereas variable is the local var on which mname is called
+    val mclass = getLocalVar(classname, methodname, variable)
+    if (classtable.contains(mclass))
+      classtable(mclass)._4(mname)._1
+    else
+      getJClass(mclass).getMethod(mname).getReturnType.getName
+  }
+
+  def getFieldType (classname : String, fieldname : String) : String = {
+    if (classtable.contains(classname))
+      classtable(classname)._3(fieldname)
+    else
+      getJClass(classname).getField(fieldname).getType.getName
   }
 
   def getLocalVar(id : String, method : String, name : String) : String = {
@@ -467,11 +514,8 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
           val nb = body.flatMap(z => z match {
             case (x : JClassDefinition) =>
               innerclasses ::= x; None
-            case JMethodDefinition(name, typ, params, body) =>
-              //Console.println("body: " + body)
-              val tb = body.foldLeft(List[JBodyStatement]())((b,a) => b ++ extractCalls(a))
-              //Console.println("body translated: " + tb)
-              Some(JMethodDefinition(name, typ, params, tb))
+            case (x : JMethodDefinition) =>
+              Some(translate(name, x))
             case x => Some(x)
           })
           JClassDefinition(name, supers, interf, nb, outer)
