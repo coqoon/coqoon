@@ -702,7 +702,7 @@ trait VernacularParser extends TokenParsers with ImplicitConversions with Vernac
 
   def sideeffect = sideeffectstart ~ rep(ws) ~ rep1sep(term, rep(ws))
   def sideeffectstart = "Print" | "Eval" | "Check"
-}
+}*/
 
 object VernacularDefinitions {
   import scala.collection.mutable.HashMap
@@ -720,7 +720,7 @@ object ParseV extends VernacularParser {
   }
 }
 
-
+/*
 object Main extends Application {
   import java.io.{FileInputStream,InputStreamReader,File}
   import scala.util.parsing.input.StreamReader
