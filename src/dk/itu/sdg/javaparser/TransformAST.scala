@@ -218,7 +218,7 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
       case Key(x) => unpackR(x)
       case Nil => ""
       case None => ""
-      case x => Console.println("unpackR dunno " + x + " class " + x.asInstanceOf[AnyRef].getClass.getName); ""
+      case x => Console.println("wanted a string, but got " + x + " class: " + x.asInstanceOf[AnyRef].getClass.getName); ""
     }
   }
 
@@ -260,20 +260,37 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
     }
   }
 
+  def transformExpressions (x : Any) : List[JExpression] = {
+    x match {
+      case a~b => transformExpressions(a) ++ transformExpressions(b)
+      case hd :: tl => transformExpressions(hd) ++ transformExpressions(tl)
+      case a => List(transformExpression(a))
+    }
+  }
+
   def transformStatement (x : Any) : Option[JStatement] = {
     //Console.println("transformstatement " + x)
     x match {
+      case Name(x) => Some(JVariableAccess(x))
       case (x : PrimaryExpr)~(y : List[Any]) =>
+        Console.println("transformStatement with primary " + x + " and arguments " + y)
         val rx = transformExpression(x)
+        Console.println("  transformed primary is " + rx)
         val rest = unpackR(y).drop(1)
+        Console.println("  rest (unpacked arguments, dropped first ('.')) " + rest)
         rx match {
-          case JVariableAccess(y) =>
-            if (y == "this")
+          case JVariableAccess(z) =>
+            if (z == "this")
               if (ClassTable.getFields(classid).contains(rest))
                 Some(JFieldAccess(rx, rest))
-              else {
+              else { //fields might be declared after use...
+                //we've most likely a call!?
                 Console.println("dunno what you mean with this (not a field): " + rx + " rest " + rest)
-                None
+                //y consists of .~(Name(addCount)~List(Expr(Prim(Post(Prim(Call(Qual(List(Name(c), Name(
+                //gather arguments from y
+                val args = transformExpressions(y).filterNot(_ == null).drop(1) //drop methodname
+                Console.println(" Call, args are " + args)
+                Some(JCall(z, rest, args))
               }
             else {
               Console.println("access to non-this field (unchecked): " + rx + " fieldname " + rest)

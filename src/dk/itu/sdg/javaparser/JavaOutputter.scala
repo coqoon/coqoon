@@ -79,7 +79,7 @@ trait JavaOutputter {
       case JWhile(t,b) => indent(ind) + "while (" + out(t, 0) + ")" + out(b, ind)
       case JConditional(t, c, a) =>
         val alt = out(a, ind)
-        val altb = if (alt.length == 0) "" else "else" + alt
+        val altb = if (alt.length == 0) "" else "\n" + indent(ind) + "else" + alt
         indent(ind) + "if (" + out(t, 0) + ")" + out(c, ind) + altb
       case JBinaryExpression(op, l, r) => indent(ind) + out(l, 0) + " " + op + " " + out(r, 0)
       case JUnaryExpression(op, e) => indent(ind) + op + out(e, 0)
