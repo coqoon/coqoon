@@ -3,7 +3,7 @@ Kopitiam - modular incremental interactive full functional static verification o
 Information about this project can be found:
 * NFM2011 paper http://www.itu.dk/~hame/nfm2011.pdf
 * Design http://www.itu.dk/~hame/kopitiam-design.pdf
-* update-site (for eclipse) http://www.itu.dk/~hame/kopitiam
+* update-site (for eclipse) http://www.itu.dk/~hame/kopitiam/
 
 Prerequisites:
 * Eclipse SDK (from http://download.eclipse.org/eclipse/downloads/) tested is 3.6
