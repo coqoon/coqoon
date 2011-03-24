@@ -39,7 +39,7 @@ trait CoqOutputter extends JavaToSimpleJava {
   }
 
   def callword (c : JCall) : String = {
-    if (ClassTable.isMethodStatic(ClassTable.getLocalVar(myclass, mymethod, c.variable), c.fun, exprtotype(c.arguments)))
+    if (ClassTable.isMethodStatic(ClassTable.getLocalVar(myclass, mymethod, c.variable), c.fun, c.arguments.map(exprtotype)))
       "cscall"
     else
       "cdcall"
@@ -83,7 +83,7 @@ trait CoqOutputter extends JavaToSimpleJava {
       case JVariableAccess(x) => "(var_expr \"" + x + "\")"
       case JCall(v, fun, arg) =>
         val args = arg.map(printStatement).foldRight("nil")(_ + " :: " + _)
-        "(" + callword(something) + " \"ignored\" \"" + v + "\" \"" + fun + "\" (" + args + "))"
+        "(" + callword(something.asInstanceOf[JCall]) + " \"ignored\" \"" + v + "\" \"" + fun + "\" (" + args + "))"
       case JNewExpression(typ, arg) =>
         val t = Gensym.newsym
         freevars += t
