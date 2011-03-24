@@ -1,9 +1,7 @@
 unreliable with keyboard shortcuts -> look whether in action or not (otherwise risk error messages from coq)
 marker for coqposition
-static methods are now supported by coq formalization!
-remember adjectives of definitions (public/private/...)
+static methods are now supported by coq formalization! ~~> remember modifiers of definitions (public/private/static/...)
 ignore Coq class in java output (at least partially)
-types for tmp_xx
 * General
 ** remove the introduced global state - DocumentState - plus everything that depends on that
 ** keep it simple, only one connection to a Coq binary
@@ -28,16 +26,30 @@ types for tmp_xx
 *** http://msdn.microsoft.com/en-us/library/ms683155(v=vs.85).aspx
 ** Reset ident <- undefines everything back to ident
 ** proof completion
+** SearchAbout and similar
+** dependency graph of coq files, run coqc as background task
+** Progress as part of progress window, not custom dialog (without using Job API?)
+*** real steps while GotoCursor/GotoEnd
+*** add lemma name to progress (especially interesting for Qed.)
+** scroll to document position (recenter while passing stuff to coq)
+** resizable GoalViewer
+*** syntax highlighting there
+*** indentation
+** step on Require... -> Error -> fix -> forward again -> not blue
 * Java side
+** operator translation (x += y --> x = x + y)
+** types for ternary Bool ? x : y <- intersect x y
 ** loop invariants
 ** proper syntax (not only a string) for pre/postcondition and loop invariants - plus completion!
 ** for loops -> translate to while
 ** foo.bar.baz() doesn't work properly (need to introduce multiple temporary variables and register these)
 ** error on multiple returns and overloading of the same method name
-** return type of java methods from java standard library (and other external libraries)
+*** at least warnings for eclipse and support for refactoring/fixing these
 ** static { } blocks
 ** field initializers
+*** assign values in constructor
 ** multiple local variables: int foo, bar, baz
+*** should work!?
 ** copy fields + methods bodies from superclasses (once we have a strategy for class-to-class inheritance)
 ** dynamic casts
 ** there's an alternative way to get the source of an editor:

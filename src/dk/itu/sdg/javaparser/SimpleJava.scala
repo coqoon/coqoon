@@ -189,7 +189,7 @@ trait JavaToSimpleJava {
           (JVariableAccess(t), i ++ List(JAssignment(t, JFieldAccess(a, f))))
       case JCall(variable, name, args) =>
         val (as, ins) = exL(args)
-        val ttype = ClassTable.getMethodType(cname, mname, variable, name)
+        val ttype = ClassTable.getMethodType(cname, mname, variable, name, exprtotype(as))
         val (t, fresh) = sym(ttype)
         if (fresh)
           (JVariableAccess(t), ins ++ List(JBinding(t, ttype, Some(JCall(variable, name, as)))))

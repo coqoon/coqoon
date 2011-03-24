@@ -102,13 +102,21 @@ object ClassTable {
     }
   }
 
-  def getMethodType (classname : String, methodname : String, variable : String, mname: String) : String = {
+  def getMethodType (classname : String, methodname : String, variable : String, mname : String, args : List[String]) : String = {
     //class and methodname are the scope, whereas variable is the local var on which mname is called
     val mclass = getLocalVar(classname, methodname, variable)
     if (classtable.contains(mclass))
       classtable(mclass)._4(mname)._1
     else
-      getJClass(mclass).getMethod(mname).getReturnType.getName
+      getJClass(mclass).getMethod(mname, args.map(getJClass) : _*).getReturnType.getName
+  }
+
+  def isMethodStatic (classname : String, methodname : String, args : List[String]) : Boolean = {
+    if (classtable.contains(classname))
+      //classtable(classname)._4(methodname)... XXX: implement!
+      false
+    else
+      Modifier.isStatic(getJClass(classname).getMethod(methodname, args.map(getJClass) : _*).getModifiers)
   }
 
   def getFieldType (classname : String, fieldname : String) : String = {

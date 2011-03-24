@@ -38,6 +38,13 @@ trait CoqOutputter extends JavaToSimpleJava {
     else { Console.println("translateOp dunno Key " + x); "" }
   }
 
+  def callword (c : JCall) : String = {
+    if (ClassTable.isMethodStatic(ClassTable.getLocalVar(myclass, mymethod, c.variable), c.fun, exprtotype(c.arguments)))
+      "cscall"
+    else
+      "cdcall"
+  }
+
   def printStatement (something : JBodyStatement) : String = {
     //Console.println("getexpr called with " + something + " class " + something.asInstanceOf[AnyRef].getClass.getName)
     something match {
@@ -46,7 +53,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         val args = value.arguments
         val callpref = value.variable
         val argstring = args.map(printStatement).foldRight("nil")(_ + " :: " + _)
-        "(ccall \"" + name + "\" \"" + callpref + "\" \"" + funname + "\" (" + argstring + "))"
+        "(" + callword(value) + " \"" + name + "\" \"" + callpref + "\" \"" + funname + "\" (" + argstring + "))"
       case JAssignment(name, JNewExpression(typ, arg)) =>
         val t = typ
         val init = printStatement(JAssignment(name, JCall("this", "init_", arg)))
@@ -76,7 +83,7 @@ trait CoqOutputter extends JavaToSimpleJava {
       case JVariableAccess(x) => "(var_expr \"" + x + "\")"
       case JCall(v, fun, arg) =>
         val args = arg.map(printStatement).foldRight("nil")(_ + " :: " + _)
-        "(ccall \"ignored\" \"" + v + "\" \"" + fun + "\" (" + args + "))"
+        "(" + callword(something) + " \"ignored\" \"" + v + "\" \"" + fun + "\" (" + args + "))"
       case JNewExpression(typ, arg) =>
         val t = Gensym.newsym
         freevars += t
