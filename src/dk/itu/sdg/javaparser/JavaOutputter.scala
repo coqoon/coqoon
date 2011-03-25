@@ -38,7 +38,12 @@ trait JavaOutputter {
         val specb = ClassTable.getCoq(id, "BEFORESPEC").reverse.map(x => coqout("BEFORESPEC", x, 4))
         val speca = ClassTable.getCoq(id, "AFTERSPEC").reverse.map(x => coqout("AFTERSPEC", x, 4))
         val spect = ClassTable.getCoq("TOP").reverse.map(x => coqout("TOP", x, 4))
-        val st = indent(ind + 2) + "static {\n" + mr(specp) + mr(spect) + mr(specpr) + mr(specb) + mr(speca) + "\n" + indent(ind + 2) + "}\n"
+        val stacon = mr(specp) + mr(spect) + mr(specpr) + mr(specb) + mr(speca)
+        val st =
+          if (stacon.length > 0)
+            indent(ind + 2) + "static {\n" + stacon + "\n" + indent(ind + 2) + "}\n"
+          else
+            ""
         val is = if (i.length > 0) " implements " + i.reduceLeft(_ + ", " + _) else " "
         indent(ind) + "class " + id + is + "{\n" + st + mr(mapi(b, ind + 2)) + "\n" + indent(ind) + "}"
       case JFieldDefinition(id, t) => indent(ind) + t + " " + id + ";"
@@ -79,7 +84,7 @@ trait JavaOutputter {
       case JWhile(t,b) => indent(ind) + "while (" + out(t, 0) + ")" + out(b, ind)
       case JConditional(t, c, a) =>
         val alt = out(a, ind)
-        val altb = if (alt.length == 0) "" else "\n" + indent(ind) + "else" + alt
+        val altb = if (alt.length == 0) "" else ";\n" + indent(ind) + "else" + alt
         indent(ind) + "if (" + out(t, 0) + ")" + out(c, ind) + altb
       case JBinaryExpression(op, l, r) => indent(ind) + out(l, 0) + " " + op + " " + out(r, 0)
       case JUnaryExpression(op, e) => indent(ind) + op + out(e, 0)

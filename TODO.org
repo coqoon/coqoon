@@ -49,7 +49,7 @@ ignore Coq class in java output (at least partially)
 ** field initializers
 *** assign values in constructor
 ** multiple local variables: int foo, bar, baz
-*** should work!?
+*** fails in assert(vars.length == 1) in TransformAST:FinishAST:transform
 ** copy fields + methods bodies from superclasses (once we have a strategy for class-to-class inheritance)
 ** dynamic casts
 ** there's an alternative way to get the source of an editor:

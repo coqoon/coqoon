@@ -13,11 +13,10 @@ object Gensym {
 trait JavaToSimpleJava {
   private var cname : String = ""
   private var mname : String = ""
-  private var mtype : String = ""
 
   def translate (classname : String, x : JMethodDefinition) : JMethodDefinition = {
     mname = x.id
-    mtype = x.jtype
+    val mtype = x.jtype
     val mbody = x.body
     val margs = x.parameters
     cname = classname
@@ -131,10 +130,8 @@ trait JavaToSimpleJava {
         List(JReturn(e))
       case JReturn(exxx) =>
         Console.println("return of an expression " + exxx)
-        val (t, fresh) = sym(mtype)
         val (ra, ri) = extractHelper(exxx)
-        val res : List[JBodyStatement] = ri ++ List(JBinding(t, mtype, Some(ra)))
-        res ++ List(JReturn(JVariableAccess(t)))
+        ri ++ List(JReturn(ra))
       case x => {
         Console.println("extract default case encountered " + x);
         List(x)
