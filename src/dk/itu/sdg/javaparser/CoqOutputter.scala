@@ -38,11 +38,12 @@ trait CoqOutputter extends JavaToSimpleJava {
     else { Console.println("translateOp dunno Key " + x); "" }
   }
 
-  def callword (c : JCall) : String = {
-    if (ClassTable.isMethodStatic(ClassTable.getLocalVar(myclass, mymethod, c.variable), c.fun, c.arguments.map(exprtotype)))
-      "cscall"
+  def callword (c : JCall) : (String, String) = {
+    val cl = ClassTable.getLocalVar(myclass, mymethod, c.variable)
+    if (ClassTable.isMethodStatic(cl, c.fun, c.arguments.map(exprtotype)))
+      ("cscall", cl)
     else
-      "cdcall"
+      ("cdcall", c.variable)
   }
 
   def printStatement (something : JBodyStatement) : String = {
@@ -51,9 +52,9 @@ trait CoqOutputter extends JavaToSimpleJava {
       case JAssignment(name, value : JCall) =>
         val funname = value.fun
         val args = value.arguments
-        val callpref = value.variable
+        val (callw, callpre) = callword(value)
         val argstring = args.map(printStatement).foldRight("nil")(_ + " :: " + _)
-        "(" + callword(value) + " \"" + name + "\" \"" + callpref + "\" \"" + funname + "\" (" + argstring + "))"
+        "(" + callw + " \"" + name + "\" \"" + callpre + "\" \"" + funname + "\" (" + argstring + "))"
       case JAssignment(name, JNewExpression(typ, arg)) =>
         val t = typ
         val init = printStatement(JAssignment(name, JCall("this", "init_", arg)))
@@ -83,7 +84,8 @@ trait CoqOutputter extends JavaToSimpleJava {
       case JVariableAccess(x) => "(var_expr \"" + x + "\")"
       case JCall(v, fun, arg) =>
         val args = arg.map(printStatement).foldRight("nil")(_ + " :: " + _)
-        "(" + callword(something.asInstanceOf[JCall]) + " \"ignored\" \"" + v + "\" \"" + fun + "\" (" + args + "))"
+        val (callw, callpre) = callword(something.asInstanceOf[JCall])
+        "(" + callw + " \"ignored\" \"" + callpre + "\" \"" + fun + "\" (" + args + "))"
       case JNewExpression(typ, arg) =>
         val t = Gensym.newsym
         freevars += t
