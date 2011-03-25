@@ -18,6 +18,7 @@ import EclipseUtils.{color, tuple2Color}
 
 class CoqEditor extends TextEditor {
   import org.eclipse.jface.text.source.ISourceViewer
+  import org.eclipse.ui.views.contentoutline.{ContentOutlinePage, IContentOutlinePage}
 
   override protected def initializeEditor () : Unit = {
     Console.println("initializeEditor was called")
@@ -35,6 +36,20 @@ class CoqEditor extends TextEditor {
 
   override def initializeKeyBindingScopes () : Unit = {
     setKeyBindingScopes(List("Kopitiam.context").toArray)
+  }
+  
+  var outlinePage : CoqContentOutlinePage = null
+  override def getAdapter(required : java.lang.Class[_]) : AnyRef = {
+    if (required.isInterface && required.getName.endsWith("IContentOutlinePage")) {
+      if (outlinePage == null) {
+        outlinePage = new CoqContentOutlinePage(getDocumentProvider(), this)
+        if (getEditorInput() != null)
+          outlinePage.setInput(getEditorInput())
+      }
+      return outlinePage;
+    }
+        
+    return super.getAdapter(required);
   }
 }
 
@@ -81,6 +96,7 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
 
   import org.eclipse.ui.part.FileEditorInput
   override def getDocument (ele : Object) : IDocument = {
+    Console.println(ele)
     assert(ele.isInstanceOf[FileEditorInput])
     val element = ele.asInstanceOf[FileEditorInput]
     val document = super.getDocument(element)
@@ -673,4 +689,112 @@ object CoqContentAssistantProcessor extends IContentAssistProcessor {
   def getContextInformationAutoActivationCharacters() : Array[Char] = null
   def getContextInformationValidator() : IContextInformationValidator = null
   def getErrorMessage() : String = "not yet implemented"
+}
+
+
+import org.eclipse.ui.views.contentoutline.ContentOutlinePage
+
+class CoqContentOutlinePage extends ContentOutlinePage {
+  import dk.itu.sdg.coqparser.VernacularRegion
+  import org.eclipse.jface.text.IDocument
+  import org.eclipse.jface.viewers.{ITreeContentProvider, LabelProvider, TreeViewer, Viewer}
+  import org.eclipse.swt.widgets.{Composite, Control}
+  import org.eclipse.ui.part.FileEditorInput
+  import org.eclipse.ui.texteditor.{IDocumentProvider, ITextEditor}
+  
+  var documentProvider : IDocumentProvider = null
+  var textEditor : ITextEditor = null
+  def this(provider : org.eclipse.ui.texteditor.IDocumentProvider, editor : org.eclipse.ui.texteditor.ITextEditor) = {
+    this()
+    documentProvider = provider
+    textEditor = editor
+  }
+  
+  var input : Any = null // TODO: Make into less of a direct Java port
+  def setInput (arg : Any) : Unit = {
+    input = arg
+    update()
+  }
+  def update () : Unit = {
+    println("Called update")
+    val viewer : TreeViewer = getTreeViewer();
+    
+    if (viewer != null) {
+      val control : Control = viewer.getControl();
+      if (control != null && !control.isDisposed()) {
+        control.setRedraw(false);
+        viewer.setInput(input);
+        viewer.expandAll();
+        control.setRedraw(true);
+      }
+    }
+  }
+  
+  protected class ContentProvider extends ITreeContentProvider {
+    def dispose() : Unit = {}
+    
+    var content : List[VernacularRegion] = Nil
+    val parser = new dk.itu.sdg.coqparser.VernacularParser {}
+    var root : parser.VernacularDocument = null
+    def parse(document : IDocument) : Unit = {
+      import scala.util.parsing.input.CharSequenceReader
+      
+      println("parse the coq")
+      val result = parser.parseString(document.get) map {doc => root = doc; doc}
+      println("got " + result)
+    }
+    
+
+    
+    def inputChanged(viewer : Viewer, oldInput : Any, newInput : Any) : Unit = {
+      println("inputChanged")
+      parse(documentProvider.getDocument(newInput))
+    }
+    
+    def hasChildren (obj : Any) : Boolean = obj match {
+      case something : VernacularRegion if something.hasSubRegions => true
+      case _ => false
+    }
+    
+    def getChildren (obj : Any) : Array[AnyRef] = {
+      Console.println("getChildren" + obj)
+      obj match {
+        case something : VernacularRegion => something.subRegions.toArray
+        case something : FileEditorInput => root.subRegions.toArray
+        case _ => Array[AnyRef]()
+      }
+    }
+    def getElements (obj : Any) : Array[AnyRef] = {
+      Console.println("getElements " + obj)
+      getChildren(obj)
+    }
+    
+    def getParent (obj : Any) : AnyRef = {
+      Console.println("getParent " + obj)
+      null //FIXME: Figure out how to do this - perhaps compute a table of parents?
+    }
+    
+    
+  }
+
+  class CoqLabelProvider extends LabelProvider {
+    override def getText(obj : AnyRef) : String = obj match {
+      case something : VernacularRegion => something.outlineName
+      case something => something.toString
+    }
+  }
+  
+  override def createControl(parent : Composite) : Unit = {
+
+        super.createControl(parent)
+
+        val viewer : TreeViewer = getTreeViewer()
+        viewer.setContentProvider(new ContentProvider());
+        viewer.setLabelProvider(new LabelProvider());
+        viewer.addSelectionChangedListener(this);
+
+        if (input != null)
+            viewer.setInput(input);
+    }
+    
 }

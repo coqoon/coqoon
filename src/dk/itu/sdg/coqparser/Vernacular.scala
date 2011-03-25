@@ -4,9 +4,23 @@ package dk.itu.sdg.coqparser
 
 import scala.util.parsing.input.Positional
 
-trait VernacularRegion extends Positional
+trait VernacularRegion extends Positional with Product {
+  val outline = false
+  def outlineName = "<no name>"
+  
+  lazy val subRegions : Stream[VernacularRegion] = subRegions(productIterator.toStream)
+  private def subRegions (fields : Stream[Any]) : Stream[VernacularRegion] =
+    fields match {
+      case (field : VernacularRegion) #:: rest => field #:: subRegions(rest)
+      case (field : Traversable[VernacularRegion]) #:: rest => field.toStream ++ subRegions(rest)
+      case _ #:: rest => subRegions(rest)
+      case Stream.Empty => Stream.Empty
+    }
+  
+  lazy val hasSubRegions : Boolean = subRegions.length > 0
+}
 
-trait GallinaSyntax {
+trait GallinaSyntax { 
   sealed abstract class Name extends VernacularRegion
   case class StringName (name : String) extends Name
   case class UnderscoreName () extends Name 
@@ -91,15 +105,25 @@ trait GallinaSyntax {
 
 trait VernacularSyntax extends GallinaSyntax {
   /*The Vernacular*/
-  sealed abstract class Sentence extends VernacularRegion
+  sealed abstract class Sentence extends VernacularRegion {
+    override val outline = true
+  }
   
-  case class AssumptionSentence (keyword : StringName, assumptions : List[Assumption]) extends Sentence
-  case class DefinitionSentence (keyword : StringName, ident : StringName, binders : List[Binder], `type` : Option[Term], body : Term) extends Sentence
-  case class InductiveSentence (keyword : StringName, bodies : List[IndBody]) extends Sentence
+  case class AssumptionSentence (keyword : StringName, assumptions : List[Assumption]) extends Sentence {
+    override def outlineName = keyword.name
+  }
+  case class DefinitionSentence (keyword : StringName, ident : StringName, binders : List[Binder], `type` : Option[Term], body : Term) extends Sentence {
+    override def outlineName = ident.name
+  }
+  case class InductiveSentence (keyword : StringName, bodies : List[IndBody]) extends Sentence {
+    override def outlineName = keyword.name
+  }
   case class FixpointSentence (fixpoints : List[FixBody]) extends Sentence
   case class CofixpointSentence (cofixpoints : List[CofixBody]) extends Sentence
   case class AssertionSentence (keyword : StringName, name : StringName, binders : List[Binder], `type` : Term) extends Sentence
-  case class Proof (/* TODO : Represent proof body */) extends Sentence
+  case class Proof (/* TODO : Represent proof body */) extends Sentence {
+    override def outlineName = "Proof"
+  }
   
   case class Assumption (names : List[StringName], `type` : Term) extends VernacularRegion
   case class IndBody (name : StringName, binders : List[Binder], `type` : Term, constructors : List[ConstructorDef]) extends VernacularRegion
@@ -107,7 +131,12 @@ trait VernacularSyntax extends GallinaSyntax {
   
   
   /* This representation of modules is a bare minimum - it throws out useful information! */
-  case class Module (name : StringName, contents : List[VernacularRegion]) extends VernacularRegion
+  case class Module (name : StringName, contents : List[VernacularRegion]) extends VernacularRegion {
+    override val outline = true
+    override def outlineName = name.name
+  }
+  
+  case class VernacularDocument (contents : List[VernacularRegion]) extends VernacularRegion
 }
 
 import scala.util.parsing.combinator.lexical.Lexical
@@ -539,6 +568,11 @@ trait VernacularParser extends TokenParsers  with VernacularSyntax {
   
   /* Valid Vernacular syntax*/
   def top = rep(sentence | module)
+  
+  def parseString (input : String) : ParseResult[VernacularDocument] = {
+    import scala.util.parsing.input.CharSequenceReader
+    phrase(top)(new lexical.Scanner(input)) map VernacularDocument
+  }
 }
 
 object TestParser extends VernacularParser with Application {
