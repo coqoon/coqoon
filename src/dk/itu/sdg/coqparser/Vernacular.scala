@@ -1,4 +1,4 @@
-/* (c) 2010-2011 Hannes Mehnert */
+/* (c) 2010-2011 Hannes Mehnert and David Christiansen */
 
 package dk.itu.sdg.coqparser
 
@@ -36,8 +36,8 @@ trait GallinaSyntax {
   case class SimpleArg (term : Term) extends Arg
   case class NamedArg (name : Name, term : Term) extends Arg
   
-  case class MatchItem(term : Term, as : Option[Name], in : Option[Term]) extends VernacularRegion
-  case class MatchEquation(patterns : List[Pattern], rhs : Term) extends VernacularRegion
+  case class MatchItem (term : Term, as : Option[Name], in : Option[Term]) extends VernacularRegion
+  case class MatchEquation (patterns : List[Pattern], rhs : Term) extends VernacularRegion
   
   sealed abstract class Pattern extends VernacularRegion
   case class MultPattern (patterns : List[Pattern]) extends Pattern
@@ -75,7 +75,7 @@ trait GallinaSyntax {
   case class Forall (binders : List[Binder], term : Term) extends Term
   case class Fun (binders : List[Binder], body : Term) extends Term
   /* more */
-  case class Ascription(term : Term, `type` : Term) extends Term
+  case class Ascription (term : Term, `type` : Term) extends Term
   case class Arrow (from : Term, to : Term) extends Term
   case class Application (op : Term, args : List[Arg]) extends Term
   /* more */
@@ -90,7 +90,7 @@ trait GallinaSyntax {
   case class Let (name : StringName, binders : List[Binder], `type` : Option[Term], is : Term, body : Term) extends Term
   case class LetFix (fixBody : FixBody, body : Term) extends Term
   case class LetCofix (cofixBody : CofixBody, body : Term) extends Term
-  case class LetDepRet(names : List[Name], depRet : Option[DepRetType], is : Term, body : Term) extends Term
+  case class LetDepRet (names : List[Name], depRet : Option[DepRetType], is : Term, body : Term) extends Term
   
   case class IfThenElse (condition : Term, depRetType : Option[DepRetType], `then` : Term, `else` : Term) extends Term
   
@@ -112,7 +112,7 @@ trait GallinaSyntax {
 }
 
 trait VernacularSyntax extends GallinaSyntax {
-  /*The Vernacular*/
+  /* The Vernacular */
   sealed abstract class Sentence extends VernacularRegion {
     override val outline = true
   }
@@ -121,16 +121,16 @@ trait VernacularSyntax extends GallinaSyntax {
     override def outlineName = keyword.name
   }
   case class DefinitionSentence (keyword : StringName, ident : StringName, binders : List[Binder], `type` : Option[Term], body : Term) extends Sentence {
-    override def outlineName = keyword.name + " " +ident.name
+    override def outlineName = keyword.name + " " + ident.name
   }
   case class InductiveSentence (keyword : StringName, bodies : List[IndBody]) extends Sentence {
     override def outlineName = keyword.name + " " + bodies.map(_.name.name).mkString(", ")
   }
   case class FixpointSentence (fixpoints : List[FixBody]) extends Sentence {
-    override def outlineName = "Fixpoint " + fixpoints.map(_.ident .name).mkString(", ")
+    override def outlineName = "Fixpoint " + fixpoints.map(_.ident.name).mkString(", ")
   }
   case class CofixpointSentence (cofixpoints : List[CofixBody]) extends Sentence {
-    override def outlineName = "Cofixpoint " + cofixpoints.map(_.ident .name).mkString(", ")
+    override def outlineName = "CoFixpoint " + cofixpoints.map(_.ident.name).mkString(", ")
   }
   case class AssertionSentence (keyword : StringName, name : StringName, binders : List[Binder], `type` : Term) extends Sentence {
     override def outlineName = keyword.name + " " + name.name
@@ -182,13 +182,15 @@ trait VernacularReserved {
                       "if", "IF", "in", "let", "match", "mod",
                       "Prop", "return", "Set", "then", "Type", "using",
                       "where", "with")
+
+  val proofEnders = List("End", "Qed", "Admitted", "Defined")
 }
 
 
 trait CoqTokens extends Tokens {
   case class Ident (chars : String) extends Token
   case class AccessIdent (chars : String) extends Token
-  case class Delim(chars : String) extends Token //the "special tokens" in the Coq reference
+  case class Delim (chars : String) extends Token //the "special tokens" in the Coq reference
   case class Num (chars : String) extends Token
   case class StringLit (chars : String) extends Token
   case class Comment (chars: String) extends Token
@@ -203,43 +205,43 @@ class VernacularLexer extends Lexical with VernacularReserved with CoqTokens wit
 
   def whitespace = """[\t\n\ ]*""".r
   
-  def ident : Parser[Token] = """[\p{L}_][\p{L}_0-9']*""".r ^^ processIdent// TODO: unicode-id-part from Coq reference
-  private def processIdent(name : String) : Token =
-	if (keywords contains name)
-	  Keyword(name)
-	else
+  def ident : Parser[Token] = """[\p{L}_][\p{L}_0-9']*""".r ^^ processIdent //TODO: unicode-id-part from Coq reference
+  private def processIdent (name : String) : Token =
+    if (keywords contains name)
+      Keyword(name)
+    else
       Ident(name)
-  
+
   def accessIdent : Parser[Token] = """\.[\p{L}_][\p{L}_0-9']*""".r ^^ AccessIdent
-  
+
   def num : Parser[Token] = """-?\d+""".r ^^ Num
-  
-  def string : Parser[Token] = '"'~>inString ^^ {chars => StringLit(chars.mkString)}
+
+  def string : Parser[Token] = '"'~>inString ^^ { chars => StringLit(chars.mkString) }
   private def inString : Parser[List[Char]] =
-    ( '"' ~ '"' ~ inString ^^ {case '"'~'"'~rest => '"' :: rest}
-    | chrExcept(EofCh, '"') ~ inString ^^ {case ch~rest => ch :: rest}
+    ( '"'~'"' ~ inString ^^ { case '"'~'"'~rest => '"' :: rest }
+    | chrExcept(EofCh, '"') ~ inString ^^ { case ch~rest => ch :: rest }
     | '"' ^^^ Nil
     | failure("String not properly terminated")
     )
-    
+
   def comment : Parser[Token] =
-	('('~'*')~>commentContents ^^ {chars => Comment("(*" + chars.mkString)}
+    ('('~'*')~>commentContents ^^ { chars => Comment("(*" + chars.mkString) }
   private def commentContents : Parser[List[Char]] =
-	( '('~'*'~commentContents~commentContents ^^ {case '('~'*'~nested~rest => '(' :: '*' :: (nested ++ rest)}
-	| '*'~')' ^^^ List('*', ')')
-	| chrExcept(EofCh)~commentContents ^^ {case char~contents => char :: contents}
-	| failure("Comment not finished")
+    ( '('~'*'~commentContents~commentContents ^^ { case '('~'*'~nested~rest => '(' :: '*' :: (nested ++ rest) }
+    | '*'~')' ^^^ List('*', ')')
+    | chrExcept(EofCh)~commentContents ^^ { case char~contents => char :: contents }
+    | failure("Comment not finished")
     )
-  
+
   // Based on technique from scala/util/parsing/combinator/lexical/StdLexical.scala
   private lazy val _delim : Parser[Token] = {
-	def parseDelim(s : String): Parser[Token] = accept(s.toList) ^^ {x => Delim(x mkString)}
-	operator.sortWith(_<_).map(parseDelim).foldRight(failure("no matching special token"): Parser[Token]) {
-		(x, y) => y | x
-	}
+    def parseDelim (s : String) : Parser[Token] = accept(s.toList) ^^ { x => Delim(x.mkString) }
+    operator.sortWith(_ < _).map(parseDelim).foldRight(failure("no matching special token") : Parser[Token]) {
+      (x, y) => y | x
+    }
   }
   def delim : Parser[Token] = _delim
-  
+
   def token = ident | accessIdent | num | string | comment | delim
 }
 
@@ -262,7 +264,7 @@ object TestLexer extends VernacularLexer with Application {
 }
 
 
-trait VernacularParser extends TokenParsers  with VernacularSyntax {
+trait VernacularParser extends TokenParsers with VernacularSyntax with VernacularReserved {
   val lexical = new VernacularLexer
   type Tokens = VernacularLexer
   
@@ -270,21 +272,21 @@ trait VernacularParser extends TokenParsers  with VernacularSyntax {
   /* Parsers for particular tokens */
   def ident = elem("identifier", _.isInstanceOf[lexical.Ident])
     
-  def ident(str : String) = elem("identifier " + str, {
+  def ident (str : String) = elem("identifier " + str, {
     case lexical.Ident(name) if name == str => true
     case _ => false
   })
   
   def accessIdent = elem("access identifier", _.isInstanceOf[lexical.AccessIdent])
 
-  def keyword(str : String) = elem("keyword " + str, {
+  def keyword (str : String) = elem("keyword " + str, {
     case lexical.Keyword(name) if name == str => true
     case _ => false
   })
   
   def delim = elem("delimiter", _.isInstanceOf[lexical.Delim])
   
-  def delim(str : String) = elem("delimiter " + str, {
+  def delim (str : String) = elem("delimiter " + str, {
     case lexical.Delim(name) if name == str => true
     case _ => false
   })
@@ -296,7 +298,7 @@ trait VernacularParser extends TokenParsers  with VernacularSyntax {
   def string = elem("string", _.isInstanceOf[lexical.StringLit])
   
   /* Utility parsers */
-  def inParens[T](p : Parser[T]) : Parser[T] = delim("(")~>(p<~delim(")"))
+  def inParens[T] (p : Parser[T]) : Parser[T] = delim("(")~>(p<~delim(")"))
   
   /* Parsers for Gallina */
   
@@ -412,7 +414,7 @@ trait VernacularParser extends TokenParsers  with VernacularSyntax {
     )
   
   def qualid : Parser[QualId] = ident~rep(accessIdent) ^^ {
-    case id~rest => QualId(StringName(id.chars) :: rest.map({(aID) => StringName(aID.chars)}))
+    case id~rest => QualId(StringName(id.chars) :: rest.map({ (aID) => StringName(aID.chars) }))
   }
   
   def depRetType : Parser[DepRetType] =
@@ -421,7 +423,7 @@ trait VernacularParser extends TokenParsers  with VernacularSyntax {
     }
   
   def patternMatch : Parser[Term] = keyword("match")~>(
-    (((rep1sep(matchItem, delim(","))~opt(keyword("return")~>term))<~ keyword("with"))~//missing return type
+    (((rep1sep(matchItem, delim(","))~opt(keyword("return")~>term))<~ keyword("with"))~ //TODO: missing return type
      opt(delim("|")) ~ repsep(matchEquation, delim("|")))<~keyword("end")
   ) ^^ {
     case items~retn~_~equations => Match(items, retn, equations)
@@ -484,9 +486,9 @@ trait VernacularParser extends TokenParsers  with VernacularSyntax {
   )
   
   def dot : Parser[lexical.Token] = elem("period", (a : lexical.Token) => a match {
-      case lexical.Delim(".") => true
-      case _ => false
-    })
+    case lexical.Delim(".") => true
+    case _ => false
+  })
   
   def assumption : Parser[Sentence] =
     assumptionKeyword~(assum | rep(inParens(assum)))<~dot ^^ {
@@ -503,7 +505,7 @@ trait VernacularParser extends TokenParsers  with VernacularSyntax {
   | ident("Variables")
   | ident("Hypothesis")
   | ident("Hypotheses")
-  ) ^^ {case id => StringName(id.chars)})
+  ) ^^ { case id => StringName(id.chars) })
   
   def assum : Parser[Assumption] = rep1(ident)~delim(":")~term ^^ {
     case ids~_~t => Assumption(ids.map(id=>StringName(id.chars)), t)
@@ -560,15 +562,18 @@ trait VernacularParser extends TokenParsers  with VernacularSyntax {
       | ident("Proposition")
       | ident("Definition")
       | ident("Example")
-      ) ^^ {kwd => StringName(kwd.chars)}
+      ) ^^ { kwd => StringName(kwd.chars) }
     )
   
+  def proofEnd : Parser[Any] =
+    proofEnders.map(ident).foldRight(failure("no matching end token") : Parser[Any]) { (p1, p2) => p1 | p2 }
+
   def proof : Parser[Sentence] = 
-    ident("Proof")~dot~proofBody~(ident("Qed") | ident("Defined") | ident("Admitted")) ^^ {case _ => Proof()}
+    ident("Proof")~dot~proofBody~proofEnd~dot ^^ { case _ => Proof() }
   
   def proofBody : Parser[Any] =
     elem("tactic", {
-      case lexical.Ident(name) if name != "Qed" && name != "Defined" && name != "Admitted" => true
+      case lexical.Ident(name) if !proofEnders.contains(name) => true
       case _ => false
     })~rep(ident | delim)~dot
     

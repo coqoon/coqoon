@@ -793,7 +793,7 @@ class CoqContentOutlinePage extends ContentOutlinePage {
       Console.println("getChildren" + obj)
       obj match {
         case something : VernacularRegion => something.getOutline.toArray
-        case something : FileEditorInput => root.getOutline.toArray
+        case something : FileEditorInput => if (root == null) Array[AnyRef]() else root.getOutline.toArray
         case _ => Array[AnyRef]()
       }
     }

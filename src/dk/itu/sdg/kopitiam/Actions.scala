@@ -107,11 +107,11 @@ object ActionDisabler {
   }
 }
 
-class CoqUndoAction extends KAction {
-  val endkeys = List("End", "Qed", "Admitted", "Defined")
-
+import dk.itu.sdg.coqparser.VernacularReserved
+class CoqUndoAction extends KAction with VernacularReserved {
+  
   def lastqed (content : String, off : Int) : Int = {
-    val lks = endkeys.map(content.indexOf(_, off)).filterNot(_ == -1)
+    val lks = proofEnders.map(content.indexOf(_, off)).filterNot(_ == -1)
     if (lks.length == 0)
       -1
     else
