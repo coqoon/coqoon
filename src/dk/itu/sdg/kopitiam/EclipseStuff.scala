@@ -117,8 +117,9 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
     	  doc
         }
       else
-          document
-    }
+        document
+    } else
+        null
   }
   
   def translate (s : String) : String = {
