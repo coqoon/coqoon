@@ -100,23 +100,25 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
 
   import org.eclipse.ui.part.FileEditorInput
   override def getDocument (ele : Object) : IDocument = {
-    Console.println(ele)
-    assert(ele.isInstanceOf[FileEditorInput])
-    val element = ele.asInstanceOf[FileEditorInput]
-    val document = super.getDocument(element)
-    val nam = element.getName
-    if (nam.endsWith(".java"))
-      if (EclipseTables.StringToDoc.contains(nam))
-        EclipseTables.StringToDoc(nam)
-      else {
-        val doc = new Document(translate(document.get))
-    	Console.println("adding doc " + nam + " mapping into " + doc + " into table")
-    	EclipseTables.StringToDoc += nam -> doc
-    	//doc.addDocumentListener(CoqJavaDocumentChangeListener)
-    	doc
-      }
-    else
-      document
+    if (ele != null) {
+      Console.println(ele)
+      assert(ele.isInstanceOf[FileEditorInput])
+      val element = ele.asInstanceOf[FileEditorInput]
+      val document = super.getDocument(element)
+      val nam = element.getName
+      if (nam.endsWith(".java"))
+        if (EclipseTables.StringToDoc.contains(nam))
+          EclipseTables.StringToDoc(nam)
+        else {
+          val doc = new Document(translate(document.get))
+          Console.println("adding doc " + nam + " mapping into " + doc + " into table")
+    	  EclipseTables.StringToDoc += nam -> doc
+    	  //doc.addDocumentListener(CoqJavaDocumentChangeListener)
+    	  doc
+        }
+      else
+          document
+    }
   }
   
   def translate (s : String) : String = {
