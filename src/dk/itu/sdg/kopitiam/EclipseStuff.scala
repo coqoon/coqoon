@@ -46,10 +46,14 @@ class CoqEditor extends TextEditor {
         if (getEditorInput() != null)
           outlinePage.setInput(getEditorInput())
       }
-      return outlinePage;
+      outlinePage;
     }
-        
-    return super.getAdapter(required);
+    else super.getAdapter(required);
+  }
+  
+  override def editorSaved() : Unit = {
+    if (outlinePage != null) outlinePage.update()
+    super.editorSaved()
   }
 }
 
@@ -114,7 +118,7 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
     else
       document
   }
-
+  
   def translate (s : String) : String = {
     //Console.println("translating " + s)
     JavaToCoq.parse(new CharArrayReader(s.toArray))
@@ -205,12 +209,35 @@ object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
 //object CoqDamageRepairer extends DefaultDamageRepairer {
 //}
 
+import org.eclipse.jface.text.reconciler.IReconcilingStrategy
+class CoqOutlineReconcilingStrategy extends IReconcilingStrategy {
+  import org.eclipse.jface.text.{IDocument, IRegion}
+  import org.eclipse.swt.widgets.Display
+  import org.eclipse.jface.text.reconciler._
+  import org.eclipse.ui.views.contentoutline.ContentOutlinePage
+  
+  var document : IDocument = null
+  
+  def reconcile (region : DirtyRegion, subregion : IRegion) : Unit = ()
+  
+  def reconcile (partition : IRegion) : Unit = {
+    println("Reconciling " + partition)
+  }
+  
+  def setDocument (doc : IDocument) : Unit = {
+    document = doc
+  }
+  
+}
+
+
 import org.eclipse.jface.text.source.SourceViewerConfiguration
 
 object CoqSourceViewerConfiguration extends SourceViewerConfiguration {
   import org.eclipse.jface.text.presentation.{IPresentationReconciler, PresentationReconciler}
   import org.eclipse.jface.text.rules.DefaultDamagerRepairer
   import org.eclipse.jface.text.{TextAttribute,IDocument}
+  import org.eclipse.jface.text.reconciler.{IReconciler, MonoReconciler}
   import org.eclipse.swt.graphics.{Color,RGB}
   import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.text.source.ISourceViewer
@@ -223,6 +250,12 @@ object CoqSourceViewerConfiguration extends SourceViewerConfiguration {
     assistant
   }
 
+  override def getReconciler (v : ISourceViewer) : IReconciler = {
+    val strategy = new CoqOutlineReconcilingStrategy
+    val reconciler = new MonoReconciler(strategy, false)
+    reconciler
+  }
+  
   override def getPresentationReconciler (v : ISourceViewer) : IPresentationReconciler = {
     val pr = new PresentationReconciler
     println("About to create damager/repairer")
@@ -711,21 +744,21 @@ class CoqContentOutlinePage extends ContentOutlinePage {
   }
   
   var input : Any = null // TODO: Make into less of a direct Java port
-  def setInput (arg : Any) : Unit = {
+  def setInput (arg : AnyRef) : Unit = {
     input = arg
     update()
   }
   def update () : Unit = {
     println("Called update")
-    val viewer : TreeViewer = getTreeViewer();
+    val viewer : TreeViewer = getTreeViewer()
     
     if (viewer != null) {
-      val control : Control = viewer.getControl();
+      val control : Control = viewer.getControl()
       if (control != null && !control.isDisposed()) {
-        control.setRedraw(false);
-        viewer.setInput(input);
-        viewer.expandAll();
-        control.setRedraw(true);
+        control.setRedraw(false)
+        viewer.setInput(input)
+        viewer.expandAll()
+        control.setRedraw(true)
       }
     }
   }
@@ -752,15 +785,15 @@ class CoqContentOutlinePage extends ContentOutlinePage {
     }
     
     def hasChildren (obj : Any) : Boolean = obj match {
-      case something : VernacularRegion if something.hasSubRegions => true
+      case something : VernacularRegion if something.getOutline.length > 0 => true
       case _ => false
     }
     
     def getChildren (obj : Any) : Array[AnyRef] = {
       Console.println("getChildren" + obj)
       obj match {
-        case something : VernacularRegion => something.subRegions.toArray
-        case something : FileEditorInput => root.subRegions.toArray
+        case something : VernacularRegion => something.getOutline.toArray
+        case something : FileEditorInput => root.getOutline.toArray
         case _ => Array[AnyRef]()
       }
     }
@@ -790,7 +823,7 @@ class CoqContentOutlinePage extends ContentOutlinePage {
 
         val viewer : TreeViewer = getTreeViewer()
         viewer.setContentProvider(new ContentProvider());
-        viewer.setLabelProvider(new LabelProvider());
+        viewer.setLabelProvider(new CoqLabelProvider());
         viewer.addSelectionChangedListener(this);
 
         if (input != null)
@@ -798,3 +831,4 @@ class CoqContentOutlinePage extends ContentOutlinePage {
     }
     
 }
+

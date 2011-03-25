@@ -8,6 +8,8 @@ trait VernacularRegion extends Positional with Product {
   val outline = false
   def outlineName = "<no name>"
   
+  def getOutline = subRegions.filter(_.outline)  
+  
   lazy val subRegions : Stream[VernacularRegion] = subRegions(productIterator.toStream)
   private def subRegions (fields : Stream[Any]) : Stream[VernacularRegion] =
     fields match {
@@ -52,14 +54,20 @@ trait GallinaSyntax {
     annotation : Option[StringName],
     `type` : Option[Term],
     rhs : Term
-  ) extends VernacularRegion
+  ) extends VernacularRegion {
+    override val outline = true
+    override def outlineName = ident.name
+  }
   
   case class CofixBody (
     ident : StringName,
     binders : List[Binder],
     `type` : Option[Term],
     rhs : Term
-  ) extends VernacularRegion
+  ) extends VernacularRegion {
+    override val outline = true
+    override def outlineName = ident.name
+  }
   
   case class DepRetType (name : Option[Name], returnType : Term) extends VernacularRegion
   
@@ -113,14 +121,20 @@ trait VernacularSyntax extends GallinaSyntax {
     override def outlineName = keyword.name
   }
   case class DefinitionSentence (keyword : StringName, ident : StringName, binders : List[Binder], `type` : Option[Term], body : Term) extends Sentence {
-    override def outlineName = ident.name
+    override def outlineName = keyword.name + " " +ident.name
   }
   case class InductiveSentence (keyword : StringName, bodies : List[IndBody]) extends Sentence {
-    override def outlineName = keyword.name
+    override def outlineName = keyword.name + " " + bodies.map(_.name.name).mkString(", ")
   }
-  case class FixpointSentence (fixpoints : List[FixBody]) extends Sentence
-  case class CofixpointSentence (cofixpoints : List[CofixBody]) extends Sentence
-  case class AssertionSentence (keyword : StringName, name : StringName, binders : List[Binder], `type` : Term) extends Sentence
+  case class FixpointSentence (fixpoints : List[FixBody]) extends Sentence {
+    override def outlineName = "Fixpoint " + fixpoints.map(_.ident .name).mkString(", ")
+  }
+  case class CofixpointSentence (cofixpoints : List[CofixBody]) extends Sentence {
+    override def outlineName = "Cofixpoint " + cofixpoints.map(_.ident .name).mkString(", ")
+  }
+  case class AssertionSentence (keyword : StringName, name : StringName, binders : List[Binder], `type` : Term) extends Sentence {
+    override def outlineName = keyword.name + " " + name.name
+  }
   case class Proof (/* TODO : Represent proof body */) extends Sentence {
     override def outlineName = "Proof"
   }
@@ -133,7 +147,7 @@ trait VernacularSyntax extends GallinaSyntax {
   /* This representation of modules is a bare minimum - it throws out useful information! */
   case class Module (name : StringName, contents : List[VernacularRegion]) extends VernacularRegion {
     override val outline = true
-    override def outlineName = name.name
+    override def outlineName = "Module " + name.name
   }
   
   case class VernacularDocument (contents : List[VernacularRegion]) extends VernacularRegion
