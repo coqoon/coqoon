@@ -730,7 +730,7 @@ import org.eclipse.ui.views.contentoutline.ContentOutlinePage
 class CoqContentOutlinePage extends ContentOutlinePage {
   import dk.itu.sdg.coqparser.VernacularRegion
   import org.eclipse.jface.text.IDocument
-  import org.eclipse.jface.viewers.{ITreeContentProvider, LabelProvider, TreeViewer, Viewer}
+  import org.eclipse.jface.viewers.{ITreeContentProvider, LabelProvider, TreeViewer, Viewer, SelectionChangedEvent, StructuredSelection}
   import org.eclipse.swt.widgets.{Composite, Control}
   import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.ui.texteditor.{IDocumentProvider, ITextEditor}
@@ -810,6 +810,23 @@ class CoqContentOutlinePage extends ContentOutlinePage {
     
   }
 
+  override def selectionChanged(event : SelectionChangedEvent) : Unit = {
+    import scala.util.parsing.input.{Position, NoPosition, OffsetPosition}
+    
+    super.selectionChanged(event)
+    
+    val selection = event.getSelection
+    
+    if (!selection.isEmpty) {
+      val sel = selection.asInstanceOf[StructuredSelection].getFirstElement.asInstanceOf[VernacularRegion]
+      sel.pos match {
+        case NoPosition => println("missing position from parser!"); textEditor.resetHighlightRange
+        case at : OffsetPosition => textEditor.setHighlightRange(at.offset, 0, true)
+        case _ => ()
+      }  
+    }
+  }
+  
   class CoqLabelProvider extends LabelProvider {
     override def getText(obj : AnyRef) : String = obj match {
       case something : VernacularRegion => something.outlineName
@@ -819,16 +836,16 @@ class CoqContentOutlinePage extends ContentOutlinePage {
   
   override def createControl(parent : Composite) : Unit = {
 
-        super.createControl(parent)
+    super.createControl(parent)
 
-        val viewer : TreeViewer = getTreeViewer()
-        viewer.setContentProvider(new ContentProvider());
-        viewer.setLabelProvider(new CoqLabelProvider());
-        viewer.addSelectionChangedListener(this);
+    val viewer : TreeViewer = getTreeViewer()
+    viewer.setContentProvider(new ContentProvider())
+    viewer.setLabelProvider(new CoqLabelProvider())
+    viewer.addSelectionChangedListener(this)
 
-        if (input != null)
-            viewer.setInput(input);
-    }
-    
+    if (input != null)
+      viewer.setInput(input)
+  }
+  
 }
 
