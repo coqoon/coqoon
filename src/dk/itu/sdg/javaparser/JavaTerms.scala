@@ -25,6 +25,8 @@ trait JavaTerms
   case class JInterface (id : Term, jtype : Option[Any], interfaces : Option[Any], body : List[Any]) extends Term
   case class Throws (exceptions : List[QualId]) extends Term
 
+  case class BodyDeclaration (modifiers : List[Modifier], x : Any) extends Term
+
   case class MethodDeclarator (parameters : Option[Any], throws : List[Throws], body : Any) extends Term
 
   case class MethodDeclaration (id : Term, jtype : Any, parameters : Option[Any], throws : List[Throws], body : Any) extends Term

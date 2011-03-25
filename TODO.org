@@ -1,3 +1,6 @@
+SCALA style guide
+mkString
+
 unreliable with keyboard shortcuts -> look whether in action or not (otherwise risk error messages from coq)
 marker for coqposition
 static methods are now supported by coq formalization! ~~> remember modifiers of definitions (public/private/static/...)

@@ -248,7 +248,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
   def classBodyDeclaration =
     ( ";"
      | opt("static") ~ block
-     | rep(modifier) ~ memberDecl
+     | rep(modifier) ~ memberDecl ^^ BodyDeclaration
     )
   def memberDecl =
     ( genericMethodOrConstructorDecl

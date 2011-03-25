@@ -6,6 +6,18 @@ object ClassTable {
   import scala.collection.mutable.HashMap
   val classtable = new HashMap[String,(Boolean, Option[String], HashMap[String,String], HashMap[String,(String,HashMap[String,String],HashMap[String,String])])]()
   //Class -> (Interface?, Outer, FieldName -> Type, MethodName -> (Returntype, LocalVar -> Type, argument -> type)
+  val modtable = new HashMap[(String,String),List[String]]()
+  //(Class, id) -> mods
+  def setModifiers (classid : String, id : String, mod : List[String]) = {
+    modtable += (classid, id) -> mod
+  }
+
+  def getModifiers (classid : String, id : String) : List[String] = {
+    if (modtable.contains((classid, id)))
+      modtable((classid, id))
+    else
+      List[String]()
+  }
 
   import scala.collection.mutable.ListBuffer
   val spectable = new HashMap[String, (HashMap[String,(String,String)], HashMap[String,ListBuffer[String]])]()
@@ -16,6 +28,7 @@ object ClassTable {
   def empty () : Unit = {
     classtable.clear
     spectable.clear
+    modtable.clear
     gspecs.clear
     gspecs += "TOP" -> new ListBuffer[String]()
     gspecs += "PRELUDE" -> new ListBuffer[String]()
@@ -112,10 +125,10 @@ object ClassTable {
   }
 
   def isMethodStatic (classname : String, methodname : String, args : List[String]) : Boolean = {
-    if (classtable.contains(classname))
-      //classtable(classname)._4(methodname)... XXX: implement!
-      false
-    else
+    if (classtable.contains(classname)) {
+      Console.println("checking static of " + getModifiers(classname, methodname))
+      getModifiers(classname, methodname).contains("static")
+    } else
       Modifier.isStatic(getJClass(classname).getMethod(methodname, args.map(getJClass) : _*).getModifiers)
   }
 
@@ -213,6 +226,7 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
       case x~y => unpackR(x) + unpackR(y)
       case QualId(xs) => "\"" + xs.map(unpackR).reduceLeft(_ + "." + _) + "\"" //XXX: ???
       case Some(x) => unpackR(x)
+      case Modifier(x) => unpackR(x)
       case Expr(x) => unpackR(x)
       case PrimaryExpr(x) => unpackR(x)
       case PostFixExpression(x) => unpackR(x)
@@ -407,6 +421,20 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
   def transform (x : Any) : Option[JStatement] = {
     //Console.println("transform " + x)
     x match {
+      case BodyDeclaration(mods, x) =>
+        Console.println("bodydecl " + mods)
+        val ted = transform(x)
+        ted match {
+          case Some(y) =>
+            val mod = mods.map(unpackR)
+            y match {
+              case JFieldDefinition(id, jtype) => ClassTable.setModifiers(classid, id, mod)
+              case JMethodDefinition(id, clasid, args, body) => ClassTable.setModifiers(classid, id, mod)
+              case x => Console.println("unexpected " + x + " during transformation of a bodydecl")
+            }
+          case None => 
+        }
+        ted
       case Modifier(_) => None
       case None => None
       case Some(x) => transform(x)

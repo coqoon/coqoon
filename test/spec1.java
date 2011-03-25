@@ -174,7 +174,7 @@ class FacC {
 
   }
 
-  public int fac (int n) {
+  public static int fac (int n) {
     Coq.requires("<pure> (ege \"n\" 0) </\> <pure> (((\"this\":expr) ::: \"FacC\"))");
     Coq.ensures("<pure> ((\"ret\":expr) ·=· (fac_Z (\"n\":expr)))");
     int x;
