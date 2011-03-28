@@ -280,25 +280,24 @@ class TranslateAction extends KAction {
   object JavaTC extends JavaAST { }
 
   override def execute (ev : ExecutionEvent) : Object = {
-    Console.println("translate!")
+    Console.println("execute translation!")
     val sel = HandlerUtil.getActiveMenuSelection(ev).asInstanceOf[IStructuredSelection]
     val fe = sel.getFirstElement
     Console.println("fe is " + fe + " type " + fe.asInstanceOf[AnyRef].getClass)
-    if (fe.isInstanceOf[IFile]) {
-      val fil = fe.asInstanceOf[IFile]
-      val nam = fil.getName
-      if (nam.endsWith(".java")) {
-        val trfi = fil.getProject.getFile(nam + ".v") //TODO: find a suitable location!
-        if (! trfi.exists) {
-          val is = StreamReader(new InputStreamReader(fil.asInstanceOf[IFile].getContents))
-          trfi.create(new ByteArrayInputStream(JavaTC.parse(is).getBytes), IResource.NONE, null)
-          Console.println("added a new file")
-        } else
-          Console.println(".v already existed, maybe retranslate?")
-      //register in table
-      }
-    }
+    if (fe.isInstanceOf[IFile])
+      translate(fe.asInstanceOf[IFile])
     null
+  }
+
+  def translate (file : IFile) : Unit = {
+    val nam = file.getName
+    if (nam.endsWith(".java")) {
+      val trfi = file.getProject.getFile(nam + ".v") //TODO: find a suitable location!
+      val is = StreamReader(new InputStreamReader(file.getContents))
+      trfi.create(new ByteArrayInputStream(JavaTC.parse(is).getBytes), IResource.NONE, null)
+      Console.println("translated file " + nam)
+    } else
+      Console.println("wasn't a java file")
   }
 
   override def start () : Boolean = false

@@ -43,14 +43,22 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   override def partActivated (part : IWorkbenchPartReference) : Unit = {
     val ed = part.getPart(false)
     Console.println("activated: " + ed)
-    if (ed.isInstanceOf[CoqEditor])
+    if (ed.isInstanceOf[CoqEditor]) {
+      val txt = ed.asInstanceOf[CoqEditor]
+      val edi = txt.getEditorInput
+      val nam = edi.getName
+      val doc = txt.getDocumentProvider.getDocument(edi)
+      if (! EclipseTables.StringToDoc.contains(nam)) {
+        Console.println("inserted " + nam + " into String2Doc table")
+        EclipseTables.StringToDoc += nam -> doc
+      }
       if (activeeditor != ed) {
         //Console.println("part activated " + ed)
         ActionDisabler.disableAll
         ActionDisabler.enableStart
       } else
         ActionDisabler.enableMaybe
-    else
+    } else
       ActionDisabler.disableAll
   }
 
@@ -87,8 +95,8 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     if (EclipseTables.DocToString.contains(doc)) {
       val docstring = EclipseTables.DocToString(doc)
       Console.println("I know it's " + docstring + " you changed")
-      if (EclipseTables.StringToDoc.contains(docstring)) {
-        val coq = EclipseTables.StringToDoc(docstring)
+      if (EclipseTables.StringToDoc.contains(docstring + ".v")) {
+        val coq = EclipseTables.StringToDoc(docstring + ".v")
         val java = doc.get
         Console.println("found coq buffer for same file!")
         CoqJavaDocumentProvider.up(coq, java)
