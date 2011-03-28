@@ -39,7 +39,7 @@ class CoqEditor extends TextEditor {
   }
   
   var outlinePage : CoqContentOutlinePage = null
-  override def getAdapter(required : java.lang.Class[_]) : AnyRef = {
+  override def getAdapter (required : java.lang.Class[_]) : AnyRef = {
     if (required.isInterface && required.getName.endsWith("IContentOutlinePage")) {
       if (outlinePage == null) {
         outlinePage = new CoqContentOutlinePage(getDocumentProvider(), this)
@@ -51,7 +51,7 @@ class CoqEditor extends TextEditor {
     else super.getAdapter(required);
   }
   
-  override def editorSaved() : Unit = {
+  override def editorSaved () : Unit = {
     if (outlinePage != null) outlinePage.update()
     super.editorSaved()
   }
@@ -783,8 +783,10 @@ class CoqContentOutlinePage extends ContentOutlinePage {
 
     
     def inputChanged(viewer : Viewer, oldInput : Any, newInput : Any) : Unit = {
-      println("inputChanged")
-      parse(documentProvider.getDocument(newInput))
+      if (newInput != null) {
+        println("inputChanged")
+        parse(documentProvider.getDocument(newInput))
+      }
     }
     
     def hasChildren (obj : Any) : Boolean = obj match {

@@ -3,7 +3,6 @@ mkString
 
 unreliable with keyboard shortcuts -> look whether in action or not (otherwise risk error messages from coq)
 marker for coqposition
-static methods are now supported by coq formalization! ~~> remember modifiers of definitions (public/private/static/...)
 ignore Coq class in java output (at least partially)
 * General
 ** remove the introduced global state - DocumentState - plus everything that depends on that
@@ -48,6 +47,7 @@ ignore Coq class in java output (at least partially)
 ** foo.bar.baz() doesn't work properly (need to introduce multiple temporary variables and register these)
 ** error on multiple returns and overloading of the same method name
 *** at least warnings for eclipse and support for refactoring/fixing these
+** constructors
 ** static { } blocks
 ** field initializers
 *** assign values in constructor
