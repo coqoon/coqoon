@@ -15,10 +15,10 @@ class FacC {
             "Open Scope string_scope." +
             "Open Scope list_scope.");
     Coq.def(Coq.M.PROGRAM,
-            "Lemma unique_names :" +
+            "Lemma unique_method_names :" +
             "      forall C m mrec," +
             "      method_lookup Prog C m mrec ->" +
-            "      NoDup (\"this\" :: m_params mrec)." +
+            "      NoDup (m_params mrec)." +
             "Proof." +
             "  search (search_unique_names Prog)." +
             "Qed.");
@@ -49,7 +49,6 @@ class FacC {
             "      | Lt => 0" +
             "      | _ => Z_of_nat (fac (Zabs_nat n))" +
             "  end.");
-    Coq.def(Coq.M.BEFORESPEC, "Definition fac_Z : expr -> expr := sm_un (fun v => vint (facZ (val_to_int v))).");
 
     Coq.def(Coq.M.BEFORESPEC,
             "Lemma fac_Z_nat : forall n," +
@@ -101,6 +100,8 @@ class FacC {
             "  intuition." +
             "Qed.");
 
+    Coq.def(Coq.M.BEFORESPEC, "Definition fac_Z : expr -> expr := sm_un (fun v => vint (facZ (val_to_int v))).");
+
 //inside Fac_spec
     Coq.def(Coq.M.AFTERSPEC,
             "Lemma substs_fac : forall {e:expr} {es}," +
@@ -151,14 +152,13 @@ class FacC {
             "    frame  (expr_pure (egt (vvar_expr \"n\") (val_to_int 0%Z)))." +
             "    - asn_solve. (* TODO: Fix reflection to kill this *)" +
             "    (* TODO: fix forward and kill the following *)" +
-            "    eapply roc; [| | apply rule_call_old]; [" +
-            "          subst_h |" +
-            "            apply xist_asnEIL; intro; subst_h" +
-            "        ]." +
-            "    unfold fac_pre. subst_h." +
-            "    asn_solve." +
-            "    solve [unentail; intuition]." +
-            "    unfold fac_post. subst_h. subst_h. reflexivity." +
+            "    eapply rule_static_complete." +
+            "    - unfold FacC_spec; reflexivity." +
+            "    - unfold fac_pre. subst_h." +
+            "      etransitivity; [| rewrite sc_asnC; apply true_asn_unitL]." +
+            "      solve [unentail; intuition]." +
+            "    - apply xist_asnEIL; intros v; unfold fac_post. subst_h. subst_h." +
+            "      rewrite sc_asnC; apply true_asn_unitR." +
             "    forward." +
             "    subst_h. unentail. intros. intuition. subst." +
             "    rewrite Fac_spec.facZ_step. reflexivity. assumption." +
@@ -166,7 +166,7 @@ class FacC {
             "    eapply rule_assign_fwd2; [apply xist_asnEIL; intro; subst_h; asn_unify]." +
             "    unentail; simpl in *." +
             "    destruct (Z_dec (val_to_int k) 0)%Z as [[HLt | HGt] | HEq];" +
-            "    intros [[HGe Heq] HLe]." +
+            "    intros [HGe HLe]." +
             "  - apply Zlt_not_le in HLt; intuition." +
             "  - apply Zgt_not_le in HGt; apply Zge_le in HGe; intuition." +
             "  rewrite HEq; reflexivity." +
@@ -175,7 +175,7 @@ class FacC {
   }
 
   public static int fac (int n) {
-    Coq.requires("<pure> (ege \"n\" 0) </\> <pure> (((\"this\":expr) ::: \"FacC\"))");
+    Coq.requires("<pure> (ege \"n\" 0)");
     Coq.ensures("<pure> ((\"ret\":expr) ·=· (fac_Z (\"n\":expr)))");
     int x;
     if (n > 0)
