@@ -143,25 +143,6 @@ trait CoqOutputter extends JavaToSimpleJava {
 	 (free, ret)
   }
 
-  def update (b : List[JStatement]) : (String, Int, Int) = {
-	  var res = ""
-	  b foreach {
-	 	  case JClassDefinition(id, supers, inters, body, par) =>
-	 	   myclass = id
-	 	   body foreach {
-	 	  	   case JMethodDefinition(name, typ, params, body) =>
-	 	  	     mymethod = name
-	 	  	     val (x0, x1, x2) = getBodyHelper(body, name + "_body")
-	 	  	     res = x0
-	 	  	   case x =>
-	 	   }
-	 	  case x =>
-	  }
-	  val realoldlen = oldlen
-	  oldlen = res.length
-	  (res, offset, realoldlen)
-  }
-  
   def getBodyHelper (xs : List[JStatement], myname : String) : (String, List[String], String) = {
     ret = "myreturnvaluedummy"
     freevars = Set[String]()
@@ -175,9 +156,6 @@ trait CoqOutputter extends JavaToSimpleJava {
     (defi, freevars.toList, "var_expr \"" + ret + "\"")
   }
   
-  var offset : Int = 0
-  var oldlen : Int = 0
-  
   def classMethods (body : List[JStatement]) : List[Pair[String,String]] = {
     body.flatMap {
       case JMethodDefinition(name, typ, params, body) =>
@@ -185,11 +163,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         mymethod = name
         val bodyref = name + "_body"
         val args = getArgs(params)
-        offset = outp.map(_.length).reduceLeft(_ + _)
-        Console.println("printing method " + name + " start: " + offset)
         val (local, returnvar) = getBody(body, bodyref)
-        oldlen = outp.map(_.length).reduceLeft(_ + _) - offset
-        Console.println("   length: " + oldlen)
         outp ::= "\nDefinition " + name + "M := Build_Method (" + printArgList(args) + ") " + bodyref + " (" + returnvar + ")."
         Some(("\"" + name + "\"", name + "M"))
       case _ => None
