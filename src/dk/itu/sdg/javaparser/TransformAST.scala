@@ -588,7 +588,15 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
 
   def doit (a : Any) : String = {
     val w = doitHelper(a)
-    coqoutput(w).reduceLeft(_ + "\n" + _)
+    coqoutput(w, true).reduceLeft(_ + "\n" + _)
     //workset ++ main
   }
+
+  def doitNoSpec (a : Any) : (String, String) = {
+    val w = doitHelper(a)
+    val re = coqoutput(w, false)
+    val prog = re.takeWhile(! _.contains("_spec.\nImport ")).reduceLeft(_ + "\n" + _)
+    val spec = re.dropWhile(! _.contains("_spec.\nImport ")).drop(1).reduceLeft(_ + "\n" + _)
+    (prog, spec)
+  }    
 }

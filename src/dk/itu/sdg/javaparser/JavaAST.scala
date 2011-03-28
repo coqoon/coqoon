@@ -39,6 +39,11 @@ trait JavaAST extends JavaParser { // with CoqOutputter {
   def parse(r: Reader[Char]) : String = {
     FinishAST.doit(parseH(r))
   }
+
+  def parseNoSpec(r: Reader[Char]) : (String, String) = {
+    FinishAST.doitNoSpec(parseH(r))
+  }
+
   def parseH(r: Reader[Char]) : Any = {
     ClassTable.empty
     //Console.println("scanning " + r)

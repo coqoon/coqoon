@@ -129,12 +129,19 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
   
   import dk.itu.sdg.javaparser.FinishAST
   def up (coq : IDocument, s : String) : Unit = {
-    //Console.println("updating " + s)
-    //val (dat, off, len) = FinishAST.update(FinishAST.doitHelper(JavaToCoq.parseH(new CharArrayReader(s.toArray))))
-    val dat = translate(s)
-    //Console.println("received at offset " + off + "(old len " + len + ") data[" + dat.length + "] " + dat)
-    coq.set(dat)
-    //replace(off, len, dat) //somehow off-by-two...
+    val (prog, spec) = JavaToCoq.parseNoSpec(new CharArrayReader(s.toArray))
+    //Console.println("got prog " + prog + " and spec " + spec)
+    val old = coq.get
+    val pstart = old.indexOf(prog.substring(0, 15))
+    val proend = prog.lastIndexOf("End ")
+    val pend = old.indexOf(prog.substring(proend, prog.length))
+    Console.println("old start " + pstart + " old end " + pend) //+ ":: " + old.substring(pstart, pend + (prog.length - proend)))
+    coq.replace(pstart, pend + (prog.length - proend) - pstart, prog)
+    val sstart = old.indexOf(spec.substring(0, spec.indexOf(" :=")))
+    val specend = spec.lastIndexOf("}}.")
+    val send = old.indexOf(spec.substring(specend, spec.length))
+    Console.println("old spec start " + sstart + " old spec end " + send) // + ":: " + old.substring(sstart, send + (spec.length - specend)))
+    coq.replace(sstart + 1, send + (spec.length - specend) - sstart, spec)
   }
 }
 

@@ -198,10 +198,11 @@ trait CoqOutputter extends JavaToSimpleJava {
 
   private var outp : List[String] = null
 
-  def coqoutput (xs : List[JStatement]) : List[String] = {
+  def coqoutput (xs : List[JStatement], spec : Boolean) : List[String] = {
     outp = List[String]()
     val name = "Fac" //TODO: that's hardcoded
-    outp = ClassTable.getCoq("PRELUDE") ++ outp
+    if (spec)
+      outp = ClassTable.getCoq("PRELUDE") ++ outp
 
     outp ::= "Module " + name + " <: PROGRAM."
     xs.foreach(x => x match {
@@ -221,10 +222,12 @@ Definition """ + id + """ :=
     })
     val cs = printFiniteMap(ClassTable.getClasses.map(x => ("\"" + x + "\"", x)))
     outp ::= "\nDefinition Prog := Build_Program " + cs + "."
-    outp = ClassTable.getCoq(myclass, "PROGRAM") ++ outp
+    //if (spec)
+      outp = ClassTable.getCoq(myclass, "PROGRAM") ++ outp
     outp ::= "End " + name + "."
     outp ::= "Module " + name + "_spec.\nImport " + name + ".\n"
-    outp = ClassTable.getCoq(myclass, "BEFORESPEC") ++ outp
+    if (spec)
+      outp = ClassTable.getCoq(myclass, "BEFORESPEC") ++ outp
     //method specs go here
     val specs = ClassTable.getSpecs(myclass)
     specs.keys.foreach(x => {
@@ -235,9 +238,11 @@ Definition """ + id + """ :=
       "\"" + myclass + "\" :.: \"" + x + "\" |->  (" + printArgList(ClassTable.getArguments(myclass, x).keys.toList) + ") {{ " + x + "_pre }}-{{ \"ret\", " + x + "_post }}")
     val spstr = if (spcs.toList.length == 0) "" else spcs.reduceLeft(_ + "\n    [/\\]\n" + _)
     outp ::= "Definition " + myclass + "_spec := " + spstr + "."
-    outp = ClassTable.getCoq(myclass, "AFTERSPEC") ++ outp
-    outp ::= "End " + name + "_spec."
-    outp = ClassTable.getCoq("TOP") ++ outp
+    if (spec) {
+      outp = ClassTable.getCoq(myclass, "AFTERSPEC") ++ outp
+      outp ::= "End " + name + "_spec."
+      outp = ClassTable.getCoq("TOP") ++ outp
+    }
     outp ::= "" //we need a newline...
     outp.reverse
   }
