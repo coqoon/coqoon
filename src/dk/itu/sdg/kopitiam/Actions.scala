@@ -266,3 +266,44 @@ class RestartCoqAction extends KAction {
   override def end () : Boolean = false
 }
 object RestartCoqAction extends RestartCoqAction { }
+
+class TranslateAction extends KAction {
+  import org.eclipse.ui.handlers.HandlerUtil
+  import org.eclipse.jface.viewers.IStructuredSelection
+  import org.eclipse.jdt.core.ICompilationUnit
+  import org.eclipse.core.resources.{IResource,IFile}
+  import org.eclipse.core.commands.ExecutionEvent
+  import java.io.{InputStreamReader,ByteArrayInputStream}
+  import scala.util.parsing.input.StreamReader
+
+  import dk.itu.sdg.javaparser.JavaAST
+  object JavaTC extends JavaAST { }
+
+  override def execute (ev : ExecutionEvent) : Object = {
+    Console.println("translate!")
+    val sel = HandlerUtil.getActiveMenuSelection(ev).asInstanceOf[IStructuredSelection]
+    val fe = sel.getFirstElement
+    Console.println("fe is " + fe + " type " + fe.asInstanceOf[AnyRef].getClass)
+    if (fe.isInstanceOf[IFile]) {
+      val fil = fe.asInstanceOf[IFile]
+      val nam = fil.getName
+      if (nam.endsWith(".java")) {
+        val trfi = fil.getProject.getFile(nam + ".v") //TODO: find a suitable location!
+        if (! trfi.exists) {
+          val is = StreamReader(new InputStreamReader(fil.asInstanceOf[IFile].getContents))
+          trfi.create(new ByteArrayInputStream(JavaTC.parse(is).getBytes), IResource.NONE, null)
+          Console.println("added a new file")
+        } else
+          Console.println(".v already existed, maybe retranslate?")
+      //register in table
+      }
+    }
+    null
+  }
+
+  override def start () : Boolean = false
+  override def end () : Boolean = false
+  override def doit () : Unit = ()
+  override def doitH () : Unit = ()
+}
+object TranslateAction extends TranslateAction { }

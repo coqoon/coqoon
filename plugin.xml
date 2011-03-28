@@ -192,6 +192,12 @@
             id="Kopitiam.restart_coq"
             name="Restart Coq command">
       </command>
+      <command
+            defaultHandler="dk.itu.sdg.kopitiam.TranslateAction"
+            description="Translate to Coq"
+            id="Kopitiam.translatetocoq"
+            name="Translate to Coq">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.contexts">
@@ -201,6 +207,15 @@
             name="In Kopitiam"
             parentId="org.eclipse.ui.textEditorScope">
       </context>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
+        <command
+        	commandId="Kopitiam.translatetocoq">
+       	</command>
+      </menuContribution>
    </extension>
 
 </plugin>
