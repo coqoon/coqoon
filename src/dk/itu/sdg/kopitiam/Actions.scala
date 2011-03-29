@@ -229,7 +229,7 @@ class CoqStepUntilAction extends KAction {
   override def doit () : Unit = {
     //need to go back one more step
     val togo = CoqTop.findPreviousCommand(EclipseBoilerPlate.getContent, EclipseBoilerPlate.getCaretPosition + 2)
-    //Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition)
+    Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition)
     if (DocumentState.position == togo) { } else
     if (DocumentState.position < togo) {
       EclipseBoilerPlate.multistep = true

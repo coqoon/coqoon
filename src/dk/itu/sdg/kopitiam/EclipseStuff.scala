@@ -297,7 +297,7 @@ object EclipseBoilerPlate {
 
   def getCaretPosition () : Int = {
     val sel = window.getActivePage.getActiveEditor.asInstanceOf[CoqEditor].getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
-    //Console.println("cursor position is " + sel.getLength + " @" + sel.getOffset)
+    Console.println("cursor position is " + sel.getLength + " @" + sel.getOffset)
     sel.getOffset
   }
 
@@ -490,7 +490,10 @@ class CoqStepNotifier extends CoqCallback {
             walker()
             val drops = DocumentState.position + DocumentState.sendlen
             if (drops >= DocumentState.totallen || CoqTop.findNextCommand(EclipseBoilerPlate.getContent.drop(drops)) == -1)
-              fini
+              if (! undo) {
+                Console.println("in drops >= or -1 case")
+                fini
+              }
           } else
             fini
         } else
