@@ -24,7 +24,7 @@ object Main extends Application with JavaAST
     val outfile = args(0) + ".v"
     //val out = new OutputStreamWriter(new FileOutputStream(outfile), "UTF-8")
     //ParseV.parse(in)
-    val res = parse(in)
+    val res = parse(in, args(0).substring(0, args(0).indexOf(".java")))
     //out.write(res, 0, res.length)
     //out.close
   }

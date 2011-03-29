@@ -172,12 +172,20 @@ trait CoqOutputter extends JavaToSimpleJava {
 
   private var outp : List[String] = null
 
-  def coqoutput (xs : List[JStatement], spec : Boolean) : List[String] = {
+  private val unique_names : String = """
+Lemma unique_method_names :
+      forall C m mrec,
+      method_lookup Prog C m mrec ->
+      NoDup (m_params mrec).
+Proof.
+  search (search_unique_names Prog).
+Qed."""
+
+
+  def coqoutput (xs : List[JStatement], spec : Boolean, name : String) : List[String] = {
     outp = List[String]()
-    val name = "Fac" //TODO: that's hardcoded
     if (spec)
       outp = ClassTable.getCoq("PRELUDE") ++ outp
-
     outp ::= "Module " + name + " <: PROGRAM."
     xs.foreach(x => x match {
       case JInterfaceDefinition(id, inters, body) =>
@@ -196,7 +204,9 @@ Definition """ + id + """ :=
     })
     val cs = printFiniteMap(ClassTable.getClasses.map(x => ("\"" + x + "\"", x)))
     outp ::= "\nDefinition Prog := Build_Program " + cs + "."
-    //if (spec)
+    if (ClassTable.getCoq(myclass, "PROGRAM").length == 0)
+      outp ::= unique_names
+    else
       outp = ClassTable.getCoq(myclass, "PROGRAM") ++ outp
     outp ::= "End " + name + "."
     outp ::= "Module " + name + "_spec.\nImport " + name + ".\n"

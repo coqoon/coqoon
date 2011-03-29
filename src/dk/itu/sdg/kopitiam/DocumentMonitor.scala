@@ -99,9 +99,11 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         val coq = EclipseTables.StringToDoc(docstring + ".v")
         val java = doc.get
         Console.println("found coq buffer for same file!")
-        CoqJavaDocumentProvider.up(coq, java)
+        CoqJavaDocumentProvider.up(coq, java, docstring.substring(0, docstring.indexOf(".java")))
       }
     }
+    //more along the lines as (but doesn't work since EclipseBoilerPlate depends on getActivePage and getCaretPosition)
+    //val adoc = activeeditor.getDocumentProvider.getDocument(activeeditor.getEditorInput)      if (adoc == doc) {
     if (activeeditor != null && activeeditor == PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.getActiveEditor) {
       val txt = doc.get
       val len = event.getLength

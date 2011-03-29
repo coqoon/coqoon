@@ -294,7 +294,9 @@ class TranslateAction extends KAction {
     if (nam.endsWith(".java")) {
       val trfi = file.getProject.getFile(nam + ".v") //TODO: find a suitable location!
       val is = StreamReader(new InputStreamReader(file.getContents))
-      trfi.create(new ByteArrayInputStream(JavaTC.parse(is).getBytes), IResource.NONE, null)
+      if (trfi.exists)
+        trfi.delete(true, false, null)
+      trfi.create(new ByteArrayInputStream(JavaTC.parse(is, nam.substring(0, nam.indexOf(".java"))).getBytes), IResource.NONE, null)
       Console.println("translated file " + nam)
     } else
       Console.println("wasn't a java file")

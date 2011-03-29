@@ -36,12 +36,12 @@ case class JFieldAccess (variable : JExpression, field : String) extends JExpres
 trait JavaAST extends JavaParser { // with CoqOutputter {
   import scala.util.parsing.input._
 
-  def parse(r: Reader[Char]) : String = {
-    FinishAST.doit(parseH(r))
+  def parse(r: Reader[Char], name : String) : String = {
+    FinishAST.doit(parseH(r), name)
   }
 
-  def parseNoSpec(r: Reader[Char]) : (String, String) = {
-    FinishAST.doitNoSpec(parseH(r))
+  def parseNoSpec(r: Reader[Char], name : String) : (String, String) = {
+    FinishAST.doitNoSpec(parseH(r), name)
   }
 
   def parseH(r: Reader[Char]) : Any = {

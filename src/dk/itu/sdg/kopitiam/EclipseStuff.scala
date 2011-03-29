@@ -110,7 +110,7 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
         if (EclipseTables.StringToDoc.contains(nam))
           EclipseTables.StringToDoc(nam)
         else {
-          val doc = new Document(translate(document.get))
+          val doc = new Document(translate(document.get, nam.substring(0, nam.indexOf(".java"))))
           Console.println("adding doc " + nam + " mapping into " + doc + " into table")
     	  EclipseTables.StringToDoc += nam -> doc
     	  //doc.addDocumentListener(CoqJavaDocumentChangeListener)
@@ -122,14 +122,14 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
         null
   }
   
-  def translate (s : String) : String = {
+  def translate (s : String, name : String) : String = {
     //Console.println("translating " + s)
-    JavaToCoq.parse(new CharArrayReader(s.toArray))
+    JavaToCoq.parse(new CharArrayReader(s.toArray), name)
   }
   
   import dk.itu.sdg.javaparser.FinishAST
-  def up (coq : IDocument, s : String) : Unit = {
-    val (prog, spec) = JavaToCoq.parseNoSpec(new CharArrayReader(s.toArray))
+  def up (coq : IDocument, s : String, name : String) : Unit = {
+    val (prog, spec) = JavaToCoq.parseNoSpec(new CharArrayReader(s.toArray), name)
     //Console.println("got prog " + prog + " and spec " + spec)
     val old = coq.get
     val pstart = old.indexOf(prog.substring(0, 15))
@@ -141,7 +141,8 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
     val specend = spec.lastIndexOf("}}.")
     val send = old.indexOf(spec.substring(specend, spec.length))
     Console.println("old spec start " + sstart + " old spec end " + send) // + ":: " + old.substring(sstart, send + (spec.length - specend)))
-    coq.replace(sstart + 1, send + (spec.length - specend) - sstart, spec)
+    val off = if (pend + (prog.length - proend) - pstart == prog.length) 0 else 1
+    coq.replace(sstart + off, send + (spec.length - specend) - sstart, spec)
   }
 }
 
