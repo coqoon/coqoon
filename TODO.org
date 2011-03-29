@@ -1,3 +1,13 @@
+observations from SnapshotTrees.java:
+add:
+      RefBool tmp_1 = new RefBool();
+      RefBool updated = tmp_1;
+addRecursive:
+      int tmp_1 = this.stamp;
+      tmp_1 + 1;
+method init_, new Node(i, l, r) vs new Node(i) <- also new should be followed by call to init
+also, inner classes should be kept inner (how to do that in Coq?)
+
 SCALA style guide
 mkString
 
@@ -38,15 +48,16 @@ ignore Coq class in java output (at least partially)
 *** indentation
 ** step on Require... -> Error -> fix -> forward again -> not blue
 * Java side
-** operator translation (x += y --> x = x + y)
+** operator translation (x += y --> x = x + y) (Composite)
 ** types for ternary Bool ? x : y <- intersect x y
-** loop invariants
+** loop invariants (trees)
 ** proper syntax (not only a string) for pre/postcondition and loop invariants - plus completion!
 ** for loops -> translate to while
 ** foo.bar.baz() doesn't work properly (need to introduce multiple temporary variables and register these)
+** foo.bar.baz same
 ** error on multiple returns and overloading of the same method name
 *** at least warnings for eclipse and support for refactoring/fixing these
-** constructors
+** constructors (multiple, what to do in there?)
 ** static { } blocks
 ** field initializers
 *** assign values in constructor

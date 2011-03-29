@@ -145,7 +145,7 @@ trait JavaToSimpleJava {
   }
 
   def sym (t : String) : (String, Boolean) = {
-    if (tmp != null)
+    if (tmp != null && ClassTable.getLocalVar(cname, mname, tmp).equals(t))
       (tmp, false)
     else {
       val nt = Gensym.newsym
@@ -177,7 +177,9 @@ trait JavaToSimpleJava {
           (JVariableAccess(t),
            JAssignment(t, va) :: List(JBinaryExpression(oper, va, JLiteral("1"))))
       case JFieldAccess(con, f) =>
+        Console.println("extractHelper with FieldAccess " + con + " field " + f)
         val (a, i) = extractHelper(con)
+        Console.println("extracted " + a + " (" + i + ")")
         val tclass = ClassTable.getFieldType(ClassTable.getLocalVar(cname, mname, exprtotype(a)), f)
         val (t, fresh) = sym(tclass)
         if (fresh)

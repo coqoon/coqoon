@@ -107,8 +107,12 @@ object ClassTable {
             case e : ClassNotFoundException =>
               try Class.forName("java.util." + name) catch {
                 case e =>
-                  Console.println("Can't find class for " + name)
-                  null
+                  if (name.contains("<")) //poor Java, no generics at RT
+                    getJClass(name.substring(0, name.indexOf("<")))
+                  else {
+                    Console.println("Can't find class for " + name)
+                    getJClass("Object")
+                  }
               }
           }
       }
@@ -120,8 +124,22 @@ object ClassTable {
     val mclass = getLocalVar(classname, methodname, variable)
     if (classtable.contains(mclass))
       classtable(mclass)._4(mname)._1
-    else
-      getJClass(mclass).getMethod(mname, args.map(getJClass) : _*).getReturnType.getName
+    else {
+      val meth = getJClass(mclass).getMethod(mname, args.map(getJClass) : _*)
+      if (mclass.contains("<")) {
+        val ty = mclass.substring(mclass.indexOf("<") + 1, mclass.lastIndexOf(">"))
+        assert(ty.contains(",") == false) //not multiple TVs
+        val tvs = meth.getDeclaringClass.getTypeParameters
+        assert(tvs.length == 1)
+        if (meth.getGenericReturnType.toString == tvs(0).toString)
+          ty
+        else {
+          Console.println("dunno how to deal with type parameters in here: " + meth.getGenericReturnType.toString)
+          meth.getGenericReturnType.toString
+        }
+      } else
+        meth.getReturnType.getName
+    }
   }
 
   def isMethodStatic (classname : String, methodname : String, args : List[String]) : Boolean = {
@@ -133,6 +151,7 @@ object ClassTable {
   }
 
   def getFieldType (classname : String, fieldname : String) : String = {
+    Console.println("getfieldtype of " + fieldname + " in class " + classname)
     if (classtable.contains(classname))
       classtable(classname)._3(fieldname)
     else
@@ -151,7 +170,7 @@ object ClassTable {
         classtable(id)._3(name)
       //XXX: (static?) field of outer class
       else {
-        Console.println("assuming static class " + name + ", since I couldn't find id " + id + " m " + method + " n " + name + " in CT")
+        Console.println("assuming static class " + name + ", since I couldn't find id " + id + " method " + method + " name " + name + " in CT")
         name
       }
   }
@@ -379,8 +398,11 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
             ClassTable.addCoq(classid, module, arg)
           }
           None
-        } else
+        } else {
+          if (rst.length > 1)
+            Console.println("should have recursed for methodname " + rst + "(in call:" + varia + ", arguments:" + args.map(transformExpression) + ")")
           Some(JCall(varia, rst.reduceLeft(_ + "." + _), args.map(transformExpression))) //XXX: recurse
+        }
       case Return(x) => Some(JReturn(transformExpression(x)))
       case QualId(x) =>
         //Console.println("inspecting qualid: " + x)
@@ -392,12 +414,21 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
           else if (ClassTable.getFields(classid).contains(v))
             Some(JFieldAccess(JVariableAccess("this"), v))
           else {
+            //might be defined later in the source as field
+            //or might be a field of an outer class
             Console.println("got a qualid which isn't in lvars or fields " + vs + " (fields: " + ClassTable.getFields(classid) + ")(lvar: " + lvars + ", args: " + argmap + ")")
             Some(JVariableAccess(vs.reduceLeft(_ + "." + _))) //XXX: recurse
           }
-        } else
+        } else if (vs.length == 2) {
+          //XXX: check whether typeof vs(0) has a field vs(1)!
+          Some(JFieldAccess(JVariableAccess(vs(0)), vs(1)))
+        } else {
+          Console.println("all I got was this qualid, I'll try to make a fieldaccess out of it " + vs + " field: " + vs.takeRight(1)(0))
           //XXX: recurse
-          Some(JFieldAccess(JVariableAccess(vs.dropRight(1).reduceLeft(_ + "." + _)), vs.takeRight(1)(0)))
+          val pre = transformExpression(QualId(x.dropRight(1)))
+          Console.println("  managed to find out pre: " + pre)
+          Some(JFieldAccess(pre, vs.takeRight(1)(0)))
+        }
       case Lit(x) => Some(JLiteral(unpackR(x)))
       case Block(xs) =>
         val res = walk(xs)
@@ -422,7 +453,7 @@ object FinishAST extends JavaTerms with Parsers with JavaToSimpleJava with CoqOu
     //Console.println("transform " + x)
     x match {
       case BodyDeclaration(mods, x) =>
-        Console.println("bodydecl " + mods)
+        //Console.println("bodydecl " + mods)
         val ted = transform(x)
         ted match {
           case Some(y) =>

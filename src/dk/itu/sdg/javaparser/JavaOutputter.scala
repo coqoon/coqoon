@@ -31,6 +31,9 @@ trait JavaOutputter {
 
   def out (x : JStatement, ind : Int) : String = {
     x match {
+      case JInterfaceDefinition(id, is, b) =>
+        val ints = if (is.length > 0) " extends " + is.mkString(", ") else ""
+        indent(ind) + "interface " + id + ints + "{\n" + mr(mapi(b, ind + 2)) + "\n" + indent(ind) + "}"
       case JClassDefinition(id, s, i, b, o) =>
         myclass = id
         val specp = ClassTable.getCoq("PRELUDE").reverse.map(x => coqout("PRELUDE", x, 4))
@@ -91,16 +94,20 @@ trait JavaOutputter {
       case JPostfixExpression(op, e) => indent(ind) + out(e, 0) + op
       case JCall(v, f, as) =>
         val va = if (v != "this") v + "." else ""
-        indent(ind) + va + f + "(" + red(mapi(as, 0), ",") + ")"
+        indent(ind) + va + f + "(" + red(mapi(as, 0), ", ") + ")"
       case JNewExpression(t, a) =>
-        indent(ind) + "new " + t + "(" + red(mapi(a, 0), ",") + ")"
+        indent(ind) + "new " + t + "(" + red(mapi(a, 0), ", ") + ")"
       case JLiteral(x) =>
         try {
           indent(ind) + x.toInt.toString
         } catch {
           case e : Exception =>
-            //todo: handle literal char and boolean at least
-            val res = if (x == "null") "null" else "\"" + x + "\"" //are there more reserved words?
+            //todo: handle literal char -- are there more reserved words?
+            val res = 
+              if (x == "null" || x == "true" || x == "false")
+                x
+              else
+                "\"" + x + "\""
             indent(ind) + res
         }
       case JVariableAccess(x) => indent(ind) + x
