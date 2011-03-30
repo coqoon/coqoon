@@ -1,41 +1,15 @@
-Error mark is a line above the actual error
-after recovery from an error, previous line is not blue
-
-observations from SnapshotTrees.java:
-pushLeftPath: node = node.left (where node is an argument (must be allocated on stack anyhow?)) ~~> JAssignment(node, JFieldAccess(node, left)) ~~> tmp because node is used on RHS
-      Node tmp_2 = node.left;
-      node = tmp_2;
-COUNTEREXAMPLE: x := x.foo + x.foo or x := foo(foo(x))
-  ~~> reusing x hurts here
-next: should be no tmp_5!
-      Integer result
-      [..]
-      int tmp_5 = tmp_4.item
-      result = tmp_5
-next: cse:
-      Node tmp_6 = nodestate.node;
-      Node tmp_7 = tmp_6.rght;
-      if (tmp_7 != null)
-        Node tmp_8 = nodestate.node;
-        Node tmp_9 = tmp_8.rght
-        pushLeftPath(tmp_9)
-~~> first conservative expansion into bad code, then later optimization of this!
- (means: remove variable tmp, conditionals from JBinding, JAssignment, JConditional)
-method init_, new Node(i, l, r) vs new Node(i) <- also new should be followed by call to init
-also, inner classes should be kept inner (how to do that in Coq?)
-
-
-SCALA style guide
-mkString
-
-ignore Coq class in java output (at least partially)
 * General
 ** remove the introduced global state - DocumentState - plus everything that depends on that
 ** keep it simple, only one connection to a Coq binary
 ** future: incrementally run proofer in the background, annoy user then with unproven stuff (when code is changed)
 ** test cases/coverage - at least for parsers
 ** incremental combinator parsers, done in yi http://yi-editor.blogspot.com/2008/11/incremental-parsing-in-yi.html
+** read scala style guide
+** use mkString instead of reduceLeft at several places!
 * Coq side
+** Error mark is a line above the actual error
+** after recovery from an error, previous line is not blue
+** Undo from just after End should jump to start of Section/Module/whatever
 ** in Actions: search for "Proof." is wrong - better search for Definition/start of lemma. Proof is optional anyhow.
 ** unreliable with keyboard shortcuts -> look whether in action or not (otherwise risk error messages from coq)
 ** marker for coqposition
@@ -66,6 +40,30 @@ ignore Coq class in java output (at least partially)
 *** indentation
 ** step on Require... -> Error -> fix -> forward again -> not blue
 * Java side
+** ignore Coq class in java output (at least partially)
+** SimpleJava optimizations
+observations from SnapshotTrees.java:
+pushLeftPath: node = node.left (where node is an argument (must be allocated on stack anyhow?)) ~~> JAssignment(node, JFieldAccess(node, left)) ~~> tmp because node is used on RHS
+      Node tmp_2 = node.left;
+      node = tmp_2;
+COUNTEREXAMPLE: x := x.foo + x.foo or x := foo(foo(x))
+  ~~> reusing x hurts here
+next: should be no tmp_5!
+      Integer result
+      [..]
+      int tmp_5 = tmp_4.item
+      result = tmp_5
+next: cse:
+      Node tmp_6 = nodestate.node;
+      Node tmp_7 = tmp_6.rght;
+      if (tmp_7 != null)
+        Node tmp_8 = nodestate.node;
+        Node tmp_9 = tmp_8.rght
+        pushLeftPath(tmp_9)
+~~> first conservative expansion into bad code, then later optimization of this!
+ (means: remove variable tmp, conditionals from JBinding, JAssignment, JConditional)
+method init_, new Node(i, l, r) vs new Node(i) <- also new should be followed by call to init
+also, inner classes should be kept inner (how to do that in Coq?)
 ** operator translation (x += y --> x = x + y) (Composite)
 ** types for ternary Bool ? x : y <- intersect x y
 ** loop invariants (trees)
