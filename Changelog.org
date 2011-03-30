@@ -1,0 +1,36 @@
+* Kopitiam 0.0.6 [30 March 2011]
+** Coq: Fixed bug reported by Jonas in UndoAction
+** Java: Translation of postfix operators
+*** this.stamp++ -> tmp1 := this.stamp; this.stamp := tmp1 + 1
+** Java: decrease introduction of temporary variables
+*** Java code Node bar = foo() was translated to Node tmp1 = foo(); Node bar = tmp1, now: Node bar = foo()
+** Java: support for generics in introspection (Stack<E>.peek() returns E)
+** Java: handle nested fields
+*** x = a.b.c is now translated to tmp1 = a.b; x = tmp1.c
+** Coq: fix Undo when document changed at the end of the file
+** Coq: remove hard coded module name "Fac"
+** Coq: insert unique_method_names Lemma into coq code
+** Coq: only update program and specification part when Java file changed
+** Coq: remove hack that first method of first class gets updated incrementally
+** Coq: generate .java.v file from .java
+* Kopitiam 0.0.5 [27 March 2011]
+** support for static and dynamic calls
+** Java: fewer temporary variables, more correct code output
+** initial CoqParser with navigation outline
+** Java: types for temporary variables (using ClassTable or reflection)
+** SimpleJavaEditor showing SimpleJava code
+** Coq: nested Proofs during Undo
+* Kopitiam 0.0.4 [15 March 2011]
+** Coq: Undo and back to cursor
+** Coq: Send Interrupt (only UNIX so far)
+** Coq: Keyboard shortcuts
+** Retract when some action in another buffer happened, not if deactivated
+** put current sentence into progress Dialog
+* Kopitiam 0.0.3 [11 March 2011]
+** more debug output
+* Kopitiam 0.0.2 [11 March 2011]
+** Eclipse: Preference page
+** Eclipse: Progress reporting
+** Eclipse: Disable actions which are not available
+* Kopitiam 0.0.1 [07 March 2011]
+** initial release

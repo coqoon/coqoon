@@ -1,3 +1,6 @@
+Error mark is a line above the actual error
+after recovery from an error, previous line is not blue
+
 observations from SnapshotTrees.java:
 pushLeftPath: node = node.left (where node is an argument (must be allocated on stack anyhow?)) ~~> JAssignment(node, JFieldAccess(node, left)) ~~> tmp because node is used on RHS
       Node tmp_2 = node.left;
@@ -21,11 +24,10 @@ next: cse:
 method init_, new Node(i, l, r) vs new Node(i) <- also new should be followed by call to init
 also, inner classes should be kept inner (how to do that in Coq?)
 
+
 SCALA style guide
 mkString
 
-unreliable with keyboard shortcuts -> look whether in action or not (otherwise risk error messages from coq)
-marker for coqposition
 ignore Coq class in java output (at least partially)
 * General
 ** remove the introduced global state - DocumentState - plus everything that depends on that
@@ -34,6 +36,9 @@ ignore Coq class in java output (at least partially)
 ** test cases/coverage - at least for parsers
 ** incremental combinator parsers, done in yi http://yi-editor.blogspot.com/2008/11/incremental-parsing-in-yi.html
 * Coq side
+** in Actions: search for "Proof." is wrong - better search for Definition/start of lemma. Proof is optional anyhow.
+** unreliable with keyboard shortcuts -> look whether in action or not (otherwise risk error messages from coq)
+** marker for coqposition
 ** outline for eclipse
 ** syntax highlighting based on coq parser
 *** source location information (hints at the bottom) - http://scala.sygneca.com/libs/parsing
