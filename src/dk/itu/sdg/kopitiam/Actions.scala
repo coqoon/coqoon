@@ -119,14 +119,17 @@ class CoqUndoAction extends KAction with VernacularReserved {
   }
 
   def eqmodws (content : String, off1 : Int, off2 : Int) : Boolean = {
-    if (off2 == -1)
+    Console.println("eqmodws, inputs: off1: " + off1 + " off2: " + off2 + " content.length: " + content.length)
+    if (off1 == 0)
       true
+    else if (off2 == -1)
+      content.drop(off1).trim.size == 0
     else
       content.take(off2).drop(off1).trim.size == 0
   }
 
   override def doit () : Unit = {
-    val content = EclipseBoilerPlate.getContent()
+    val content = EclipseBoilerPlate.getContent
     val l = CoqTop.findPreviousCommand(content, DocumentState.position)
     Console.println("prev (" + DocumentState.position + " [" + content(DocumentState.position) + "]): " + l)
     if (l > -1) {
@@ -141,8 +144,8 @@ class CoqUndoAction extends KAction with VernacularReserved {
         var off : Int = l
         //Console.println("before loop " + content.take(content.indexOf("Proof.", off)).drop(off).trim.size)
         var deep : Int = 0
-        while (! eqmodws(content, off, content.indexOf("Proof.", off)) || deep != 0) {
-          //Console.println("in loop " + content.take(content.indexOf("Proof.", off)).drop(off).trim.size)
+        while ((!eqmodws(content, off, content.indexOf("Proof.", off)) || deep != 0) && off > 0) {
+          Console.println("in loop: " + deep + " current off is " + off)
           if (eqmodws(content, off, content.indexOf("Proof.", off)))
             deep -= 1
           off = CoqTop.findPreviousCommand(content, off)
@@ -150,7 +153,9 @@ class CoqUndoAction extends KAction with VernacularReserved {
             deep += 1
           step += 1
         }
-        off = CoqTop.findPreviousCommand(content, off)
+        off = scala.math.max(0, CoqTop.findPreviousCommand(content, off))
+        if ((content.indexOf("Proof.", off) == -1) || (content.indexOf("Proof.", off) > lastqed(content, off)))
+          step -= 1
         Console.println("found proof before  @" + off + "(" + step + "): " + content.drop(off).take(20))
         DocumentState.sendlen = DocumentState.position - off
         CoqTop.writeToCoq("Backtrack " + (sh.globalStep - step) + " " + sh.localStep + " 0.")
