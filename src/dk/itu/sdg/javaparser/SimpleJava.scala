@@ -73,7 +73,16 @@ trait JavaToSimpleJava {
           case None => List(JBinding(n, t, i))
           case Some(x) =>
             val (ih, ins) = extractHelper(x)
-            ins ++ List(JBinding(n, t, Some(ih)))
+            Console.println("working on a binding with initializer: " + x + ", extracthelper gave me ih " + ih + " and ins " + ins)
+            if (ih.isInstanceOf[JVariableAccess] && ins.length > 0 && ins.takeRight(1)(0).isInstanceOf[JBinding]) {
+              val tmpvar = ih.asInstanceOf[JVariableAccess].variable
+              val lb = ins.takeRight(1)(0).asInstanceOf[JBinding]
+              if (lb.name == tmpvar && lb.jtype == t)
+                ins.dropRight(1) ++ List(JBinding(n, t, lb.init))
+              else
+                ins ++ List(JBinding(n, t, Some(ih)))
+            } else
+              ins ++ List(JBinding(n, t, Some(ih)))
         }
       case JBinaryExpression(op, l, r) =>
         val (larg, lins) = extractHelper(l)
@@ -83,13 +92,16 @@ trait JavaToSimpleJava {
         val (va, vis) = extractHelper(v)
         vis ++ List(JUnaryExpression(op, va))
       case JPostfixExpression(op, v) =>
-        val (va, vis) = extractHelper(v)
         val oper = op match {
           case "++" => "+"
           case "--" => "-"
-          case x => Console.println("dunno about postfixop " + op); op
         }
-        vis ++ List(JBinaryExpression(oper, va, JLiteral("1")))
+        val res = JBinaryExpression(oper, JLiteral("1"), v)
+        val ass = v match {
+          case JFieldAccess(variable, value) => JFieldWrite(variable, value, res)
+          case JVariableAccess(x) => JAssignment(x, res)
+        }
+        extractCalls(ass)
       case JFieldWrite(x, f, v) =>
         val (a, i) = extractHelper(v)
         val (va, vi) = extractHelper(x)

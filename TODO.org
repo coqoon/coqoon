@@ -1,10 +1,23 @@
 observations from SnapshotTrees.java:
-add:
-      RefBool tmp_1 = new RefBool();
-      RefBool updated = tmp_1;
-addRecursive:
-      int tmp_1 = this.stamp;
-      tmp_1 + 1;
+pushLeftPath: node = node.left (where node is an argument (must be allocated on stack anyhow?)) ~~> JAssignment(node, JFieldAccess(node, left)) ~~> tmp because node is used on RHS
+      Node tmp_2 = node.left;
+      node = tmp_2;
+COUNTEREXAMPLE: x := x.foo + x.foo or x := foo(foo(x))
+  ~~> reusing x hurts here
+next: should be no tmp_5!
+      Integer result
+      [..]
+      int tmp_5 = tmp_4.item
+      result = tmp_5
+next: cse:
+      Node tmp_6 = nodestate.node;
+      Node tmp_7 = tmp_6.rght;
+      if (tmp_7 != null)
+        Node tmp_8 = nodestate.node;
+        Node tmp_9 = tmp_8.rght
+        pushLeftPath(tmp_9)
+~~> first conservative expansion into bad code, then later optimization of this!
+ (means: remove variable tmp, conditionals from JBinding, JAssignment, JConditional)
 method init_, new Node(i, l, r) vs new Node(i) <- also new should be followed by call to init
 also, inner classes should be kept inner (how to do that in Coq?)
 
