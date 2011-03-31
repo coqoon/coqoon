@@ -537,7 +537,7 @@ object DocumentState {
       coqmarker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO)
     }
     coqmarker.setAttribute(IMarker.CHAR_START, x)
-    coqmarker.setAttribute(IMarker.CHAR_END, x + 1)
+    coqmarker.setAttribute(IMarker.CHAR_END, x)
     position_ = x
   }
 
