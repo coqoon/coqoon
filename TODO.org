@@ -7,8 +7,6 @@
 ** read scala style guide
 ** use mkString instead of reduceLeft at several places!
 * Coq side
-** Error mark is a line above the actual error
-** after recovery from an error, previous line is not blue
 ** Undo from just after End should jump to start of Section/Module/whatever
 ** in Actions: search for "Proof." is wrong - better search for Definition/start of lemma. Proof is optional anyhow.
 ** unreliable with keyboard shortcuts -> look whether in action or not (otherwise risk error messages from coq)

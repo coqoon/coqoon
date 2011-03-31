@@ -409,7 +409,7 @@ object EclipseBoilerPlate {
     val marker = file.createMarker(IMarker.PROBLEM)
     marker.setAttribute(IMarker.MESSAGE, text)
     marker.setAttribute(IMarker.LOCATION, file.getName)
-    marker.setAttribute(IMarker.CHAR_START, DocumentState.position)
+    marker.setAttribute(IMarker.CHAR_START, DocumentState.position + 1)
     marker.setAttribute(IMarker.CHAR_END, DocumentState.position + DocumentState.oldsendlen - 1) //for tha whitespace
     marker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_ERROR)
     marker.setAttribute(IMarker.TRANSIENT, true)
