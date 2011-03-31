@@ -39,6 +39,7 @@
 *** indentation
 ** step on Require... -> Error -> fix -> forward again -> not blue
 * Java side
+** update on save rather than edit (and only if it typechecks/compiles ok)
 ** ignore Coq class in java output (at least partially)
 ** SimpleJava optimizations
 observations from SnapshotTrees.java:
@@ -69,7 +70,6 @@ also, inner classes should be kept inner (how to do that in Coq?)
 ** proper syntax (not only a string) for pre/postcondition and loop invariants - plus completion!
 ** for loops -> translate to while
 ** foo.bar.baz() doesn't work properly (need to introduce multiple temporary variables and register these)
-** foo.bar.baz same
 ** error on multiple returns and overloading of the same method name
 *** at least warnings for eclipse and support for refactoring/fixing these
 ** constructors (multiple, what to do in there?)
@@ -79,7 +79,6 @@ also, inner classes should be kept inner (how to do that in Coq?)
 ** multiple local variables: int foo, bar, baz
 *** fails in assert(vars.length == 1) in TransformAST:FinishAST:transform
 ** copy fields + methods bodies from superclasses (once we have a strategy for class-to-class inheritance)
-** dynamic casts
 ** there's an alternative way to get the source of an editor:
   final IEditorInput editorInput = window.getActivePage().getActiveEditor().getEditorInput();
   final IFile selectedFile = (IFile) editorInput.getAdapter(IFile.class);
@@ -87,3 +86,4 @@ also, inner classes should be kept inner (how to do that in Coq?)
 ** Generics
 ** Exceptions
 ** array types
+** dynamic casts

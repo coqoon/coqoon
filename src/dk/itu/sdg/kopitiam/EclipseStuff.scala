@@ -527,7 +527,7 @@ object DocumentState {
   var position_ : Int = 0
   def position : Int = position_
   def position_= (x : Int) {
-    Console.println("new pos is " + x + " (old was " + position_ + ")");
+    //Console.println("new pos is " + x + " (old was " + position_ + ")");
     if (coqmarker == null) {
       val file = EclipseBoilerPlate.getResource
       coqmarker = file.createMarker(IMarker.BOOKMARK)
