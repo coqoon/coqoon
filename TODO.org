@@ -1,5 +1,6 @@
 * General
 ** remove the introduced global state - DocumentState - plus everything that depends on that
+*** especially important now that document might be modified without being the active editor window, and we should retract
 ** keep it simple, only one connection to a Coq binary
 ** future: incrementally run proofer in the background, annoy user then with unproven stuff (when code is changed)
 ** test cases/coverage - at least for parsers
@@ -8,9 +9,9 @@
 ** use mkString instead of reduceLeft at several places!
 * Coq side
 ** Undo from just after End should jump to start of Section/Module/whatever
+** after undo, do syntax highlighting again!
 ** in Actions: search for "Proof." is wrong - better search for Definition/start of lemma. Proof is optional anyhow.
 ** unreliable with keyboard shortcuts -> look whether in action or not (otherwise risk error messages from coq)
-** marker for coqposition
 ** outline for eclipse
 ** syntax highlighting based on coq parser
 *** source location information (hints at the bottom) - http://scala.sygneca.com/libs/parsing

@@ -54,6 +54,8 @@ abstract class KAction extends IWorkbenchWindowActionDelegate with IHandler {
 
       DocumentState.position = 0
       DocumentState.sendlen = 0
+      DocumentState.coqmarker.delete
+      DocumentState.coqmarker = null
       DocumentState.undoAll
       DocumentState.sourceview = DocumentMonitor.activeeditor.getSource
       DocumentState.totallen = EclipseBoilerPlate.getContent.length

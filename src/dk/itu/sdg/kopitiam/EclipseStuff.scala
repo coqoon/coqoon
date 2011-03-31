@@ -515,14 +515,31 @@ object DocumentState {
   import org.eclipse.swt.widgets.Display
  
   var sourceview : ITextViewer = null
-  var position : Int = 0
+  //var position : Int = 0
   var sendlen : Int = 0
   var totallen : Int = 0
   var coqstart : Int = 0
   var realundo : Boolean = false
 
-  //def position : Int = position_
-  //def position_= (x : Int) { Console.println("new pos is " + x + " (old was " + position_ + ")"); position_ = x }
+  import org.eclipse.core.resources.IMarker
+  var coqmarker : IMarker = null
+
+  var position_ : Int = 0
+  def position : Int = position_
+  def position_= (x : Int) {
+    Console.println("new pos is " + x + " (old was " + position_ + ")");
+    if (coqmarker == null) {
+      val file = EclipseBoilerPlate.getResource
+      coqmarker = file.createMarker(IMarker.BOOKMARK)
+      coqmarker.setAttribute(IMarker.MESSAGE, "coq position")
+      coqmarker.setAttribute(IMarker.LOCATION, file.getName)
+      coqmarker.setAttribute(IMarker.TRANSIENT, true)
+      coqmarker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO)
+    }
+    coqmarker.setAttribute(IMarker.CHAR_START, x)
+    coqmarker.setAttribute(IMarker.CHAR_END, x + 1)
+    position_ = x
+  }
 
   def undoAll () : Unit = synchronized {
     if (sourceview != null) {
