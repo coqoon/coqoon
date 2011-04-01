@@ -1,3 +1,9 @@
+* Kopitiam 0.0.7 [01 April 2011]
+** Coq: fix marker start position of errors and warnings (was previously in wrong line)
+** Coq: marker for CoqPosition
+** Java: add "this" to BuildMethod arguments if non-static method
+** Coq: activate Actions just after startup if CoqEditor is shown
+** Coq: edit of proven code forces a retract, now with fewer bugs (thanks to Jonas report)
 * Kopitiam 0.0.6 [30 March 2011]
 ** Coq: Fixed bug reported by Jonas in UndoAction
 ** Java: Translation of postfix operators
