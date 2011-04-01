@@ -297,7 +297,7 @@ object EclipseBoilerPlate {
 
   def getCaretPosition () : Int = {
     val sel = window.getActivePage.getActiveEditor.asInstanceOf[CoqEditor].getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
-    Console.println("cursor position is " + sel.getLength + " @" + sel.getOffset)
+    //Console.println("cursor position is " + sel.getLength + " @" + sel.getOffset)
     sel.getOffset
   }
 
@@ -517,7 +517,13 @@ object DocumentState {
   var sourceview : ITextViewer = null
   //var position : Int = 0
   var sendlen : Int = 0
-  var totallen : Int = 0
+  var totallen_ : Int = 0
+  def totallen : Int = totallen_
+  def totallen_= (n : Int) {
+    if (position > n)
+      position = n - 1
+    totallen_ = n
+  }
   var coqstart : Int = 0
   var realundo : Boolean = false
 
@@ -561,10 +567,12 @@ object DocumentState {
         realundo = false
         val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
         val start = scala.math.max(position - sendlen, 0)
-        Display.getDefault.syncExec(
-          new Runnable() {
-            def run() = sourceview.setTextColor(bl, start, sendlen, true)
-          });
+        Console.println("undo (start " + start + " len " + sendlen + " totallen " + totallen + ")")
+        if (CoqUndoAction.text == None)
+          Display.getDefault.syncExec(
+            new Runnable() {
+              def run() = sourceview.setTextColor(bl, start, sendlen, true)
+            });
         position = start
         sendlen = 0
       } else { //just an error

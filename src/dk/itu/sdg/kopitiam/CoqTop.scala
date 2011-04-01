@@ -264,8 +264,9 @@ object CoqTop {
   def findPreviousCommand (s : String, pos : Int) : Int = {
     if (pos == 0) -1
     else {
+      Console.println("find previous with " + pos + " and length " + s.length)
       var cdepth : Int = 0
-      var i : Int = pos - 2
+      var i : Int = scala.math.min(pos - 2, s.length - 1)
       var found : Boolean = false
       while (i > 0 && ! found && i < s.length) {
         val c = s(i)

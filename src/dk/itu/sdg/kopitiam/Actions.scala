@@ -109,7 +109,6 @@ object ActionDisabler {
 
 import dk.itu.sdg.coqparser.VernacularReserved
 class CoqUndoAction extends KAction with VernacularReserved {
-  
   def lastqed (content : String, off : Int) : Int = {
     val lks = proofEnders.map(content.indexOf(_, off)).filterNot(_ == -1)
     if (lks.length == 0)
@@ -128,17 +127,21 @@ class CoqUndoAction extends KAction with VernacularReserved {
       content.take(off2).drop(off1).trim.size == 0
   }
 
+  var text : Option[String] = None
   override def doit () : Unit = {
-    val content = EclipseBoilerPlate.getContent
+    val content = text match {
+      case None => EclipseBoilerPlate.getContent
+      case Some(x) => x
+    }
     val l = CoqTop.findPreviousCommand(content, DocumentState.position)
-    Console.println("prev (" + DocumentState.position + " [" + content(DocumentState.position) + "]): " + l)
+    Console.println("prev pos of " + DocumentState.position + " is " + l)
     if (l > -1) {
       DocumentState.realundo = true
       EclipseBoilerPlate.unmark
       val sh = CoqState.getShell
       val mn = lastqed(content, l)
       Console.println("qed distance is " + (mn - l))
-      if (mn > 0 && eqmodws(content, l, mn)) {
+      if (mn > 0 && l > 0 && eqmodws(content, l, mn)) {
         Console.println("found qed-word nearby, better loop before last proof.")
         var step : Int = 2
         var off : Int = l
@@ -163,6 +166,9 @@ class CoqUndoAction extends KAction with VernacularReserved {
         DocumentState.sendlen = DocumentState.position - l
         if (sh.localStep > 1)
           CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1)  + " " + (sh.localStep - 1) + " 0.")
+        else if (sh.localStep == 1 && content.take(DocumentState.position).drop(l).trim == "Proof.")
+            //proof doesn't modify localstep
+            CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1)  + " " + (sh.localStep) + " 0.")
         else {
           val ctx = if (sh.context.length == 0) 0 else 1
           val loc = if (ctx == 1 && sh.context.length != 1) sh.localStep else 0
