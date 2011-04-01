@@ -13,7 +13,7 @@ package dk.itu.sdg.javaparser
  *
  * adapted by Hannes Mehnert (https://github.com/hannesm/Kopitiam)
  */
-object Main extends Application with JavaAST
+object Main extends Application with JavaOutputter with JavaAST
 {
   import java.io.{FileInputStream,InputStreamReader,OutputStreamWriter,FileOutputStream,File}
   import scala.util.parsing.input.StreamReader
@@ -21,11 +21,7 @@ object Main extends Application with JavaAST
   override def main(args: Array[String]) = {
     System.setProperty("file.encoding", "UTF-8")
     val in = StreamReader(new InputStreamReader(new FileInputStream(new File(args(0))), "UTF-8"))
-    val outfile = args(0) + ".v"
-    //val out = new OutputStreamWriter(new FileOutputStream(outfile), "UTF-8")
-    //ParseV.parse(in)
-    val res = parse(in, args(0).substring(0, args(0).indexOf(".java")))
-    //out.write(res, 0, res.length)
-    //out.close
+    val res = FinishAST.doitHelper(parseH(in)).map(out(_, 0)).reduceLeft(_ + "\n\n" + _)
+    Console.println(res)
   }
 }
