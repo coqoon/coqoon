@@ -92,45 +92,17 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
   import org.eclipse.jface.text.IDocument
   import dk.itu.sdg.javaparser.JavaAST
   import scala.util.parsing.input.CharArrayReader
-  import scala.collection.mutable.HashMap
 
   object JavaToCoq extends JavaAST { }
 
   override def getDefaultEncoding () : String = "UTF-8"
 
-  import org.eclipse.ui.part.FileEditorInput
-  override def getDocument (ele : Object) : IDocument = {
-    if (ele != null) {
-      Console.println("CoqJava getDocument of " + ele)
-      assert(ele.isInstanceOf[FileEditorInput])
-      val element = ele.asInstanceOf[FileEditorInput]
-      val document = super.getDocument(element)
-      val nam = element.getName
-      if (nam.endsWith(".java"))
-        if (EclipseTables.StringToDoc.contains(nam))
-          EclipseTables.StringToDoc(nam)
-        else {
-          val doc = new Document(translate(document.get, nam.substring(0, nam.indexOf(".java"))))
-          Console.println("adding doc " + nam + " mapping into " + doc + " into table")
-    	  EclipseTables.StringToDoc += nam -> doc
-    	  //doc.addDocumentListener(CoqJavaDocumentChangeListener)
-    	  doc
-        }
-      else
-        document
-    } else
-        null
-  }
-  
-  def translate (s : String, name : String) : String = {
-    //Console.println("translating " + s)
-    JavaToCoq.parse(new CharArrayReader(s.toArray), name)
-  }
-  
   import dk.itu.sdg.javaparser.FinishAST
-  def up (coq : IDocument, s : String, name : String) : Unit = {
+  def updateCoqCode (coq : IDocument, s : String, name : String) : Unit = {
     val (prog, spec) = JavaToCoq.parseNoSpec(new CharArrayReader(s.toArray), name)
     //Console.println("got prog " + prog + " and spec " + spec)
+    //TODO: actually do a proper diff - there might be changes from the user in that area
+    //like Definition of eeqptr, elt, eand, eneqptr in Snap.v
     val old = coq.get
     val pstart = old.indexOf(prog.substring(0, 15))
     val proend = prog.lastIndexOf("End ")

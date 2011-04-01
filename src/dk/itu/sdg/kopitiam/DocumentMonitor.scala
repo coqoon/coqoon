@@ -23,10 +23,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       val ed = txt.getEditorInput
       val doc = txt.getDocumentProvider.getDocument(ed)
       val nam = ed.getName
-      //add java files to doc2str table - but not the ones automatically translated
-      //to Coq code by Kopitiam (present in str2doc table)
-      if (nam.endsWith(".java") &&
-          (! EclipseTables.StringToDoc.contains(nam) || EclipseTables.StringToDoc(nam) != doc))
+      if (nam.endsWith(".java") && !EclipseTables.StringToDoc.contains(nam))
         EclipseTables.DocToString += doc -> nam
       doc.addDocumentListener(this)
     }
@@ -106,7 +103,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   var olddocString : String = ""
   override def documentChanged (event : DocumentEvent) : Unit = {
     val doc = event.getDocument
-    Console.println("doc " + doc + " changed [@" + event.getOffset + "]: " + event.getText)
+    Console.println("doc " + doc + " changed [@" + event.getOffset + "], len: " + event.getLength)
     if (EclipseTables.DocToString.contains(doc)) {
       val docstring = EclipseTables.DocToString(doc)
       Console.println("I know it's " + docstring + " you changed")
@@ -114,7 +111,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         val coq = EclipseTables.StringToDoc(docstring + ".v")
         val java = doc.get
         Console.println("found coq buffer for same file!")
-        CoqJavaDocumentProvider.up(coq, java, docstring.substring(0, docstring.indexOf(".java")))
+        CoqJavaDocumentProvider.updateCoqCode(coq, java, docstring.substring(0, docstring.indexOf(".java")))
       }
     }
     //more along the lines as (but doesn't work since EclipseBoilerPlate depends on getActivePage and getCaretPosition)
