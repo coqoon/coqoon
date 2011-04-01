@@ -138,9 +138,9 @@ trait CoqOutputter extends JavaToSimpleJava {
   }
 
   def getBody (xs : List[JStatement], myname : String) : (List[String], String) = {
-	 val (ou, free, ret) = getBodyHelper(xs, myname)
-	 outp ::= ou
-	 (free, ret)
+    val (ou, free, ret) = getBodyHelper(xs, myname)
+    outp ::= ou
+    (free, ret)
   }
 
   def getBodyHelper (xs : List[JStatement], myname : String) : (String, List[String], String) = {
@@ -164,7 +164,12 @@ trait CoqOutputter extends JavaToSimpleJava {
         val bodyref = name + "_body"
         val args = getArgs(params)
         val (local, returnvar) = getBody(body, bodyref)
-        outp ::= "\nDefinition " + name + "M := Build_Method (" + printArgList(args) + ") " + bodyref + " (" + returnvar + ")."
+        val t =
+          if (ClassTable.isMethodStatic(myclass, mymethod, args))
+            args
+          else
+            "this" :: args
+        outp ::= "\nDefinition " + name + "M := Build_Method (" + printArgList(t) + ") " + bodyref + " (" + returnvar + ")."
         Some(("\"" + name + "\"", name + "M"))
       case _ => None
     }

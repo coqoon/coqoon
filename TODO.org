@@ -39,6 +39,7 @@
 *** indentation
 ** step on Require... -> Error -> fix -> forward again -> not blue
 * Java side
+** Report Warnings/Errors instead of Console.println during parsing and simplification
 ** update on save rather than edit (and only if it typechecks/compiles ok)
 ** ignore Coq class in java output (at least partially)
 ** SimpleJava optimizations
