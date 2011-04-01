@@ -36,12 +36,25 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     val wins = PlatformUI.getWorkbench.getWorkbenchWindows
     wins.map(x => x.getPartService.addPartListener(this))
     wins.map(x => x.getPages.toList.map(y => y.getEditorReferences.toList.map(z => handlePart(z.getEditor(false)))))
+    val wb = PlatformUI.getWorkbench
+    wb.getDisplay.asyncExec(new Runnable() {
+      def run () = {
+        val win = wb.getActiveWorkbenchWindow
+        assert(win != null)
+        EclipseBoilerPlate.window = win
+        activateEditor(win.getActivePage.getActiveEditor)
+      }
+    })
   }
 
 
-  var activeeditor : CoqEditor = null
   override def partActivated (part : IWorkbenchPartReference) : Unit = {
     val ed = part.getPart(false)
+    activateEditor(ed)
+  }
+
+  var activeeditor : CoqEditor = null
+  def activateEditor (ed : IWorkbenchPart) : Unit = {
     Console.println("activated: " + ed)
     if (ed.isInstanceOf[CoqEditor]) {
       val txt = ed.asInstanceOf[CoqEditor]

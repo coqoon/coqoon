@@ -28,7 +28,7 @@
 *** http://msdn.microsoft.com/en-us/library/ms683155(v=vs.85).aspx
 ** Reset ident <- undefines everything back to ident
 ** proof completion
-** SearchAbout and similar
+*** start with SearchAbout and similar helpers
 ** dependency graph of coq files, run coqc as background task
 ** Progress as part of progress window, not custom dialog (without using Job API?)
 *** real steps while GotoCursor/GotoEnd
@@ -37,7 +37,6 @@
 ** resizable GoalViewer
 *** syntax highlighting there
 *** indentation
-** step on Require... -> Error -> fix -> forward again -> not blue
 * Java side
 ** Report Warnings/Errors instead of Console.println during parsing and simplification
 ** update on save rather than edit (and only if it typechecks/compiles ok)
@@ -61,6 +60,14 @@ next: cse:
         Node tmp_8 = nodestate.node;
         Node tmp_9 = tmp_8.rght
         pushLeftPath(tmp_9)
+same in contains: [item stack variable, integer argument ; node a local variable of type Node]
+ if (node.item < item) ... else if (item < node.item)
+ generates
+   tmp_2 = FieldAccess(node, item)
+   if (tmp_2 < item) ...
+   else
+     tmp_4 = FieldAccess(node, item)
+     if (item < tmp_4)
 ~~> first conservative expansion into bad code, then later optimization of this!
  (means: remove variable tmp, conditionals from JBinding, JAssignment, JConditional)
 method init_, new Node(i, l, r) vs new Node(i) <- also new should be followed by call to init

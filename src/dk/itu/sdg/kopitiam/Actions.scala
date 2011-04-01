@@ -40,8 +40,6 @@ abstract class KAction extends IWorkbenchWindowActionDelegate with IHandler {
   import org.eclipse.core.resources.{IResource, IMarker}
   def doitH () : Unit = {
     ActionDisabler.disableAll
-    if (EclipseBoilerPlate.window == null)
-      EclipseBoilerPlate.window = PlatformUI.getWorkbench.getActiveWorkbenchWindow
     val coqstarted = CoqTop.isStarted
     if (! coqstarted)
       CoqStartUp.start

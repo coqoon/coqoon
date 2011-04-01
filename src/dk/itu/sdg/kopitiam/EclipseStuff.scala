@@ -101,7 +101,7 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
   import org.eclipse.ui.part.FileEditorInput
   override def getDocument (ele : Object) : IDocument = {
     if (ele != null) {
-      Console.println(ele)
+      Console.println("CoqJava getDocument of " + ele)
       assert(ele.isInstanceOf[FileEditorInput])
       val element = ele.asInstanceOf[FileEditorInput]
       val document = super.getDocument(element)
@@ -166,7 +166,7 @@ object SimpleJavaDocumentProvider extends FileDocumentProvider {
       val document = super.getDocument(ele)
       //Console.println("getdocument received " + document.get)
       val newt = JavaOutput.parseandoutput(document.get)
-      Console.println("getDocument called, translated to " + newt)
+      Console.println("SimpleJava getDocument called, translated")
       document.set(newt)
       docs += nam -> document
       document
