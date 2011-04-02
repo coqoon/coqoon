@@ -35,6 +35,7 @@
 ** Progress as part of progress window, not custom dialog (without using Job API?)
 *** real steps while GotoCursor/GotoEnd
 *** add lemma name to progress (especially interesting for Qed.)
+*** join strings (otherwise displays one line only, might be (* COMMENT *))
 ** scroll to document position (recenter while passing stuff to coq)
 ** resizable GoalViewer
 *** syntax highlighting there
