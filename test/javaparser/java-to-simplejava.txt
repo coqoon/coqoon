@@ -1,0 +1,64 @@
+//simple class should be translated to identical
+class Foo { } => class Foo { }
+//simple class with simple field also identical
+class Foo { int foo; } => class Foo { int foo; }
+//simple class and simple method
+class Foo { void foo () { } } => class Foo { void foo () { } }
+//simple class more complex method
+class Foo { int foo (int a) { return a; } } => class Foo { int foo (int a) { return a; } }
+//more complex method (not sure whether this actually is valid Java code, at least it will end in a StackOverflow): only expression in return, only expressions in arguments to a call
+class Foo { int foo (int a) { return foo(foo(a)); } } =>
+class Foo {
+  int foo (int a) {
+    int tmp_1 = this.foo(a);
+    int tmp_2 = this.foo(tmp_1);
+    return tmp_2;
+  }
+}
+//some more interesting method: no field access and method call in an expression
+class Foo {
+  int f;
+  int a () { return 10; }
+  int b (int c) { return f + a() + c; }
+} =>
+class Foo {
+  int f;
+  int a () { return 10; }
+  int b (int c) {
+    int tmp_1 = this.f;
+    int tmp_2 = this.a();
+    int tmp_3 = tmp_1 + tmp_2;
+    int tmp_4 = tmp_3 + c;
+    return tmp_4;
+  }
+}
+//should produce a warning (multiple return statements) and transform to identity
+class Foo {
+  int a (int b) {
+    if (b < 0)
+      return 10;
+    else
+      return 20;
+  }
+}
+//bindings
+//assignment
+//loops (while & for)
+//postfix expression
+//ternary x ? a : b
+//assignment operators (+=, ...)
+//nested field access foo.bar.baz
+//nested calls foo.bar.baz() or foo.bar().baz or foo().bar.baz()
+//field initializer
+//allocation
+//typed temporary variables (with java.lang/util)
+//inner classes
+//modifiers
+//static calls
+//multiple methods with same name (overloading)
+//interfaces
+//exceptions
+//assertions
+//generics
+//arrays
+//dynamic casts
