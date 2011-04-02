@@ -41,6 +41,7 @@
 *** syntax highlighting there
 *** indentation
 * Java side
+** highlight verified/proven method in green or however
 ** add/remove whitespaces at end of class/file messes the coq synced output up (DeDefinition and emma instead of Definition and Lemma)
 ** Report Warnings/Errors instead of Console.println during parsing and simplification
 ** update on save rather than edit (and only if it typechecks/compiles ok)
