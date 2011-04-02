@@ -1,8 +1,8 @@
 (
-  :project-package "dk.itu.sdg" 
+  :project-package "dk.itu.sdg"
   :target "bin"
-  :sources ("src")
-  :compile-jars ("lib")
+  :sources ("src" "automated-tests/dk")
+  :compile-jars ("lib" "lib_managed/scala_2.8.1/test")
   :formatting-prefs (
     :spaceBeforeColon t
   )
