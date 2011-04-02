@@ -1,5 +1,6 @@
 * General
 ** Most likely for the integration of proofs and code something like http://blog.objectteams.org/2010/02/ide-for-your-own-language-embedded-in-java-part-1/ is worth trying (to extend JDT at the points where there is no API/extension point for that)
+*** alternatively, maybe the jdt weaving (http://wiki.eclipse.org/JDT_weaving_features) scala-ide uses is worth looking into?
 ** remove the introduced global state - DocumentState - plus everything that depends on that
 *** especially important now that document might be modified without being the active editor window, and we should retract
 ** keep it simple, only one connection to a Coq binary
