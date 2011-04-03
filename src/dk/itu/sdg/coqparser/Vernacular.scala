@@ -24,7 +24,9 @@ trait VernacularRegion extends Positional with Product {
 
 trait GallinaSyntax { 
   sealed abstract class Name extends VernacularRegion
-  case class StringName (name : String) extends Name
+  case class StringName (name : String) extends Name {
+    override def toString = name
+  }
   case class UnderscoreName () extends Name 
   
   sealed abstract class Binder extends VernacularRegion
@@ -79,7 +81,9 @@ trait GallinaSyntax {
   case class Arrow (from : Term, to : Term) extends Term
   case class Application (op : Term, args : List[Arg]) extends Term
   /* more */
-  case class QualId (path : List[StringName]) extends Term
+  case class QualId (path : List[StringName]) extends Term {
+    override def toString = path mkString
+  }
 
   case class Fix (body: FixBody) extends Term
   case class FixFor (bodies : List[FixBody], `for` : StringName) extends Term
@@ -151,6 +155,24 @@ trait VernacularSyntax extends GallinaSyntax {
   }
   
   case class VernacularDocument (contents : List[VernacularRegion]) extends VernacularRegion
+  
+  sealed abstract class Command extends VernacularRegion {
+    override val outline = true
+  }
+  case class Print (keyword : StringName, ident : QualId) extends Command {
+    override def outlineName = keyword + " " + ident.toString
+  }
+  case class PrintAll () extends Command {
+    override def outlineName = "Print All"
+  }
+  case class Inspect (num : Int) extends Command {
+    override def outlineName = "Inspect " + num.toString
+  }
+  case class PrintSection (ident : StringName) extends Command {
+    override def outlineName = "Print Section " + ident.name
+  }
+  
+  
 }
 
 import scala.util.parsing.combinator.lexical.Lexical
@@ -585,8 +607,20 @@ trait VernacularParser extends TokenParsers with VernacularSyntax with Vernacula
     _ <- ident("End")~>(ident(moduleName.chars)<~dot)
   } yield Module(StringName(moduleName.chars), body)
   
+  /* Commands */
+  def command : Parser[Command] = displayer
+  
+  def displayer : Parser[Command] =
+    ( ident("Print")~>(qualid<~dot) ^^ {id : QualId => Print(StringName("Print"), id)}
+    | ident("Print")~>ident("Term")~>(qualid<~dot) ^^ {id : QualId => Print(StringName("Print Term"), id)}
+    | ident("About")~>(qualid<~dot) ^^ {id : QualId => Print(StringName("About"), id)}
+    | ident("Print")~ident("All")~dot ^^ (_ => PrintAll())
+    | ident("Inspect")~>(num<~dot) ^^ Inspect
+    | ident("Print")~>ident("Section")~>(ident<~dot) ^^ {case id : lexical.Ident => PrintSection(StringName(id.chars))}
+    )
+  
   /* Valid Vernacular syntax*/
-  def top = rep(sentence | module)
+  def top = rep(sentence | module | command)
   
   def parseString (input : String) : ParseResult[VernacularDocument] = {
     import scala.util.parsing.input.CharSequenceReader
