@@ -18,6 +18,7 @@ import EclipseUtils.{color, tuple2Color}
 
 class CoqEditor extends TextEditor {
   import org.eclipse.jface.text.source.ISourceViewer
+  import org.eclipse.ui.IEditorInput
   import org.eclipse.ui.views.contentoutline.{ContentOutlinePage, IContentOutlinePage}
 
   override protected def initializeEditor () : Unit = {
@@ -40,15 +41,21 @@ class CoqEditor extends TextEditor {
   
   var outlinePage : CoqContentOutlinePage = null
   override def getAdapter (required : java.lang.Class[_]) : AnyRef = {
+    Console.println("Getting adapter for " + required + " on CoqEditor")
     if (required.isInterface && required.getName.endsWith("IContentOutlinePage")) {
       if (outlinePage == null) {
         outlinePage = new CoqContentOutlinePage(getDocumentProvider(), this)
         if (getEditorInput() != null)
           outlinePage.setInput(getEditorInput())
       }
-      outlinePage;
+      outlinePage
     }
-    else super.getAdapter(required);
+    else super.getAdapter(required)
+  }
+
+  override def doSetInput (input : IEditorInput) : Unit = {
+    super.doSetInput(input)
+    if (input != null && outlinePage != null) outlinePage.setInput(input)
   }
   
   override def editorSaved () : Unit = {
@@ -85,6 +92,63 @@ object CoqJavaDocumentChangeListener extends IDocumentListener {
   }
 }
 
+import org.eclipse.jface.viewers.ITreeContentProvider
+protected class CoqContentProvider extends ITreeContentProvider {
+  import dk.itu.sdg.coqparser.VernacularRegion
+  import org.eclipse.jface.text.IDocument
+  import org.eclipse.jface.viewers.Viewer
+  import org.eclipse.ui.part.FileEditorInput
+  import org.eclipse.ui.texteditor.IDocumentProvider
+  
+  var documentProvider : Option[IDocumentProvider] = None
+  
+  def dispose() : Unit = {}
+  
+  var content : List[VernacularRegion] = Nil
+  val parser = new dk.itu.sdg.coqparser.VernacularParser {}
+  var root : parser.VernacularDocument = null
+  def parse(document : IDocument) : Unit = {
+    import scala.util.parsing.input.CharSequenceReader
+    
+    println("parse the coq")
+    val result = parser.parseString(document.get) map {doc => root = doc; doc}
+    println("got " + result)
+  }
+  
+  
+  def inputChanged(viewer : Viewer, oldInput : Any, newInput : Any) : Unit = {
+    if (newInput != null) {
+      println("inputChanged")
+      documentProvider foreach {prov => parse(prov.getDocument(newInput))}
+    }
+  }
+  
+  def hasChildren (obj : Any) : Boolean = obj match {
+    case something : VernacularRegion if something.getOutline.length > 0 => true
+    case _ => false
+  }
+  
+  def getChildren (obj : Any) : Array[AnyRef] = {
+    Console.println("getChildren" + obj)
+    obj match {
+      case something : VernacularRegion => something.getOutline.toArray
+      case something : FileEditorInput => if (root == null) Array[AnyRef]() else root.getOutline.toArray
+      case _ => Array[AnyRef]()
+    }
+  }
+  def getElements (obj : Any) : Array[AnyRef] = {
+    Console.println("getElements " + obj)
+    getChildren(obj)
+  }
+  
+  def getParent (obj : Any) : AnyRef = {
+    Console.println("getParent " + obj)
+    null //FIXME: Figure out how to do this - perhaps compute a table of parents?
+  }
+  
+  
+}
+
 import org.eclipse.jface.text.Document
 import org.eclipse.ui.editors.text.FileDocumentProvider
 
@@ -115,6 +179,21 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
     Console.println("old spec start " + sstart + " old spec end " + send) // + ":: " + old.substring(sstart, send + (spec.length - specend)))
     val off = if (pend + (prog.length - proend) - pstart == prog.length) 0 else 1
     coq.replace(sstart + off, send + (spec.length - specend) - sstart, spec)
+  }
+  
+  // The model of Coq code, used for outline view etc.
+  import dk.itu.sdg.coqparser.VernacularRegion
+  private val contentProviders : collection.mutable.Map[IDocument, CoqContentProvider] =
+    collection.mutable.Map.empty
+  def getOutline (doc : IDocument) : Option[CoqContentProvider] = {
+    val outline = contentProviders.get(doc) getOrElse {
+      val cprov = new CoqContentProvider()
+      cprov.documentProvider = Some(this)
+      contentProviders += (doc -> cprov)
+      cprov
+    }
+    outline.parse(doc)
+    Some(outline)
   }
 }
 
@@ -748,82 +827,39 @@ class CoqContentOutlinePage extends ContentOutlinePage {
   import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.ui.texteditor.{IDocumentProvider, ITextEditor}
   
-  var documentProvider : IDocumentProvider = null
+  var documentProvider : Option[IDocumentProvider] = None
   var textEditor : ITextEditor = null
   def this(provider : org.eclipse.ui.texteditor.IDocumentProvider, editor : org.eclipse.ui.texteditor.ITextEditor) = {
     this()
-    documentProvider = provider
+    documentProvider = Some(provider)
     textEditor = editor
   }
   
   var input : Any = null // TODO: Make into less of a direct Java port
+  
   def setInput (arg : AnyRef) : Unit = {
     input = arg
     update()
   }
+
   def update () : Unit = {
-    println("Called update")
     val viewer : TreeViewer = getTreeViewer()
+    println("Called update when input = [" + input + "] and viewer = [" + viewer + "]")
     
     if (viewer != null) {
       val control : Control = viewer.getControl()
       if (control != null && !control.isDisposed()) {
         control.setRedraw(false)
         viewer.setInput(input)
+        val doc = textEditor.getDocumentProvider.getDocument(input)
+        Console.println("  In update(), document is " + doc)
+        CoqJavaDocumentProvider.getOutline(doc) foreach { cprov => viewer.setContentProvider(cprov) }
         viewer.expandAll()
         control.setRedraw(true)
       }
     }
   }
   
-  protected class ContentProvider extends ITreeContentProvider {
-    def dispose() : Unit = {}
-    
-    var content : List[VernacularRegion] = Nil
-    val parser = new dk.itu.sdg.coqparser.VernacularParser {}
-    var root : parser.VernacularDocument = null
-    def parse(document : IDocument) : Unit = {
-      import scala.util.parsing.input.CharSequenceReader
-      
-      println("parse the coq")
-      val result = parser.parseString(document.get) map {doc => root = doc; doc}
-      println("got " + result)
-    }
-    
-
-    
-    def inputChanged(viewer : Viewer, oldInput : Any, newInput : Any) : Unit = {
-      if (newInput != null) {
-        println("inputChanged")
-        parse(documentProvider.getDocument(newInput))
-      }
-    }
-    
-    def hasChildren (obj : Any) : Boolean = obj match {
-      case something : VernacularRegion if something.getOutline.length > 0 => true
-      case _ => false
-    }
-    
-    def getChildren (obj : Any) : Array[AnyRef] = {
-      Console.println("getChildren" + obj)
-      obj match {
-        case something : VernacularRegion => something.getOutline.toArray
-        case something : FileEditorInput => if (root == null) Array[AnyRef]() else root.getOutline.toArray
-        case _ => Array[AnyRef]()
-      }
-    }
-    def getElements (obj : Any) : Array[AnyRef] = {
-      Console.println("getElements " + obj)
-      getChildren(obj)
-    }
-    
-    def getParent (obj : Any) : AnyRef = {
-      Console.println("getParent " + obj)
-      null //FIXME: Figure out how to do this - perhaps compute a table of parents?
-    }
-    
-    
-  }
 
   override def selectionChanged(event : SelectionChangedEvent) : Unit = {
     import dk.itu.sdg.parsing.{LengthPosition, NoLengthPosition, RegionPosition}
@@ -854,12 +890,14 @@ class CoqContentOutlinePage extends ContentOutlinePage {
     super.createControl(parent)
 
     val viewer : TreeViewer = getTreeViewer()
-    viewer.setContentProvider(new ContentProvider())
+    viewer.setContentProvider(new CoqContentProvider()) // Just to satisfy precondition - replaced later!
     viewer.setLabelProvider(new CoqLabelProvider())
     viewer.addSelectionChangedListener(this)
 
     if (input != null)
       viewer.setInput(input)
+    
+    update()
   }
   
 }
