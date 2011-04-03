@@ -17,20 +17,48 @@ object EclipseUtils {
 import EclipseUtils.{color, tuple2Color}
 
 class CoqEditor extends TextEditor {
-  import org.eclipse.jface.text.source.ISourceViewer
+  import org.eclipse.jface.text.source.{IAnnotationModel, ISourceViewer, IVerticalRuler}
+  import org.eclipse.swt.widgets.Composite
   import org.eclipse.ui.IEditorInput
   import org.eclipse.ui.views.contentoutline.{ContentOutlinePage, IContentOutlinePage}
 
+  var annotationModel : IAnnotationModel = null
+  
   override protected def initializeEditor () : Unit = {
     Console.println("initializeEditor was called")
     setDocumentProvider(CoqJavaDocumentProvider)
     Console.println(" - document provider set")
-    setSourceViewerConfiguration(CoqSourceViewerConfiguration)
+    setSourceViewerConfiguration(new CoqSourceViewerConfiguration(this))
     Console.println(" - source viewer configuration set")
     super.initializeEditor()
     Console.println(" - initializeEditor called super")
   }
 
+  
+  override def createPartControl (parent : Composite) : Unit = {
+    import org.eclipse.jface.text.source.projection.{ProjectionSupport, ProjectionViewer}
+    super.createPartControl(parent)
+    
+    //Create the necessary infrastructure for code folding
+    val projViewer : ProjectionViewer = getSourceViewer.asInstanceOf[ProjectionViewer]
+    val projectionSupport = new ProjectionSupport(projViewer, getAnnotationAccess(), getSharedColors())
+    projectionSupport.install()
+
+    //turn projection mode on
+    projViewer.doOperation(ProjectionViewer.TOGGLE)
+
+    annotationModel = projViewer.getProjectionAnnotationModel()
+  }
+  
+  //Create the source viewer as one that supports folding
+  override def createSourceViewer (parent : Composite, ruler : IVerticalRuler, styles : Int) : ISourceViewer = {
+    import org.eclipse.jface.text.source.projection.ProjectionViewer
+    val viewer : ISourceViewer = new ProjectionViewer(parent, ruler, getOverviewRuler(), isOverviewRulerVisible(), styles)
+    getSourceViewerDecorationSupport(viewer)
+    viewer
+  }
+  
+  
   def getSource () : ISourceViewer = {
     getSourceViewer()
   }
@@ -39,6 +67,7 @@ class CoqEditor extends TextEditor {
     setKeyBindingScopes(List("Kopitiam.context").toArray)
   }
   
+  // Support getting outline pages
   var outlinePage : Option[CoqContentOutlinePage] = None
   override def getAdapter (required : java.lang.Class[_]) : AnyRef = {
     Console.println("Getting adapter for " + required + " on CoqEditor")
@@ -278,33 +307,39 @@ object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
 //}
 
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
-class CoqOutlineReconcilingStrategy extends IReconcilingStrategy {
+import org.eclipse.jface.text.IDocument
+class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor) extends IReconcilingStrategy {
   import org.eclipse.jface.text.{IDocument, IRegion}
   import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.text.reconciler._
-  import org.eclipse.ui.views.contentoutline.ContentOutlinePage
-  
-  var document : IDocument = null
+  import org.eclipse.ui.views.contentoutline.IContentOutlinePage
   
   def reconcile (region : DirtyRegion, subregion : IRegion) : Unit = ()
   
   def reconcile (partition : IRegion) : Unit = {
-    println("Reconciling " + partition)
-    CoqJavaDocumentProvider.getOutline(document) //updates outline
-    
+    println("Reconciling " + partition + " with editor = " + editor + " and doc = " + document)
+    val outline = CoqJavaDocumentProvider.getOutline(document) // updates model as side effect
+    if (editor != null) {
+      val outlinePage = editor.getAdapter(classOf[IContentOutlinePage]).asInstanceOf[CoqContentOutlinePage]
+      Display.getDefault.asyncExec(new java.lang.Runnable {
+        def run() : Unit = {
+          outlinePage.update() //Update GUI outline  
+        }
+      })    
+    } else
+      println(" null editor")
+    // update folding
   }
   
-  def setDocument (doc : IDocument) : Unit = {
-    Console.println("Setting document "+doc+" for reconciler")
+  def setDocument(doc : IDocument) : Unit = {
     document = doc
   }
-  
 }
 
 
 import org.eclipse.jface.text.source.SourceViewerConfiguration
 
-object CoqSourceViewerConfiguration extends SourceViewerConfiguration {
+class CoqSourceViewerConfiguration(editor : CoqEditor) extends SourceViewerConfiguration {
   import org.eclipse.jface.text.presentation.{IPresentationReconciler, PresentationReconciler}
   import org.eclipse.jface.text.rules.DefaultDamagerRepairer
   import org.eclipse.jface.text.{TextAttribute,IDocument}
@@ -314,7 +349,6 @@ object CoqSourceViewerConfiguration extends SourceViewerConfiguration {
   import org.eclipse.jface.text.source.ISourceViewer
   import org.eclipse.jface.text.contentassist.{IContentAssistant,ContentAssistant}
 
-
   override def getContentAssistant(v : ISourceViewer) : IContentAssistant = {
     val assistant= new ContentAssistant
     assistant.setContentAssistProcessor(CoqContentAssistantProcessor, IDocument.DEFAULT_CONTENT_TYPE)
@@ -322,8 +356,7 @@ object CoqSourceViewerConfiguration extends SourceViewerConfiguration {
   }
 
   override def getReconciler (v : ISourceViewer) : IReconciler = {
-    val strategy = new CoqOutlineReconcilingStrategy
-    strategy.setDocument(v.getDocument)
+    val strategy = new CoqOutlineReconcilingStrategy(v.getDocument, editor)
     val reconciler = new MonoReconciler(strategy, false)
     reconciler
   }
@@ -827,7 +860,7 @@ object CoqContentAssistantProcessor extends IContentAssistProcessor {
 
 import org.eclipse.ui.views.contentoutline.ContentOutlinePage
 
-class CoqContentOutlinePage extends ContentOutlinePage with IDocumentListener {
+class CoqContentOutlinePage extends ContentOutlinePage {
   import dk.itu.sdg.coqparser.VernacularRegion
   import org.eclipse.jface.text.{IDocument, DocumentEvent}
   import org.eclipse.jface.viewers.{ITreeContentProvider, LabelProvider, TreeViewer, Viewer, SelectionChangedEvent, StructuredSelection}
@@ -862,17 +895,12 @@ class CoqContentOutlinePage extends ContentOutlinePage with IDocumentListener {
         val doc = textEditor.getDocumentProvider.getDocument(input)
         Console.println("  In update(), document is " + doc)
         CoqJavaDocumentProvider.getOutline(doc) foreach { cprov => viewer.setContentProvider(cprov) }
-        doc.addDocumentListener(this)
         viewer.expandAll()
         control.setRedraw(true)
       }
     }
   }
   
-  def documentAboutToBeChanged(event : DocumentEvent) : Unit = ()
-  def documentChanged (event : DocumentEvent) : Unit = update()
-  
-
   override def selectionChanged(event : SelectionChangedEvent) : Unit = {
     import dk.itu.sdg.parsing.{LengthPosition, NoLengthPosition, RegionPosition}
     
