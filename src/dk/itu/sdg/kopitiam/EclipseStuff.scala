@@ -1,4 +1,4 @@
-/* (c) 2010-2011 Hannes Mehnert */
+/* (c) 2010-2011 Hannes Mehnert and David Christiansen */
 
 package dk.itu.sdg.kopitiam
 
