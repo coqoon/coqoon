@@ -228,7 +228,7 @@ class VernacularLexer extends Lexical with VernacularReserved with CoqTokens wit
   type Tokens <: CoqTokens
   override type Elem = Char
 
-  def whitespace = comment | """[\t\n\ ]*""".r
+  def whitespace = rep('('~'*'~commentContents | '\t' | '\r' | '\n' | ' ')
   
   def ident : Parser[Token] = """[\p{L}_][\p{L}_0-9']*""".r ^^ processIdent //TODO: unicode-id-part from Coq reference
   private def processIdent (name : String) : Token =
