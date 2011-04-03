@@ -24,12 +24,14 @@ trait EclipseUtils {
   
 }
 
-class CoqEditor extends TextEditor {
-  import org.eclipse.jface.text.source.{IAnnotationModel, ISourceViewer, IVerticalRuler}
+class CoqEditor extends TextEditor with EclipseUtils {
+  import dk.itu.sdg.coqparser.VernacularRegion
+  import org.eclipse.jface.text.source.{Annotation, IAnnotationModel, ISourceViewer, IVerticalRuler}
+  import org.eclipse.jface.text.Position
   import org.eclipse.swt.widgets.Composite
   import org.eclipse.ui.IEditorInput
   import org.eclipse.ui.views.contentoutline.{ContentOutlinePage, IContentOutlinePage}
-  import org.eclipse.jface.text.source.projection.ProjectionAnnotationModel
+  import org.eclipse.jface.text.source.projection.{ProjectionAnnotation, ProjectionAnnotationModel}
   
   var annotationModel : ProjectionAnnotationModel = null
   
@@ -42,7 +44,6 @@ class CoqEditor extends TextEditor {
     super.initializeEditor()
     Console.println(" - initializeEditor called super")
   }
-
   
   override def createPartControl (parent : Composite) : Unit = {
     import org.eclipse.jface.text.source.projection.{ProjectionSupport, ProjectionViewer}
@@ -66,7 +67,6 @@ class CoqEditor extends TextEditor {
     getSourceViewerDecorationSupport(viewer)
     viewer
   }
-  
   
   def getSource () : ISourceViewer = {
     getSourceViewer()
@@ -97,12 +97,35 @@ class CoqEditor extends TextEditor {
 
   override def doSetInput (input : IEditorInput) : Unit = {
     super.doSetInput(input)
-    if (input != null && outlinePage != null) outlinePage foreach { _.setInput(input) }
+    if (input != null && outlinePage != null) {
+      outlinePage foreach { _.setInput(input) }
+    }
+    
   }
   
   override def editorSaved () : Unit = {
     if (outlinePage != null) outlinePage foreach { _.update() }
     super.editorSaved()
+  }
+  
+  //Necessary for Eclipse API cruft
+  var oldAnnotations : Array[Annotation] = Array.empty
+  
+  def updateFolding (root : VernacularRegion) : Unit = {
+    val annotations = foldingAnnotations(root)
+    var newAnnotations = new java.util.HashMap[Any, Any]
+    for ((pos, annot) <- annotations) newAnnotations.put(annot, pos)
+    annotationModel.modifyAnnotations(oldAnnotations, newAnnotations, null)
+    oldAnnotations = annotations.map(_._2).toArray
+    Console.println("Updated folding " + annotations.toList)
+  }
+  
+  private def foldingAnnotations(region : VernacularRegion) : Stream[(Position, ProjectionAnnotation)] = {
+    println("Collapsable " + region.outlineName + region.outlineNameExtra)
+    if (region.pos.hasPosition)
+      (pos2eclipsePos(region.pos), new ProjectionAnnotation) #:: region.getOutline.flatMap(foldingAnnotations)
+    else
+     region.getOutline.flatMap(foldingAnnotations) 
   }
 }
 
@@ -161,13 +184,37 @@ protected class CoqContentProvider extends ITreeContentProvider {
   
   def killLeadingWhitespace(reg : VernacularRegion, doc : String) : Unit = {
     import dk.itu.sdg.parsing._
-    def advance(reg: VernacularRegion): Unit = {
+    def advance(reg : VernacularRegion) : Unit = {
       reg.pos match {
         case NoLengthPosition => ()
-        case p@RegionPosition(off, len) => {
+        case RegionPosition(off, len) if len > 0 => {
           if ((doc(off) == ' ' || doc(off) == '\t' || doc(off) == '\n' || doc(off) == '\r') && reg.advancePosStart) advance(reg)
+          else if (doc.substring(off, off+2) == "(*") advanceComment(reg, 1)
         }
+        case _ => ()
       }
+    }
+    def advanceComment(reg : VernacularRegion, depth : Int) : Unit = {
+      reg.pos match {
+        case NoLengthPosition => ()
+        case RegionPosition(off, len) if len > 0=> {
+          println("Advancing " + doc.substring(off, off+len) + " at " + off)
+          if (doc.substring(off, off+2) == "(*") {
+            reg.advancePosStart(2)
+            advanceComment(reg, depth + 1)
+          }
+          else if (doc.substring(off, off+2) == "*)") {
+            reg.advancePosStart(2)
+            if (depth > 1) advanceComment(reg, depth - 1)
+            else advance(reg)
+          }
+          else {
+            reg.advancePosStart
+            advanceComment(reg, depth)
+          }
+        }
+        case _ => ()
+      }  
     }
     advance(reg)
     reg.subRegions foreach { r => killLeadingWhitespace(r, doc) }
@@ -334,18 +381,13 @@ import org.eclipse.jface.text.reconciler.IReconcilingStrategy
 import org.eclipse.jface.text.IDocument
 class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor) extends IReconcilingStrategy with EclipseUtils {
   import dk.itu.sdg.coqparser.VernacularRegion
-  import org.eclipse.jface.text.source.Annotation
-  import org.eclipse.jface.text.source.projection.ProjectionAnnotation
   import org.eclipse.jface.text.{IDocument, IRegion, Position}
   import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.text.reconciler._
   import org.eclipse.ui.views.contentoutline.IContentOutlinePage
   
   def reconcile (region : DirtyRegion, subregion : IRegion) : Unit = ()
-  
-  //Necessary for Eclipse API cruft
-  var oldAnnotations : Array[Annotation] = Array.empty
-  
+    
   def reconcile (partition : IRegion) : Unit = {
     println("Reconciling " + partition + " with editor = " + editor + " and doc = " + document)
     val outline = CoqJavaDocumentProvider.getOutline(document) // updates model as side effect
@@ -361,23 +403,8 @@ class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor
       
     // update folding
     outline map (_.root) foreach { root =>
-      val annotations = foldingAnnotations(root)
-      var newAnnotations = new java.util.HashMap[Any, Any]
-      for ((pos, annot) <- annotations) newAnnotations.put(annot, pos)
-      editor.annotationModel.modifyAnnotations(oldAnnotations, newAnnotations, null)
-      oldAnnotations = annotations.map(_._2).toArray
-      Console.println("Updated folding " + annotations.toList)
-    }
-    
-    
-  }
-  
-  def foldingAnnotations(region : VernacularRegion) : Stream[(Position, ProjectionAnnotation)] = {
-    println("Collapsable " + region.outlineName + region.outlineNameExtra)
-    if (region.pos.hasPosition)
-      (pos2eclipsePos(region.pos), new ProjectionAnnotation) #:: region.getOutline.flatMap(foldingAnnotations)
-    else
-     region.getOutline.flatMap(foldingAnnotations) 
+      if (editor != null) editor.updateFolding(root)
+    }  
   }
   
   def setDocument(doc : IDocument) : Unit = {
