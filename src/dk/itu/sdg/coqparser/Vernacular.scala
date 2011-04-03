@@ -10,9 +10,9 @@ trait VernacularRegion extends LengthPositional with Product {
   def outlineName = "<no name>"
   def outlineNameExtra = pos.toString
   override def toString = "<" + outlineName + " " + outlineNameExtra + ">"
-  
-  def getOutline = subRegions.filter(_.outline)  
-  
+
+  def getOutline = subRegions.filter(_.outline)
+
   lazy val subRegions : Stream[VernacularRegion] = subRegions(productIterator.toStream)
   private def subRegions (fields : Stream[Any]) : Stream[VernacularRegion] =
     fields match {
@@ -21,29 +21,29 @@ trait VernacularRegion extends LengthPositional with Product {
       case _ #:: rest => subRegions(rest)
       case Stream.Empty => Stream.Empty
     }
-  
+
   lazy val hasSubRegions : Boolean = subRegions.length > 0
 }
 
-trait GallinaSyntax { 
+trait GallinaSyntax {
   sealed abstract class Name extends VernacularRegion
   case class StringName (name : String) extends Name {
     override def toString = name
   }
-  case class UnderscoreName () extends Name 
-  
+  case class UnderscoreName () extends Name
+
   sealed abstract class Binder extends VernacularRegion
   case class NameBinder (name : Name) extends Binder
   case class TypedNameBinder (names: List[Name], `type` : Term) extends Binder
   case class ColonEqualBinder (name : Name, `type` : Option[Term], binding : Term) extends Binder
-  
+
   sealed abstract class Arg extends VernacularRegion
   case class SimpleArg (term : Term) extends Arg
   case class NamedArg (name : Name, term : Term) extends Arg
-  
+
   case class MatchItem (term : Term, as : Option[Name], in : Option[Term]) extends VernacularRegion
   case class MatchEquation (patterns : List[Pattern], rhs : Term) extends VernacularRegion
-  
+
   sealed abstract class Pattern extends VernacularRegion
   case class MultPattern (patterns : List[Pattern]) extends Pattern
   case class AsPattern (pattern : Pattern, name : StringName) extends Pattern
@@ -52,7 +52,7 @@ trait GallinaSyntax {
   case class DontCarePattern () extends Pattern // underscore
   case class NumericPattern (num : Int) extends Pattern
   case class OrPattern (patterns : List[Pattern]) extends Pattern
-  
+
   case class FixBody (
     ident : StringName,
     binders : List[Binder],
@@ -63,7 +63,7 @@ trait GallinaSyntax {
     override val outline = true
     override def outlineName = ident.name
   }
-  
+
   case class CofixBody (
     ident : StringName,
     binders : List[Binder],
@@ -73,9 +73,9 @@ trait GallinaSyntax {
     override val outline = true
     override def outlineName = ident.name
   }
-  
+
   case class DepRetType (name : Option[Name], returnType : Term) extends VernacularRegion
-  
+
   sealed abstract class Term extends VernacularRegion
   case class Forall (binders : List[Binder], term : Term) extends Term
   case class Fun (binders : List[Binder], body : Term) extends Term
@@ -90,32 +90,32 @@ trait GallinaSyntax {
 
   case class Fix (body: FixBody) extends Term
   case class FixFor (bodies : List[FixBody], `for` : StringName) extends Term
-  
+
   case class Cofix (body : CofixBody) extends Term
   case class CofixFor (bodies : List[CofixBody], `for` : StringName) extends Term
-  
+
   case class Let (name : StringName, binders : List[Binder], `type` : Option[Term], is : Term, body : Term) extends Term
   case class LetFix (fixBody : FixBody, body : Term) extends Term
   case class LetCofix (cofixBody : CofixBody, body : Term) extends Term
   case class LetDepRet (names : List[Name], depRet : Option[DepRetType], is : Term, body : Term) extends Term
-  
+
   case class IfThenElse (condition : Term, depRetType : Option[DepRetType], `then` : Term, `else` : Term) extends Term
-  
+
   case class NoImplicits (id : QualId, terms : List[Term]) extends Term
-  
+
   sealed abstract class Sort extends Term
   // These are not case objects because they extend Positional
   case class Prop () extends Sort
   case class Set () extends Sort
   case class Type () extends Sort
-  
+
   case class Scope (term : Term, name : String) extends Term
-  
+
   case class Match (items : List[MatchItem], returnType : Option[Term], body : List[MatchEquation]) extends Term
-  
+
   case class Num (value : Int) extends Term
   case class Inferrable () extends Term /* this is _ */
-  
+
 }
 
 trait VernacularSyntax extends GallinaSyntax {
@@ -123,7 +123,7 @@ trait VernacularSyntax extends GallinaSyntax {
   sealed abstract class Sentence extends VernacularRegion {
     override val outline = true
   }
-  
+
   case class AssumptionSentence (keyword : StringName, assumptions : List[Assumption]) extends Sentence {
     override def outlineName = keyword.name
   }
@@ -145,20 +145,20 @@ trait VernacularSyntax extends GallinaSyntax {
   case class Proof (/* TODO : Represent proof body */) extends Sentence {
     override def outlineName = "Proof"
   }
-  
+
   case class Assumption (names : List[StringName], `type` : Term) extends VernacularRegion
   case class IndBody (name : StringName, binders : List[Binder], `type` : Term, constructors : List[ConstructorDef]) extends VernacularRegion
   case class ConstructorDef (name : StringName, binders : List[Binder], `type` : Option[Term]) extends VernacularRegion
-  
-  
+
+
   /* This representation of modules is a bare minimum - it throws out useful information! */
   case class Module (name : StringName, contents : List[VernacularRegion]) extends VernacularRegion {
     override val outline = true
     override def outlineName = "Module " + name.name
   }
-  
+
   case class VernacularDocument (contents : List[VernacularRegion]) extends VernacularRegion
-  
+
   sealed abstract class Command extends VernacularRegion {
     override val outline = true
   }
@@ -174,41 +174,41 @@ trait VernacularSyntax extends GallinaSyntax {
   case class PrintSection (ident : StringName) extends Command {
     override def outlineName = "Print Section " + ident.name
   }
-  
+
   case class Pwd () extends Command {
     override def outlineName = "Pwd"
   }
-  
+
   case class Cd (path : StringName) extends Command {
     override def outlineName = "Cd \"" + path.name + "\""
   }
-  
+
   case class AddLoadPath (path : StringName, as : Option[QualId]) extends Command {
-    override def outlineName = "Add LoadPath \"" + path.name + "\"" 
+    override def outlineName = "Add LoadPath \"" + path.name + "\""
   }
-  
+
   case class AddRecLoadPath (path : StringName, as : Option[QualId]) extends Command {
-    override def outlineName = "Add Rec LoadPath \"" + path.name + "\"" 
+    override def outlineName = "Add Rec LoadPath \"" + path.name + "\""
   }
-  
+
   //TODO: Rest of the load path commands
-  
+
   case class Require (ids : List[QualId]) extends Command {
-    override def outlineName = "Require " + ids.mkString(" ") 
+    override def outlineName = "Require " + ids.mkString(" ")
   }
-  
+
   case class RequireImport (ids : List[QualId]) extends Command {
-    override def outlineName = "Require Import " + ids.mkString(" ") 
+    override def outlineName = "Require Import " + ids.mkString(" ")
   }
-  
+
   case class RequireExport (ids : List[QualId]) extends Command {
-    override def outlineName = "Require Export " + ids.mkString(" ") 
+    override def outlineName = "Require Export " + ids.mkString(" ")
   }
-  
+
   case class RequireFile (file : StringName) extends Command {
     override def outlineName = "Require " + file.name
   }
-  
+
   //TODO: Global/Local variants
   case class OpenScope (name : StringName) extends Command {
     override def outlineName = "Open Scope " + name.name
@@ -269,7 +269,7 @@ class VernacularLexer extends Lexical with VernacularReserved with CoqTokens wit
   override type Elem = Char
 
   def whitespace = rep('('~'*'~commentContents | '\t' | '\r' | '\n' | ' ')
-  
+
   def ident : Parser[Token] = """[\p{L}_][\p{L}_0-9']*""".r ^^ processIdent //TODO: unicode-id-part from Coq reference
   private def processIdent (name : String) : Token =
     if (keywords contains name)
@@ -332,43 +332,43 @@ object TestLexer extends VernacularLexer with Application {
 trait VernacularParser extends LengthPositionParsers with TokenParsers with VernacularSyntax with VernacularReserved {
   val lexical = new VernacularLexer
   type Tokens = VernacularLexer
-  
-  
+
+
   /* Parsers for particular tokens */
   def ident = elem("identifier", _.isInstanceOf[lexical.Ident])
-    
+
   def ident (str : String) = elem("identifier " + str, {
     case lexical.Ident(name) if name == str => true
     case _ => false
   })
-  
+
   def accessIdent = elem("access identifier", _.isInstanceOf[lexical.AccessIdent])
 
   def keyword (str : String) = elem("keyword " + str, {
     case lexical.Keyword(name) if name == str => true
     case _ => false
   })
-  
+
   def delim = elem("delimiter", _.isInstanceOf[lexical.Delim])
-  
+
   def delim (str : String) = elem("delimiter " + str, {
     case lexical.Delim(name) if name == str => true
     case _ => false
   })
-  
+
   def num : Parser[Int] = elem("number", _.isInstanceOf[lexical.Num]) ^^ {
     case lexical.Num(digits) => digits.toInt
   }
-  
+
   def string = elem("string", _.isInstanceOf[lexical.StringLit])
-  
+
   /* Utility parsers */
   def inParens[T] (p : Parser[T]) : Parser[T] = delim("(")~>(p<~delim(")"))
   def inBraces[T] (p : Parser[T]) : Parser[T] = delim("{")~>(p<~delim("}"))
   def inParensOrBraces[T] (p : Parser[T]) : Parser[T] = inParens(p) | inBraces(p)
-  
+
   /* Parsers for Gallina */
-  
+
   def term : Parser[Term] =
     lengthPositioned(
       ( forall
@@ -396,11 +396,11 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
         case t~Some(lexical.Delim("%")~lexical.Ident(scope)) => Scope(t, scope)
       }
     )
-  
+
   def forall : Parser[Term] = keyword("forall")~rep1(binder)~delim(",")~term ^^ {
     case kwd~binds~comma~body => Forall(binds, body)
   }
-  
+
   def fix : Parser[Term] =
     keyword("fix")~>(fixBody | rep1sep(fixBody, keyword("with"))~keyword("for")~ident) ^^ {
       case (bodies : List[FixBody])~_~(id : lexical.Ident) =>
@@ -408,7 +408,7 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
       case (fbody: FixBody) =>
         Fix(fbody)
     }
-  
+
   def fixBody : Parser[FixBody] =
     ident~rep1(binder)~
     opt((delim("{")~keyword("struct"))~>(ident<~delim("}")))~
@@ -417,7 +417,7 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
     case id~binders~annot~ascr~rhs =>
       FixBody(StringName(id.chars), binders, annot.map(name=>StringName(name.chars)), ascr, rhs)
   }
-  
+
   def cofix : Parser[Term] =
     keyword("cofix")~>(cofixBody | rep1sep(cofixBody, keyword("with"))~keyword("for")~ident) ^^ {
       case (bodies : List[CofixBody])~_~(id: lexical.Ident) =>
@@ -425,13 +425,13 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
       case (cfbody: CofixBody) =>
         Cofix(cfbody)
     }
-  
+
   def cofixBody : Parser[CofixBody] =
     ident~rep(binder)~opt(delim(":")~>term)~(delim(":=")~>term) ^^ {
       case id~binders~ascr~rhs =>
         CofixBody(StringName(id.chars), binders, ascr, rhs)
     }
-  
+
   def let : Parser[Term] =
     keyword("let")~>(
       ident~rep(binder)~opt(delim(":")~term)~(delim(":=")~>term)~(keyword("in")~>term)
@@ -446,19 +446,19 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
       case (names : List[Name])~(depRet : Option[DepRetType])~(is : Term)~(body : Term) =>
         LetDepRet(names, depRet, is, body)
     }
-  
+
   def noImplicits : Parser[Term] =
     delim("@")~>qualid~rep(term) ^^ {
       case name~args => NoImplicits(name, args)
     }
-    
+
   def ifElse : Parser[Term] =
     (keyword("if")~>term~opt(depRetType))~
     (keyword("then")~>term)~
     (keyword("else")~>term) ^^ {
-      case cond~depRet~thn~els => IfThenElse(cond, depRet, thn, els) 
+      case cond~depRet~thn~els => IfThenElse(cond, depRet, thn, els)
     }
-  
+
   def binder : Parser[Binder] =
     lengthPositioned(
       name ^^ NameBinder
@@ -469,7 +469,7 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
         case name~typ~colonEqual~binding => ColonEqualBinder(name, typ, binding)
       }
     )
-  
+
   def fun : Parser[Term] = (keyword("fun")~>rep1(binder))~(delim("=>")~>term) ^^ {
     case binders~body => Fun(binders, body)
   }
@@ -479,39 +479,39 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
       ident ^^ {case lexical.Ident(id) => StringName(id)}
     | delim("_") ^^^ UnderscoreName()
     )
-  
+
   def qualid : Parser[QualId] = ident~rep(accessIdent) ^^ {
     case id~rest => QualId(StringName(id.chars) :: rest.map({ (aID) => StringName(aID.chars) }))
   }
-  
+
   def depRetType : Parser[DepRetType] =
     opt(keyword("as")~>name)~(keyword("return")~>term) ^^ {
-      case name~ret => DepRetType(name, ret) 
+      case name~ret => DepRetType(name, ret)
     }
-  
+
   def patternMatch : Parser[Term] = keyword("match")~>(
     (((rep1sep(matchItem, delim(","))~opt(keyword("return")~>term))<~ keyword("with"))~ //TODO: missing return type
      opt(delim("|")) ~ repsep(matchEquation, delim("|")))<~keyword("end")
   ) ^^ {
     case items~retn~_~equations => Match(items, retn, equations)
   }
-  
+
   def matchItem : Parser[MatchItem] =
     lengthPositioned(term~opt(keyword("as")~>name)~opt(keyword("in")~>term) ^^ {
       case t~as~in => MatchItem(t, as, in)
     })
-  
+
   def matchEquation : Parser[MatchEquation] =
     lengthPositioned(
       rep1sep(rep1sep(pattern, delim(",")), delim("|"))~delim("=>")~term ^^ {
         case patterns~arrow~result => MatchEquation(patterns map MultPattern, result)
       }
     )
-  
+
   def pattern : Parser[Pattern] =
     lengthPositioned(
       ( qualid~rep(pattern) ^^ {
-          case id~Nil => IdentPattern(id, Nil) 
+          case id~Nil => IdentPattern(id, Nil)
           case id~patterns => IdentPattern(id, patterns)
         }
       | num ^^ NumericPattern
@@ -530,17 +530,17 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
         case pattern~None => pattern
       }
     )
-  
-  def sort : Parser[Sort] = propSort | setSort | typeSort  
+
+  def sort : Parser[Sort] = propSort | setSort | typeSort
   def propSort : Parser[Prop] = keyword("Prop") ^^^ Prop()
   def setSort : Parser[Set] = keyword("Set") ^^^ Set()
   def typeSort : Parser[Type] = keyword("Type") ^^^ Type()
-  
+
   def arg : Parser[Arg] = (term | inParens(name~delim(":=")~term)) ^^ {
     case t : Term => SimpleArg(t)
     case (name : Name)~colonEquals~(t : Term) => NamedArg(name, t)
   }
-  
+
   /* Parsers for Vernacular */
   def sentence : Parser[Sentence] = lengthPositioned(
     assumption
@@ -551,18 +551,18 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
   | assertion
   | proof
   )
-  
+
   def dot : Parser[lexical.Token] = elem("period", (a : lexical.Token) => a match {
     case lexical.Delim(".") => true
     case _ => false
   })
-  
+
   def assumption : Parser[Sentence] =
     assumptionKeyword~(assum | rep(inParens(assum)))<~dot ^^ {
       case kwd~(assum : Assumption) => AssumptionSentence(kwd, List(assum))
       case kwd~(assums : List[Assumption]) => AssumptionSentence(kwd, assums)
     }
-  
+
   def assumptionKeyword : Parser[StringName] = lengthPositioned(
   ( ident("Axiom")
   | ident("Conjecture")
@@ -573,52 +573,52 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
   | ident("Hypothesis")
   | ident("Hypotheses")
   ) ^^ { case id => StringName(id.chars) })
-  
+
   def assum : Parser[Assumption] = rep1(ident)~delim(":")~term ^^ {
     case ids~_~t => Assumption(ids.map(id=>StringName(id.chars)), t)
   }
-  
+
   def definition : Parser[Sentence] =
     defnKeyword~ident~rep(binder)~opt(delim(":")~>term)~(delim(":=")~>term)<~dot ^^ {
       case kwd~id~binders~typ~body =>
         DefinitionSentence(kwd, StringName(id.chars), binders, typ, body)
     }
-  
+
   def defnKeyword : Parser[StringName] =
     (ident("Definition") | ident("Let")) ^^ {id => StringName(id.chars)}
-  
+
   def inductive : Parser[Sentence] =
     inductiveKeyword~rep1sep(indBody, keyword("with"))<~dot ^^ {
       case kwd~bodies => InductiveSentence(kwd, bodies)
     }
-  
+
   def inductiveKeyword = (ident("Inductive") | ident("Coinductive")) ^^ {
       id => StringName(id.chars)
     }
-  
+
   def indBody : Parser[IndBody] =
     ident~rep(binder)~
     (delim(":")~>term)~
     (delim(":=")~>opt(delim("|"))~>rep1sep(constructorDef, delim("|"))) ^^ {
      case id~binders~typ~constructors => IndBody(StringName(id.chars), binders, typ, constructors)
     }
-  
+
   def constructorDef : Parser[ConstructorDef] =
     ident~rep(binder)~opt(delim(":")~>term) ^^ {
      case id~binders~typ => ConstructorDef(StringName(id.chars), binders, typ)
     }
-  
+
   def fixpoint : Parser[FixpointSentence] =
     ident("Fixpoint")~>(rep1sep(lengthPositioned(fixBody), ident("with"))<~dot) ^^ FixpointSentence
-    
+
   def cofixpoint : Parser[CofixpointSentence] =
     ident("Cofixpoint")~>(rep1sep(lengthPositioned(cofixBody), ident("with"))<~dot) ^^ CofixpointSentence
-    
+
   def assertion : Parser[AssertionSentence] =
     assertionKeyword~ident~rep(binder)~(delim(":")~>term)<~dot ^^ {
       case kwd~id~binders~typ => AssertionSentence(kwd, StringName(id.chars), binders, typ)
     }
-  
+
   def assertionKeyword : Parser[StringName] =
     lengthPositioned(
       ( ident("Theorem")
@@ -631,20 +631,20 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
       | ident("Example")
       ) ^^ { kwd => StringName(kwd.chars) }
     )
-  
+
   def proofEnd : Parser[Any] =
     proofEnders.map(ident).foldRight(failure("no matching end token") : Parser[Any]) { (p1, p2) => p1 | p2 }
 
-  def proof : Parser[Sentence] = 
+  def proof : Parser[Sentence] =
     ident("Proof")~dot~proofBody~proofEnd~dot ^^ { case _ => Proof() }
-  
+
   def proofBody : Parser[Any] =
     elem("tactic", {
       case lexical.Ident(name) if !proofEnders.contains(name) => true
       case _ => false
     })~rep(ident | delim)~dot
-    
-    
+
+
   /* Modules - just a start.*/
   // TODO: Represent the imports and such that are being thrown out
   def module : Parser[Module] = {
@@ -656,13 +656,13 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
       } yield Module(StringName(moduleName.chars), body)
     lengthPositioned(module)
   }
-  
+
   def moduleInfo = (ident | delim("!") | delim(":") | delim("<:"))
-    
-  
+
+
   /* Commands */
   def command : Parser[Command] = lengthPositioned(displayer | pathCommand | require | scopeCommand)
-  
+
   def displayer : Parser[Command] =
     ( ident("Print")~>(qualid<~dot) ^^ {id : QualId => Print(StringName("Print"), id)}
     | ident("Print")~>ident("Term")~>(qualid<~dot) ^^ {id : QualId => Print(StringName("Print Term"), id)}
@@ -671,7 +671,7 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
     | ident("Inspect")~>(num<~dot) ^^ Inspect
     | ident("Print")~>ident("Section")~>(ident<~dot) ^^ { case id : lexical.Ident => PrintSection(StringName(id.chars))}
     )
-  
+
   def pathCommand : Parser[Command] =
     ( ident("Pwd")~dot ^^ { _ => Pwd () }
     | ident("Cd")~>(string<~dot) ^^ {
@@ -684,7 +684,7 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
         case (str : lexical.StringLit)~id => AddRecLoadPath(StringName(str.chars), id)
       }
     )
-  
+
   def require : Parser[Command] =
     ( (ident("Require")~ident("Import"))~>(rep1(qualid)<~dot) ^^ RequireImport
     | (ident("Require")~ident("Export"))~>(rep1(qualid)<~dot) ^^ RequireExport
@@ -693,15 +693,15 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
         case str : lexical.StringLit => RequireFile(StringName(str.chars))
       }
     )
-  
+
   def scopeCommand : Parser[Command] =
     ( (ident("Open")~ident("Scope"))~>(ident<~dot) ^^ { case id : lexical.Ident => OpenScope(StringName(id.chars))}
     | (ident("Close")~ident("Scope"))~>(ident<~dot) ^^ { case id : lexical.Ident => OpenScope(StringName(id.chars))}
     )
-    
+
   /* Valid Vernacular syntax*/
   def top = rep(sentence | module | command)
-  
+
   def parseString (input : String) : ParseResult[VernacularDocument] = {
     import scala.util.parsing.input.CharSequenceReader
     phrase(top)(new lexical.Scanner(input)) map VernacularDocument
@@ -709,7 +709,7 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
 }
 
 object TestParser extends VernacularParser with Application {
-  
+
   import scala.util.parsing.input.Reader
   def parse (in : Reader[Char]) : Unit = {
     val p = phrase(top)(new lexical.Scanner(in))
@@ -731,7 +731,7 @@ object TestParser extends VernacularParser with Application {
       }
       print("Lexer: ")
       println(lexResult.toList)
-      
+
       import scala.util.parsing.input.CharSequenceReader
       parse(new CharSequenceReader(input))
       test()
@@ -749,7 +749,7 @@ trait VernacularParser extends TokenParsers with ImplicitConversions with Vernac
   import lexical.{Ident, StringLit, Num, Keyword, Delim}
 
   def ident = elem("identifier", _.isInstanceOf[Ident])
-    
+
   def ident(str : String) = elem("identifier " + str, {
     case Ident(name) if name == str => true
     case _ => false
@@ -759,12 +759,12 @@ trait VernacularParser extends TokenParsers with ImplicitConversions with Vernac
     case Keyword(name) if name == str => true
     case _ => false
   })
-  
+
   def delim(str : String) = elem("delimiter " + str, {
     case Delim(name) if name == str => true
     case _ => false
   })
-  
+
   def string = elem("string", _.isInstanceOf[StringLit])
 
   def top = rep1(sentence)

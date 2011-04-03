@@ -4,12 +4,12 @@ import scala.util.parsing.combinator._
 
 trait LengthPosition {
   def hasPosition : Boolean
-  
+
   def offset : Int
   def length : Int
-  
+
   override def toString = "(@" + offset + ", len " + length + ")"
-  
+
   def < (that: LengthPosition) =
     if (this.offset == that.offset)
       this.length < that.length
@@ -30,7 +30,7 @@ case class RegionPosition (offset : Int, length : Int) extends LengthPosition {
 
 trait LengthPositional {
   var pos : LengthPosition = NoLengthPosition
-  
+
   def setPos (off : Int, len : Int) : this.type= {
     if (this.pos == NoLengthPosition) {
       this.pos = RegionPosition(off, len)
@@ -38,10 +38,10 @@ trait LengthPositional {
     }
     else this
   }
-  
+
   //Enable a hack to kill whitespace that the positioned method brings along
   def advancePosStart() : Boolean = advancePosStart(1)
-  
+
   def advancePosStart(n : Int) : Boolean =
     this.pos match {
       case NoLengthPosition => false
@@ -50,7 +50,7 @@ trait LengthPositional {
         true
       }
       case _ => false
-    }  
+    }
 }
 
 trait LengthPositionParsers extends Parsers {
