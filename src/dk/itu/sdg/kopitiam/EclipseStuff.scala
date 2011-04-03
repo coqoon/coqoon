@@ -173,12 +173,16 @@ protected class CoqContentProvider extends ITreeContentProvider {
   val parser = new dk.itu.sdg.coqparser.VernacularParser {}
   var root : parser.VernacularDocument = null
   def parse(document : IDocument) : Unit = {
+    require(document != null)
     import scala.util.parsing.input.CharSequenceReader
-    
+        
     println("parse the coq")
-    val result = parser.parseString(document.get) map {doc => root = doc; doc}
+    val result = parser.parseString(document.get) match {
+      case parser.Success(doc, _) => root = doc; doc
+      case r : parser.NoSuccess => println("Could not parse: " + r) 
+    }
     // Remove beginning whitespace from parse result positions
-    killLeadingWhitespace(root, document.get)
+    if (root != null) killLeadingWhitespace(root, document.get)
     println("got " + result)
   }
   
