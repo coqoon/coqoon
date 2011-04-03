@@ -39,27 +39,31 @@ class CoqEditor extends TextEditor {
     setKeyBindingScopes(List("Kopitiam.context").toArray)
   }
   
-  var outlinePage : CoqContentOutlinePage = null
+  var outlinePage : Option[CoqContentOutlinePage] = None
   override def getAdapter (required : java.lang.Class[_]) : AnyRef = {
     Console.println("Getting adapter for " + required + " on CoqEditor")
     if (required.isInterface && required.getName.endsWith("IContentOutlinePage")) {
-      if (outlinePage == null) {
-        outlinePage = new CoqContentOutlinePage(getDocumentProvider(), this)
-        if (getEditorInput() != null)
-          outlinePage.setInput(getEditorInput())
+      outlinePage = outlinePage match {
+        case p@Some(page) => p
+        case None => {
+          val page = new CoqContentOutlinePage(getDocumentProvider(), this)
+          if (getEditorInput() != null)
+            page.setInput(getEditorInput())
+          Some(page)
+        }
       }
-      outlinePage
+      outlinePage.get
     }
     else super.getAdapter(required)
   }
 
   override def doSetInput (input : IEditorInput) : Unit = {
     super.doSetInput(input)
-    if (input != null && outlinePage != null) outlinePage.setInput(input)
+    if (input != null && outlinePage != null) outlinePage foreach { _.setInput(input) }
   }
   
   override def editorSaved () : Unit = {
-    if (outlinePage != null) outlinePage.update()
+    if (outlinePage != null) outlinePage foreach { _.update() }
     super.editorSaved()
   }
 }
@@ -286,9 +290,12 @@ class CoqOutlineReconcilingStrategy extends IReconcilingStrategy {
   
   def reconcile (partition : IRegion) : Unit = {
     println("Reconciling " + partition)
+    CoqJavaDocumentProvider.getOutline(document) //updates outline
+    
   }
   
   def setDocument (doc : IDocument) : Unit = {
+    Console.println("Setting document "+doc+" for reconciler")
     document = doc
   }
   
@@ -316,6 +323,7 @@ object CoqSourceViewerConfiguration extends SourceViewerConfiguration {
 
   override def getReconciler (v : ISourceViewer) : IReconciler = {
     val strategy = new CoqOutlineReconcilingStrategy
+    strategy.setDocument(v.getDocument)
     val reconciler = new MonoReconciler(strategy, false)
     reconciler
   }
@@ -819,9 +827,9 @@ object CoqContentAssistantProcessor extends IContentAssistProcessor {
 
 import org.eclipse.ui.views.contentoutline.ContentOutlinePage
 
-class CoqContentOutlinePage extends ContentOutlinePage {
+class CoqContentOutlinePage extends ContentOutlinePage with IDocumentListener {
   import dk.itu.sdg.coqparser.VernacularRegion
-  import org.eclipse.jface.text.IDocument
+  import org.eclipse.jface.text.{IDocument, DocumentEvent}
   import org.eclipse.jface.viewers.{ITreeContentProvider, LabelProvider, TreeViewer, Viewer, SelectionChangedEvent, StructuredSelection}
   import org.eclipse.swt.widgets.{Composite, Control}
   import org.eclipse.ui.part.FileEditorInput
@@ -854,11 +862,15 @@ class CoqContentOutlinePage extends ContentOutlinePage {
         val doc = textEditor.getDocumentProvider.getDocument(input)
         Console.println("  In update(), document is " + doc)
         CoqJavaDocumentProvider.getOutline(doc) foreach { cprov => viewer.setContentProvider(cprov) }
+        doc.addDocumentListener(this)
         viewer.expandAll()
         control.setRedraw(true)
       }
     }
   }
+  
+  def documentAboutToBeChanged(event : DocumentEvent) : Unit = ()
+  def documentChanged (event : DocumentEvent) : Unit = update()
   
 
   override def selectionChanged(event : SelectionChangedEvent) : Unit = {
@@ -874,7 +886,7 @@ class CoqContentOutlinePage extends ContentOutlinePage {
         case NoLengthPosition => println("missing position from parser!"); textEditor.resetHighlightRange
         case at : RegionPosition => textEditor.setHighlightRange(at.offset, at.length, true)
         case _ => ()
-      }  
+      }
     }
   }
   
