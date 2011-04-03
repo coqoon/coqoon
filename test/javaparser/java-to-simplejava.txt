@@ -1,20 +1,4 @@
-//simple class should be translated to identical
-class Foo { } => class Foo { }
-//simple class with simple field also identical
-class Foo { int foo; } => class Foo { int foo; }
-//simple class and simple method
-class Foo { void foo () { } } => class Foo { void foo () { } }
-//simple class more complex method
-class Foo { int foo (int a) { return a; } } => class Foo { int foo (int a) { return a; } }
-//more complex method (not sure whether this actually is valid Java code, at least it will end in a StackOverflow): only expression in return, only expressions in arguments to a call
-class Foo { int foo (int a) { return foo(foo(a)); } } =>
-class Foo {
-  int foo (int a) {
-    int tmp_1 = this.foo(a);
-    int tmp_2 = this.foo(tmp_1);
-    return tmp_2;
-  }
-}
+
 //some more interesting method: no field access and method call in an expression
 class Foo {
   int f;
