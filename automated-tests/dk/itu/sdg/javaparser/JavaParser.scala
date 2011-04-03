@@ -6,6 +6,7 @@ import org.scalatest.matchers.ShouldMatchers
 import java.io._
 import scala.util.parsing.input.StreamReader
 import dk.itu.sdg.javaparser._
+import dk.itu.sdg.util.{ IO }
 
 /*
   Parse each file in automated-tests/resources/javaparser/source and
@@ -37,7 +38,7 @@ class JavaParserSpec extends FlatSpec with ShouldMatchers
   /*
     simplifies strings so they're comparable
   */
-  def simplify(text: String): String = {
+  def simplify(text : String) : String = {
     text.split('\n').filterNot(_ == "")
                     .reduceLeft(_ + " " + _)
                     .replace("    "," ")
@@ -52,21 +53,7 @@ class JavaParserSpec extends FlatSpec with ShouldMatchers
   */
   def getExpectedOutputOfFile(file : File) : String = {
     val path = List("automated-tests", "resources", "javaparser", "expected", file.getName).mkString(File.separator)
-    readContentsOfFile(new File(path))
-  }
-
-  /*
-    Returns the contents of a file as a String
-  */
-  def readContentsOfFile(file : File) : String = {
-    val reader = new BufferedReader(new FileReader(file))
-    var text = ""
-    var line = reader.readLine()
-    while (line != null) {
-      text = text + " " + line
-      line = reader.readLine()
-    }
-    text
+    IO.readContentsOfFile(new File(path))
   }
 
 }
