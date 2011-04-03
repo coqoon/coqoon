@@ -175,7 +175,47 @@ trait VernacularSyntax extends GallinaSyntax {
     override def outlineName = "Print Section " + ident.name
   }
   
+  case class Pwd () extends Command {
+    override def outlineName = "Pwd"
+  }
   
+  case class Cd (path : StringName) extends Command {
+    override def outlineName = "Cd \"" + path.name + "\""
+  }
+  
+  case class AddLoadPath (path : StringName, as : Option[QualId]) extends Command {
+    override def outlineName = "Add LoadPath \"" + path.name + "\"" 
+  }
+  
+  case class AddRecLoadPath (path : StringName, as : Option[QualId]) extends Command {
+    override def outlineName = "Add Rec LoadPath \"" + path.name + "\"" 
+  }
+  
+  //TODO: Rest of the load path commands
+  
+  case class Require (ids : List[QualId]) extends Command {
+    override def outlineName = "Require " + ids.mkString(" ") 
+  }
+  
+  case class RequireImport (ids : List[QualId]) extends Command {
+    override def outlineName = "Require Import " + ids.mkString(" ") 
+  }
+  
+  case class RequireExport (ids : List[QualId]) extends Command {
+    override def outlineName = "Require Export " + ids.mkString(" ") 
+  }
+  
+  case class RequireFile (file : StringName) extends Command {
+    override def outlineName = "Require " + file.name
+  }
+  
+  //TODO: Global/Local variants
+  case class OpenScope (name : StringName) extends Command {
+    override def outlineName = "Open Scope " + name.name
+  }
+  case class CloseScope (name : StringName) extends Command {
+    override def outlineName = "Close Scope " + name.name
+  }
 }
 
 import scala.util.parsing.combinator.lexical.Lexical
@@ -324,6 +364,8 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
   
   /* Utility parsers */
   def inParens[T] (p : Parser[T]) : Parser[T] = delim("(")~>(p<~delim(")"))
+  def inBraces[T] (p : Parser[T]) : Parser[T] = delim("{")~>(p<~delim("}"))
+  def inParensOrBraces[T] (p : Parser[T]) : Parser[T] = inParens(p) | inBraces(p)
   
   /* Parsers for Gallina */
   
@@ -420,10 +462,10 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
   def binder : Parser[Binder] =
     lengthPositioned(
       name ^^ NameBinder
-    | inParens(rep1(name)~delim(":")~term) ^^ {
+    | inParensOrBraces(rep1(name)~delim(":")~term) ^^ {
         case names~colon~typ => TypedNameBinder(names, typ)
       }
-    | inParens(name~opt(delim(":")~>term)~delim(":=")~term) ^^ {
+    | inParensOrBraces(name~opt(delim(":")~>term)~delim(":=")~term) ^^ {
         case name~typ~colonEqual~binding => ColonEqualBinder(name, typ, binding)
       }
     )
@@ -604,19 +646,22 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
     
     
   /* Modules - just a start.*/
+  // TODO: Represent the imports and such that are being thrown out
   def module : Parser[Module] = {
     val module =
       for {
-        moduleName <- ident("Module")~>(ident<~dot);
+        moduleName <- ident("Module")~>(ident<~(rep(moduleInfo)~dot));
         body <- top;
         _ <- ident("End")~>(ident(moduleName.chars)<~dot)
       } yield Module(StringName(moduleName.chars), body)
     lengthPositioned(module)
   }
+  
+  def moduleInfo = (ident | delim("!") | delim(":") | delim("<:"))
     
   
   /* Commands */
-  def command : Parser[Command] = lengthPositioned(displayer)
+  def command : Parser[Command] = lengthPositioned(displayer | pathCommand | require | scopeCommand)
   
   def displayer : Parser[Command] =
     ( ident("Print")~>(qualid<~dot) ^^ {id : QualId => Print(StringName("Print"), id)}
@@ -624,9 +669,36 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
     | ident("About")~>(qualid<~dot) ^^ {id : QualId => Print(StringName("About"), id)}
     | ident("Print")~ident("All")~dot ^^ (_ => PrintAll())
     | ident("Inspect")~>(num<~dot) ^^ Inspect
-    | ident("Print")~>ident("Section")~>(ident<~dot) ^^ {case id : lexical.Ident => PrintSection(StringName(id.chars))}
+    | ident("Print")~>ident("Section")~>(ident<~dot) ^^ { case id : lexical.Ident => PrintSection(StringName(id.chars))}
     )
   
+  def pathCommand : Parser[Command] =
+    ( ident("Pwd")~dot ^^ { _ => Pwd () }
+    | ident("Cd")~>(string<~dot) ^^ {
+        case str : lexical.StringLit => Cd(StringName(str.chars))
+      }
+    | (ident("Add")~ident("LoadPath"))~>(string~opt(ident("as")~>qualid)<~dot) ^^ {
+        case (str : lexical.StringLit)~id => AddLoadPath(StringName(str.chars), id)
+      }
+    | (ident("Add")~ident("Rec")~ident("LoadPath"))~>(string~opt(ident("as")~>qualid)<~dot) ^^ {
+        case (str : lexical.StringLit)~id => AddRecLoadPath(StringName(str.chars), id)
+      }
+    )
+  
+  def require : Parser[Command] =
+    ( (ident("Require")~ident("Import"))~>(rep1(qualid)<~dot) ^^ RequireImport
+    | (ident("Require")~ident("Export"))~>(rep1(qualid)<~dot) ^^ RequireExport
+    | ident("Require")~>(rep1(qualid)<~dot) ^^ Require
+    | (ident("Require")~(ident("Import") | ident("Export")))~>(string<~dot) ^^ {
+        case str : lexical.StringLit => RequireFile(StringName(str.chars))
+      }
+    )
+  
+  def scopeCommand : Parser[Command] =
+    ( (ident("Open")~ident("Scope"))~>(ident<~dot) ^^ { case id : lexical.Ident => OpenScope(StringName(id.chars))}
+    | (ident("Close")~ident("Scope"))~>(ident<~dot) ^^ { case id : lexical.Ident => OpenScope(StringName(id.chars))}
+    )
+    
   /* Valid Vernacular syntax*/
   def top = rep(sentence | module | command)
   
