@@ -38,6 +38,19 @@ trait LengthPositional {
     }
     else this
   }
+  
+  //Enable a hack to kill whitespace that the positioned method brings along
+  def advancePosStart() : Boolean = advancePosStart(1)
+  
+  def advancePosStart(n : Int) : Boolean =
+    this.pos match {
+      case NoLengthPosition => false
+      case RegionPosition(off, len) if len > 0 => {
+        this.pos = RegionPosition(off + 1, len - 1)
+        true
+      }
+      case _ => false
+    }  
 }
 
 trait LengthPositionParsers extends Parsers {

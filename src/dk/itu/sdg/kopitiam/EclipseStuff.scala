@@ -4,25 +4,34 @@ package dk.itu.sdg.kopitiam
 
 import org.eclipse.ui.editors.text.TextEditor
 
-object EclipseUtils {
+trait EclipseUtils {
   //Handy implicits and functions that make dealing with Eclipse less verbose
+  import org.eclipse.jface.text.Position
   import org.eclipse.swt.graphics.Color
   import org.eclipse.swt.widgets.Display
+  import dk.itu.sdg.parsing._
 
   private def display = Display getCurrent
   def color (r : Int, g : Int, b : Int) = new Color(display, r, g, b)
 
+  implicit def pos2eclipsePos (pos : LengthPosition) : Position =
+    pos match {
+      case NoLengthPosition => new Position(0)
+      case RegionPosition(off, len) => new Position(off, len)
+    }
+  
   implicit def tuple2Color (vals : (Int, Int, Int)) : Color = color(vals._1, vals._2, vals._3)
+  
 }
-import EclipseUtils.{color, tuple2Color}
 
 class CoqEditor extends TextEditor {
   import org.eclipse.jface.text.source.{IAnnotationModel, ISourceViewer, IVerticalRuler}
   import org.eclipse.swt.widgets.Composite
   import org.eclipse.ui.IEditorInput
   import org.eclipse.ui.views.contentoutline.{ContentOutlinePage, IContentOutlinePage}
-
-  var annotationModel : IAnnotationModel = null
+  import org.eclipse.jface.text.source.projection.ProjectionAnnotationModel
+  
+  var annotationModel : ProjectionAnnotationModel = null
   
   override protected def initializeEditor () : Unit = {
     Console.println("initializeEditor was called")
@@ -70,7 +79,7 @@ class CoqEditor extends TextEditor {
   // Support getting outline pages
   var outlinePage : Option[CoqContentOutlinePage] = None
   override def getAdapter (required : java.lang.Class[_]) : AnyRef = {
-    Console.println("Getting adapter for " + required + " on CoqEditor")
+    //Console.println("Getting adapter for " + required + " on CoqEditor")
     if (required.isInterface && required.getName.endsWith("IContentOutlinePage")) {
       outlinePage = outlinePage match {
         case p@Some(page) => p
@@ -145,9 +154,24 @@ protected class CoqContentProvider extends ITreeContentProvider {
     
     println("parse the coq")
     val result = parser.parseString(document.get) map {doc => root = doc; doc}
+    // Remove beginning whitespace from parse result positions
+    killLeadingWhitespace(root, document.get)
     println("got " + result)
   }
   
+  def killLeadingWhitespace(reg : VernacularRegion, doc : String) : Unit = {
+    import dk.itu.sdg.parsing._
+    def advance(reg: VernacularRegion): Unit = {
+      reg.pos match {
+        case NoLengthPosition => ()
+        case p@RegionPosition(off, len) => {
+          if ((doc(off) == ' ' || doc(off) == '\t' || doc(off) == '\n' || doc(off) == '\r') && reg.advancePosStart) advance(reg)
+        }
+      }
+    }
+    advance(reg)
+    reg.subRegions foreach { r => killLeadingWhitespace(r, doc) }
+  }
   
   def inputChanged(viewer : Viewer, oldInput : Any, newInput : Any) : Unit = {
     if (newInput != null) {
@@ -272,7 +296,7 @@ object CoqWordDetector extends IWordDetector {
   def isWordPart(character : Char) = isWordStart(character)
 }
 
-object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
+object CoqTokenScanner extends RuleBasedScanner with VernacularReserved with EclipseUtils {
   import org.eclipse.jface.text.rules.{IToken, MultiLineRule, SingleLineRule, Token, WordRule}
   import org.eclipse.jface.text.{IDocument, TextAttribute}
   import org.eclipse.swt.SWT.{BOLD, ITALIC}
@@ -308,13 +332,19 @@ object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
 
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
 import org.eclipse.jface.text.IDocument
-class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor) extends IReconcilingStrategy {
-  import org.eclipse.jface.text.{IDocument, IRegion}
+class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor) extends IReconcilingStrategy with EclipseUtils {
+  import dk.itu.sdg.coqparser.VernacularRegion
+  import org.eclipse.jface.text.source.Annotation
+  import org.eclipse.jface.text.source.projection.ProjectionAnnotation
+  import org.eclipse.jface.text.{IDocument, IRegion, Position}
   import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.text.reconciler._
   import org.eclipse.ui.views.contentoutline.IContentOutlinePage
   
   def reconcile (region : DirtyRegion, subregion : IRegion) : Unit = ()
+  
+  //Necessary for Eclipse API cruft
+  var oldAnnotations : Array[Annotation] = Array.empty
   
   def reconcile (partition : IRegion) : Unit = {
     println("Reconciling " + partition + " with editor = " + editor + " and doc = " + document)
@@ -328,7 +358,26 @@ class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor
       })    
     } else
       println(" null editor")
+      
     // update folding
+    outline map (_.root) foreach { root =>
+      val annotations = foldingAnnotations(root)
+      var newAnnotations = new java.util.HashMap[Any, Any]
+      for ((pos, annot) <- annotations) newAnnotations.put(annot, pos)
+      editor.annotationModel.modifyAnnotations(oldAnnotations, newAnnotations, null)
+      oldAnnotations = annotations.map(_._2).toArray
+      Console.println("Updated folding " + annotations.toList)
+    }
+    
+    
+  }
+  
+  def foldingAnnotations(region : VernacularRegion) : Stream[(Position, ProjectionAnnotation)] = {
+    println("Collapsable " + region.outlineName + region.outlineNameExtra)
+    if (region.pos.hasPosition)
+      (pos2eclipsePos(region.pos), new ProjectionAnnotation) #:: region.getOutline.flatMap(foldingAnnotations)
+    else
+     region.getOutline.flatMap(foldingAnnotations) 
   }
   
   def setDocument(doc : IDocument) : Unit = {

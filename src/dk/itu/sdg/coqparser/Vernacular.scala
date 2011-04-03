@@ -9,6 +9,7 @@ trait VernacularRegion extends LengthPositional with Product {
   val outline = false
   def outlineName = "<no name>"
   def outlineNameExtra = pos.toString
+  override def toString = "<" + outlineName + " " + outlineNameExtra + ">"
   
   def getOutline = subRegions.filter(_.outline)  
   
