@@ -1,0 +1,14 @@
+
+
+- SimpleClass: 
+  Simple class should be translated to identical
+- SimpleClassWithSimpleField: 
+  simple class with simple field also identical
+- SimpleClassWithMethod:
+  Simple class and simple method
+- SimpleClassMoreComplexMethod
+  simple class more complex method
+- SimpleClassMoreComplexMethod2
+  more complex method (not sure whether this actually is valid Java code, at least it 
+  will end in a StackOverflow): only expression in return, only expressions in arguments 
+  to a call
