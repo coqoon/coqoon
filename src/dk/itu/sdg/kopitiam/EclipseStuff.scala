@@ -826,7 +826,7 @@ class CoqContentOutlinePage extends ContentOutlinePage {
   }
 
   override def selectionChanged(event : SelectionChangedEvent) : Unit = {
-    import scala.util.parsing.input.{Position, NoPosition, OffsetPosition}
+    import dk.itu.sdg.parsing.{LengthPosition, NoLengthPosition, RegionPosition}
     
     super.selectionChanged(event)
     
@@ -835,8 +835,8 @@ class CoqContentOutlinePage extends ContentOutlinePage {
     if (!selection.isEmpty) {
       val sel = selection.asInstanceOf[StructuredSelection].getFirstElement.asInstanceOf[VernacularRegion]
       sel.pos match {
-        case NoPosition => println("missing position from parser!"); textEditor.resetHighlightRange
-        case at : OffsetPosition => textEditor.setHighlightRange(at.offset, 0, true)
+        case NoLengthPosition => println("missing position from parser!"); textEditor.resetHighlightRange
+        case at : RegionPosition => textEditor.setHighlightRange(at.offset, at.length, true)
         case _ => ()
       }  
     }
@@ -844,7 +844,7 @@ class CoqContentOutlinePage extends ContentOutlinePage {
   
   class CoqLabelProvider extends LabelProvider {
     override def getText(obj : AnyRef) : String = obj match {
-      case something : VernacularRegion => something.outlineName
+      case something : VernacularRegion => something.outlineName + " " + something.outlineNameExtra
       case something => something.toString
     }
   }

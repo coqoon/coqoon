@@ -2,11 +2,13 @@
 
 package dk.itu.sdg.coqparser
 
+import dk.itu.sdg.parsing._
 import scala.util.parsing.input.Positional
 
-trait VernacularRegion extends Positional with Product {
+trait VernacularRegion extends LengthPositional with Product {
   val outline = false
   def outlineName = "<no name>"
+  def outlineNameExtra = pos.toString
   
   def getOutline = subRegions.filter(_.outline)  
   
@@ -286,7 +288,7 @@ object TestLexer extends VernacularLexer with Application {
 }
 
 
-trait VernacularParser extends TokenParsers with VernacularSyntax with VernacularReserved {
+trait VernacularParser extends LengthPositionParsers with TokenParsers with VernacularSyntax with VernacularReserved {
   val lexical = new VernacularLexer
   type Tokens = VernacularLexer
   
@@ -325,7 +327,7 @@ trait VernacularParser extends TokenParsers with VernacularSyntax with Vernacula
   /* Parsers for Gallina */
   
   def term : Parser[Term] =
-    positioned(
+    lengthPositioned(
       ( forall
       | fun
       | fix
@@ -415,7 +417,7 @@ trait VernacularParser extends TokenParsers with VernacularSyntax with Vernacula
     }
   
   def binder : Parser[Binder] =
-    positioned(
+    lengthPositioned(
       name ^^ NameBinder
     | inParens(rep1(name)~delim(":")~term) ^^ {
         case names~colon~typ => TypedNameBinder(names, typ)
@@ -430,7 +432,7 @@ trait VernacularParser extends TokenParsers with VernacularSyntax with Vernacula
   }
 
   def name : Parser[Name] =
-    positioned(
+    lengthPositioned(
       ident ^^ {case lexical.Ident(id) => StringName(id)}
     | delim("_") ^^^ UnderscoreName()
     )
@@ -452,19 +454,19 @@ trait VernacularParser extends TokenParsers with VernacularSyntax with Vernacula
   }
   
   def matchItem : Parser[MatchItem] =
-    positioned(term~opt(keyword("as")~>name)~opt(keyword("in")~>term) ^^ {
+    lengthPositioned(term~opt(keyword("as")~>name)~opt(keyword("in")~>term) ^^ {
       case t~as~in => MatchItem(t, as, in)
     })
   
   def matchEquation : Parser[MatchEquation] =
-    positioned(
+    lengthPositioned(
       rep1sep(rep1sep(pattern, delim(",")), delim("|"))~delim("=>")~term ^^ {
         case patterns~arrow~result => MatchEquation(patterns map MultPattern, result)
       }
     )
   
   def pattern : Parser[Pattern] =
-    positioned(
+    lengthPositioned(
       ( qualid~rep(pattern) ^^ {
           case id~Nil => IdentPattern(id, Nil) 
           case id~patterns => IdentPattern(id, patterns)
@@ -497,7 +499,7 @@ trait VernacularParser extends TokenParsers with VernacularSyntax with Vernacula
   }
   
   /* Parsers for Vernacular */
-  def sentence : Parser[Sentence] = positioned(
+  def sentence : Parser[Sentence] = lengthPositioned(
     assumption
   | definition
   | inductive
@@ -518,7 +520,7 @@ trait VernacularParser extends TokenParsers with VernacularSyntax with Vernacula
       case kwd~(assums : List[Assumption]) => AssumptionSentence(kwd, assums)
     }
   
-  def assumptionKeyword : Parser[StringName] = positioned(
+  def assumptionKeyword : Parser[StringName] = lengthPositioned(
   ( ident("Axiom")
   | ident("Conjecture")
   | ident("Parameter")
@@ -564,10 +566,10 @@ trait VernacularParser extends TokenParsers with VernacularSyntax with Vernacula
     }
   
   def fixpoint : Parser[FixpointSentence] =
-    ident("Fixpoint")~>(rep1sep(positioned(fixBody), ident("with"))<~dot) ^^ FixpointSentence
+    ident("Fixpoint")~>(rep1sep(lengthPositioned(fixBody), ident("with"))<~dot) ^^ FixpointSentence
     
   def cofixpoint : Parser[CofixpointSentence] =
-    ident("Cofixpoint")~>(rep1sep(positioned(cofixBody), ident("with"))<~dot) ^^ CofixpointSentence
+    ident("Cofixpoint")~>(rep1sep(lengthPositioned(cofixBody), ident("with"))<~dot) ^^ CofixpointSentence
     
   def assertion : Parser[AssertionSentence] =
     assertionKeyword~ident~rep(binder)~(delim(":")~>term)<~dot ^^ {
@@ -575,7 +577,7 @@ trait VernacularParser extends TokenParsers with VernacularSyntax with Vernacula
     }
   
   def assertionKeyword : Parser[StringName] =
-    positioned(
+    lengthPositioned(
       ( ident("Theorem")
       | ident("Lemma")
       | ident("Remark")
@@ -601,14 +603,19 @@ trait VernacularParser extends TokenParsers with VernacularSyntax with Vernacula
     
     
   /* Modules - just a start.*/
-  def module : Parser[Module] = for {
-    moduleName <- ident("Module")~>(ident<~dot);
-    body <- top;
-    _ <- ident("End")~>(ident(moduleName.chars)<~dot)
-  } yield Module(StringName(moduleName.chars), body)
+  def module : Parser[Module] = {
+    val module =
+      for {
+        moduleName <- ident("Module")~>(ident<~dot);
+        body <- top;
+        _ <- ident("End")~>(ident(moduleName.chars)<~dot)
+      } yield Module(StringName(moduleName.chars), body)
+    lengthPositioned(module)
+  }
+    
   
   /* Commands */
-  def command : Parser[Command] = displayer
+  def command : Parser[Command] = lengthPositioned(displayer)
   
   def displayer : Parser[Command] =
     ( ident("Print")~>(qualid<~dot) ^^ {id : QualId => Print(StringName("Print"), id)}
