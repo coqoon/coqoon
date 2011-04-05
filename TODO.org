@@ -11,6 +11,7 @@
 ** use mkString instead of reduceLeft at several places!
 * Coq side
 ** Response/Message buffer (or below Goal Viewer?)
+** clear Goal Buffer at right places
 ** Undo from just after End should jump to start of Section/Module/whatever
 mobius approach to undo:
   public void undo(final ITopLevel itl) throws AProverException {

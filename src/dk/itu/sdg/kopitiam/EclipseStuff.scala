@@ -374,6 +374,18 @@ class GoalViewer extends ViewPart {
       })
   }
 
+  def writeGoal (assumptions : String, cgoal : String, othergoals : String) : Unit = {
+    Display.getDefault.syncExec(
+      new Runnable() {
+        def run() = {
+          hypos.setText(assumptions)
+          goal.setText(cgoal)
+          othersubs.setText(othergoals)
+          comp.layout
+        }
+      })
+  }
+
   def setFocus() : Unit = {
   //  viewer.getControl.setFocus
   }

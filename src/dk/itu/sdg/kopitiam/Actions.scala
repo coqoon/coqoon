@@ -420,39 +420,26 @@ object CoqOutputDispatcher extends CoqCallback {
         } else
           DocumentState.undo(id)
         ActionDisabler.enableMaybe
-      case CoqGoal(n, goals) => {
-          val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
-          val ht = if (hy.length > 0) hy.reduceLeft(_ + "\n" + _) else ""
-          val subd = res.findIndexOf(_.contains("subgoal "))
-          val (g, r) = if (subd > 0) res.splitAt(subd) else (res, List[String]())
-          val gt = if (g.length > 1) g.drop(1).reduceLeft(_ + "\n" + _) else ""
-          val ot = if (r.length > 0) {
-            val r2 = r.map(x => { if (x.contains("subgoal ")) x.drop(1) else x })
-            r2.reduceLeft(_ + "\n" + _)
-          } else ""
-          writeGoal(ht, gt, ot)
-        }
-      case CoqProofCompleted() => writeGoal("Proof completed", "", "")
-      case CoqError(msg) => {
+      case CoqGoal(n, goals) =>
+        //Console.println("outputdispatcher, n is " + n + ", goals:\n" +
+    goals)
+        val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
+        val ht = if (hy.length > 0) hy.reduceLeft(_ + "\n" + _) else ""
+        val subd = res.findIndexOf(_.contains("subgoal "))
+        val (g, r) = if (subd > 0) res.splitAt(subd) else (res, List[String]())
+        val gt = if (g.length > 1) g.drop(1).reduceLeft(_ + "\n" + _) else ""
+        val ot = if (r.length > 0) {
+          val r2 = r.map(x => { if (x.contains("subgoal ")) x.drop(1) else x })
+          r2.reduceLeft(_ + "\n" + _)
+        } else ""
+        goalviewer.writeGoal(ht, gt, ot)
+      case CoqProofCompleted() => goalviewer.writeGoal("Proof completed", "", "")
+      case CoqError(msg) =>
         //TODO: what if Error not found, should come up with a sensible message anyways!
         val ps = msg.drop(msg.findIndexOf(_.startsWith("Error")))
         EclipseBoilerPlate.mark(ps.reduceLeft(_ + " " + _))
-      }
       case x => EclipseConsole.out.println("received: " + x)
     }
-  }
-
-  //should be in goalviewer
-  def writeGoal (assumptions : String, goal : String, othergoals : String) : Unit = {
-    Display.getDefault.syncExec(
-      new Runnable() {
-        def run() = {
-          goalviewer.hypos.setText(assumptions)
-          goalviewer.goal.setText(goal)
-          goalviewer.othersubs.setText(othergoals)
-          goalviewer.comp.layout
-        }
-      })
   }
 }
 
