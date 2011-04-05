@@ -2,17 +2,6 @@
 
 package dk.itu.sdg.kopitiam
 
-import org.eclipse.ui.IStartup
-class Startup extends IStartup {
-  override def earlyStartup () : Unit = {
-    Console.println("earlyStartup called")
-    ActionDisabler.disableAll
-    DocumentMonitor.init
-    CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + System.getProperty("file.separator")
-    CoqTop.init
-  }
-}
-
 import org.eclipse.jface.preference.FieldEditorPreferencePage
 import org.eclipse.ui.IWorkbenchPreferencePage
 
