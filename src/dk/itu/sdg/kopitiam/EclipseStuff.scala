@@ -77,44 +77,13 @@ object EclipseBoilerPlate {
   var window : IWorkbenchWindow = null
 
   def getCaretPosition () : Int = {
-    val sel = window.getActivePage.getActiveEditor.asInstanceOf[CoqEditor].getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
+    val sel = DocumentState.activeEditor.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
     //Console.println("cursor position is " + sel.getLength + " @" + sel.getOffset)
     sel.getOffset
   }
 
-  def getContent () : String = {
-    val editorpart = window.getActivePage.getActiveEditor
-    if (editorpart.isInstanceOf[CoqEditor]) {
-      val texteditor = editorpart.asInstanceOf[CoqEditor]
-      val dp : IDocumentProvider = texteditor.getDocumentProvider
-      val doc : IDocument = dp.getDocument(texteditor.getEditorInput)
-      doc.get
-    } else {
-      Console.println("not a CoqEditor!")
-      ""
-    }
-  }
-
-  import org.eclipse.core.resources.{IResource, IFile}
-  import org.eclipse.ui.{IEditorInput, IFileEditorInput}
-
-  def getResource () : IFile = {
-    val editorpart = window.getActivePage.getActiveEditor
-    if (editorpart.isInstanceOf[CoqEditor]) {
-      val texteditor = editorpart.asInstanceOf[CoqEditor]
-      val ei : IEditorInput = texteditor.getEditorInput
-      if (ei.isInstanceOf[IFileEditorInput]) {
-        val fei = ei.asInstanceOf[IFileEditorInput]
-        fei.getFile
-      } else {
-        Console.println("not a file editor")
-        null
-      }
-    } else null
-  }
-
   def getProjectDir () : String = {
-    getResource.getProject.getLocation.toOSString
+    DocumentState.resource.getProject.getLocation.toOSString
   }
 
   import org.eclipse.swt.widgets.Display
@@ -183,10 +152,10 @@ object EclipseBoilerPlate {
     }
   }
 
-  import org.eclipse.core.resources.IMarker
+  import org.eclipse.core.resources.{IMarker, IResource}
 
   def mark (text : String) : Unit = {
-    val file = getResource
+    val file = DocumentState.resource
     val marker = file.createMarker(IMarker.PROBLEM)
     marker.setAttribute(IMarker.MESSAGE, text)
     marker.setAttribute(IMarker.LOCATION, file.getName)
@@ -197,38 +166,55 @@ object EclipseBoilerPlate {
   }
 
   def unmark () : Unit = {
-    getResource.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
+    DocumentState.resource.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
   }
 
   def maybeunmark (until : Int) : Unit = {
-    val marks = getResource.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
+    val marks = DocumentState.resource.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
     marks.foreach(x => if (x.getAttribute(IMarker.CHAR_START, 0) < until) x.delete)
   }
 }
 
 object DocumentState extends CoqCallback {
-  import org.eclipse.jface.text.{ITextViewer}
+  import org.eclipse.jface.text.IDocument
   import org.eclipse.swt.graphics.{Color,RGB}
   import org.eclipse.swt.widgets.Display
 
-  var sourceview : ITextViewer = null
+  var busy : Boolean = false
 
-  //we're not there yet
-  //var document : String = null
+  var activeEditor : CoqEditor = null
+
+  def activeDocument () : IDocument = {
+    if (activeEditor != null)
+      activeEditor.getDocumentProvider.getDocument(activeEditor.getEditorInput)
+    else
+      null
+  }
+
+  import org.eclipse.ui.IFileEditorInput
+  import org.eclipse.core.resources.IFile
+  def resource () : IFile = {
+    if (activeEditor != null)
+      activeEditor.getEditorInput.asInstanceOf[IFileEditorInput].getFile
+    else
+      null
+  }
+
+  var content : String = ""
+
+  def tick () : Unit = { if (!busy) content = currentcontent() }
+
+  private def currentcontent () : String = {
+    if (activeEditor != null)
+      activeDocument.get
+    else
+      ""
+  }
 
   import scala.collection.mutable.HashMap
   var positionToShell : HashMap[Int,CoqShellTokens] = new HashMap[Int,CoqShellTokens]()
 
   var sendlen : Int = 0
-  var totallen_ : Int = 0
-  def totallen : Int = totallen_
-  def totallen_= (n : Int) {
-    if (position > n) {
-      Console.println("totallen was decreased (" + n + "), now even smaller than position " + position + ", adjusting to " + (n - 1))
-      position = n - 1
-    }
-    totallen_ = n
-  }
   var realundo : Boolean = false
 
   import org.eclipse.core.resources.IMarker
@@ -239,7 +225,7 @@ object DocumentState extends CoqCallback {
   def position_= (x : Int) {
     //Console.println("new pos is " + x + " (old was " + position_ + ")");
     if (coqmarker == null) {
-      val file = EclipseBoilerPlate.getResource
+      val file = resource
       coqmarker = file.createMarker(IMarker.BOOKMARK)
       coqmarker.setAttribute(IMarker.MESSAGE, "coq position")
       coqmarker.setAttribute(IMarker.LOCATION, file.getName)
@@ -265,11 +251,11 @@ object DocumentState extends CoqCallback {
   }
 
   def undoAll () : Unit = synchronized {
-    if (sourceview != null) {
+    if (activeEditor != null) {
       val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
       Display.getDefault.syncExec(
         new Runnable() {
-          def run() = sourceview.setTextColor(bl, 0, totallen, true)
+          def run() = activeEditor.getSource.setTextColor(bl, 0, content.length, true)
         });
     }
   }
@@ -282,12 +268,11 @@ object DocumentState extends CoqCallback {
         realundo = false
         val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
         val start = scala.math.max(position - sendlen, 0)
-        Console.println("undo (start " + start + " len " + sendlen + " totallen " + totallen + ")")
-        if (CoqUndoAction.text == None)
-          Display.getDefault.syncExec(
-            new Runnable() {
-              def run() = sourceview.setTextColor(bl, start, sendlen, true)
-            });
+        Console.println("undo (start " + start + " send length " + sendlen + " content length " + content.length + ")")
+        Display.getDefault.syncExec(
+          new Runnable() {
+            def run() = activeEditor.getSource.setTextColor(bl, start, sendlen, true)
+          });
         position = start
         sendlen = 0
       } else { //just an error
@@ -303,11 +288,11 @@ object DocumentState extends CoqCallback {
     if (sendlen != 0) {
       Console.println("commited - and doing some work")
       val bl = new Color(Display.getDefault, new RGB(0, 0, 220))
-      val end = scala.math.min(sendlen, totallen - position)
-      //Console.println("commiting, end is " + end + " (pos + len: " + (position + sendlen) + ")" + ", pos:" + position + " sourceview: " + sourceview)
+      val end = scala.math.min(sendlen, content.length - position)
+      //Console.println("commiting, end is " + end + " (pos + len: " + (position + sendlen) + ")" + ", pos:" + position)
       Display.getDefault.syncExec(
         new Runnable() {
-          def run() = sourceview.setTextColor(bl, position, end, true)
+          def run() = activeEditor.getSource.setTextColor(bl, position, end, true)
         });
       position += end
       sendlen = 0

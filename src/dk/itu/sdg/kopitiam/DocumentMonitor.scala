@@ -50,7 +50,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     activateEditor(ed)
   }
 
-  var activeeditor : CoqEditor = null
   def activateEditor (ed : IWorkbenchPart) : Unit = {
     Console.println("activated: " + ed)
     if (ed.isInstanceOf[CoqEditor]) {
@@ -62,7 +61,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         Console.println("inserted " + nam + " into String2Doc table")
         EclipseTables.StringToDoc += nam -> doc
       }
-      if (activeeditor != ed) {
+      if (DocumentState.activeEditor != ed) {
         //Console.println("part activated " + ed)
         ActionDisabler.disableAll
         ActionDisabler.enableStart
@@ -100,7 +99,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   override def windowDeactivated (window : IWorkbenchWindow) : Unit = { }
   override def windowOpened (window : IWorkbenchWindow) : Unit = { }
 
-  var olddocString : String = ""
   override def documentChanged (event : DocumentEvent) : Unit = {
     val doc = event.getDocument
     Console.println("doc " + doc + " changed [@" + event.getOffset + "], len: " + event.getLength)
@@ -114,35 +112,26 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         CoqJavaDocumentProvider.updateCoqCode(coq, java, docstring.substring(0, docstring.indexOf(".java")))
       }
     }
-    //more along the lines as (but doesn't work since EclipseBoilerPlate depends on getActivePage and getCaretPosition)
-    //val adoc = activeeditor.getDocumentProvider.getDocument(activeeditor.getEditorInput)      if (adoc == doc) {
-    if (activeeditor != null && activeeditor == PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.getActiveEditor) {
-      val txt = olddocString //doc.get
-      val len = event.getLength
+    if (DocumentState.activeDocument == doc) {
+      val txt = DocumentState.content
       val off = event.getOffset
-      val lengthdiff = event.getText.length - len
-      val con = txt.take(off + len).drop(off)
-      Console.println("in active coq buffer, [" + lengthdiff + "] replace :" + con + ": with :" + event.getText + ":")
       if (off < DocumentState.position) {
-        CoqUndoAction.text = Some(olddocString)
         //retract to before
+        DocumentState.busy = true
         Console.println("retracting to " + off + " (from " + DocumentState.position + ")")
-        if (DocumentState.position > CoqTop.findPreviousCommand(doc.get, off + 2))
-          EclipseBoilerPlate.multistep = true
-        CoqStepUntilAction.doit
-        while (EclipseBoilerPlate.multistep) { }
-        CoqUndoAction.text = None
+        CoqStepUntilAction.doitReally(off, Some(() => {
+          Console.println("DONE with retracting")
+          DocumentState.busy = false
+          DocumentState.tick()
+        }))
       }
-      DocumentState.totallen += lengthdiff
       //also, remove markers around here
-      Console.println("upgraded totallen with " + (event.getText.length - len))
       EclipseBoilerPlate.maybeunmark(off)
       Console.println("may have unmarked stuff")
       ActionDisabler.enableMaybe
     }
   }
-  def nd (s : String) : Int =
-    { if (s.trim.length == 0) 0 else (s.replaceAll("\\.\\.\\.", "").replaceAll("\\.\\.", "") + "  ").split("\\.[ \n\t]").length - 1 }
+
   override def documentAboutToBeChanged (event : DocumentEvent) : Unit =
-    { olddocString = event.getDocument.get }
+    { if (event.getDocument == DocumentState.activeDocument) DocumentState.tick }
 }

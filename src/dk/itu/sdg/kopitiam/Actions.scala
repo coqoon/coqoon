@@ -41,7 +41,7 @@ abstract class KCoqAction extends KAction {
   override def isEnabled () : Boolean = {
     if (DocumentState.position == 0 && start)
       false
-    else if (DocumentState.position + 1 >= DocumentState.totallen && end)
+    else if (DocumentState.position + 1 >= DocumentState.content.length && end)
       false
     else
       true
@@ -54,14 +54,19 @@ abstract class KCoqAction extends KAction {
   def doitH () : Unit = {
     ActionDisabler.disableAll
     val coqstarted = CoqTop.isStarted
-    if (! coqstarted)
-      CoqStartUp.start
     val acted = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.getActiveEditor
-    if (DocumentMonitor.activeeditor != acted) {
-      if (DocumentMonitor.activeeditor != null)
-        DocumentMonitor.activeeditor.getEditorInput.asInstanceOf[IFileEditorInput].getFile.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
+    if (DocumentState.activeEditor != acted) {
+      if (DocumentState.resource != null)
+        EclipseBoilerPlate.unmark
+      if (DocumentState.coqmarker != null)
+        DocumentState.coqmarker.delete
+      DocumentState.coqmarker = null
+      DocumentState.undoAll
+      DocumentState.activeEditor = acted.asInstanceOf[CoqEditor]
+      DocumentState.tick
 
-      DocumentMonitor.activeeditor = acted.asInstanceOf[CoqEditor]
+      if (! coqstarted)
+        CoqStartUp.start
 
       val initial =
         if (DocumentState.positionToShell.contains(0))
@@ -73,11 +78,6 @@ abstract class KCoqAction extends KAction {
       DocumentState.positionToShell.empty
       DocumentState.position = 0
       DocumentState.sendlen = 0
-      DocumentState.coqmarker.delete
-      DocumentState.coqmarker = null
-      DocumentState.undoAll
-      DocumentState.sourceview = DocumentMonitor.activeeditor.getSource
-      DocumentState.totallen = EclipseBoilerPlate.getContent.length
       CoqOutputDispatcher.goalviewer.clear
 
       if (coqstarted) {
@@ -113,10 +113,10 @@ object ActionDisabler {
   }
 
   def enableMaybe () = {
-    Console.println("maybe enable " + DocumentState.position + " len " + DocumentState.totallen)
+    Console.println("maybe enable " + DocumentState.position + " len " + DocumentState.content.length)
     if (DocumentState.position == 0)
       enableStart
-    else if (DocumentState.position + 1 >= DocumentState.totallen)
+    else if (DocumentState.position + 1 >= DocumentState.content.length)
       actions.zip(ends).filterNot(_._2).map(_._1).foreach(_.setEnabled(true))
     else
       actions.foreach(_.setEnabled(true))
@@ -147,12 +147,8 @@ class CoqUndoAction extends KCoqAction with VernacularReserved {
       content.take(off2).drop(off1).trim.size == 0
   }
 
-  var text : Option[String] = None
   override def doit () : Unit = {
-    val content = text match {
-      case None => EclipseBoilerPlate.getContent
-      case Some(x) => x
-    }
+    val content = DocumentState.content
     val l = CoqTop.findPreviousCommand(content, DocumentState.position)
     Console.println("prev pos of " + DocumentState.position + " is " + l)
     if (l > -1) {
@@ -222,8 +218,7 @@ object CoqRetractAction extends CoqRetractAction { }
 class CoqStepAction extends KCoqAction {
   override def doit () : Unit = {
     //Console.println("run called, sending a command")
-    val con = EclipseBoilerPlate.getContent
-    DocumentState.totallen = con.length
+    val con = DocumentState.content
     val content = con.drop(DocumentState.position)
     if (content.length > 0) {
       val eoc = CoqTop.findNextCommand(content)
@@ -258,8 +253,11 @@ object CoqStepAllAction extends CoqStepAllAction { }
 
 class CoqStepUntilAction extends KCoqAction {
   override def doit () : Unit = {
+    doitReally(CoqTop.findPreviousCommand(DocumentState.content, EclipseBoilerPlate.getCaretPosition + 2), None)
+  }
+
+  def doitReally (togo : Int, dolater : Option[() => Unit]) = {
     //need to go back one more step
-    val togo = CoqTop.findPreviousCommand(EclipseBoilerPlate.getContent, EclipseBoilerPlate.getCaretPosition + 2)
     //doesn't work reliable when inside a comment
     Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition + ", docpos is " + DocumentState.position)
     if (DocumentState.position == togo) { } else
@@ -267,6 +265,7 @@ class CoqStepUntilAction extends KCoqAction {
       EclipseBoilerPlate.multistep = true
       val coqs = new CoqStepNotifier()
       coqs.test = Some((x : Int) => x >= togo)
+      coqs.later = dolater
       PrintActor.register(coqs)
       CoqStepAction.doit()
     } else { //Backtrack
@@ -274,6 +273,7 @@ class CoqStepUntilAction extends KCoqAction {
       val coqs = new CoqStepNotifier()
       coqs.test = Some((x : Int) => x <= togo)
       coqs.walker = CoqUndoAction.doit
+      coqs.later = dolater
       coqs.undo = true
       PrintActor.register(coqs)
       CoqUndoAction.doit()
@@ -377,6 +377,7 @@ object CoqStartUp extends CoqCallback {
 class CoqStepNotifier extends CoqCallback {
   var err : Boolean = false
   var test : Option[(Int) => Boolean] = None
+  var later : Option[() => Unit] = None
   var walker : () => Unit = CoqStepAction.doit
   var undo : Boolean = false
 
@@ -398,7 +399,7 @@ class CoqStepNotifier extends CoqCallback {
           } else if (monoton || undo) {
             walker()
             val drops = DocumentState.position + DocumentState.sendlen
-            if (drops >= DocumentState.totallen || CoqTop.findNextCommand(EclipseBoilerPlate.getContent.drop(drops)) == -1)
+            if (drops >= DocumentState.content.length || CoqTop.findNextCommand(DocumentState.content.drop(drops)) == -1)
               if (! undo) {
                 Console.println("in drops >= or -1 case")
                 fini
@@ -413,6 +414,10 @@ class CoqStepNotifier extends CoqCallback {
 
   def fini () : Unit = {
     PrintActor.deregister(this)
+    later match {
+      case Some(x) => x()
+      case None =>
+    }
     EclipseBoilerPlate.multistep = false
     EclipseBoilerPlate.finishedProgress
   }
