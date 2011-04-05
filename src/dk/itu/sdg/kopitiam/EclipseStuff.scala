@@ -3,6 +3,44 @@
 package dk.itu.sdg.kopitiam
 
 import org.eclipse.ui.editors.text.TextEditor
+import org.eclipse.ui.editors.text.FileDocumentProvider
+
+//this should go away soon (rather use JDT editor)
+class SimpleJavaEditor extends TextEditor {
+  override def initializeEditor () : Unit = {
+    setDocumentProvider(SimpleJavaDocumentProvider)
+    super.initializeEditor()
+  }
+}
+
+object SimpleJavaDocumentProvider extends FileDocumentProvider {
+  import dk.itu.sdg.javaparser.JavaOutput
+  import org.eclipse.ui.part.FileEditorInput
+  import org.eclipse.jface.text.IDocument
+  import scala.collection.mutable.HashMap
+
+  val docs : HashMap[String,IDocument] = new HashMap[String,IDocument]()
+
+  override def getDefaultEncoding () : String = "UTF-8"
+
+  override def getDocument (ele : Object) : IDocument = {
+    assert(ele.isInstanceOf[FileEditorInput])
+    val elem = ele.asInstanceOf[FileEditorInput]
+    val nam = elem.getName
+    if (docs.contains(nam))
+      docs(nam)
+    else {
+      val document = super.getDocument(ele)
+      //Console.println("getdocument received " + document.get)
+      val newt = JavaOutput.parseandoutput(document.get)
+      Console.println("SimpleJava getDocument called, translated")
+      document.set(newt)
+      docs += nam -> document
+      document
+    }
+  }
+}
+
 
 trait EclipseUtils {
   //Handy implicits and functions that make dealing with Eclipse less verbose
@@ -21,7 +59,6 @@ trait EclipseUtils {
     }
 
   implicit def tuple2Color (vals : (Int, Int, Int)) : Color = color(vals._1, vals._2, vals._3)
-
 }
 
 class CoqEditor extends TextEditor with EclipseUtils {
@@ -100,7 +137,6 @@ class CoqEditor extends TextEditor with EclipseUtils {
     if (input != null && outlinePage != null) {
       outlinePage foreach { _.setInput(input) }
     }
-
   }
 
   override def editorSaved () : Unit = {
@@ -126,34 +162,6 @@ class CoqEditor extends TextEditor with EclipseUtils {
       (pos2eclipsePos(region.pos), new ProjectionAnnotation) #:: region.getOutline.flatMap(foldingAnnotations)
     else
      region.getOutline.flatMap(foldingAnnotations)
-  }
-}
-
-class SimpleJavaEditor extends TextEditor {
-  override def initializeEditor () : Unit = {
-    setDocumentProvider(SimpleJavaDocumentProvider)
-    super.initializeEditor()
-  }
-}
-
-import org.eclipse.jface.text.IDocumentListener
-
-object CoqJavaDocumentChangeListener extends IDocumentListener {
-  import org.eclipse.jface.text.DocumentEvent
-  import scala.collection.mutable.HashMap
-  import org.eclipse.jface.text.IDocument
-  private val docTS = new HashMap[IDocument,Long]()
-
-  override def documentAboutToBeChanged (ev : DocumentEvent) : Unit = ()
-
-  override def documentChanged (ev : DocumentEvent) : Unit = {
-    val doc = ev.getDocument
-    if (!docTS.contains(doc) | docTS(doc) < ev.getModificationStamp) {
-      docTS += doc -> ev.getModificationStamp
-      //ev.getDocument.removeDocumentListener(this)
-      //ev.getDocument.replace(ev.getOffset, ev.getLength, ev.getText)
-      //ev.getDocument.addDocumentListener(this)
-    }
   }
 }
 
@@ -253,12 +261,7 @@ protected class CoqContentProvider extends ITreeContentProvider {
     Console.println("getParent " + obj)
     null //FIXME: Figure out how to do this - perhaps compute a table of parents?
   }
-
-
 }
-
-import org.eclipse.jface.text.Document
-import org.eclipse.ui.editors.text.FileDocumentProvider
 
 object CoqJavaDocumentProvider extends FileDocumentProvider {
   import org.eclipse.jface.text.IDocument
@@ -305,36 +308,6 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
   }
 }
 
-object SimpleJavaDocumentProvider extends FileDocumentProvider {
-  import dk.itu.sdg.javaparser.JavaOutput
-  import org.eclipse.ui.part.FileEditorInput
-  import org.eclipse.jface.text.IDocument
-  import scala.collection.mutable.HashMap
-
-  val docs : HashMap[String,IDocument] = new HashMap[String,IDocument]()
-
-  override def getDefaultEncoding () : String = "UTF-8"
-
-  override def getDocument (ele : Object) : IDocument = {
-    assert(ele.isInstanceOf[FileEditorInput])
-    val elem = ele.asInstanceOf[FileEditorInput]
-    val nam = elem.getName
-    if (docs.contains(nam))
-      docs(nam)
-    else {
-      val document = super.getDocument(ele)
-      //Console.println("getdocument received " + document.get)
-      val newt = JavaOutput.parseandoutput(document.get)
-      Console.println("SimpleJava getDocument called, translated")
-      document.set(newt)
-      docs += nam -> document
-      document
-    }
-  }
-}
-
-import org.eclipse.jface.text.rules.{ITokenScanner, RuleBasedScanner}
-import dk.itu.sdg.coqparser.VernacularReserved
 import org.eclipse.jface.text.rules.IWordDetector
 
 object CoqWordDetector extends IWordDetector {
@@ -346,6 +319,9 @@ object CoqWordDetector extends IWordDetector {
 
   def isWordPart(character : Char) = isWordStart(character)
 }
+
+import org.eclipse.jface.text.rules.RuleBasedScanner
+import dk.itu.sdg.coqparser.VernacularReserved
 
 object CoqTokenScanner extends RuleBasedScanner with VernacularReserved with EclipseUtils {
   import org.eclipse.jface.text.rules.{IToken, MultiLineRule, SingleLineRule, Token, WordRule}
@@ -375,11 +351,6 @@ object CoqTokenScanner extends RuleBasedScanner with VernacularReserved with Ecl
 
   setRules((rules ++ Seq(wordRule)).toArray)
 }
-
-//import org.eclipse.jface.text.rules.DefaultDamageRepairer
-
-//object CoqDamageRepairer extends DefaultDamageRepairer {
-//}
 
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
 import org.eclipse.jface.text.IDocument
@@ -597,90 +568,6 @@ object EclipseBoilerPlate {
   }
 }
 
-object CoqStartUp extends CoqCallback {
-  private var first : Boolean = true
-  var fini : Boolean = false
-
-  def start () : Unit = {
-    if (! CoqTop.isStarted) {
-      PrintActor.register(CoqStartUp)
-      if (EclipseConsole.out == null)
-        EclipseConsole.initConsole
-      PrintActor.stream = EclipseConsole.out
-      if (! CoqTop.startCoq)
-        EclipseBoilerPlate.warnUser("No Coq", "No Coq binary found, please specify one in the Kopitiam preferences page")
-      else {
-        while (!fini) { }
-        fini = false
-      }
-      PrintActor.deregister(CoqStartUp)
-    }
-  }
-
-  override def dispatch (x : CoqResponse) : Unit = {
-    x match {
-      case CoqShellReady(m, id, t) =>
-        if (first) {
-          DocumentState.coqstart = t.globalStep
-          CoqTop.writeToCoq("Add LoadPath \"" + EclipseBoilerPlate.getProjectDir + "\".")
-          first = false
-        } else {
-          PrintActor.deregister(CoqStartUp)
-          PrintActor.register(CoqOutputDispatcher)
-          first = true
-          fini = true
-          ActionDisabler.enableMaybe
-        }
-      case y =>
-    }
-  }
-}
-
-class CoqStepNotifier extends CoqCallback {
-  var err : Boolean = false
-  var test : Option[(Int) => Boolean] = None
-  var walker : () => Unit = CoqStepAction.doit
-  var undo : Boolean = false
-
-  import org.eclipse.swt.widgets.Display
-
-  override def dispatch (x : CoqResponse) : Unit = {
-    x match {
-      case CoqError(m) => err = true
-      case CoqUserInterrupt() => err = true
-      case CoqShellReady(monoton, id, tokens) =>
-        if (! err) {
-          if (monoton) DocumentState.commit(id) else DocumentState.undo(id)
-          if (test.isDefined && test.get(DocumentState.position)) {
-            fini
-            if (undo)
-              Display.getDefault.syncExec(
-                new Runnable() {
-                  def run() = CoqStepUntilAction.doit
-                });
-          } else if (monoton || undo) {
-            walker()
-            val drops = DocumentState.position + DocumentState.sendlen
-            if (drops >= DocumentState.totallen || CoqTop.findNextCommand(EclipseBoilerPlate.getContent.drop(drops)) == -1)
-              if (! undo) {
-                Console.println("in drops >= or -1 case")
-                fini
-              }
-          } else
-            fini
-        } else
-          fini
-      case x => //Console.println("got something, try again player 1 " + x)
-    }
-  }
-
-  def fini () : Unit = {
-    PrintActor.deregister(this)
-    EclipseBoilerPlate.multistep = false
-    EclipseBoilerPlate.finishedProgress
-  }
-}
-
 object DocumentState {
   import org.eclipse.jface.text.{ITextViewer}
   import org.eclipse.swt.graphics.{Color,RGB}
@@ -856,57 +743,6 @@ class GoalViewer extends ViewPart {
 
 object GoalViewer extends GoalViewer { }
 
-object CoqOutputDispatcher extends CoqCallback {
-  import org.eclipse.swt.widgets.Display
-
-  var goalviewer : GoalViewer = null
-
-  override def dispatch (x : CoqResponse) : Unit = {
-    //Console.println("received in dispatch " + x)
-    x match {
-      case CoqShellReady(monoton, id, token) =>
-        EclipseBoilerPlate.finishedProgress
-        if (monoton) {
-          DocumentState.commit(id)
-          EclipseBoilerPlate.unmark
-        } else
-          DocumentState.undo(id)
-        ActionDisabler.enableMaybe
-      case CoqGoal(n, goals) => {
-          val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
-          val ht = if (hy.length > 0) hy.reduceLeft(_ + "\n" + _) else ""
-          val subd = res.findIndexOf(_.contains("subgoal "))
-          val (g, r) = if (subd > 0) res.splitAt(subd) else (res, List[String]())
-          val gt = if (g.length > 1) g.drop(1).reduceLeft(_ + "\n" + _) else ""
-          val ot = if (r.length > 0) {
-            val r2 = r.map(x => { if (x.contains("subgoal ")) x.drop(1) else x })
-            r2.reduceLeft(_ + "\n" + _)
-          } else ""
-          writeGoal(ht, gt, ot)
-        }
-      case CoqProofCompleted() => writeGoal("Proof completed", "", "")
-      case CoqError(msg) => {
-        //TODO: what if Error not found, should come up with a sensible message anyways!
-        val ps = msg.drop(msg.findIndexOf(_.startsWith("Error")))
-        EclipseBoilerPlate.mark(ps.reduceLeft(_ + " " + _))
-      }
-      case x => EclipseConsole.out.println("received: " + x)
-    }
-  }
-
-  def writeGoal (assumptions : String, goal : String, othergoals : String) : Unit = {
-    Display.getDefault.syncExec(
-      new Runnable() {
-        def run() = {
-          goalviewer.hypos.setText(assumptions)
-          goalviewer.goal.setText(goal)
-          goalviewer.othersubs.setText(othergoals)
-          goalviewer.comp.layout
-        }
-      })
-  }
-}
-
 import org.eclipse.jface.text.contentassist.IContentAssistProcessor
 
 object CoqContentAssistantProcessor extends IContentAssistProcessor {
@@ -1006,7 +842,6 @@ class CoqContentOutlinePage extends ContentOutlinePage {
   }
 
   override def createControl(parent : Composite) : Unit = {
-
     super.createControl(parent)
 
     val viewer : TreeViewer = getTreeViewer()
@@ -1019,6 +854,5 @@ class CoqContentOutlinePage extends ContentOutlinePage {
 
     update()
   }
-
 }
 

@@ -10,7 +10,23 @@
 ** read scala style guide
 ** use mkString instead of reduceLeft at several places!
 * Coq side
+** Response/Message buffer (or below Goal Viewer?)
 ** Undo from just after End should jump to start of Section/Module/whatever
+mobius approach to undo:
+  public void undo(final ITopLevel itl) throws AProverException {
+    if (isProofMode(itl)) {
+      try {
+        sendCommand(itl, "Undo 1.");
+      }
+      catch (Exception e) {
+        sendCommand(itl, "Abort.");
+      }
+    }
+    else {
+      sendCommand(itl, "Back 1.");
+    }
+  }  
+where isProofMode is CoqShellTokens.lemma.length != 0
 ** after undo, do syntax highlighting again!
 ** in Actions: search for "Proof." is wrong - better search for Definition/start of lemma. Proof is optional anyhow.
 ** unreliable with keyboard shortcuts -> look whether in action or not (otherwise risk error messages from coq)
