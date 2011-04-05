@@ -50,6 +50,14 @@ abstract class KAction extends IWorkbenchWindowActionDelegate with IHandler {
 
       DocumentMonitor.activeeditor = acted.asInstanceOf[CoqEditor]
 
+      val initial =
+        if (DocumentState.positionToShell.contains(0))
+          DocumentState.positionToShell(0).globalStep
+        else {
+          Console.println("doitH: using 2 instead of registered position, since there is none")
+          2
+        }
+      DocumentState.positionToShell.empty
       DocumentState.position = 0
       DocumentState.sendlen = 0
       DocumentState.coqmarker.delete
@@ -64,7 +72,7 @@ abstract class KAction extends IWorkbenchWindowActionDelegate with IHandler {
         PrintActor.deregister(CoqOutputDispatcher)
         val shell = CoqState.getShell
         PrintActor.register(CoqStartUp)
-        CoqTop.writeToCoq("Backtrack " + DocumentState.coqstart + " 0 " + shell.context.length + ".")
+        CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
         while (! CoqStartUp.fini) { }
         CoqStartUp.fini = false
       }
@@ -140,11 +148,10 @@ class CoqUndoAction extends KAction with VernacularReserved {
       EclipseBoilerPlate.unmark
       val sh = CoqState.getShell
       val mn = lastqed(content, l)
+      var off : Int = l
       Console.println("qed distance is " + (mn - l))
       if (mn > 0 && l > 0 && eqmodws(content, l, mn)) {
         Console.println("found qed-word nearby, better loop before last proof.")
-        var step : Int = 2
-        var off : Int = l
         //Console.println("before loop " + content.take(content.indexOf("Proof.", off)).drop(off).trim.size)
         var deep : Int = 0
         while ((!eqmodws(content, off, content.indexOf("Proof.", off)) || deep != 0) && off > 0) {
@@ -154,27 +161,20 @@ class CoqUndoAction extends KAction with VernacularReserved {
           off = CoqTop.findPreviousCommand(content, off)
           if (eqmodws(content, off, lastqed(content, off)))
             deep += 1
-          step += 1
         }
         off = scala.math.max(0, CoqTop.findPreviousCommand(content, off))
-        if ((content.indexOf("Proof.", off) == -1) || (content.indexOf("Proof.", off) > lastqed(content, off)))
-          step -= 1
-        Console.println("found proof before  @" + off + "(" + step + "): " + content.drop(off).take(20))
-        DocumentState.sendlen = DocumentState.position - off
-        CoqTop.writeToCoq("Backtrack " + (sh.globalStep - step) + " " + sh.localStep + " 0.")
-      } else {
-        DocumentState.sendlen = DocumentState.position - l
-        if (sh.localStep > 1)
-          CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1)  + " " + (sh.localStep - 1) + " 0.")
-        else if (sh.localStep == 1 && content.take(DocumentState.position).drop(l).trim == "Proof.")
-            //proof doesn't modify localstep
-            CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1)  + " " + (sh.localStep) + " 0.")
+        Console.println("found proof before  @" + off + ": " + content.drop(off).take(20))
+      } //care about End Foo.: find Begin Foo., with Begin being Section or Module
+      DocumentState.sendlen = DocumentState.position - off
+      val oldsh =
+        if (DocumentState.positionToShell.contains(off))
+          DocumentState.positionToShell(off)
         else {
-          val ctx = if (sh.context.length == 0) 0 else 1
-          val loc = if (ctx == 1 && sh.context.length != 1) sh.localStep else 0
-          CoqTop.writeToCoq("Backtrack " + (sh.globalStep - 1) + " " + loc + " " + ctx + ".")
+          Console.println("couldn't find shell for offset " + off + " in table with keys " + DocumentState.positionToShell.keys.toList.sort((x, y) => x < y))
+          CoqShellTokens("Coq", 0, List(), 0)
         }
-      }
+      val dropped = sh.context.length - oldsh.context.length
+      CoqTop.writeToCoq("Backtrack " + oldsh.globalStep + " " + oldsh.localStep + " " + dropped + ".")
     } else
       ActionDisabler.enableMaybe
   }
@@ -192,7 +192,15 @@ class CoqRetractAction extends KAction {
     val shell = CoqState.getShell
     DocumentState.undoAll
     EclipseBoilerPlate.unmark
-    CoqTop.writeToCoq("Backtrack " + DocumentState.coqstart + " 0 " + shell.context.length + ".")
+    val initial =
+      if (DocumentState.positionToShell.contains(0))
+        DocumentState.positionToShell(0).globalStep
+      else {
+        Console.println("CoqRetractAction: retracting without position information, using 2")
+        2
+      }
+    DocumentState.positionToShell.empty
+    CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
   }
   override def start () : Boolean = true
   override def end () : Boolean = false
@@ -240,7 +248,8 @@ class CoqStepUntilAction extends KAction {
   override def doit () : Unit = {
     //need to go back one more step
     val togo = CoqTop.findPreviousCommand(EclipseBoilerPlate.getContent, EclipseBoilerPlate.getCaretPosition + 2)
-    Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition)
+    //doesn't work reliable when inside a comment
+    Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition + ", docpos is " + DocumentState.position)
     if (DocumentState.position == togo) { } else
     if (DocumentState.position < togo) {
       EclipseBoilerPlate.multistep = true
@@ -342,9 +351,8 @@ object CoqStartUp extends CoqCallback {
 
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
-      case CoqShellReady(m, id, t) =>
+      case CoqShellReady(m, t) =>
         if (first) {
-          DocumentState.coqstart = t.globalStep
           CoqTop.writeToCoq("Add LoadPath \"" + EclipseBoilerPlate.getProjectDir + "\".")
           first = false
         } else {
@@ -371,9 +379,8 @@ class CoqStepNotifier extends CoqCallback {
     x match {
       case CoqError(m) => err = true
       case CoqUserInterrupt() => err = true
-      case CoqShellReady(monoton, id, tokens) =>
+      case CoqShellReady(monoton, tokens) =>
         if (! err) {
-          if (monoton) DocumentState.commit(id) else DocumentState.undo(id)
           if (test.isDefined && test.get(DocumentState.position)) {
             fini
             if (undo)
@@ -412,13 +419,10 @@ object CoqOutputDispatcher extends CoqCallback {
   override def dispatch (x : CoqResponse) : Unit = {
     //Console.println("received in dispatch " + x)
     x match {
-      case CoqShellReady(monoton, id, token) =>
+      case CoqShellReady(monoton, token) =>
         EclipseBoilerPlate.finishedProgress
-        if (monoton) {
-          DocumentState.commit(id)
+        if (monoton)
           EclipseBoilerPlate.unmark
-        } else
-          DocumentState.undo(id)
         ActionDisabler.enableMaybe
       case CoqGoal(n, goals) =>
         //Console.println("outputdispatcher, n is " + n + ", goals:\n" + goals)

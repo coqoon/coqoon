@@ -11,8 +11,7 @@ class BusyStreamReader (input : InputStream) extends Runnable {
   private var callbacks : List[Actor] = List[Actor]()
 
   def addActor (c : Actor) : Unit = { callbacks = c :: callbacks }
-  def removeActor (c : Actor) : Unit =
-    { callbacks = callbacks.filterNot(_ == c) }
+  def removeActor (c : Actor) : Unit = { callbacks = callbacks.filterNot(_ == c) }
 
   override def run () : Unit = {
     while (input.available >= 0) {
@@ -40,14 +39,12 @@ object PrintActor extends Actor with OutputChannel[String] {
   type Printable = { def println (x : String) : Unit }
   var stream : Printable = PCons
 
-  var callbacks : List[CoqCallback] = List[CoqCallback]() //why not actors?
+  private var callbacks : List[CoqCallback] = List[CoqCallback]() //why not actors?
 
-  def register (c : CoqCallback) : Unit = { callbacks = c :: callbacks }
+  def register (c : CoqCallback) : Unit = { callbacks = (c :: callbacks.reverse).reverse }
   def deregister (c : CoqCallback) : Unit = { callbacks = callbacks.filterNot(_ == c) }
 
-  def distribute (c : CoqResponse) : Unit = {
-    callbacks.foreach(_.dispatch(c))
-  }
+  def distribute (c : CoqResponse) : Unit = { callbacks.foreach(_.dispatch(c)) }
 
   def act() {
     var buf = ""
@@ -106,7 +103,6 @@ object ValidCoqShell {
 object CoqState {
   private var readyforinput : Boolean = false
   private var context : CoqShellTokens = new CoqShellTokens("Coq", 0, List(), 0)
-  private var id : Int = 0
 
   def readyForInput () : Boolean = { readyforinput }
 
@@ -123,8 +119,7 @@ object CoqState {
       if (oldc.localStep <= tokens.localStep || oldc.theorem != tokens.theorem)
         monotonic = true
     Console.println("distributing shell ready " + monotonic + " shell " + tokens)
-    id += 1
-    PrintActor.distribute(CoqShellReady(monotonic, id, tokens))
+    PrintActor.distribute(CoqShellReady(monotonic, tokens))
     Console.println(" -> done distributing " + tokens)
   }
 

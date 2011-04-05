@@ -206,22 +206,29 @@ object EclipseBoilerPlate {
   }
 }
 
-object DocumentState {
+object DocumentState extends CoqCallback {
   import org.eclipse.jface.text.{ITextViewer}
   import org.eclipse.swt.graphics.{Color,RGB}
   import org.eclipse.swt.widgets.Display
 
   var sourceview : ITextViewer = null
-  //var position : Int = 0
+
+  //we're not there yet
+  //var document : String = null
+
+  import scala.collection.mutable.HashMap
+  var positionToShell : HashMap[Int,CoqShellTokens] = new HashMap[Int,CoqShellTokens]()
+
   var sendlen : Int = 0
   var totallen_ : Int = 0
   def totallen : Int = totallen_
   def totallen_= (n : Int) {
-    if (position > n)
+    if (position > n) {
+      Console.println("totallen was decreased (" + n + "), now even smaller than position " + position + ", adjusting to " + (n - 1))
       position = n - 1
+    }
     totallen_ = n
   }
-  var coqstart : Int = 0
   var realundo : Boolean = false
 
   import org.eclipse.core.resources.IMarker
@@ -244,6 +251,19 @@ object DocumentState {
     position_ = x
   }
 
+  override def dispatch (x : CoqResponse) : Unit = {
+    x match {
+      case CoqShellReady(monoton, token) =>
+        if (monoton) {
+          commit
+          Console.println("filling table [" + position + "]: " + token)
+          positionToShell += position -> token
+        } else
+          undo
+      case y =>
+    }
+  }
+
   def undoAll () : Unit = synchronized {
     if (sourceview != null) {
       val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
@@ -254,12 +274,10 @@ object DocumentState {
     }
   }
 
-  var lastcommit : Int = 0
   var oldsendlen : Int = 0
-  def undo (id : Int) : Unit = synchronized {
+  def undo () : Unit = synchronized {
     //Console.println("undo (@" + position + ", " + sendlen + ")")
-    if (sendlen != 0 && id > lastcommit) {
-      lastcommit = id
+    if (sendlen != 0) {
       if (realundo) {
         realundo = false
         val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
@@ -280,10 +298,9 @@ object DocumentState {
     }
   }
 
-  def commit (id : Int) : Unit = synchronized {
+  def commit () : Unit = synchronized {
     //Console.println("commited (@" + position + ", " + sendlen + ")")
-    if (sendlen != 0 && id > lastcommit) {
-      lastcommit = id
+    if (sendlen != 0) {
       Console.println("commited - and doing some work")
       val bl = new Color(Display.getDefault, new RGB(0, 0, 220))
       val end = scala.math.min(sendlen, totallen - position)
@@ -399,6 +416,7 @@ class Startup extends IStartup {
     Console.println("earlyStartup called")
     ActionDisabler.disableAll
     DocumentMonitor.init
+    PrintActor.register(DocumentState)
     CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + System.getProperty("file.separator")
     CoqTop.init
   }

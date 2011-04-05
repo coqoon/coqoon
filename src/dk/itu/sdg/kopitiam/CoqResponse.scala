@@ -11,7 +11,7 @@ case class CoqProofCompleted () extends CoqResponse { }
 case class CoqTheoremDefined (theorem : String) extends CoqResponse { }
 case class CoqUnknown (stuff : String) extends CoqResponse { }
 case class CoqUserInterrupt () extends CoqResponse { }
-case class CoqShellReady (mono : Boolean, id : Int, tokens : CoqShellTokens) extends CoqResponse { }
+case class CoqShellReady (mono : Boolean, tokens : CoqShellTokens) extends CoqResponse { }
 
 import scala.util.parsing.combinator.syntactical._
 import scala.util.parsing.combinator.JavaTokenParsers
