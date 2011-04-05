@@ -548,8 +548,10 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
   | inductive
   | fixpoint
   | cofixpoint
-  | assertion
-  | proof
+  | assertion //TODO: followed by proof (fig 1.3 of sec 1.3) - hannes
+  | proof //TODO: where ident("Proof") is optional (remark 3 in 1.3.5 at the end) - hannes
+    //TODO: proof also might end with Save (sec 7.1); and "Proof term." is also legal (sec 7.1.4) - hannes
+    //TODO: and Abort (sec 7.1.5), Abort ident, Abort All; Suspend and Resume (7.1.6/7) - hannes
   )
 
   def dot : Parser[lexical.Token] = elem("period", (a : lexical.Token) => a match {
@@ -619,6 +621,8 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
       case kwd~id~binders~typ => AssertionSentence(kwd, StringName(id.chars), binders, typ)
     }
 
+  //TODO: Goal (sec 7.1.1); Let (same as Definition (without := term) starts proof editing mode) (sec 1.3.5) - hannes
+  //Fixpoint?, CoFixpoint? (sec 1.3.5, can't tell the difference to fix/cofixpoint assumptions) - hannes
   def assertionKeyword : Parser[StringName] =
     lengthPositioned(
       ( ident("Theorem")

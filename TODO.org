@@ -57,6 +57,7 @@ where isProofMode is CoqShellTokens.lemma.length != 0
 ** resizable GoalViewer
 *** syntax highlighting there
 *** indentation
+ losing whitespaces in CoqResponseParser
 * Java side
 ** highlight verified/proven method in green or however
 ** add/remove whitespaces at end of class/file messes the coq synced output up (DeDefinition and emma instead of Definition and Lemma)
