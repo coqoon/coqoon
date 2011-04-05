@@ -421,8 +421,7 @@ object CoqOutputDispatcher extends CoqCallback {
           DocumentState.undo(id)
         ActionDisabler.enableMaybe
       case CoqGoal(n, goals) =>
-        //Console.println("outputdispatcher, n is " + n + ", goals:\n" +
-    goals)
+        //Console.println("outputdispatcher, n is " + n + ", goals:\n" + goals)
         val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
         val ht = if (hy.length > 0) hy.reduceLeft(_ + "\n" + _) else ""
         val subd = res.findIndexOf(_.contains("subgoal "))
