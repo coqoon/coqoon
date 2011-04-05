@@ -14,17 +14,29 @@ abstract class KAction extends IWorkbenchWindowActionDelegate with IHandler {
   override def init (w : IWorkbenchWindow) : Unit = ()
   override def dispose () : Unit = ()
 
-  private var first : Boolean = true
-  override def selectionChanged (a : IAction, s : ISelection) : Unit =
-    { if (first) { first = false; ActionDisabler.registeraction(a, start(), end()) } }
+  override def selectionChanged (a : IAction, s : ISelection) : Unit = ()
 
   private var handlers : List[IHandlerListener] = List[IHandlerListener]()
   override def addHandlerListener (h : IHandlerListener) : Unit = { handlers ::= h }
   override def removeHandlerListener (h : IHandlerListener) : Unit =
     { handlers = handlers.filterNot(_ == h) }
 
-  override def run (a : IAction) : Unit = { doitH }
-  override def execute (ev : ExecutionEvent) : Object = { doitH; null }
+  override def run (a : IAction) : Unit = { doit }
+  override def execute (ev : ExecutionEvent) : Object = { doit; null }
+
+  override def isEnabled () : Boolean = true
+  override def isHandled () : Boolean = true
+  def doit () : Unit
+}
+
+abstract class KCoqAction extends KAction {
+  import org.eclipse.jface.action.IAction
+  import org.eclipse.jface.viewers.ISelection
+  import org.eclipse.core.commands.{IHandlerListener,ExecutionEvent}
+
+  private var first : Boolean = true
+  override def selectionChanged (a : IAction, s : ISelection) : Unit =
+    { if (first) { first = false; ActionDisabler.registeraction(a, start(), end()) } }
 
   override def isEnabled () : Boolean = {
     if (DocumentState.position == 0 && start)
@@ -34,7 +46,8 @@ abstract class KAction extends IWorkbenchWindowActionDelegate with IHandler {
     else
       true
   }
-  override def isHandled () : Boolean = true
+  override def run (a : IAction) : Unit = { doitH }
+  override def execute (ev : ExecutionEvent) : Object = { doitH; null }
 
   import org.eclipse.ui.{IFileEditorInput, PlatformUI}
   import org.eclipse.core.resources.{IResource, IMarker}
@@ -80,7 +93,6 @@ abstract class KAction extends IWorkbenchWindowActionDelegate with IHandler {
     doit
   }
 
-  def doit () : Unit
   def start () : Boolean
   def end () : Boolean
 }
@@ -116,7 +128,7 @@ object ActionDisabler {
 }
 
 import dk.itu.sdg.coqparser.VernacularReserved
-class CoqUndoAction extends KAction with VernacularReserved {
+class CoqUndoAction extends KCoqAction with VernacularReserved {
   def lastqed (content : String, off : Int) : Int = {
     val lks = proofEnders.map(content.indexOf(_, off)).filterNot(_ == -1)
     if (lks.length == 0)
@@ -183,7 +195,7 @@ class CoqUndoAction extends KAction with VernacularReserved {
 }
 object CoqUndoAction extends CoqUndoAction { }
 
-class CoqRetractAction extends KAction {
+class CoqRetractAction extends KCoqAction {
   override def doit () : Unit = {
     PrintActor.deregister(CoqOutputDispatcher)
     DocumentState.position = 0
@@ -207,7 +219,7 @@ class CoqRetractAction extends KAction {
 }
 object CoqRetractAction extends CoqRetractAction { }
 
-class CoqStepAction extends KAction {
+class CoqStepAction extends KCoqAction {
   override def doit () : Unit = {
     //Console.println("run called, sending a command")
     val con = EclipseBoilerPlate.getContent
@@ -231,7 +243,7 @@ class CoqStepAction extends KAction {
 }
 object CoqStepAction extends CoqStepAction { }
 
-class CoqStepAllAction extends KAction {
+class CoqStepAllAction extends KCoqAction {
   override def doit () : Unit = {
     //Console.println("registering CoqStepNotifier to PrintActor, now stepping")
     EclipseBoilerPlate.multistep = true
@@ -244,7 +256,7 @@ class CoqStepAllAction extends KAction {
 }
 object CoqStepAllAction extends CoqStepAllAction { }
 
-class CoqStepUntilAction extends KAction {
+class CoqStepUntilAction extends KCoqAction {
   override def doit () : Unit = {
     //need to go back one more step
     val togo = CoqTop.findPreviousCommand(EclipseBoilerPlate.getContent, EclipseBoilerPlate.getCaretPosition + 2)
@@ -282,8 +294,6 @@ class RestartCoqAction extends KAction {
     PrintActor.deregister(CoqOutputDispatcher)
     CoqStartUp.start
   }
-  override def start () : Boolean = false
-  override def end () : Boolean = false
 }
 object RestartCoqAction extends RestartCoqAction { }
 
@@ -322,10 +332,7 @@ class TranslateAction extends KAction {
       Console.println("wasn't a java file")
   }
 
-  override def start () : Boolean = false
-  override def end () : Boolean = false
   override def doit () : Unit = ()
-  override def doitH () : Unit = ()
 }
 object TranslateAction extends TranslateAction { }
 

@@ -275,7 +275,7 @@ object DocumentState extends CoqCallback {
   }
 
   var oldsendlen : Int = 0
-  def undo () : Unit = synchronized {
+  private def undo () : Unit = synchronized {
     //Console.println("undo (@" + position + ", " + sendlen + ")")
     if (sendlen != 0) {
       if (realundo) {
@@ -298,7 +298,7 @@ object DocumentState extends CoqCallback {
     }
   }
 
-  def commit () : Unit = synchronized {
+  private def commit () : Unit = synchronized {
     //Console.println("commited (@" + position + ", " + sendlen + ")")
     if (sendlen != 0) {
       Console.println("commited - and doing some work")
