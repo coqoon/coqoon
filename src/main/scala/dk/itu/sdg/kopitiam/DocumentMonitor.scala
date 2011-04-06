@@ -125,6 +125,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
           DocumentState.tick()
         }))
       }
+      DocumentState.tick()
       //also, remove markers around here
       EclipseBoilerPlate.maybeunmark(off)
       Console.println("may have unmarked stuff")

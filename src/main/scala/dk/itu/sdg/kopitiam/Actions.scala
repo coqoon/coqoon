@@ -63,7 +63,7 @@ abstract class KCoqAction extends KAction {
       DocumentState.coqmarker = null
       DocumentState.undoAll
       DocumentState.activeEditor = acted.asInstanceOf[CoqEditor]
-      DocumentState.tick
+      DocumentState.tick()
 
       if (! coqstarted)
         CoqStartUp.start
@@ -90,6 +90,7 @@ abstract class KCoqAction extends KAction {
         CoqStartUp.fini = false
       }
     }
+    DocumentState.tick()
     doit
   }
 
