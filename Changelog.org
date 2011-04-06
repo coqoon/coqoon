@@ -1,3 +1,5 @@
+* Kopitiam 0.0.9 [06 April 2011]
+** Coq: reworked undo to work with the bugs Jesper reported
 * Kopitiam 0.0.8 [05 April 2011]
 ** Coq: Preliminary outline and folding support (by David)
 ** Coq: more robust Undo
