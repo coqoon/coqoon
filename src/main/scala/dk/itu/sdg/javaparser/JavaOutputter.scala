@@ -8,7 +8,7 @@ trait JavaOutputter {
   def coqout (loc : String, msg : String, ind : Int) : String = {
     val spaces = indent(ind) + indent(8)
     val replace = "\" +\n" + spaces + "\""
-    indent(ind) + "Coq.def(Coq.M." + loc + ",\n" + spaces + "\"" + msg.replace("\"", "\\\"").replace("\n", replace) + "\");\n" 
+    indent(ind) + "Coq.def(Coq.M." + loc + ",\n" + spaces + "\"" + msg.replace("\"", "\\\"").replace("\n", replace) + "\");\n"
   }
 
   def red (x : List[String], sep : String) : String = {
@@ -93,7 +93,7 @@ trait JavaOutputter {
       case JUnaryExpression(op, e) => indent(ind) + op + out(e, 0)
       case JPostfixExpression(op, e) => indent(ind) + out(e, 0) + op
       case JCall(v, f, as) =>
-        val va = if (v != "this") v + "." else ""
+        val va = v + "."
         indent(ind) + va + f + "(" + red(mapi(as, 0), ", ") + ")"
       case JNewExpression(t, a) =>
         indent(ind) + "new " + t + "(" + red(mapi(a, 0), ", ") + ")"
@@ -103,7 +103,7 @@ trait JavaOutputter {
         } catch {
           case e : Exception =>
             //todo: handle literal char -- are there more reserved words?
-            val res = 
+            val res =
               if (x == "null" || x == "true" || x == "false")
                 x
               else
