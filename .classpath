@@ -1,8 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_CONTAINER"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
-	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
-	<classpathentry kind="src" path="src"/>
+	<classpathentry exported="true" kind="con" path="org.scala-ide.sdt.launching.SCALA_CONTAINER"/>
+	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
+	<classpathentry exported="true" kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
+	<classpathentry kind="src" path="src/test/scala"/>
+	<classpathentry kind="src" path="src/main/scala"/>
+	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/test/scalatest-1.3.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.core.commands_3.6.0.I20100512-1500.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.core.contenttype_3.4.100.v20100505-1235.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.core.expressions_3.4.200.v20100505.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.core.filebuffers_3.5.100.v20100520-0800.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.core.jobs_3.5.0.v20100515.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.core.resources_3.6.0.v20100526-0737.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.core.runtime_3.6.0.v20100505.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.equinox.app_1.3.0.v20100512.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.equinox.common_3.6.0.v20100503.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.equinox.preferences_3.3.0.v20100503.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.equinox.registry_3.5.0.v20100503.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.equinox.weaving.hook_1.0.0.v20100108.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.help_3.5.0.v20100524.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.jdt_3.6.0.v201006080911.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.jdt.compiler.apt_1.0.300.v20100513-0845.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.jdt.compiler.tool_1.0.100.v_A58.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.jdt.core_3.6.0.v_A58.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.jface_3.6.0.I20100601-0800.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.jface.text_3.6.0.v20100526-0800.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.osgi_3.6.0.v20100517.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.swt_3.6.0.v3650b.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.swt.cocoa.macosx.x86_64_3.6.0.v3650b.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.text_3.5.0.v20100601-1300.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.ui_3.6.0.I20100603-1100.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.ui.console_3.5.0.v20100526.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.ui.editors_3.6.0.v20100520-0800.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.ui.ide_3.6.0.I20100601-0800.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.ui.views_3.5.0.I20100527-0800.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.ui.workbench_3.6.0.I20100603-1100.jar"/>
+	<classpathentry kind="lib" path="lib/compile/org.eclipse.ui.workbench.texteditor_3.6.0.v20100520-0800.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

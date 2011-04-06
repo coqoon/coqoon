@@ -4,25 +4,21 @@ import java.io._
 
 class Project(info: ProjectInfo) extends DefaultProject(info)
 {
-  
   // Reading the version from MA
   override def version = OpaqueVersion(readVersion)
   
   // Forcing SBT to use the project structure that Eclipse uses
   override def outputDirectoryName = "bin"
-  override def mainScalaSourcePath = "src"
-  override def testScalaSourcePath = "automated-tests"
    
   override def libraryDependencies = Set(
     "org.scalatest" % "scalatest" % "1.3" % "test->default"
-  ) ++ super.libraryDependencies  
-  
+  ) ++ super.libraryDependencies    
   
   /*
     Read the version from the MANIFEST.MF file. 
   */
   def readVersion : String = {
-    val manifestFile = new File(List("META-INF","MANIFEST.MF").mkString(File.separator))
+    val manifestFile = new File(List("src","main","resources","META-INF","MANIFEST.MF").mkString(File.separator))
     val manifest     = readContentsOfFile(manifestFile)
     val r = """Bundle-Version: (\S*)""".r 
     r.findFirstMatchIn(manifest).map( _.group(1) ).get
@@ -41,7 +37,5 @@ class Project(info: ProjectInfo) extends DefaultProject(info)
       line = reader.readLine()
     }
     text
-  }
-  
-  
+  } 
 }

@@ -18,19 +18,19 @@ class JavaParserSpec extends FlatSpec with ShouldMatchers
                                       with JavaOutputter 
                                       with JavaAST {
 
+  val pathToSource   = List("src","test","resources","javaparser","source").mkString(File.separator)
+  val pathToExpected = List("src","test","resources","javaparser","expected").mkString(File.separator)
+
   System.setProperty("file.encoding", "UTF-8")
 
   "Result of parsing all files in source" should 
   "equal to the contents of the associated file in expected" in {
 
-    val sourcePath = List("automated-tests", "resources", "javaparser", "source").mkString(File.separator)
-    val source     = new File(sourcePath)
-
+    val source     = new File(pathToSource)
     source.listFiles().foreach { file =>
       val in       = StreamReader(new InputStreamReader(new FileInputStream(file)))
       val result   = FinishAST.doitHelper(parseH(in)).map(out(_, 0)).reduceLeft(_ + " " + _)                                    
       val expected = getExpectedOutputOfFile(file)
-            
       simplify(result) should equal(simplify(expected))
     }
   }
@@ -52,7 +52,7 @@ class JavaParserSpec extends FlatSpec with ShouldMatchers
     parsing the file.
   */
   def getExpectedOutputOfFile(file : File) : String = {
-    val path = List("automated-tests", "resources", "javaparser", "expected", file.getName).mkString(File.separator)
+    val path = List(pathToExpected, file.getName).mkString(File.separator)
     IO.readContentsOfFile(new File(path))
   }
 
