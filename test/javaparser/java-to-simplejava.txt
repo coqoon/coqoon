@@ -1,21 +1,3 @@
-
-//some more interesting method: no field access and method call in an expression
-class Foo {
-  int f;
-  int a () { return 10; }
-  int b (int c) { return f + a() + c; }
-} =>
-class Foo {
-  int f;
-  int a () { return 10; }
-  int b (int c) {
-    int tmp_1 = this.f;
-    int tmp_2 = this.a();
-    int tmp_3 = tmp_1 + tmp_2;
-    int tmp_4 = tmp_3 + c;
-    return tmp_4;
-  }
-}
 //should produce a warning (multiple return statements) and transform to identity
 class Foo {
   int a (int b) {
