@@ -268,10 +268,11 @@ object DocumentState extends CoqCallback {
         realundo = false
         val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
         val start = scala.math.max(position - sendlen, 0)
-        Console.println("undo (start " + start + " send length " + sendlen + " content length " + content.length + ")")
+        val end = scala.math.min(sendlen + position, content.length - 1)
+        Console.println("undo (start " + start + " send length " + sendlen + " content length " + content.length + " submitting length " + (end - start) + ")")
         Display.getDefault.syncExec(
           new Runnable() {
-            def run() = activeEditor.getSource.setTextColor(bl, start, sendlen, true)
+            def run() = activeEditor.getSource.setTextColor(bl, start, end - start, true)
           });
         position = start
         sendlen = 0
@@ -289,10 +290,11 @@ object DocumentState extends CoqCallback {
       Console.println("commited - and doing some work")
       val bl = new Color(Display.getDefault, new RGB(0, 0, 220))
       val end = scala.math.min(sendlen, content.length - position)
-      //Console.println("commiting, end is " + end + " (pos + len: " + (position + sendlen) + ")" + ", pos:" + position)
+      val len = scala.math.min(position + end, content.length - 1)
+      Console.println("commiting, end is " + end + " (pos + len: " + (position + sendlen) + ")" + ", pos:" + position + ", submitted length " + (len - position))
       Display.getDefault.syncExec(
         new Runnable() {
-          def run() = activeEditor.getSource.setTextColor(bl, position, end, true)
+          def run() = activeEditor.getSource.setTextColor(bl, position, len - position, true)
         });
       position += end
       sendlen = 0
