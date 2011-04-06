@@ -1,0 +1,9 @@
+class Foo {
+ int f;
+ int a () { return 10; }
+ int b (int c) {
+   int tmp_1 = this.a();
+   int tmp_2 = this.f;
+   return tmp_2 + tmp_1 + c;
+ }
+}

@@ -1,0 +1,5 @@
+class Foo {
+  int f;
+  int a () { return 10; }
+  int b (int c) { return f + a() + c; }
+}
