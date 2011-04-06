@@ -128,64 +128,34 @@ object ActionDisabler {
   }
 }
 
-import dk.itu.sdg.coqparser.VernacularReserved
-class CoqUndoAction extends KCoqAction with VernacularReserved {
-  def lastqed (content : String, off : Int) : Int = {
-    val lks = proofEnders.map(content.indexOf(_, off)).filterNot(_ == -1)
-    if (lks.length == 0)
-      -1
-    else
-      lks.reduceLeft(scala.math.min(_, _))
-  }
-
-  def eqmodws (content : String, off1 : Int, off2 : Int) : Boolean = {
-    Console.println("eqmodws, inputs: off1: " + off1 + " off2: " + off2 + " content.length: " + content.length)
-    if (off1 == 0)
-      true
-    else if (off2 == -1)
-      content.drop(off1).trim.size == 0
-    else
-      content.take(off2).drop(off1).trim.size == 0
-  }
-
+class CoqUndoAction extends KCoqAction {
   override def doit () : Unit = {
-    val content = DocumentState.content
-    val l = CoqTop.findPreviousCommand(content, DocumentState.position)
-    Console.println("prev pos of " + DocumentState.position + " is " + l)
-    if (l > -1) {
-      DocumentState.realundo = true
-      EclipseBoilerPlate.unmark
-      val sh = CoqState.getShell
-      val mn = lastqed(content, l)
-      var off : Int = l
-      Console.println("qed distance is " + (mn - l))
-      if (mn > 0 && l > 0 && eqmodws(content, l, mn)) {
-        Console.println("found qed-word nearby, better loop before last proof.")
-        //Console.println("before loop " + content.take(content.indexOf("Proof.", off)).drop(off).trim.size)
-        var deep : Int = 0
-        while ((!eqmodws(content, off, content.indexOf("Proof.", off)) || deep != 0) && off > 0) {
-          Console.println("in loop: " + deep + " current off is " + off)
-          if (eqmodws(content, off, content.indexOf("Proof.", off)))
-            deep -= 1
-          off = CoqTop.findPreviousCommand(content, off)
-          if (eqmodws(content, off, lastqed(content, off)))
-            deep += 1
-        }
-        off = scala.math.max(0, CoqTop.findPreviousCommand(content, off))
-        Console.println("found proof before  @" + off + ": " + content.drop(off).take(20))
-      } //care about End Foo.: find Begin Foo., with Begin being Section or Module
-      DocumentState.sendlen = DocumentState.position - off
-      val oldsh =
-        if (DocumentState.positionToShell.contains(off))
-          DocumentState.positionToShell(off)
-        else {
-          Console.println("couldn't find shell for offset " + off + " in table with keys " + DocumentState.positionToShell.keys.toList.sort((x, y) => x < y))
-          CoqShellTokens("Coq", 0, List(), 0)
-        }
-      val dropped = sh.context.length - oldsh.context.length
-      CoqTop.writeToCoq("Backtrack " + oldsh.globalStep + " " + oldsh.localStep + " " + dropped + ".")
-    } else
-      ActionDisabler.enableMaybe
+    //invariant: we're at position p, all previous commands are already sent to coq
+    // this implies that the table (positionToShell) is fully populated until p
+    // this also implies that the previous content is not messed up!
+    val curshell = CoqState.getShell
+    //curshell is head of prevs, so we better have one more thing
+    val prevs = DocumentState.positionToShell.keys.toList.filter(_ < DocumentState.position).sort(_ > _)
+    assert(prevs.length > 0)
+    Console.println("working on the following keys " + prevs)
+    //now we have the current state (curshell): g cs l
+    //we look into lastmost shell, either:
+    //g-- cs l or g-- cs l-- <- we're fine
+    //g-- cs+c l++ <- we need to find something with cs (just jumped into a proof)
+    var i : Int = 0
+    var prevshell : CoqShellTokens = DocumentState.positionToShell(prevs(i))
+    assert(prevshell.globalStep < curshell.globalStep) //we're decreasing!
+    if (prevshell.context.length > curshell.context.length) {
+      while (prevshell.context.length > curshell.context.length && prevs.length > (i + 1)) {
+        i += 1
+        prevshell = DocumentState.positionToShell(prevs(i))
+      }
+    }
+    val ctxdrop = curshell.context.length - prevshell.context.length
+    DocumentState.realundo = true
+    EclipseBoilerPlate.unmark
+    DocumentState.sendlen = DocumentState.position - prevs(i)
+    CoqTop.writeToCoq("Backtrack " + prevshell.globalStep + " " + prevshell.localStep + " " + ctxdrop + ".")
   }
   override def start () : Boolean = true
   override def end () : Boolean = false
