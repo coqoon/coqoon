@@ -2,7 +2,6 @@
 ** Most likely for the integration of proofs and code something like http://blog.objectteams.org/2010/02/ide-for-your-own-language-embedded-in-java-part-1/ is worth trying (to extend JDT at the points where there is no API/extension point for that)
 *** alternatively, maybe the jdt weaving (http://wiki.eclipse.org/JDT_weaving_features) scala-ide uses is worth looking into?
 ** remove the introduced global state - DocumentState - plus everything that depends on that
-*** especially important now that document might be modified without being the active editor window, and we should retract
 ** keep it simple, only one connection to a Coq binary
 ** future: incrementally run proofer in the background, annoy user then with unproven stuff (when code is changed)
 ** test cases/coverage - at least for parsers
@@ -29,7 +28,6 @@ mobius approach to undo:
   }  
 where isProofMode is CoqShellTokens.lemma.length != 0
 ** after undo, do syntax highlighting again!
-** in Actions: search for "Proof." is wrong - better search for Definition/start of lemma. Proof is optional anyhow.
 ** unreliable with keyboard shortcuts -> look whether in action or not (otherwise risk error messages from coq)
 ** outline for eclipse
 ** syntax highlighting based on coq parser
