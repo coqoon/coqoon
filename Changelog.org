@@ -1,3 +1,5 @@
+* Kopitiam 0.0.10 [07 April 2011]
+** Coq: more robust interaction, specifically sync of the sent state
 * Kopitiam 0.0.9 [06 April 2011]
 ** Coq: reworked undo to work with the bugs Jesper reported
 * Kopitiam 0.0.8 [05 April 2011]
