@@ -18,7 +18,7 @@ class Project(info: ProjectInfo) extends DefaultProject(info)
     Read the version from the MANIFEST.MF file. 
   */
   def readVersion : String = {
-    val manifestFile = new File(List("src","main","resources","META-INF","MANIFEST.MF").mkString(File.separator))
+    val manifestFile = new File(List("META-INF","MANIFEST.MF").mkString(File.separator))
     val manifest     = readContentsOfFile(manifestFile)
     val r = """Bundle-Version: (\S*)""".r 
     r.findFirstMatchIn(manifest).map( _.group(1) ).get
