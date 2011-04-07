@@ -328,6 +328,7 @@ object CoqStartUp extends CoqCallback {
       if (! CoqTop.startCoq)
         EclipseBoilerPlate.warnUser("No Coq", "No Coq binary found, please specify one in the Kopitiam preferences page")
       else {
+        fini = false
         while (!fini) { }
         fini = false
       }
