@@ -118,9 +118,9 @@ object CoqState {
       //TODO: strictly greater in first, subset in the latter comparison
       if (oldc.localStep <= tokens.localStep || oldc.theorem != tokens.theorem)
         monotonic = true
-    Console.println("distributing shell ready " + monotonic + " shell " + tokens)
+    //Console.println("distributing shell ready " + monotonic + " shell " + tokens)
     PrintActor.distribute(CoqShellReady(monotonic, tokens))
-    Console.println(" -> done distributing " + tokens)
+    //Console.println(" -> done distributing " + tokens)
   }
 
   def sendCommand () : Unit = {
@@ -137,7 +137,7 @@ object ErrorOutputActor extends Actor with OutputChannel[String] {
           Console.println("receiving shell " + msg)
           ValidCoqShell.getTokens(msg) match {
             case Some(tokens : CoqShellTokens) => {
-              Console.println("set coq ready " + tokens)
+              //Console.println("set coq ready " + tokens)
               CoqState.setShell(tokens)
             }
             case None =>

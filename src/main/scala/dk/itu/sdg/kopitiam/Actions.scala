@@ -63,7 +63,6 @@ abstract class KCoqAction extends KAction {
       DocumentState.coqmarker = null
       DocumentState.undoAll
       DocumentState.activeEditor = acted.asInstanceOf[CoqEditor]
-      DocumentState.tick()
 
       if (! coqstarted)
         CoqStartUp.start
@@ -90,7 +89,6 @@ abstract class KCoqAction extends KAction {
         CoqStartUp.fini = false
       }
     }
-    DocumentState.tick()
     doit
   }
 
@@ -114,7 +112,7 @@ object ActionDisabler {
   }
 
   def enableMaybe () = {
-    Console.println("maybe enable " + DocumentState.position + " len " + DocumentState.content.length)
+    //Console.println("maybe enable " + DocumentState.position + " len " + DocumentState.content.length)
     if (DocumentState.position == 0)
       enableStart
     else if (DocumentState.position + 1 >= DocumentState.content.length)
@@ -130,31 +128,35 @@ object ActionDisabler {
 
 class CoqUndoAction extends KCoqAction {
   override def doit () : Unit = {
+    doitReally(DocumentState.position)
+  }
+
+  def doitReally (pos : Int) : Unit = {
     //invariant: we're at position p, all previous commands are already sent to coq
     // this implies that the table (positionToShell) is fully populated until p
     // this also implies that the previous content is not messed up!
     val curshell = CoqState.getShell
     //curshell is head of prevs, so we better have one more thing
-    val prevs = DocumentState.positionToShell.keys.toList.filter(_ < DocumentState.position).sort(_ > _)
+    val prevs = DocumentState.positionToShell.keys.toList.sort(_ > _)
     assert(prevs.length > 0)
-    Console.println("working on the following keys " + prevs)
+    Console.println("working (pos: " + pos + ") on the following keys " + prevs)
     //now we have the current state (curshell): g cs l
     //we look into lastmost shell, either:
     //g-- cs l or g-- cs l-- <- we're fine
     //g-- cs+c l++ <- we need to find something with cs (just jumped into a proof)
-    var i : Int = 0
+    var i : Int = prevs.filter(_ >= pos).length
     var prevshell : CoqShellTokens = DocumentState.positionToShell(prevs(i))
     assert(prevshell.globalStep < curshell.globalStep) //we're decreasing!
-    if (prevshell.context.length > curshell.context.length) {
-      while (prevshell.context.length > curshell.context.length && prevs.length > (i + 1)) {
-        i += 1
-        prevshell = DocumentState.positionToShell(prevs(i))
-      }
+    while (! prevshell.context.toSet.subsetOf(curshell.context.toSet) && prevs.length > (i + 1)) {
+      i += 1
+      prevshell = DocumentState.positionToShell(prevs(i))
     }
     val ctxdrop = curshell.context.length - prevshell.context.length
     DocumentState.realundo = true
     EclipseBoilerPlate.unmark
     DocumentState.sendlen = DocumentState.position - prevs(i)
+    prevs.take(i).foreach(DocumentState.positionToShell.remove(_))
+    assert(DocumentState.positionToShell.contains(0) == true)
     CoqTop.writeToCoq("Backtrack " + prevshell.globalStep + " " + prevshell.localStep + " " + ctxdrop + ".")
   }
   override def start () : Boolean = true
@@ -178,7 +180,7 @@ class CoqRetractAction extends KCoqAction {
         Console.println("CoqRetractAction: retracting without position information, using 2")
         2
       }
-    DocumentState.positionToShell.empty
+    DocumentState.positionToShell.keys.toList.filterNot(_ == 0).foreach(DocumentState.positionToShell.remove(_))
     CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
   }
   override def start () : Boolean = true
@@ -224,11 +226,7 @@ object CoqStepAllAction extends CoqStepAllAction { }
 
 class CoqStepUntilAction extends KCoqAction {
   override def doit () : Unit = {
-    doitReally(CoqTop.findPreviousCommand(DocumentState.content, EclipseBoilerPlate.getCaretPosition + 2), None)
-  }
-
-  def doitReally (togo : Int, dolater : Option[() => Unit]) = {
-    //need to go back one more step
+    val togo = CoqTop.findPreviousCommand(DocumentState.content, EclipseBoilerPlate.getCaretPosition + 2)
     //doesn't work reliable when inside a comment
     Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition + ", docpos is " + DocumentState.position)
     if (DocumentState.position == togo) { } else
@@ -236,18 +234,12 @@ class CoqStepUntilAction extends KCoqAction {
       EclipseBoilerPlate.multistep = true
       val coqs = new CoqStepNotifier()
       coqs.test = Some((x : Int) => x >= togo)
-      coqs.later = dolater
       PrintActor.register(coqs)
       CoqStepAction.doit()
     } else { //Backtrack
-      EclipseBoilerPlate.multistep = true
-      val coqs = new CoqStepNotifier()
-      coqs.test = Some((x : Int) => x <= togo)
-      coqs.walker = CoqUndoAction.doit
-      coqs.later = dolater
-      coqs.undo = true
-      PrintActor.register(coqs)
-      CoqUndoAction.doit()
+      CoqUndoAction.doitReally(EclipseBoilerPlate.getCaretPosition)
+      //go forward till cursor: upon successfull CoqShellReady, do:
+      //CoqStepUntilAction.doit()
     }
   }
   override def start () : Boolean = false
@@ -348,9 +340,6 @@ object CoqStartUp extends CoqCallback {
 class CoqStepNotifier extends CoqCallback {
   var err : Boolean = false
   var test : Option[(Int) => Boolean] = None
-  var later : Option[() => Unit] = None
-  var walker : () => Unit = CoqStepAction.doit
-  var undo : Boolean = false
 
   import org.eclipse.swt.widgets.Display
 
@@ -359,36 +348,25 @@ class CoqStepNotifier extends CoqCallback {
       case CoqError(m) => err = true
       case CoqUserInterrupt() => err = true
       case CoqShellReady(monoton, tokens) =>
-        if (! err) {
-          if (test.isDefined && test.get(DocumentState.position)) {
+        if (err)
+          fini
+        else
+          if (test.isDefined && test.get(DocumentState.position))
             fini
-            if (undo)
-              Display.getDefault.syncExec(
-                new Runnable() {
-                  def run() = CoqStepUntilAction.doit
-                });
-          } else if (monoton || undo) {
-            walker()
+          else if (monoton) {
+            CoqStepAction.doit
+            //is that really needed?
             val drops = DocumentState.position + DocumentState.sendlen
             if (drops >= DocumentState.content.length || CoqTop.findNextCommand(DocumentState.content.drop(drops)) == -1)
-              if (! undo) {
-                Console.println("in drops >= or -1 case")
-                fini
-              }
+              fini
           } else
             fini
-        } else
-          fini
       case x => //Console.println("got something, try again player 1 " + x)
     }
   }
 
   def fini () : Unit = {
     PrintActor.deregister(this)
-    later match {
-      case Some(x) => x()
-      case None =>
-    }
     EclipseBoilerPlate.multistep = false
     EclipseBoilerPlate.finishedProgress
   }

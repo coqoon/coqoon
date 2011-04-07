@@ -200,11 +200,7 @@ object DocumentState extends CoqCallback {
       null
   }
 
-  var content : String = ""
-
-  def tick () : Unit = { if (!busy) content = currentcontent() }
-
-  private def currentcontent () : String = {
+  def content () : String = {
     if (activeEditor != null)
       activeDocument.get
     else
@@ -242,7 +238,7 @@ object DocumentState extends CoqCallback {
       case CoqShellReady(monoton, token) =>
         if (monoton) {
           commit
-          Console.println("filling table [" + position + "]: " + token)
+          Console.println("filling table (" + positionToShell.keys.toList.length + ") [" + position + "]: " + token)
           positionToShell += position -> token
         } else
           undo
@@ -250,7 +246,18 @@ object DocumentState extends CoqCallback {
     }
   }
 
-  def undoAll () : Unit = synchronized {
+  def uncolor (offset : Int) : Unit = {
+    if (activeEditor != null) {
+      val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
+      val st = scala.math.min(offset, content.length - 1)
+      Display.getDefault.syncExec(
+        new Runnable() {
+          def run() = activeEditor.getSource.setTextColor(bl, st, content.length, true)
+        });
+    }
+  }
+
+  def undoAll () : Unit = {
     if (activeEditor != null) {
       val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
       Display.getDefault.syncExec(
@@ -261,15 +268,15 @@ object DocumentState extends CoqCallback {
   }
 
   var oldsendlen : Int = 0
-  private def undo () : Unit = synchronized {
+  private def undo () : Unit = {
     //Console.println("undo (@" + position + ", " + sendlen + ")")
     if (sendlen != 0) {
       if (realundo) {
         realundo = false
         val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
         val start = scala.math.max(position - sendlen, 0)
-        val end = scala.math.min(sendlen + position, content.length - 1)
-        Console.println("undo (start " + start + " send length " + sendlen + " content length " + content.length + " submitting length " + (end - start) + ")")
+        val end = scala.math.min(sendlen + position, content.length)
+        //Console.println("undo (start " + start + " send length " + sendlen + " content length " + content.length + " submitting length " + (end - start) + ")")
         Display.getDefault.syncExec(
           new Runnable() {
             def run() = activeEditor.getSource.setTextColor(bl, start, end - start, true)
@@ -277,21 +284,21 @@ object DocumentState extends CoqCallback {
         position = start
         sendlen = 0
       } else { //just an error
-        Console.println("undo: barf")
+        //Console.println("undo: barf")
         oldsendlen = sendlen
         sendlen = 0
       }
     }
   }
 
-  private def commit () : Unit = synchronized {
+  private def commit () : Unit = {
     //Console.println("commited (@" + position + ", " + sendlen + ")")
     if (sendlen != 0) {
-      Console.println("commited - and doing some work")
+      //Console.println("commited - and doing some work")
       val bl = new Color(Display.getDefault, new RGB(0, 0, 220))
       val end = scala.math.min(sendlen, content.length - position)
-      val len = scala.math.min(position + end, content.length - 1)
-      Console.println("commiting, end is " + end + " (pos + len: " + (position + sendlen) + ")" + ", pos:" + position + ", submitted length " + (len - position))
+      val len = scala.math.min(position + end, content.length)
+      //Console.println("commiting, end is " + end + " (pos + len: " + (position + sendlen) + ")" + ", pos:" + position + ", submitted length " + (len - position))
       Display.getDefault.syncExec(
         new Runnable() {
           def run() = activeEditor.getSource.setTextColor(bl, position, len - position, true)

@@ -101,7 +101,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
 
   override def documentChanged (event : DocumentEvent) : Unit = {
     val doc = event.getDocument
-    Console.println("doc " + doc + " changed [@" + event.getOffset + "], len: " + event.getLength)
+    //Console.println("doc " + doc + " changed [@" + event.getOffset + "], len: " + event.getLength)
     if (EclipseTables.DocToString.contains(doc)) {
       val docstring = EclipseTables.DocToString(doc)
       Console.println("I know it's " + docstring + " you changed")
@@ -117,22 +117,17 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       val off = event.getOffset
       if (off < DocumentState.position) {
         //retract to before
-        DocumentState.busy = true
         Console.println("retracting to " + off + " (from " + DocumentState.position + ")")
-        CoqStepUntilAction.doitReally(off, Some(() => {
-          Console.println("DONE with retracting")
-          DocumentState.busy = false
-          DocumentState.tick()
-        }))
+        CoqUndoAction.doitReally(off)
+        //color black from off to end
+        DocumentState.uncolor(off)
       }
-      DocumentState.tick()
       //also, remove markers around here
       EclipseBoilerPlate.maybeunmark(off)
-      Console.println("may have unmarked stuff")
+      //Console.println("may have unmarked stuff")
       ActionDisabler.enableMaybe
     }
   }
 
-  override def documentAboutToBeChanged (event : DocumentEvent) : Unit =
-    { if (event.getDocument == DocumentState.activeDocument) DocumentState.tick }
+  override def documentAboutToBeChanged (event : DocumentEvent) : Unit = ()
 }
