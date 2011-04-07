@@ -1,0 +1,6 @@
+class Foo {
+  int b;
+  void set () {
+    this.b = 10;
+  }
+}

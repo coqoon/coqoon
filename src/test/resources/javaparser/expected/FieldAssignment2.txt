@@ -1,0 +1,7 @@
+class Foo {
+  int b;
+  void set () {
+    int tmp_1 = this.b;
+    this.b = tmp_1 + 10;
+  }
+}

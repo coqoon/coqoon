@@ -1,0 +1,14 @@
+class Foo {
+  int a;
+  int bar () {
+    int tmp_1 = this.a;
+    int tmp_2 = this.a;
+    return tmp_2 + tmp_1;
+  }
+  void foo () {
+    int b = this.a;
+    int tmp_2 = this.bar();
+    int tmp_3 = this.a;
+    int c = tmp_3 + tmp_2;
+  }
+}
