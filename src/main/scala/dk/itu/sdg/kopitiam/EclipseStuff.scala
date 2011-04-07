@@ -180,8 +180,6 @@ object DocumentState extends CoqCallback {
   import org.eclipse.swt.graphics.{Color,RGB}
   import org.eclipse.swt.widgets.Display
 
-  var busy : Boolean = false
-
   var activeEditor : CoqEditor = null
 
   def activeDocument () : IDocument = {
@@ -257,15 +255,7 @@ object DocumentState extends CoqCallback {
     }
   }
 
-  def undoAll () : Unit = {
-    if (activeEditor != null) {
-      val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
-      Display.getDefault.syncExec(
-        new Runnable() {
-          def run() = activeEditor.getSource.setTextColor(bl, 0, content.length, true)
-        });
-    }
-  }
+  def undoAll () : Unit = { uncolor(0) }
 
   var oldsendlen : Int = 0
   private def undo () : Unit = {

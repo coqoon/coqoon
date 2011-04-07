@@ -215,7 +215,7 @@ class CoqStepAllAction extends KCoqAction {
   override def doit () : Unit = {
     //Console.println("registering CoqStepNotifier to PrintActor, now stepping")
     EclipseBoilerPlate.multistep = true
-    PrintActor.register(new CoqStepNotifier())
+    PrintActor.register(CoqStepNotifier)
     //we need to provoke first message to start callback loops
     CoqStepAction.doit()
   }
@@ -225,6 +225,8 @@ class CoqStepAllAction extends KCoqAction {
 object CoqStepAllAction extends CoqStepAllAction { }
 
 class CoqStepUntilAction extends KCoqAction {
+  import org.eclipse.swt.widgets.Display
+
   override def doit () : Unit = {
     val togo = CoqTop.findPreviousCommand(DocumentState.content, EclipseBoilerPlate.getCaretPosition + 2)
     //doesn't work reliable when inside a comment
@@ -232,14 +234,17 @@ class CoqStepUntilAction extends KCoqAction {
     if (DocumentState.position == togo) { } else
     if (DocumentState.position < togo) {
       EclipseBoilerPlate.multistep = true
-      val coqs = new CoqStepNotifier()
-      coqs.test = Some((x : Int) => x >= togo)
-      PrintActor.register(coqs)
+      CoqStepNotifier.test = Some((x : Int) => x >= togo)
+      PrintActor.register(CoqStepNotifier)
       CoqStepAction.doit()
     } else { //Backtrack
+      //go forward till cursor afterwards
+      PrintActor.register(CoqLater(() => 
+        Display.getDefault.syncExec(
+          new Runnable() {
+            def run() = CoqStepUntilAction.doit
+          })))
       CoqUndoAction.doitReally(EclipseBoilerPlate.getCaretPosition)
-      //go forward till cursor: upon successfull CoqShellReady, do:
-      //CoqStepUntilAction.doit()
     }
   }
   override def start () : Boolean = false
@@ -253,6 +258,7 @@ class RestartCoqAction extends KAction {
     DocumentState.position = 0
     DocumentState.sendlen = 0
     DocumentState.undoAll
+    DocumentState.positionToShell.empty
     EclipseBoilerPlate.unmark
     PrintActor.deregister(CoqOutputDispatcher)
     CoqStartUp.start
@@ -299,6 +305,16 @@ class TranslateAction extends KAction {
 }
 object TranslateAction extends TranslateAction { }
 
+case class CoqLater (later : () => Unit) extends CoqCallback {
+  override def dispatch (x : CoqResponse) : Unit = {
+    x match {
+      case CoqShellReady(m, t) =>
+        PrintActor.deregister(this)
+        later()
+    }
+  }
+}
+
 object CoqStartUp extends CoqCallback {
   private var first : Boolean = true
   var fini : Boolean = false
@@ -337,7 +353,7 @@ object CoqStartUp extends CoqCallback {
   }
 }
 
-class CoqStepNotifier extends CoqCallback {
+object CoqStepNotifier extends CoqCallback {
   var err : Boolean = false
   var test : Option[(Int) => Boolean] = None
 
@@ -366,7 +382,9 @@ class CoqStepNotifier extends CoqCallback {
   }
 
   def fini () : Unit = {
-    PrintActor.deregister(this)
+    PrintActor.deregister(CoqStepNotifier)
+    err = false
+    test = None
     EclipseBoilerPlate.multistep = false
     EclipseBoilerPlate.finishedProgress
   }
