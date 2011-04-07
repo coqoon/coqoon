@@ -139,7 +139,7 @@ trait VernacularSyntax extends GallinaSyntax {
   case class CofixpointSentence (cofixpoints : List[CofixBody]) extends Sentence {
     override def outlineName = "CoFixpoint " + cofixpoints.map(_.ident.name).mkString(", ")
   }
-  case class AssertionSentence (keyword : StringName, name : StringName, binders : List[Binder], `type` : Term) extends Sentence {
+  case class AssertionSentence (keyword : StringName, name : StringName, binders : List[Binder], `type` : Term, proof : Proof) extends Sentence {
     override def outlineName = keyword.name + " " + name.name
   }
   case class Proof (/* TODO : Represent proof body */) extends Sentence {
@@ -548,14 +548,19 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
   | inductive
   | fixpoint
   | cofixpoint
-  | assertion //TODO: followed by proof (fig 1.3 of sec 1.3) - hannes
-  | proof //TODO: where ident("Proof") is optional (remark 3 in 1.3.5 at the end) - hannes
+  | assertion
     //TODO: proof also might end with Save (sec 7.1); and "Proof term." is also legal (sec 7.1.4) - hannes
     //TODO: and Abort (sec 7.1.5), Abort ident, Abort All; Suspend and Resume (7.1.6/7) - hannes
   )
 
   def dot : Parser[lexical.Token] = elem("period", (a : lexical.Token) => a match {
     case lexical.Delim(".") => true
+    case _ => false
+  })
+  
+  def delimNotDot : Parser[lexical.Token] = elem("not-period delimiter", (a : lexical.Token) => a match {
+    case lexical.Delim(".") => false
+    case lexical.Delim(_) => true
     case _ => false
   })
 
@@ -617,8 +622,8 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
     ident("Cofixpoint")~>(rep1sep(lengthPositioned(cofixBody), ident("with"))<~dot) ^^ CofixpointSentence
 
   def assertion : Parser[AssertionSentence] =
-    assertionKeyword~ident~rep(binder)~(delim(":")~>term)<~dot ^^ {
-      case kwd~id~binders~typ => AssertionSentence(kwd, StringName(id.chars), binders, typ)
+    assertionKeyword~ident~rep(binder)~((delim(":")~>term)<~dot)~lengthPositioned(proof) ^^ {
+      case kwd~id~binders~typ~prf => AssertionSentence(kwd, StringName(id.chars), binders, typ, prf)
     }
 
   //TODO: Goal (sec 7.1.1); Let (same as Definition (without := term) starts proof editing mode) (sec 1.3.5) - hannes
@@ -639,14 +644,14 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
   def proofEnd : Parser[Any] =
     proofEnders.map(ident).foldRight(failure("no matching end token") : Parser[Any]) { (p1, p2) => p1 | p2 }
 
-  def proof : Parser[Sentence] =
-    ident("Proof")~dot~proofBody~proofEnd~dot ^^ { case _ => Proof() }
+  def proof : Parser[Proof] =
+    opt(ident("Proof")~dot)~rep(tactic)~proofEnd~dot ^^ { case _ => Proof() }
 
-  def proofBody : Parser[Any] =
+  def tactic : Parser[Any] =
     elem("tactic", {
       case lexical.Ident(name) if !proofEnders.contains(name) => true
       case _ => false
-    })~rep(ident | delim)~dot
+    })~rep(ident | delimNotDot | num)~dot
 
 
   /* Modules - just a start.*/
