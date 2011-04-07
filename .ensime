@@ -1,6 +1,7 @@
 (
   :project-package "dk.itu.sdg"
   :target "bin"
+  :use-sbt t
   :sources ("src/main/scala" "src/test/scala")
   :compile-jars ("lib" "lib_managed/scala_2.8.1/test")
   :formatting-prefs (
