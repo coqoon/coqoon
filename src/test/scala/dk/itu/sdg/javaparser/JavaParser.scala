@@ -29,7 +29,7 @@ class JavaParserSpec extends FlatSpec with ShouldMatchers
     val source     = new File(pathToSource)
     source.listFiles().foreach { file =>
       val in       = StreamReader(new InputStreamReader(new FileInputStream(file)))
-      val result   = FinishAST.doitHelper(parseH(in)).map(out(_, 0)).reduceLeft(_ + " " + _)                                    
+      val result   = FinishAST.doitHelper(parseH(in)).map(out(_, 0)).reduceLeft(_ + " " + _)
       val expected = getExpectedOutputOfFile(file)
       simplify(result) should equal(simplify(expected))
     }
