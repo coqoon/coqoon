@@ -248,7 +248,8 @@ trait VernacularReserved {
                       "Prop", "return", "Set", "then", "Type", "using",
                       "where", "with")
 
-  val proofEnders = List("End", "Qed", "Admitted", "Defined")
+  //TODO: proof also might end with Save (sec 7.1); and "Proof term." is also legal (sec 7.1.4) - hannes
+  val proofEnders = List("End", "Qed", "Admitted", "Defined", "Save", "Proof term")
 }
 
 
@@ -549,7 +550,6 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
   | fixpoint
   | cofixpoint
   | assertion
-    //TODO: proof also might end with Save (sec 7.1); and "Proof term." is also legal (sec 7.1.4) - hannes
     //TODO: and Abort (sec 7.1.5), Abort ident, Abort All; Suspend and Resume (7.1.6/7) - hannes
   )
 
@@ -642,7 +642,12 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
     )
 
   def proofEnd : Parser[Any] =
-    proofEnders.map(ident).foldRight(failure("no matching end token") : Parser[Any]) { (p1, p2) => p1 | p2 }
+    proofEnders.map({ str =>
+      val ids = str.split("""\s+""").map(ident)
+      ids.tail.foldLeft[Parser[Any]](ids.head) { (p1, p2) => p1~p2 }
+    }).foldRight(failure("no matching end token") : Parser[Any])({
+      (p1 : Parser[Any], p2 : Parser[Any]) => p1 | p2
+    })
 
   def proof : Parser[Proof] =
     opt(ident("Proof")~dot)~rep(tactic)~proofEnd~dot ^^ { case _ => Proof() }
