@@ -250,7 +250,7 @@ object DocumentState extends CoqCallback {
       val st = scala.math.min(offset, content.length - 1)
       Display.getDefault.syncExec(
         new Runnable() {
-          def run() = activeEditor.getSource.setTextColor(bl, st, content.length, true)
+          def run() = activeEditor.getSource.setTextColor(bl, st, content.length - st, true)
         });
     }
   }

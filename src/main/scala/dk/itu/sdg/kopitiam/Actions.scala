@@ -77,7 +77,8 @@ abstract class KCoqAction extends KAction {
       DocumentState.positionToShell.empty
       DocumentState.position = 0
       DocumentState.sendlen = 0
-      CoqOutputDispatcher.goalviewer.clear
+      if (CoqOutputDispatcher.goalviewer != null)
+        CoqOutputDispatcher.goalviewer.clear
 
       if (coqstarted) {
         CoqStartUp.fini = false
