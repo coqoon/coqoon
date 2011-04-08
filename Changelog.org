@@ -1,3 +1,5 @@
+* Kopitiam 0.0.11 [08 April 2011]
+** make uncolor and doitH more robust (check for null, do not uncolor out of bounds)
 * Kopitiam 0.0.10 [07 April 2011]
 ** Coq: more robust interaction, specifically sync of the sent state
 * Kopitiam 0.0.9 [06 April 2011]
