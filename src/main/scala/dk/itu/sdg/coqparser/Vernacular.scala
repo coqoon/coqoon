@@ -142,8 +142,18 @@ trait VernacularSyntax extends GallinaSyntax {
   case class AssertionSentence (keyword : StringName, name : StringName, binders : List[Binder], `type` : Term, proof : Proof) extends Sentence {
     override def outlineName = keyword.name + " " + name.name
   }
-  case class Proof (/* TODO : Represent proof body */) extends Sentence {
-    override def outlineName = "Proof"
+
+  object ProofResult extends Enumeration {
+    type ProofResult = Value
+    val Succeeded, Suspended, Aborted = Value
+  }
+  import ProofResult._
+
+  case class Proof (result : ProofResult/* TODO : Represent proof body */) extends Sentence {
+    override def outlineName = "Proof (" + result.toString + ")"
+  }
+  case class ResumedProof (ident : Option[StringName], result : ProofResult) extends Sentence {
+    override def outlineName = "Resume" + ident.map(" "+_.name).getOrElse("")
   }
 
   case class Assumption (names : List[StringName], `type` : Term) extends VernacularRegion
@@ -248,7 +258,6 @@ trait VernacularReserved {
                       "Prop", "return", "Set", "then", "Type", "using",
                       "where", "with")
 
-  //TODO: proof also might end with Save (sec 7.1); and "Proof term." is also legal (sec 7.1.4) - hannes
   val proofEnders = List("End", "Qed", "Admitted", "Defined", "Save", "Proof term")
 }
 
@@ -546,11 +555,12 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
   def sentence : Parser[Sentence] = lengthPositioned(
     assumption
   | definition
+  | resumedProof
   | inductive
   | fixpoint
   | cofixpoint
   | assertion
-    //TODO: and Abort (sec 7.1.5), Abort ident, Abort All; Suspend and Resume (7.1.6/7) - hannes
+     //TODO: and Abort (sec 7.1.5), Abort ident, Abort All; - hannes
   )
 
   def dot : Parser[lexical.Token] = elem("period", (a : lexical.Token) => a match {
@@ -622,7 +632,7 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
     ident("Cofixpoint")~>(rep1sep(lengthPositioned(cofixBody), ident("with"))<~dot) ^^ CofixpointSentence
 
   def assertion : Parser[AssertionSentence] =
-    assertionKeyword~ident~rep(binder)~((delim(":")~>term)<~dot)~lengthPositioned(proof) ^^ {
+    assertionKeyword~ident~rep(binder)~((delim(":")~>term)<~dot)~lengthPositioned(opt(ident("Proof")~dot)~>proof) ^^ {
       case kwd~id~binders~typ~prf => AssertionSentence(kwd, StringName(id.chars), binders, typ, prf)
     }
 
@@ -641,20 +651,30 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
       ) ^^ { kwd => StringName(kwd.chars) }
     )
 
-  def proofEnd : Parser[Any] =
+  def proofEnd : Parser[ProofResult.ProofResult] =
+    ( proofSuccess
+    | ident("Abort")~opt(ident) ^^^ ProofResult.Aborted
+    | ident("Suspend") ^^^ ProofResult.Suspended
+    )
+  def proofSuccess : Parser[ProofResult.ProofResult] =
     proofEnders.map({ str =>
       val ids = str.split("""\s+""").map(ident)
       ids.tail.foldLeft[Parser[Any]](ids.head) { (p1, p2) => p1~p2 }
     }).foldRight(failure("no matching end token") : Parser[Any])({
       (p1 : Parser[Any], p2 : Parser[Any]) => p1 | p2
-    })
+    }) ^^^ ProofResult.Succeeded
 
   def proof : Parser[Proof] =
-    opt(ident("Proof")~dot)~rep(tactic)~proofEnd~dot ^^ { case _ => Proof() }
+    rep(tactic)~>(proofEnd<~dot) ^^ { case res => Proof(res) }
+
+  def resumedProof : Parser[ResumedProof] =
+    ident("Resume")~>opt(ident)~dot~proof ^^ {
+      case id~dot~prf => ResumedProof(id.map(id => StringName(id.chars)), prf.result)
+    }
 
   def tactic : Parser[Any] =
     elem("tactic", {
-      case lexical.Ident(name) if !proofEnders.contains(name) => true
+      case lexical.Ident(name) if !proofEnders.contains(name) && name != "Abort" && name != "Suspend" => true
       case _ => false
     })~rep(ident | delimNotDot | num)~dot
 
