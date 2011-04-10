@@ -12,6 +12,12 @@ import scala.util.parsing.input.{ StreamReader }
  */
 class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
 
+  /*
+   * NOTE:
+   * The easiest way to do this is to run the Main method in sbt with the
+   * given file and then in Emacs: M-x query-replace-regexp RET \([a-z0-9_+-*]+\) RET "\1"
+   */
+
   "Parsing SimpleClass.txt" should "produce the correct AST" in {
     val expected = List(JClassDefinition("Foo", "", Nil, Nil, None))
     getASTbyParsingFileNamed("SimpleClass.txt") should equal(expected)
