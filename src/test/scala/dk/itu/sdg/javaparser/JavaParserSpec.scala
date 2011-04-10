@@ -9,13 +9,12 @@ import dk.itu.sdg.javaparser._
 import dk.itu.sdg.util.{ IO }
 
 /*
-  Parse each file in automated-tests/resources/javaparser/source and
+  Parse each file in src/test/resources/javaparser/source and
   test that the result is equal to the contents of the file with the same
-  name in the automated-tests/resources/javaparser/expected folder.
+  name in the src/test/resources/javaparser/expected folder.
 */
-
-class JavaParserSpec extends FlatSpec with ShouldMatchers 
-                                      with JavaOutputter 
+class JavaParserSpec extends FlatSpec with ShouldMatchers
+                                      with JavaOutputter
                                       with JavaAST {
 
   val pathToSource   = List("src","test","resources","javaparser","source").mkString(File.separator)
@@ -23,7 +22,7 @@ class JavaParserSpec extends FlatSpec with ShouldMatchers
 
   System.setProperty("file.encoding", "UTF-8")
 
-  "Result of parsing all files in source" should 
+  "Result of parsing all files in source" should
   "equal to the contents of the associated file in expected" in {
 
     val source     = new File(pathToSource)
@@ -48,7 +47,7 @@ class JavaParserSpec extends FlatSpec with ShouldMatchers
   }
 
   /*
-    given a file in sources it will find the file with the expected result of 
+    given a file in sources it will find the file with the expected result of
     parsing the file.
   */
   def getExpectedOutputOfFile(file : File) : String = {

@@ -21,7 +21,14 @@ object Main extends Application with JavaOutputter with JavaAST
   override def main(args: Array[String]) = {
     System.setProperty("file.encoding", "UTF-8")
     val in = StreamReader(new InputStreamReader(new FileInputStream(new File(args(0))), "UTF-8"))
-    val res = FinishAST.doitHelper(parseH(in)).map(out(_, 0)).reduceLeft(_ + "\n\n" + _)
+
+
+    // use this line if you want to see the JavaAST
+    val res = FinishAST.doitHelper(parseH(in))
+
+    // use this line if you want to see the source
+    // val res = FinishAST.doitHelper(parseH(in)).map(out(_, 0)).reduceLeft(_ + "\n\n" + _)
+
     Console.println(res)
   }
 }
