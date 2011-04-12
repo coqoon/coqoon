@@ -312,6 +312,7 @@ case class CoqLater (later : () => Unit) extends CoqCallback {
       case CoqShellReady(m, t) =>
         PrintActor.deregister(this)
         later()
+      case _ =>
     }
   }
 }

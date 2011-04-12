@@ -2,7 +2,7 @@
 
 package dk.itu.sdg.kopitiam
 
-trait CoqResponse { }
+sealed abstract class CoqResponse { }
 
 case class CoqGoal (n : Int, goals : List[String]) extends CoqResponse { }
 case class CoqVariablesAssumed (vars : String) extends CoqResponse { }
