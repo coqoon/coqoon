@@ -25,6 +25,7 @@ trait CoqOutputter extends JavaToSimpleJava {
     }
   }
 
+  //TODO: that's wrong, since at least == and != depend on the type...
   def translateOp (x : String) : String = {
     if (x == ">") "egt"
     else if (x == "<") "elt"
@@ -88,8 +89,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         "(" + callw + " \"ignored\" \"" + callpre + "\" \"" + fun + "\" (" + args + "))"
       case JNewExpression(typ, arg) =>
         val t = Gensym.newsym
-        freevars += t
-        val init = printStatement(JAssignment(t, JCall("this", "<init>", arg)))
+        val init = printStatement(JAssignment(t, JCall("this", "init_", arg)))
         "(cseq (calloc \"" + t + "\" \"" + typ + "\")" + init + ")"
       case y => Console.println("printStatement: no handler for " + y); ""
     }
@@ -110,8 +110,6 @@ trait CoqOutputter extends JavaToSimpleJava {
     }
   }
 
-  import scala.collection.mutable.Set
-  private var freevars : Set[String] = Set[String]()
   private var ret : String = "myreturnvaluedummy"
 
   def getBS (xs : JBodyStatement) : Option[List[String]] = {
@@ -125,27 +123,25 @@ trait CoqOutputter extends JavaToSimpleJava {
       case JWhile(test, body) =>
         Some(List("(cwhile " + printStatement(test) + " " + optPrintBody(getBS(body)) + ")"))
       case JBinding(x, typ, init) =>
-        freevars += x
         init match {
           case None => None
           case Some(y) => Some(List(printStatement(JAssignment(x, y))))
         }
       case JReturn(JVariableAccess(r)) => ret = r; None
-      case a @ JAssignment(n, x) => freevars += n; Some(List(printStatement(a)))
+      case a @ JAssignment(n, x) => Some(List(printStatement(a)))
       case (x : JBodyStatement) => Some(List(printStatement(x)))
       case y => Console.println("no handler for getBS " + y); None
     }
   }
 
-  def getBody (xs : List[JStatement], myname : String) : (List[String], String) = {
-    val (ou, free, ret) = getBodyHelper(xs, myname)
+  def getBody (xs : List[JStatement], myname : String) : String = {
+    val (ou, ret) = getBodyHelper(xs, myname)
     outp ::= ou
-    (free, ret)
+    ret
   }
 
-  def getBodyHelper (xs : List[JStatement], myname : String) : (String, List[String], String) = {
+  def getBodyHelper (xs : List[JStatement], myname : String) : (String, String) = {
     ret = "myreturnvaluedummy"
-    freevars = Set[String]()
     //Console.println("getbody, flattening " + xs)
     val body = xs.flatMap {
       case (x : JBodyStatement) => getBS(x)
@@ -153,7 +149,7 @@ trait CoqOutputter extends JavaToSimpleJava {
     //Console.println("getbody, flattened " + body)
     val b = printBody(body.flatten)
     val defi = "\nDefinition " + myname + " := " + b + "."
-    (defi, freevars.toList, "var_expr \"" + ret + "\"")
+    (defi, "var_expr \"" + ret + "\"")
   }
   
   def classMethods (body : List[JStatement]) : List[Pair[String,String]] = {
@@ -163,7 +159,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         mymethod = name
         val bodyref = name + "_body"
         val args = getArgs(params)
-        val (local, returnvar) = getBody(body, bodyref)
+        val returnvar = getBody(body, bodyref)
         val t =
           if (ClassTable.isMethodStatic(myclass, mymethod, args))
             args
