@@ -1,3 +1,7 @@
+* Kopitiam 0.0.12 [12 April 2011]
+** may work on windows (searching for coqtop.exe there)
+** more work on interface specification
+** more work on robustness (against NullPointerExceptions)
 * Kopitiam 0.0.11 [08 April 2011]
 ** make uncolor and doitH more robust (check for null, do not uncolor out of bounds)
 * Kopitiam 0.0.10 [07 April 2011]
