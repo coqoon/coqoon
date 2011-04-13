@@ -608,6 +608,10 @@ object FinishAST extends JavaTerms
 
   def doitHelper (a : Any) : List[JStatement] = {
     //log.info("walking over " + a)
+    classid = ""
+    methodid = ""
+    lvars = new HashMap[String,String]()
+    argmap = new HashMap[String,String]()
     val x = walk(a)
     //log.info("doit, walked " + x)
     var innerclasses : List[JClassDefinition] = List[JClassDefinition]()

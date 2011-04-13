@@ -108,11 +108,11 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     getASTbyParsingFileNamed("Binding1.txt") should equal(expected)
   }
 
-  // "Parsing Binding2.txt" should "produce the correct AST" in {
-  //   // TODO: This pretty much just crashed the parser.
-  //   val expected = Nil
-  //   getASTbyParsingFileNamed("Binding2.txt") should equal(expected)
-  // }
+  "Parsing Binding2.txt" should "produce the correct AST" in {
+  // TODO: This pretty much just crashed the parser.
+    val expected = Nil
+    getASTbyParsingFileNamed("Binding2.txt") should equal(expected)
+  }
 
   "Parsing Binding3.txt" should "produce the correct AST" in {
     val expected = List(JClassDefinition("Foo", "", Nil, List(
