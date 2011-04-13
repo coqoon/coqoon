@@ -161,8 +161,9 @@ object CoqTop {
   var coqpath : String = ""
   var pid : String = ""
 
-  private val coqtopbinary = "coqtop"
+  val coqtopbinary = "coqtop"
   private val coqarguments = "-emacs"
+  private var waiting : Int = 0
 
   def writeToCoq (data : String) : Unit = {
     if (started && data != null && data.length > 0) {
@@ -180,9 +181,13 @@ object CoqTop {
           coqin.write("\n".getBytes("UTF-8"))
         coqin.flush
         CoqState.sendCommand
+      } else if (waiting > 100) {
+        Console.println("initiating self-destruct mechanism")
+        killCoq
       } else {
         Console.println("please wait a bit longer")
-        Thread.sleep(10)
+        Thread.sleep(50)
+        waiting += 1
         writeToCoq(data)
       }
     }
@@ -202,15 +207,25 @@ object CoqTop {
 
   def interruptCoq () : Unit = {
     if (coqprocess != null) {
-      Console.println("sending ctrl-c to coq (pid: " + pid + ")")
-      Runtime.getRuntime.exec("/bin/kill -INT " + pid)
+      if (isWin)
+        Console.println("sorry, nothing to see here")
+      else {
+        Console.println("sending ctrl-c to coq (pid: " + pid + ")")
+        Runtime.getRuntime.exec("/bin/kill -INT " + pid)
+      }
     }
   }
 
+  def isWin () : Boolean = {
+    System.getProperty("os.name").toLowerCase.indexOf("windows") != -1
+  }
+
+
   import java.io.File
   def startCoq () : Boolean = {
-    if (! new File(coqpath + coqtopbinary).exists) {
-      Console.println("can't find coqtop binary (in: " + coqpath + coqtopbinary + ")")
+    val end = if (isWin) ".exe" else ""
+    if (! new File(coqpath + coqtopbinary + end).exists) {
+      Console.println("can't find coqtop binary (in: " + coqpath + coqtopbinary + end + ")")
       false
     } else {
       //due to the lack of Java's possibility to send signals to processes,
@@ -232,13 +247,17 @@ object CoqTop {
       if (exec.length == 1)
         false
       else {
-        val strarr = (exec ++ List("echo $$; exec " + coqpath + coqtopbinary + " " + coqarguments)).toArray
-        //Console.println("executing:" + strarr.toList)
-        coqprocess = Runtime.getRuntime.exec(strarr)
-        val cout = coqprocess.getInputStream
-        val pidarray = new Array[Byte](80) //should be enough for pid
-        cout.read(pidarray, 0, 80)
-        pid = new String(pidarray)
+        if (isWin)
+          coqprocess = Runtime.getRuntime.exec(coqpath + coqtopbinary + end + " " + coqarguments)
+        else {
+          val strarr = (exec ++ List("echo $$; exec " + coqpath + coqtopbinary + " " + coqarguments)).toArray
+          //Console.println("executing:" + strarr.toList)
+          coqprocess = Runtime.getRuntime.exec(strarr)
+          val cout = coqprocess.getInputStream
+          val pidarray = new Array[Byte](80) //should be enough for pid
+          cout.read(pidarray, 0, 80)
+          pid = new String(pidarray)
+        }
         coqin = coqprocess.getOutputStream
         coqout = new BusyStreamReader(coqprocess.getInputStream)
         coqerr = new BusyStreamReader(coqprocess.getErrorStream)
@@ -246,15 +265,14 @@ object CoqTop {
         coqerr.addActor(ErrorOutputActor)
         new Thread(coqout).start
         new Thread(coqerr).start
+        waiting = 0
         started = true
         true
       }
     }
   }
   
-  def isStarted () : Boolean = {
-    started
-  }
+  def isStarted () : Boolean = { started }
 
   def findPreviousCommand (s : String, pos : Int) : Int = {
     if (pos == 0) -1

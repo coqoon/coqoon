@@ -323,7 +323,7 @@ class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor
 
     // update folding
     outline map (_.root) foreach { root =>
-      if (editor != null) editor.updateFolding(root)
+      if (editor != null && root != null) editor.updateFolding(root)
     }
   }
 

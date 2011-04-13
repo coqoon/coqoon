@@ -21,7 +21,12 @@ class KopitiamPreferencePage extends FieldEditorPreferencePage with IWorkbenchPr
   override def performOk () : Boolean = {
     super.performOk()
     val coqp = Activator.getDefault.getPreferenceStore.getString("coqpath")
-    if (new File(coqp + System.getProperty("file.separator") + "coqtop").exists)
+    val coq =
+      if (CoqTop.isWin)
+        CoqTop.coqtopbinary + ".exe"
+      else
+        CoqTop.coqtopbinary
+    if (new File(coqp + System.getProperty("file.separator") + coq).exists)
       CoqTop.coqpath = coqp + System.getProperty("file.separator")
     else
       setErrorMessage("couldn't find coqtop in the specified path")

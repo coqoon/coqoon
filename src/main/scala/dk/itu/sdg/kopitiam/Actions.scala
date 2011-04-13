@@ -89,7 +89,9 @@ abstract class KCoqAction extends KAction {
         while (! CoqStartUp.fini) { }
         CoqStartUp.fini = false
       }
-    }
+    } else
+      if (! coqstarted)
+        CoqStartUp.start
     doit
   }
 
@@ -417,7 +419,8 @@ object CoqOutputDispatcher extends CoqCallback {
           val r2 = r.map(x => { if (x.contains("subgoal ")) x.drop(1) else x })
           r2.reduceLeft(_ + "\n" + _)
         } else ""
-        goalviewer.writeGoal(ht, gt, ot)
+        if (goalviewer != null)
+          goalviewer.writeGoal(ht, gt, ot)
       case CoqProofCompleted() => goalviewer.writeGoal("Proof completed", "", "")
       case CoqError(msg) =>
         //TODO: what if Error not found, should come up with a sensible message anyways!
