@@ -7,7 +7,7 @@ import org.eclipse.ui.editors.text.TextEditor
 class CoqEditor extends TextEditor with EclipseUtils {
   import dk.itu.sdg.coqparser.VernacularRegion
   import org.eclipse.jface.text.source.{Annotation, IAnnotationModel, ISourceViewer, IVerticalRuler}
-  import org.eclipse.jface.text.Position
+  import org.eclipse.jface.text.{IDocument, Position}
   import org.eclipse.swt.widgets.Composite
   import org.eclipse.ui.IEditorInput
   import org.eclipse.ui.views.contentoutline.{ContentOutlinePage, IContentOutlinePage}
@@ -90,21 +90,22 @@ class CoqEditor extends TextEditor with EclipseUtils {
   //Necessary for Eclipse API cruft
   var oldAnnotations : Array[Annotation] = Array.empty
 
-  def updateFolding (root : VernacularRegion) : Unit = {
-    val annotations = foldingAnnotations(root)
+  def updateFolding (root : VernacularRegion, document : IDocument) : Unit = {
+    val annotations = foldingAnnotations(root, document)
     var newAnnotations = new java.util.HashMap[Any, Any]
+
     for ((pos, annot) <- annotations) newAnnotations.put(annot, pos)
     annotationModel.modifyAnnotations(oldAnnotations, newAnnotations, null)
     oldAnnotations = annotations.map(_._2).toArray
     Console.println("Updated folding " + annotations.toList)
   }
 
-  private def foldingAnnotations(region : VernacularRegion) : Stream[(Position, ProjectionAnnotation)] = {
+  private def foldingAnnotations(region : VernacularRegion, document : IDocument) : Stream[(Position, ProjectionAnnotation)] = {
     println("Collapsable " + region.outlineName + region.outlineNameExtra)
-    if (region.pos.hasPosition)
-      (pos2eclipsePos(region.pos), new ProjectionAnnotation) #:: region.getOutline.flatMap(foldingAnnotations)
+    if (region.pos.hasPosition && document.get(region.pos.offset, region.pos.length).contains("\n"))
+      (pos2eclipsePos(region.pos), new ProjectionAnnotation) #:: region.getOutline.flatMap(foldingAnnotations(_, document))
     else
-     region.getOutline.flatMap(foldingAnnotations)
+     region.getOutline.flatMap(foldingAnnotations(_, document))
   }
 }
 
@@ -323,7 +324,7 @@ class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor
 
     // update folding
     outline map (_.root) foreach { root =>
-      if (editor != null && root != null) editor.updateFolding(root)
+      if (editor != null && root != null) editor.updateFolding(root, document)
     }
   }
 
