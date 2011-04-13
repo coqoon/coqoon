@@ -1,6 +1,6 @@
 * Kopitiam vNext
 ** Added a wizard for creating Coq files
-
+** Added the start of a preference pane for Coq syntax colors
 * Kopitiam 0.0.13 [12 April 2011]
 ** more work on windows (still doesn't run)
 * Kopitiam 0.0.12 [12 April 2011]
