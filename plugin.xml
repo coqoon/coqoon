@@ -149,6 +149,12 @@
             id="Kopitiam.settings"
             name="Kopitiam">
       </page>
+      <page
+            category="Kopitiam.settings"
+            class="dk.itu.sdg.kopitiam.KopitiamColorPreferencePage"
+            id="Kopitiam.colorSettings"
+            name="Color Settings">
+      </page>
    </extension>
    <extension
          point="org.eclipse.ui.commands">

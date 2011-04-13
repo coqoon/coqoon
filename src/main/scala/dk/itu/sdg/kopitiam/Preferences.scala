@@ -11,7 +11,7 @@ class KopitiamPreferencePage extends FieldEditorPreferencePage with IWorkbenchPr
   override def init (workbench : IWorkbench) : Unit = {
     setPreferenceStore(Activator.getDefault.getPreferenceStore)
   }
-  
+
   import org.eclipse.jface.preference.DirectoryFieldEditor
   override def createFieldEditors () : Unit = {
     addField(new DirectoryFieldEditor("coqpath", "Path to Coq", getFieldEditorParent))
@@ -35,3 +35,19 @@ class KopitiamPreferencePage extends FieldEditorPreferencePage with IWorkbenchPr
 }
 
 object KopitiamPreferencePage extends KopitiamPreferencePage { }
+
+class KopitiamColorPreferencePage extends FieldEditorPreferencePage with IWorkbenchPreferencePage {
+  import org.eclipse.ui.IWorkbench
+
+  override def init (workbench : IWorkbench) : Unit = {
+    setPreferenceStore(Activator.getDefault.getPreferenceStore)
+  }
+
+  import org.eclipse.jface.preference.ColorFieldEditor
+  override def createFieldEditors () : Unit = {
+    addField(new ColorFieldEditor("coqSentBg", "Coq Sent Background", getFieldEditorParent))
+    addField(new ColorFieldEditor("coqSentFg", "Coq Sent Foreground", getFieldEditorParent))
+  }
+}
+
+object KopitiamColorPreferencePage extends KopitiamColorPreferencePage

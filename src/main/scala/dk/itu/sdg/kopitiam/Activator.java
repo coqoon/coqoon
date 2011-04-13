@@ -1,9 +1,12 @@
-/* (c) 2010-2011 Hannes Mehnert */
+/* (c) 2010-2011 Hannes Mehnert and David Christiansen */
 
 package dk.itu.sdg.kopitiam;
 
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
+import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.jface.preference.PreferenceConverter;
+import org.eclipse.swt.graphics.*;
 
 public class Activator extends AbstractUIPlugin {
   public final static String PLUGIN_ID = "Kopitiam";
@@ -25,4 +28,8 @@ public class Activator extends AbstractUIPlugin {
   }
 
   public static Activator getDefault () { return single; }
+
+  protected void initializeDefaultPreferences(IPreferenceStore store) {
+    PreferenceConverter.setDefault(store, "coqSentFg", new RGB(0, 0, 220));
+  }
 }

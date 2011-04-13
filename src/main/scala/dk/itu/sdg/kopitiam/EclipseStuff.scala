@@ -1,6 +1,7 @@
 /* (c) 2010-2011 Hannes Mehnert and David Christiansen */
 
 package dk.itu.sdg.kopitiam
+import dk.itu.sdg.util.KopitiamLogger
 
 import org.eclipse.ui.editors.text.TextEditor
 
@@ -175,7 +176,7 @@ object EclipseBoilerPlate {
   }
 }
 
-object DocumentState extends CoqCallback {
+object DocumentState extends CoqCallback with KopitiamLogger {
   import org.eclipse.jface.text.IDocument
   import org.eclipse.swt.graphics.{Color,RGB}
   import org.eclipse.swt.widgets.Display
@@ -281,11 +282,18 @@ object DocumentState extends CoqCallback {
     }
   }
 
+  def sentColor : RGB = {
+    log.warning("Getting sent color")
+    import org.eclipse.jface.preference.PreferenceConverter
+    val store = Activator.getDefault.getPreferenceStore
+    PreferenceConverter.getColor(store, "coqSentFg")
+  }
+
   private def commit () : Unit = {
     //Console.println("commited (@" + position + ", " + sendlen + ")")
     if (sendlen != 0) {
       //Console.println("commited - and doing some work")
-      val bl = new Color(Display.getDefault, new RGB(0, 0, 220))
+      val bl = new Color(Display.getDefault, sentColor)
       val end = scala.math.min(sendlen, content.length - position)
       val len = scala.math.min(position + end, content.length)
       //Console.println("commiting, end is " + end + " (pos + len: " + (position + sendlen) + ")" + ", pos:" + position + ", submitted length " + (len - position))
