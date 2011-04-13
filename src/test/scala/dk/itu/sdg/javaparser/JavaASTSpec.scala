@@ -138,6 +138,25 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     getASTbyParsingFileNamed("Binding4.txt") should equal(expected)
   }
 
+  "Parsing Interface0.txt" should "produce the correct AST" in {
+    val expected = List(JInterfaceDefinition("Foo", List[String](), List[JBodyStatement]()))
+    getASTbyParsingFileNamed("Interface0.txt") should equal(expected)
+  }
+
+  "Parsing Interface1.txt" should "produce the correct AST" in {
+    val expected = List(JInterfaceDefinition("Foo", List[String](), List(
+      JMethodDefinition("bar", "int", List[JArgument](), List[JBodyStatement]())
+    )))
+    getASTbyParsingFileNamed("Interface1.txt") should equal(expected)
+  }
+
+  "Parsing Interface2.txt" should "produce the correct AST" in {
+    val expected = List(JInterfaceDefinition("Foo", List[String](), List(
+      JMethodDefinition("bar", "void", List[JArgument](), List[JBodyStatement]())
+    )))
+    getASTbyParsingFileNamed("Interface2.txt") should equal(expected)
+  }
+
   /*
    * Returns the JavaAST produced by parsing the file named "name" inside of the
    * folder src/test/resources/javaparser/source.
