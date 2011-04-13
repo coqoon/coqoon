@@ -11,18 +11,60 @@ trait CoqOutputter extends JavaToSimpleJava {
       case JArgument(id, jtype) =>
         Some(id)
       case (x : JBinaryExpression) =>
+        Console.println("in getArgs, didn't expect binary expression (but printing anyways): " + x)
         Some(printStatement(x))
-      case _ => None
+      case y => Console.println("in getArgs, unexpected " + y); None
     }
   }
 
-  def interfaceMethods (body : List[JStatement]) : List[Pair[String,String]] = {
-    body.flatMap {
+  def interfaceMethods (interface : String, body : List[JStatement]) : (List[String], List[String]) = {
+    //input: (int get(), void set (int v))
+    //output: ("get : T -> val", "set : T -> val -> T"),
+    //        ([A]t:T, C:.:"get" |-> (params) {{ pre }}-{{ post }}, [A]t:T, C:.:"set" |-> (params) {{ pre }}-{{ post }})
+    // where pre and post are lifted get/set thingies, together with magic representation
+    // or more concise: pre is sm_bin R ("this":expr) (sm_const t)
+    // post is (void): "", sm_bin R ("this":expr) (sm_bin name t args)
+    // post is (non-void): "r", sm_bin R (this) (sm_bin name t args) </\> r = name t
+    var ms : List[String] = List[String]()
+    val results = body.flatMap {
       case JMethodDefinition(name, typ, params, body) =>
-        val ps = getArgs(params)
-        val f = "(" + printArgList(ps) + ")"
-        Some(("\"" + name + "\"", f))
+        val pre = "sm_bin R (\"this\":expr) (sm_const t)"
+        var paras = getArgs(params)
+        val ps = if (paras.length == 0) "" else paras.map("(\"" + _ + "\":expr)").reduceLeft(_ + _)
+        val postf = name + " (sm_const t) " + ps
+        val postm = "sm_bin R (\"this\":expr) (sm_bin " + postf + ")"
+        val post =
+          if (typ == "void")
+            "\"\", " + postm
+          else
+            "\"ret\", " + postm + " </\\> (\"ret\":expr) == (" + postf + ")"
+        //XXX: fixme! only no T if no side effects
+        val rettype = if (typ == "void") "T" else "val"
+        val margs =
+          if (params.length == 0) ""
+          else "-> " + params.map(_ => "val").reduceLeft(_ + " -> " + _)
+        ms ::= name
+        Some(("(" + name + " : T " + margs + " -> " + rettype + ")",
+            "([A]t : T, C :.: " + name + " |-> (" +  printArgList("this" :: paras) + ") {{ " + pre + " }}-{{ " + post + " }})"))
+      case _ => None
     }
+    //thus we need to save _1 in ClassTable, don't we?
+    val funs = results.map(_._1)
+    ClassTable.registerInterfaceFunctions(interface, ms, funs)
+    (results.map(_._1), results.map(_._2))
+  }
+
+  def interfaceSpec (supers : List[String]) : (List[String], List[String]) = {
+    //input: List("ICell")
+    //output: (List("get : T -> val", "set : T -> val -> T"), List("ICell C T _ get set")
+    val results = supers.map({ x =>
+      val (ps, pas) = ClassTable.interfaceFunctions(x)
+      (ps, x + " C T R " + pas.reduceLeft(_ + " " + _))
+    })
+    if (results.length == 0)
+      (List[String](), List[String]())
+    else
+      (results.map(_._1).reduceLeft(_ ++ _), results.map(_._2))
   }
 
   //TODO: that's wrong, since at least == and != depend on the type...
@@ -57,9 +99,8 @@ trait CoqOutputter extends JavaToSimpleJava {
         val argstring = args.map(printStatement).foldRight("nil")(_ + " :: " + _)
         "(" + callw + " \"" + name + "\" \"" + callpre + "\" \"" + funname + "\" (" + argstring + "))"
       case JAssignment(name, JNewExpression(typ, arg)) =>
-        val t = typ
         val init = printStatement(JAssignment(name, JCall("this", "init_", arg)))
-        "(cseq (calloc \"" + name + "\" \"" + t + "\")" + init + ")"
+        "(cseq (calloc \"" + name + "\" \"" + typ + "\")" + init + ")"
       case JAssignment(name, JFieldAccess(variable, field)) =>
         val v = variable match {
           case JVariableAccess(x) => x
@@ -149,7 +190,12 @@ trait CoqOutputter extends JavaToSimpleJava {
     //Console.println("getbody, flattened " + body)
     val b = printBody(body.flatten)
     val defi = "\nDefinition " + myname + " := " + b + "."
-    (defi, "var_expr \"" + ret + "\"")
+    val res =
+      if (ret == "myreturnvaluedummy")
+        ""
+      else
+        "var_expr \"" + ret + "\""
+    (defi, res)
   }
   
   def classMethods (body : List[JStatement]) : List[Pair[String,String]] = {
@@ -191,8 +237,14 @@ Qed."""
     xs.foreach(x => x match {
       case JInterfaceDefinition(id, inters, body) =>
         //Console.println("interfaces are " + inters)
-        val methods = interfaceMethods(body)
-        outp ::= "Definition " + id + " := Build_Inter " + printFiniteSet(inters) + " " + printFiniteMap(methods) + "."
+        val (mmethods, methodspecs) = interfaceMethods(id, body)
+        val mmeths = if (mmethods.length == 0) "" else mmethods.reduceLeft(_ + " " + _)
+        val mspecs = if (methodspecs.length == 0) "" else methodspecs.reduceLeft(_ + "\n  " + _)
+        val (supermethods, interfaces) = interfaceSpec(inters)
+        val superms = if (supermethods.length == 0) "" else supermethods.reduceLeft(_ + " " + _)
+        val superis = if (interfaces.length == 0) "" else interfaces.reduceLeft(_ + "\n  " + _) + "\n  "
+        //should be on toplevel, not inside of a module...
+        outp ::= "Definition " + id + " (C : class) (T : Type) (R : val -> T -> upred heap_alg) " + superms + " " + mmeths + " : spec :=\n  " + superis + mspecs + "."
       case JClassDefinition("Coq", supers, inters, body, par) =>
       case JClassDefinition(id, supers, inters, body, par) =>
         myclass = id
@@ -210,19 +262,46 @@ Definition """ + id + """ :=
     else
       outp = ClassTable.getCoq(myclass, "PROGRAM") ++ outp
     outp ::= "End " + name + "."
+    //Module Import SC := Rules CellP.
+    //Open Scope spec_scope.
+    //Open Scope asn_scope.
     outp ::= "Module " + name + "_spec.\nImport " + name + ".\n"
     if (spec)
       outp = ClassTable.getCoq(myclass, "BEFORESPEC") ++ outp
     //method specs go here
-    val specs = ClassTable.getSpecs(myclass)
-    specs.keys.foreach(x => {
-      outp ::= "Definition " + x + "_pre : hasn :=\n  (" + specs(x)._1 + ")%asn."
-      outp ::= "Definition " + x + "_post : hasn := \n  (" + specs(x)._2 + ")%asn."
+    xs.foreach(x => x match {
+      case JClassDefinition("Coq", supers, inters, body, par) =>
+      case JClassDefinition(id, supers, inters, body, par) =>
+        myclass = id
+        val specs = ClassTable.getSpecs(myclass)
+        //filter out empty specs which are provided by an interface
+        val inter = inters.map(ClassTable.interfaceFunctions(_)).map(_._1)
+        val interf = if (inter.length == 0) List[String]() else inter.reduceLeft(_ ++ _)
+        var ems : List[String] = List[String]()
+        specs.keys.foreach(x => {
+          if ((specs(x)._1 == specs(x)._2) && (specs(x)._1 == null) && interf.contains(x))
+            ems ::= x
+          else {
+            outp ::= "Definition " + x + "_pre : hasn :=\n  (" + specs(x)._1 + ")%asn."
+            outp ::= "Definition " + x + "_post : hasn := \n  (" + specs(x)._2 + ")%asn."
+          }
+        })
+        val spcs = specs.keys.flatMap(x => {
+          if (!ems.contains(x))
+            Some("\"" + myclass + "\" :.: \"" + x + "\" |->  (" + printArgList(ClassTable.getArguments(myclass, x).keys.toList) + ") {{ " + x + "_pre }}-{{ \"ret\", " + x + "_post }}")
+          else
+            None
+        })
+        val spstr = if (spcs.toList.length == 0) "" else spcs.reduceLeft(_ + "\n    [/\\]\n  " + _)
+        val is = inters.map(x => x + " \"" + myclass + "\"" + " val VC (\\v, v) (\\_,\\v,v)") //XXX real instantiation
+        val ins =
+          if (is.length == 0) ""
+          else
+            "[E] VS : val -> val -> upred heap_alg, " + is.reduceLeft(_ + " [/\\] " + _)
+        val sps = if (ins.length > 0 && spstr.length > 0) " [/\\] " + spstr else ""
+        outp ::= "Definition " + myclass + "_spec := " + ins + sps + "."
+      case _ => Console.println("specs for " + x)
     })
-    val spcs = specs.keys.map(x =>
-      "\"" + myclass + "\" :.: \"" + x + "\" |->  (" + printArgList(ClassTable.getArguments(myclass, x).keys.toList) + ") {{ " + x + "_pre }}-{{ \"ret\", " + x + "_post }}")
-    val spstr = if (spcs.toList.length == 0) "" else spcs.reduceLeft(_ + "\n    [/\\]\n" + _)
-    outp ::= "Definition " + myclass + "_spec := " + spstr + "."
     if (spec) {
       outp = ClassTable.getCoq(myclass, "AFTERSPEC") ++ outp
       outp ::= "End " + name + "_spec."

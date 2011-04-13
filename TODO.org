@@ -41,10 +41,10 @@
 [Jesper] make this maybe optionally/as a preference?
 (according to Jesper shouldn't be done when stepping backwards)
 ** [Jesper] Using ctrl-Enter to parse lots of code works nicely, but would it be faster if it didn't print the output for all steps? If not then disregard this.
-** resizable GoalViewer
+** indentation and resizable GoalViewer
 *** syntax highlighting there
 *** indentation
- losing whitespaces in CoqResponseParser
+ losing whitespaces in CoqResponseParser, therefore redo CoqResponse combinator parser with regular expressions
 * Java side
 ** highlight verified/proven method in green or however
 ** add/remove whitespaces at end of class/file messes the coq synced output up (DeDefinition and emma instead of Definition and Lemma)

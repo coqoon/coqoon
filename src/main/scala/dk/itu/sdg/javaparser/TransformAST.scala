@@ -27,13 +27,26 @@ object ClassTable extends KopitiamLogger {
   val gspecs = new HashMap[String, ListBuffer[String]]()
   //TOP -> topcoq; PRELUDE -> preludecoq
 
+  val interfaceToFunctions = new HashMap[String,(List[String],List[String])]()
+
   def empty () : Unit = {
     classtable.clear
     spectable.clear
     modtable.clear
+    interfaceToFunctions.clear
     gspecs.clear
     gspecs += "TOP" -> new ListBuffer[String]()
     gspecs += "PRELUDE" -> new ListBuffer[String]()
+  }
+
+  def registerInterfaceFunctions (id : String, ms : List[String], funs : List[String]) = {
+    assert(! interfaceToFunctions.contains(id))
+    interfaceToFunctions += id -> (ms, funs)
+  }
+
+  def interfaceFunctions (id : String) : (List[String], List[String]) = {
+    assert(interfaceToFunctions.contains(id))
+    interfaceToFunctions(id)
   }
 
   def registerClass (id : String, outer : Option[String], interface : Boolean) = {
