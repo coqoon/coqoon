@@ -488,10 +488,7 @@ import org.eclipse.ui.dialogs.WizardNewFileCreationPage
 class NewCoqFileWizardPage (selection: IStructuredSelection) extends WizardNewFileCreationPage("NewCoqFileWizardPage", selection) {
   setTitle("Coq File")
   setDescription("Creates a new Coq file")
-  setFileExtension("v")
-  
-  //override def validatePage () : Boolean = getFileName.endsWith(".v")
-  
+  setFileExtension("v") 
 }
 
 import org.eclipse.jface.wizard.Wizard
