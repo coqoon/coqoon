@@ -217,5 +217,14 @@
        	</command>
       </menuContribution>
    </extension>
+   <extension
+         point="org.eclipse.ui.newWizards">
+      <wizard
+            class="dk.itu.sdg.kopitiam.NewCoqFileWizard"
+            icon="icons/sample.gif"
+            id="Kopitiam.newCoqFileWizard"
+            name="Coq File">
+      </wizard>
+   </extension>
 
 </plugin>

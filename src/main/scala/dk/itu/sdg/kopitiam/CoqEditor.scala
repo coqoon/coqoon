@@ -102,7 +102,7 @@ class CoqEditor extends TextEditor with EclipseUtils {
 
   private def foldingAnnotations(region : VernacularRegion, document : IDocument) : Stream[(Position, ProjectionAnnotation)] = {
     println("Collapsable " + region.outlineName + region.outlineNameExtra)
-    if (region.pos.hasPosition && document.get(region.pos.offset, region.pos.length).contains("\n"))
+    if (region.pos.hasPosition && document.get(region.pos.offset, region.pos.length).count(_=='\n') >= 2)
       (pos2eclipsePos(region.pos), new ProjectionAnnotation) #:: region.getOutline.flatMap(foldingAnnotations(_, document))
     else
      region.getOutline.flatMap(foldingAnnotations(_, document))
@@ -482,3 +482,55 @@ class CoqContentOutlinePage extends ContentOutlinePage {
   }
 }
 
+// Provide a Coq option in the New menu
+import org.eclipse.jface.viewers.IStructuredSelection
+import org.eclipse.ui.dialogs.WizardNewFileCreationPage
+class NewCoqFileWizardPage (selection: IStructuredSelection) extends WizardNewFileCreationPage("NewCoqFileWizardPage", selection) {
+  setTitle("Coq File")
+  setDescription("Creates a new Coq file")
+  setFileExtension("v")
+  
+  //override def validatePage () : Boolean = getFileName.endsWith(".v")
+  
+}
+
+import org.eclipse.jface.wizard.Wizard
+import org.eclipse.ui.INewWizard
+import dk.itu.sdg.util.KopitiamLogger
+class NewCoqFileWizard extends Wizard with INewWizard with KopitiamLogger {
+  import org.eclipse.core.resources.IFile
+  import org.eclipse.ui.{IWorkbench, PlatformUI, IWorkbenchPage}
+  import org.eclipse.jface.viewers.IStructuredSelection
+
+  setWindowTitle("New Coq File")
+
+  var workbench : Option[IWorkbench] = None
+  var selection : Option[IStructuredSelection] = None
+  var page : Option[NewCoqFileWizardPage] = None
+
+  def init (wkbnch : IWorkbench, sel : IStructuredSelection) = {
+    workbench = Some(wkbnch)
+    selection = Some(sel)
+  }
+
+  override def addPages () : Unit = {
+    page = selection map (new NewCoqFileWizardPage(_))
+    page foreach addPage
+  }
+
+  override def performFinish () : Boolean = {
+    import org.eclipse.ui.PartInitException
+    import org.eclipse.ui.ide.IDE
+
+    val file = page map (_.createNewFile)
+    for (f <- file ; p <- page) {
+      val workbenchPage : IWorkbenchPage = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage
+      try {
+        IDE.openEditor(workbenchPage, f, true)
+      } catch {
+        case e : PartInitException => log.warning("Caught an " + e)
+      }
+    }
+    !file.isEmpty
+  }
+}
