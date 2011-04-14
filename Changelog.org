@@ -1,3 +1,5 @@
+* Kopitiam 0.0.13 [12 April 2011]
+** more work on windows (still doesn't run)
 * Kopitiam 0.0.12 [12 April 2011]
 ** may work on windows (searching for coqtop.exe there)
 ** more work on interface specification
