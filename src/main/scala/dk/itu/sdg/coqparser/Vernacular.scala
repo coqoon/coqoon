@@ -125,6 +125,7 @@ trait GallinaSyntax {
   case class Match (items : List[MatchItem], returnType : Option[Term], body : List[MatchEquation]) extends Term
 
   case class Num (value : Int) extends Term
+  case class StrLit (value : String) extends Term
   case class Inferrable () extends Term /* this is _ */
 
 }
@@ -387,7 +388,9 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
     case lexical.Num(digits) => digits.toInt
   }
 
-  def string = elem("string", _.isInstanceOf[lexical.StringLit])
+  def string = elem("string", _.isInstanceOf[lexical.StringLit]) ^^ {
+    case lexical.StringLit(chars) => StrLit(chars)
+  }
 
   /* Utility parsers */
   def inParens[T] (p : Parser[T]) : Parser[T] = delim("(")~>(p<~delim(")"))
@@ -406,6 +409,7 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
       | ifElse
       | sort
       | num ^^ Num
+      | string
       | noImplicits
       | qualid
       | patternMatch
