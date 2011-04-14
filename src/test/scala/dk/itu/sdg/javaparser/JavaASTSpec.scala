@@ -291,7 +291,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
         JMethodDefinition("bar", "void", Nil, List(JBlock(List(
           JBinding("i", "int", Some(JLiteral("1"))),
           JWhile(JBinaryExpression(">", JVariableAccess("i"), JLiteral("0")),
-                 JBlock(List(JAssignment("i", JBinaryExpression("+", JLiteral("1"), JVariableAccess("i"))))))
+                 JBlock(List(JAssignment("i", JBinaryExpression("+", JVariableAccess("i"), JLiteral("1"))))))
         ))))), None))
     getASTbyParsingFileNamed("While1.txt") should equal(expected)
   }

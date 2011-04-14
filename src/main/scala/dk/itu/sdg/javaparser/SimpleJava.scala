@@ -96,7 +96,7 @@ trait JavaToSimpleJava {
           case "++" => "+"
           case "--" => "-"
         }
-        val res = JBinaryExpression(oper, JLiteral("1"), v)
+        val res = JBinaryExpression(oper, v, JLiteral("1"))
         val ass = v match {
           case JFieldAccess(variable, value) => JFieldWrite(variable, value, res)
           case JVariableAccess(x) => JAssignment(x, res)
