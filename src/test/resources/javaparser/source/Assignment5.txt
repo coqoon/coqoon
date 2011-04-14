@@ -1,0 +1,9 @@
+class Foo {
+  void bar () {
+    int a = 10;
+    a = a + foobar();
+  }
+  int foobar () {
+    return 10;
+  }
+}

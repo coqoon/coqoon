@@ -157,6 +157,55 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     getASTbyParsingFileNamed("Interface2.txt") should equal(expected)
   }
 
+  "Parsing Assignment1.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition("Foo", "", Nil, List(
+      JMethodDefinition("bar", "void", Nil, List(JBlock(List(
+        JBinding("a", "int", Some(JLiteral("10"))),
+        JAssignment("a", JLiteral("20"))))))), None))
+    getASTbyParsingFileNamed("Assignment1.txt") should equal(expected)
+  }
+
+  "Parsing Assignment2.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition("Foo", "", Nil, List(
+      JMethodDefinition("bar", "void", Nil, List(JBlock(List(
+        JBinding("a", "int", Some(JLiteral("10"))),
+        JAssignment("a", JBinaryExpression("+", JVariableAccess("a"), JLiteral("20")))))))),
+      None))
+    getASTbyParsingFileNamed("Assignment2.txt") should equal(expected)
+  }
+
+  "Parsing Assignment3.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition("Foo", "", Nil, List(
+      JMethodDefinition("bar", "void", Nil, List(JBlock(List(
+        JBinding("a", "int", Some(JLiteral("10"))),
+        JAssignment("a", JBinaryExpression("+", JVariableAccess("a"), JLiteral("20")))))))),
+      None))
+    getASTbyParsingFileNamed("Assignment3.txt") should equal(expected)
+  }
+
+  "Parsing Assignment4.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition("Foo", "", Nil, List(
+      JMethodDefinition("bar", "void", Nil, List(JBlock(List(
+        JBinding("a", "int", Some(JLiteral("10"))),
+        JAssignment("a", JCall("this", "foobar", List())))))),
+      JMethodDefinition("foobar", "int", Nil, List(JBlock(List(
+        JReturn(JLiteral("10"))))))),
+      None))
+    getASTbyParsingFileNamed("Assignment4.txt") should equal(expected)
+  }
+
+  "Parsing Assignment5.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition("Foo", "", Nil, List(
+      JMethodDefinition("bar", "void", Nil, List(JBlock(List(
+        JBinding("a", "int", Some(JLiteral("10"))),
+        JBinding("tmp_1", "int", Some(JCall("this", "foobar", List()))),
+        JAssignment("a", JBinaryExpression("+", JVariableAccess("a"), JVariableAccess("tmp_1"))))))),
+      JMethodDefinition("foobar", "int", Nil, List(JBlock(List(
+        JReturn(JLiteral("10"))))))),
+      None))
+    getASTbyParsingFileNamed("Assignment5.txt") should equal(expected)
+  }
+
   /*
    * Returns the JavaAST produced by parsing the file named "name" inside of the
    * folder src/test/resources/javaparser/source.
