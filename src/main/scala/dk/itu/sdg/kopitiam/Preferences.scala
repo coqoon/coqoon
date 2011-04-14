@@ -45,9 +45,20 @@ class KopitiamColorPreferencePage extends FieldEditorPreferencePage with IWorkbe
 
   import org.eclipse.jface.preference.ColorFieldEditor
   override def createFieldEditors () : Unit = {
+    val fields = List(
+      ("coqSentBg", "Coq Sent Background"),
+      ("coqSentFg", "Coq Sent Foreground"),
+      ("coqKeywordFg", "Keyword Foreground")
+    )
+    for ((pref, label) <- fields)
+      addField(new ColorFieldEditor(pref, label, getFieldEditorParent))
+
+/*
     addField(new ColorFieldEditor("coqSentBg", "Coq Sent Background", getFieldEditorParent))
     addField(new ColorFieldEditor("coqSentFg", "Coq Sent Foreground", getFieldEditorParent))
-  }
+    addField(new ColorFieldEditor("coqKeywordFg", "Keyword Foreground", getFieldEditorParent)) */
+    
+ }
 }
 
 object KopitiamColorPreferencePage extends KopitiamColorPreferencePage

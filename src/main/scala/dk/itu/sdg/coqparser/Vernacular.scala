@@ -8,7 +8,7 @@ import scala.util.parsing.input.Positional
 trait VernacularRegion extends LengthPositional with Product {
   val outline = false
   def outlineName = "<no name>"
-  def outlineNameExtra = pos.toString
+  def outlineNameExtra = "" //pos.toString
   override def toString = "<" + outlineName + " " + outlineNameExtra + ">"
 
   def getOutline = subRegions.filter(_.outline)
@@ -29,13 +29,22 @@ trait GallinaSyntax {
   sealed abstract class Name extends VernacularRegion
   case class StringName (name : String) extends Name {
     override def toString = name
+    override def outlineName = "_"
   }
-  case class UnderscoreName () extends Name
+  case class UnderscoreName () extends Name {
+    override def outlineName = "_"
+  }
 
   sealed abstract class Binder extends VernacularRegion
-  case class NameBinder (name : Name) extends Binder
-  case class TypedNameBinder (names: List[Name], `type` : Term) extends Binder
-  case class ColonEqualBinder (name : Name, `type` : Option[Term], binding : Term) extends Binder
+  case class NameBinder (name : Name) extends Binder {
+    override def outlineName = name.outlineName
+  }
+  case class TypedNameBinder (names: List[Name], `type` : Term) extends Binder {
+    override def outlineName = "(" + names.map(_.outlineName).mkString(" ") + " : " + `type` + ")"
+  }
+  case class ColonEqualBinder (name : Name, `type` : Option[Term], binding : Term) extends Binder {
+    override def outlineName = "(" + name.outlineName + " := " + binding.outlineName + ")"
+  }
 
   sealed abstract class Arg extends VernacularRegion
   case class SimpleArg (term : Term) extends Arg
@@ -76,7 +85,9 @@ trait GallinaSyntax {
 
   case class DepRetType (name : Option[Name], returnType : Term) extends VernacularRegion
 
-  sealed abstract class Term extends VernacularRegion
+  sealed abstract class Term extends VernacularRegion {
+    override def outlineName = "<term> "
+  }
   case class Forall (binders : List[Binder], term : Term) extends Term
   case class Fun (binders : List[Binder], body : Term) extends Term
   /* more */
@@ -157,8 +168,14 @@ trait VernacularSyntax extends GallinaSyntax {
   }
 
   case class Assumption (names : List[StringName], `type` : Term) extends VernacularRegion
-  case class IndBody (name : StringName, binders : List[Binder], `type` : Term, constructors : List[ConstructorDef]) extends VernacularRegion
-  case class ConstructorDef (name : StringName, binders : List[Binder], `type` : Option[Term]) extends VernacularRegion
+  case class IndBody (name : StringName, binders : List[Binder], `type` : Term, constructors : List[ConstructorDef]) extends VernacularRegion {
+    override val outline = true
+    override def outlineName = name.name //TODO better name
+  }
+  case class ConstructorDef (name : StringName, binders : List[Binder], `type` : Option[Term]) extends VernacularRegion {
+    override val outline = true
+    override def outlineName = name.name + binders.map(_.outlineName).mkString(" ") //TODO: Add type
+}
 
 
   /* This representation of modules is a bare minimum - it throws out useful information! */
