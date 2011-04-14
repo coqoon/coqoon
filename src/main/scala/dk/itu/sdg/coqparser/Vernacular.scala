@@ -393,7 +393,11 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
     case lexical.Num(digits) => digits.toInt
   }
 
-  def string = elem("string", _.isInstanceOf[lexical.StringLit]) ^^ {
+  def string : Parser[lexical.StringLit] = elem("string", _.isInstanceOf[lexical.StringLit]) ^^ {
+    case str : lexical.StringLit => str
+  }
+
+  def stringTerm = string ^^ {
     case lexical.StringLit(chars) => StrLit(chars)
   }
 
@@ -414,7 +418,7 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
       | ifElse
       | sort
       | num ^^ Num
-      | string
+      | stringTerm
       | noImplicits
       | qualid
       | underscore
