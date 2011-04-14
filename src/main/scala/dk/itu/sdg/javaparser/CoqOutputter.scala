@@ -31,13 +31,15 @@ trait CoqOutputter extends JavaToSimpleJava {
         val pre = "sm_bin R (\"this\":expr) (sm_const t)"
         var paras = getArgs(params)
         val ps = if (paras.length == 0) "" else paras.map("(\"" + _ + "\":expr)").reduceLeft(_ + _)
-        val postf = name + " (sm_const t) " + ps
-        val postm = "sm_bin R (\"this\":expr) (sm_bin " + postf + ")"
+        val postm = "sm_bin R (\"this\":expr) (sm_bin " + name + " (sm_const t) " + ps + ")"
+        //XXX: fixme! only valid if no side effects
+        val postns = "sm_bin R (\"this\":expr) (sm_const t)"
         val post =
           if (typ == "void")
             "\"\", " + postm
           else
-            "\"ret\", " + postm + " </\\> (\"ret\":expr) == (" + postf + ")"
+            //XXX: also only true for no side effects _and_ single argument for mathematical fun
+            "\"ret\", " + postns + " </\\> (\"ret\":expr) == (" + name + " t:expr)"
         //XXX: fixme! only no T if no side effects
         val rettype = if (typ == "void") "T" else "val"
         val margs =
@@ -45,7 +47,7 @@ trait CoqOutputter extends JavaToSimpleJava {
           else "-> " + params.map(_ => "val").reduceLeft(_ + " -> " + _)
         ms ::= name
         Some(("(" + name + " : T " + margs + " -> " + rettype + ")",
-            "([A]t : T, C :.: " + name + " |-> (" +  printArgList("this" :: paras) + ") {{ " + pre + " }}-{{ " + post + " }})"))
+            "([A]t : T, C :.: \"" + name + "\" |-> (" +  printArgList("this" :: paras) + ") {{ " + pre + " }}-{{ " + post + " }})"))
       case _ => None
     }
     //thus we need to save _1 in ClassTable, don't we?
@@ -192,7 +194,7 @@ trait CoqOutputter extends JavaToSimpleJava {
     val defi = "\nDefinition " + myname + " := " + b + "."
     val res =
       if (ret == "myreturnvaluedummy")
-        ""
+        "0"
       else
         "var_expr \"" + ret + "\""
     (defi, res)
