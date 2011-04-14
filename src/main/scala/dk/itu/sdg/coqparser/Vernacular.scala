@@ -98,6 +98,11 @@ trait GallinaSyntax {
   case class QualId (path : List[StringName]) extends Term {
     override def toString = path mkString
   }
+  case class Underscore () extends Term {
+    override def toString = "_"
+    override def outlineName = "_"
+    override val outline = true
+  }
 
   case class Fix (body: FixBody) extends Term
   case class FixFor (bodies : List[FixBody], `for` : StringName) extends Term
@@ -412,6 +417,7 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
       | string
       | noImplicits
       | qualid
+      | underscore
       | patternMatch
       | inParens(term) //not present in spec but seems necessary
       )~opt(
@@ -508,8 +514,10 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
   def name : Parser[Name] =
     lengthPositioned(
       ident ^^ {case lexical.Ident(id) => StringName(id)}
-    | delim("_") ^^^ UnderscoreName()
+    | keyword("_") ^^^ UnderscoreName()
     )
+
+  def underscore : Parser[Term] = keyword("_") ^^^ Underscore()
 
   def qualid : Parser[QualId] = ident~rep(accessIdent) ^^ {
     case id~rest => QualId(StringName(id.chars) :: rest.map({ (aID) => StringName(aID.chars) }))
