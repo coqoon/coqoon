@@ -1,0 +1,6 @@
+class Foo {
+  void bar () {
+    int a = 0;
+    a--;
+  }
+}

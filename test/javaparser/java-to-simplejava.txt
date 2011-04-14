@@ -1,27 +1,30 @@
 //should produce a warning (multiple return statements) and transform to identity
 class Foo {
   int a (int b) {
+   int x
     if (b < 0)
-      return 10;
+      x = 10;
     else
-      return 20;
+      x = 20;
+    return x
   }
 }
-//assignment
-//loops (while & for)
-//postfix expression
-//ternary x ? a : b
-//assignment operators (+=, ...)
-//nested field access foo.bar.baz
-//nested calls foo.bar.baz() or foo.bar().baz or foo().bar.baz()
-//field initializer
 //allocation
 //typed temporary variables (with java.lang/util)
 //inner classes
-//modifiers
-//static calls
+//interface inheritance
+
+Changes to AST:
+ no longer String, use proper types!
+ modifiers in AST (method/class/fields)
+ static vs dynamic call (see Fac tests)
+ constructors
+
+FUTURE:
+//static call
+//field initializer
 //multiple methods with same name (overloading)
-//interfaces
+//for loop
 //exceptions
 //assertions
 //generics

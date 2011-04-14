@@ -206,6 +206,122 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     getASTbyParsingFileNamed("Assignment5.txt") should equal(expected)
   }
 
+  "Parsing Postfix1.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition("Foo", "", Nil, List(
+      JMethodDefinition("bar", "void", Nil, List(JBlock(List(
+        JBinding("a", "int", Some(JLiteral("0"))),
+        JAssignment("a", JBinaryExpression("+", JVariableAccess("a"), JLiteral("1")))))))),
+      None))
+    getASTbyParsingFileNamed("Postfix1.txt") should equal(expected)
+  }
+                                         
+  "Parsing Postfix2.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition("Foo", "", Nil, List(
+      JMethodDefinition("bar", "void", Nil, List(JBlock(List(
+        JBinding("a", "int", Some(JLiteral("0"))),
+        JAssignment("a", JBinaryExpression("-", JVariableAccess("a"), JLiteral("1")))))))),
+      None))
+    getASTbyParsingFileNamed("Postfix2.txt") should equal(expected)
+  }
+                                         
+  "Parsing Postfix3.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition("Foo", "", Nil, List(
+      JFieldDefinition("a", "int"),
+      JMethodDefinition("bar", "void", Nil, List(JBlock(List(
+        JBinding("tmp_1", "int", Some(JFieldAccess(JVariableAccess("this"), "a"))),
+        JFieldWrite(JVariableAccess("this"), "a", JBinaryExpression("+", JVariableAccess("tmp_1"), JLiteral("1")))))))),
+      None))
+    getASTbyParsingFileNamed("Postfix3.txt") should equal(expected)
+  }
+
+  "Parsing Conditional1.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition("Foo", "", Nil, List(
+      JMethodDefinition("bar", "void", List(JArgument("a", "int")), List(JBlock(List(
+        JBinding("tmp_1", "int", None),
+        JConditional(JBinaryExpression("==", JVariableAccess("a"), JLiteral("10")),
+                     JBlock(List(JAssignment("tmp_1", JLiteral("20")))),
+                     JBlock(List(JAssignment("tmp_1", JLiteral("30"))))),
+        JBinding("b", "int", Some(JVariableAccess("tmp_1")))))))),
+      None))
+    getASTbyParsingFileNamed("Conditional1.txt") should equal(expected)
+  }
+
+  "Parsing Conditional2.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition("Foo", "", Nil, List(
+      JFieldDefinition("c", "int"),
+      JMethodDefinition("bar", "void", List(JArgument("a", "int")), List(JBlock(List(
+        JBinding("tmp_2", "int", Some(JFieldAccess(JVariableAccess("this"), "c"))),
+        JBinding("tmp_1", "int", None),
+        JConditional(JBinaryExpression("==", JVariableAccess("a"), JVariableAccess("tmp_2")),
+                     JBlock(List(JAssignment("tmp_1", JLiteral("20")))),
+                     JBlock(List(JAssignment("tmp_1", JLiteral("30"))))),
+        JBinding("b", "int", Some(JVariableAccess("tmp_1")))))))),
+      None))
+    getASTbyParsingFileNamed("Conditional2.txt") should equal(expected)
+  }
+
+  "Parsing NestedField1.txt" should "produce the correct AST" in {
+    val expected =
+      List(JClassDefinition("Foo", "", Nil, List(JFieldDefinition("a", "int")), None),
+           JClassDefinition("Bar", "", Nil, List(
+             JFieldDefinition("f", "Foo"),
+             JMethodDefinition("bar", "void", Nil, List(JBlock(List(
+               JBinding("tmp_1", "int", Some(JFieldAccess(JVariableAccess("this"), "f"))),
+               JBinding("b", "int", Some(JFieldAccess(JVariableAccess("tmp_1"), "a")))
+           ))))), None))
+    getASTbyParsingFileNamed("NestedField1.txt") should equal(expected)
+  }
+
+
+  "Parsing NestedCall1.txt" should "produce the correct AST" in {
+    val expected =
+      List(JClassDefinition("Foo", "", Nil, List(JMethodDefinition("bar", "void", Nil, List(JBlock(List())))), None),
+           JClassDefinition("Bar", "", Nil, List(
+             JFieldDefinition("f", "Foo"),
+             JMethodDefinition("bar", "void", Nil, List(JBlock(List(
+               JBinding("tmp_1", "int", Some(JFieldAccess(JVariableAccess("this"), "f"))),
+               JCall("tmp_1", "bar", Nil)
+           ))))), None))
+    getASTbyParsingFileNamed("NestedCall1.txt") should equal(expected)
+  }
+
+  "Parsing While1.txt" should "produce the correct AST" in {
+    val expected =
+      List(JClassDefinition("Foo", "", Nil, List(
+        JMethodDefinition("bar", "void", Nil, List(JBlock(List(
+          JBinding("i", "int", Some(JLiteral("1"))),
+          JWhile(JBinaryExpression(">", JVariableAccess("i"), JLiteral("0")),
+                 JBlock(List(JAssignment("i", JBinaryExpression("+", JLiteral("1"), JVariableAccess("i"))))))
+        ))))), None))
+    getASTbyParsingFileNamed("While1.txt") should equal(expected)
+  }
+
+  "Parsing Fac.txt" should "produce the correct AST" in {
+    val expected =
+      List(JClassDefinition("Fac", "", List(), List(JMethodDefinition("fac", "int",
+       List(JArgument("n", "int")),
+        List(JBlock(List(JBinding("x", "int", None), 
+          JConditional(JBinaryExpression(">=", JVariableAccess("n"), JLiteral("0")),
+            JBlock(List(JAssignment("x", JCall("this", "fac",
+                                  List(JBinaryExpression("-", JVariableAccess("n"), JLiteral("1"))))),
+                        JAssignment("x", JBinaryExpression("*", JVariableAccess("n"), JVariableAccess("x"))))),
+            JBlock(List(JAssignment("x", JLiteral("1"))))), JReturn(JVariableAccess("x"))))))), None))
+    getASTbyParsingFileNamed("Fac.txt") should equal(expected)
+  }
+
+  "Parsing Fac2.txt" should "produce the correct AST" in {
+    val expected =
+      List(JClassDefinition("Fac", "", List(), List(JMethodDefinition("fac", "int",
+       List(JArgument("n", "int")),
+        List(JBlock(List(JBinding("x", "int", None), 
+          JConditional(JBinaryExpression(">=", JVariableAccess("n"), JLiteral("0")),
+            JBlock(List(JAssignment("x", JCall("this", "fac",
+                                  List(JBinaryExpression("-", JVariableAccess("n"), JLiteral("1"))))),
+                        JAssignment("x", JBinaryExpression("*", JVariableAccess("n"), JVariableAccess("x"))))),
+            JBlock(List(JAssignment("x", JLiteral("1"))))), JReturn(JVariableAccess("x"))))))), None))
+    getASTbyParsingFileNamed("Fac2.txt") should equal(expected)
+  }
+
   /*
    * Returns the JavaAST produced by parsing the file named "name" inside of the
    * folder src/test/resources/javaparser/source.

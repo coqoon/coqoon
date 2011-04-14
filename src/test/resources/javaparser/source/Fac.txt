@@ -1,0 +1,11 @@
+class Fac {
+  static int fac (int n) {
+    int x;
+    if (n >= 0) {
+      x = fac(n - 1);
+      x = n * x;
+    } else
+      x = 1;
+    return x;
+  }
+}

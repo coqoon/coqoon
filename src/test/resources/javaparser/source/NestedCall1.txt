@@ -1,0 +1,10 @@
+class Foo {
+ void bar () {
+ }
+}
+class Bar {
+  Foo f;
+  void bar () {
+    f.bar();
+  }
+}
