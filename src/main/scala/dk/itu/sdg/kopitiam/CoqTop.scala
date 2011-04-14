@@ -226,50 +226,40 @@ object CoqTop {
     val end = if (isWin) ".exe" else ""
     if (! new File(coqpath + coqtopbinary + end).exists) {
       Console.println("can't find coqtop binary (in: " + coqpath + coqtopbinary + end + ")")
-      false
-    } else {
+      return false
+    }
+    if (isWin)
+      coqprocess = Runtime.getRuntime.exec(coqpath + coqtopbinary + end + " " + coqarguments)
+    else {
       //due to the lack of Java's possibility to send signals to processes,
       //we start coqtop in a shell (and thus can send ctrl+c sequences manually)
       ///bin/sh -c only works on unix; but happily there's cmd.exe /c on windows
       val exec =
-        if (System.getProperty("os.name").toLowerCase.indexOf("windows") != -1)
-          //if (! new File("c:\\windows\\system32\\cmd.exe").exists) {
-          //  Console.println("cmd.exe not found")
-            List("")
-          //} else
-          //  List("c:\\windows\\system32\\cmd.exe", "/c")
-        else //UNIX
-          if (! new File("/bin/sh").exists) {
-            Console.println("/bin/sh not found")
-            List("")
-          } else
-            List("/bin/sh", "-c")
+        if (! new File("/bin/sh").exists) {
+          Console.println("/bin/sh not found")
+          List("")
+        } else
+          List("/bin/sh", "-c")
       if (exec.length == 1)
-        false
-      else {
-        if (isWin)
-          coqprocess = Runtime.getRuntime.exec(coqpath + coqtopbinary + end + " " + coqarguments)
-        else {
-          val strarr = (exec ++ List("echo $$; exec " + coqpath + coqtopbinary + " " + coqarguments)).toArray
-          //Console.println("executing:" + strarr.toList)
-          coqprocess = Runtime.getRuntime.exec(strarr)
-          val cout = coqprocess.getInputStream
-          val pidarray = new Array[Byte](80) //should be enough for pid
-          cout.read(pidarray, 0, 80)
-          pid = new String(pidarray)
-        }
-        coqin = coqprocess.getOutputStream
-        coqout = new BusyStreamReader(coqprocess.getInputStream)
-        coqerr = new BusyStreamReader(coqprocess.getErrorStream)
-        coqout.addActor(PrintActor)
-        coqerr.addActor(ErrorOutputActor)
-        new Thread(coqout).start
-        new Thread(coqerr).start
-        waiting = 0
-        started = true
-        true
-      }
+        return false
+      val strarr = (exec ++ List("echo $$; exec " + coqpath + coqtopbinary + " " + coqarguments)).toArray
+      //Console.println("executing:" + strarr.toList)
+      coqprocess = Runtime.getRuntime.exec(strarr)
+      val cout = coqprocess.getInputStream
+      val pidarray = new Array[Byte](80) //should be enough for pid
+      cout.read(pidarray, 0, 80)
+      pid = new String(pidarray)
     }
+    coqin = coqprocess.getOutputStream
+    coqout = new BusyStreamReader(coqprocess.getInputStream)
+    coqerr = new BusyStreamReader(coqprocess.getErrorStream)
+    coqout.addActor(PrintActor)
+    coqerr.addActor(ErrorOutputActor)
+    new Thread(coqout).start
+    new Thread(coqerr).start
+    waiting = 0
+    started = true
+    true
   }
   
   def isStarted () : Boolean = { started }
