@@ -281,6 +281,7 @@ class TranslateAction extends KAction {
   import dk.itu.sdg.javaparser.JavaAST
   object JavaTC extends JavaAST { }
 
+  import org.eclipse.jdt.core.ICompilationUnit
   override def execute (ev : ExecutionEvent) : Object = {
     Console.println("execute translation!")
     val sel = HandlerUtil.getActiveMenuSelection(ev).asInstanceOf[IStructuredSelection]
@@ -288,6 +289,8 @@ class TranslateAction extends KAction {
     Console.println("fe is " + fe + " type " + fe.asInstanceOf[AnyRef].getClass)
     if (fe.isInstanceOf[IFile])
       translate(fe.asInstanceOf[IFile])
+    else if (fe.isInstanceOf[ICompilationUnit])
+      translate(fe.asInstanceOf[ICompilationUnit].getResource.asInstanceOf[IFile])
     null
   }
 
@@ -299,7 +302,6 @@ class TranslateAction extends KAction {
       if (trfi.exists)
         trfi.delete(true, false, null)
       trfi.create(new ByteArrayInputStream(JavaTC.parse(is, nam.substring(0, nam.indexOf(".java"))).getBytes), IResource.NONE, null)
-      Console.println("translated file " + nam)
     } else
       Console.println("wasn't a java file")
   }

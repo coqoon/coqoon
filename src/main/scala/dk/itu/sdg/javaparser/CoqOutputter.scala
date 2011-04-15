@@ -289,8 +289,10 @@ Definition """ + id + """ :=
           if ((specs(x)._1 == specs(x)._2) && (specs(x)._1 == null) && interf.contains(x))
             ems ::= x
           else {
-            outp ::= "Definition " + x + "_pre : hasn :=\n  (" + specs(x)._1 + ")%asn."
-            outp ::= "Definition " + x + "_post : hasn := \n  (" + specs(x)._2 + ")%asn."
+            if (spec) {
+              outp ::= "Definition " + x + "_pre : hasn :=\n  (" + specs(x)._1 + ")%asn."
+              outp ::= "Definition " + x + "_post : hasn := \n  (" + specs(x)._2 + ")%asn."
+            }
           }
         })
         val spcs = specs.keys.flatMap(x => {
@@ -306,7 +308,8 @@ Definition """ + id + """ :=
           else
             "[E] VC : val -> val -> upred heap_alg, " + is.reduceLeft(_ + " [/\\] " + _)
         val sps = if (ins.length > 0 && spstr.length > 0) " [/\\] " + spstr else ""
-        outp ::= "Definition " + myclass + "_spec := " + ins + sps + "."
+        if (spec)
+          outp ::= "Definition " + myclass + "_spec := " + ins + sps + "."
       case _ => Console.println("specs for " + x)
     })
     if (spec) {

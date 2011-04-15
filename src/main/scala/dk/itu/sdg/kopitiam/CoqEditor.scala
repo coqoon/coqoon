@@ -226,7 +226,7 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
     //like Definition of eeqptr, elt, eand, eneqptr in Snap.v
     val old = coq.get
     val pstart = old.indexOf(prog.substring(0, 15))
-    val proend = prog.lastIndexOf("End ")
+    val proend = prog.length - 20
     val pend = old.indexOf(prog.substring(proend, prog.length))
     Console.println("old start " + pstart + " old end " + pend) //+ ":: " + old.substring(pstart, pend + (prog.length - proend)))
     coq.replace(pstart, pend + (prog.length - proend) - pstart, prog)
