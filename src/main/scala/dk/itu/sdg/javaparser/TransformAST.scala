@@ -520,7 +520,7 @@ object FinishAST extends JavaTerms
         log.info("constructor pos info: " + x.asInstanceOf[ConstructorDeclaration].pos)
         lvars = new HashMap[String,String]()
         argmap = new HashMap[String,String]()
-        methodid = "init_"
+        methodid = "new"
         val args = transformOL(parameters, List[JArgument]())
         args.foreach { x => argmap += x.id -> x.jtype }
         ClassTable.addMethod(classid, methodid, unpackR(id), argmap)
@@ -650,7 +650,7 @@ object FinishAST extends JavaTerms
     val w = doitHelper(a)
     val re = coqoutput(w, false, name)
     val prog = re.takeWhile(! _.contains("_spec.\nImport ")).reduceLeft(_ + "\n" + _)
-    val spec = re.dropWhile(! _.contains("_spec.\nImport ")).drop(1).reduceLeft(_ + "\n" + _)
+    val spec = re.dropWhile(! _.contains("_spec.\nImport ")).drop(1).mkString("\n")
     (prog, spec)
   }
 }

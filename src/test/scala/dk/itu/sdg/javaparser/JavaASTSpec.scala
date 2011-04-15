@@ -327,14 +327,14 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
       JClassDefinition("NodeState", "", List(), List(
         JFieldDefinition("node", "Node"),
         JFieldDefinition("yielded", "boolean"),
-        JMethodDefinition("init_", "NodeState", List(JArgument("node", "Node")), List(JBlock(List(
+        JMethodDefinition("new", "NodeState", List(JArgument("node", "Node")), List(JBlock(List(
           JFieldWrite(JVariableAccess("this"), "node", JVariableAccess("node")),
           JFieldWrite(JVariableAccess("this"), "yielded", JLiteral("false"))))))),
         Some("TreeIterator")),
      JClassDefinition("TreeIterator", "", List("Iterator<Integer>"), List(
        JFieldDefinition("oldStamp", "int"),
        JFieldDefinition("context", "Stack<NodeState>"),
-       JMethodDefinition("init_", "TreeIterator",
+       JMethodDefinition("new", "TreeIterator",
          List(JArgument("tree", "A1B1Tree"), JArgument("oldStamp", "int")), List(JBlock(List(
            JBinding("tmp_1", "Node", Some(JFieldAccess(JVariableAccess("tree"), "root"))),
            JCall("this", "pushLeftPath", List(JVariableAccess("tmp_1"))),
@@ -384,7 +384,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
         JFieldDefinition("item", "int"),
         JFieldDefinition("left", "Node"),
         JFieldDefinition("rght", "Node"),
-        JMethodDefinition("init_", "Node", List(
+        JMethodDefinition("new", "Node", List(
           JArgument("left", "Node"), JArgument("item", "int"), JArgument("rght", "Node")), List(JBlock(List(
             JFieldWrite(JVariableAccess("this"), "left", JVariableAccess("left")),
             JFieldWrite(JVariableAccess("this"), "item", JVariableAccess("item")),
@@ -418,7 +418,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
         JFieldDefinition("isSnapshot", "boolean"),
         JFieldDefinition("hasSnapshot", "boolean"),
         JFieldDefinition("stamp", "int"),
-        JMethodDefinition("init_", "A1B1Tree", List(JArgument("tree", "A1B1Tree")), List(JBlock(List(
+        JMethodDefinition("new", "A1B1Tree", List(JArgument("tree", "A1B1Tree")), List(JBlock(List(
           JBinding("tmp_1", "Node", Some(JFieldAccess(JVariableAccess("tree"), "root"))),
           JFieldWrite(JVariableAccess("this"), "root", JVariableAccess("tmp_1")),
           JFieldWrite(JVariableAccess("this"), "isSnapshot", JLiteral("true")))))),

@@ -230,12 +230,12 @@ object CoqJavaDocumentProvider extends FileDocumentProvider {
     val pend = old.indexOf(prog.substring(proend, prog.length))
     Console.println("old start " + pstart + " old end " + pend) //+ ":: " + old.substring(pstart, pend + (prog.length - proend)))
     coq.replace(pstart, pend + (prog.length - proend) - pstart, prog)
-    val sstart = old.indexOf(spec.substring(0, spec.indexOf(" :=")))
+   /* val sstart = old.indexOf(spec.substring(0, spec.indexOf(" :=")))
     val specend = spec.lastIndexOf("}}.")
     val send = old.indexOf(spec.substring(specend, spec.length))
     Console.println("old spec start " + sstart + " old spec end " + send) // + ":: " + old.substring(sstart, send + (spec.length - specend)))
     val off = if (pend + (prog.length - proend) - pstart == prog.length) 0 else 1
-    coq.replace(sstart + off, send + (spec.length - specend) - sstart, spec)
+    coq.replace(sstart + off, send + (spec.length - specend) - sstart, spec) */
   }
 
   // The model of Coq code, used for outline view etc.
