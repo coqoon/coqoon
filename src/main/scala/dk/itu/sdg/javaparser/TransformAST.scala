@@ -6,15 +6,15 @@ import dk.itu.sdg.util.{ KopitiamLogger }
 
 object ClassTable extends KopitiamLogger {
   import scala.collection.mutable.HashMap
-  val classtable = new HashMap[String,(Boolean, Option[String], HashMap[String,String], HashMap[String,(String,HashMap[String,String],HashMap[String,String])])]()
+  val classtable = new HashMap[String, (Boolean, Option[String], HashMap[String, String], HashMap[String, (String, HashMap[String, String], HashMap[String, String])])]()
   //Class -> (Interface?, Outer, FieldName -> Type, MethodName -> (Returntype, LocalVar -> Type, argument -> type)
-  val modtable = new HashMap[(String,String),List[String]]()
+  val modtable = new HashMap[(String, String), List[String]]()
   //(Class, id) -> mods
-  def setModifiers (classid : String, id : String, mod : List[String]) = {
+  def setModifiers(classid : String, id : String, mod : List[String]) = {
     modtable += (classid, id) -> mod
   }
 
-  def getModifiers (classid : String, id : String) : List[String] = {
+  def getModifiers(classid : String, id : String) : List[String] = {
     if (modtable.contains((classid, id)))
       modtable((classid, id))
     else
@@ -22,14 +22,14 @@ object ClassTable extends KopitiamLogger {
   }
 
   import scala.collection.mutable.ListBuffer
-  val spectable = new HashMap[String, (HashMap[String,(String,String)], HashMap[String,ListBuffer[String]])]()
+  val spectable = new HashMap[String, (HashMap[String, (String, String)], HashMap[String, ListBuffer[String]])]()
   //class -> (method -> (pre, post), module -> coq)
   val gspecs = new HashMap[String, ListBuffer[String]]()
   //TOP -> topcoq; PRELUDE -> preludecoq
 
-  val interfaceToFunctions = new HashMap[String,(List[String],List[String])]()
+  val interfaceToFunctions = new HashMap[String, (List[String], List[String])]()
 
-  def empty () : Unit = {
+  def empty() : Unit = {
     classtable.clear
     spectable.clear
     modtable.clear
@@ -39,58 +39,58 @@ object ClassTable extends KopitiamLogger {
     gspecs += "PRELUDE" -> new ListBuffer[String]()
   }
 
-  def registerInterfaceFunctions (id : String, ms : List[String], funs : List[String]) = {
-    assert(! interfaceToFunctions.contains(id))
+  def registerInterfaceFunctions(id : String, ms : List[String], funs : List[String]) = {
+    assert(!interfaceToFunctions.contains(id))
     interfaceToFunctions += id -> (ms, funs)
   }
 
-  def interfaceFunctions (id : String) : (List[String], List[String]) = {
+  def interfaceFunctions(id : String) : (List[String], List[String]) = {
     assert(interfaceToFunctions.contains(id))
     interfaceToFunctions(id)
   }
 
-  def registerClass (id : String, outer : Option[String], interface : Boolean) = {
-    assert(! classtable.contains(id))
-    classtable += id -> (interface, outer, new HashMap[String,String](), new HashMap[String,(String,HashMap[String,String],HashMap[String,String])]())
-    spectable += id -> (new HashMap[String,(String,String)](), new HashMap[String,ListBuffer[String]]())
+  def registerClass(id : String, outer : Option[String], interface : Boolean) = {
+    assert(!classtable.contains(id))
+    classtable += id -> (interface, outer, new HashMap[String, String](), new HashMap[String, (String, HashMap[String, String], HashMap[String, String])]())
+    spectable += id -> (new HashMap[String, (String, String)](), new HashMap[String, ListBuffer[String]]())
   }
 
-  def checkkey (id : String, key : String) = {
-    assert(! classtable(id)._3.contains(key))
-    assert(! classtable(id)._4.contains(key))
+  def checkkey(id : String, key : String) = {
+    assert(!classtable(id)._3.contains(key))
+    assert(!classtable(id)._4.contains(key))
   }
 
-  def addField (id : String, key : String, value : String) = {
+  def addField(id : String, key : String, value : String) = {
     checkkey(id, key)
     classtable(id)._3 += key -> value
   }
 
-  def addLocals (id : String, method : String, lvars : HashMap[String,String]) {
+  def addLocals(id : String, method : String, lvars : HashMap[String, String]) {
     classtable(id)._4(method)._2 ++= lvars
   }
 
-  def addLocal (id : String, method : String, lvar : String, typ : String) {
+  def addLocal(id : String, method : String, lvar : String, typ : String) {
     classtable(id)._4(method)._2 += lvar -> typ
   }
 
-  def addMethod (id : String, key : String, value : String, args : HashMap[String,String]) = {
+  def addMethod(id : String, key : String, value : String, args : HashMap[String, String]) = {
     checkkey(id, key)
-    classtable(id)._4 += key -> (value, new HashMap[String,String](), args)
+    classtable(id)._4 += key -> (value, new HashMap[String, String](), args)
     spectable(id)._1 += key -> (null, null)
   }
 
-  def getOuter (id : String) : Option[String] = {
+  def getOuter(id : String) : Option[String] = {
     if (classtable.contains(id))
       classtable(id)._2
     else
       None
   }
 
-  def getFields (id : String) : HashMap[String,String] = {
+  def getFields(id : String) : HashMap[String, String] = {
     classtable(id)._3
   }
 
-  def getType (classname : String, key : String) : String = {
+  def getType(classname : String, key : String) : String = {
     if (classtable.contains(classname)) {
       val tup = classtable(classname)
       if (tup._3.contains(key))
@@ -103,10 +103,10 @@ object ClassTable extends KopitiamLogger {
     }
   }
 
-  import java.lang.{Class,ClassNotFoundException}
+  import java.lang.{ Class, ClassNotFoundException }
   import java.lang.reflect._
 
-  def getJClass (name : String) : Class[_] = {
+  def getJClass(name : String) : Class[_] = {
     name match {
       case "byte" => java.lang.Byte.TYPE
       case "short" => java.lang.Short.TYPE
@@ -134,7 +134,7 @@ object ClassTable extends KopitiamLogger {
     }
   }
 
-  def getMethodType (classname : String, methodname : String, variable : String, mname : String, args : List[String]) : String = {
+  def getMethodType(classname : String, methodname : String, variable : String, mname : String, args : List[String]) : String = {
     //class and methodname are the scope, whereas variable is the local var on which mname is called
     val mclass = getLocalVar(classname, methodname, variable)
     if (classtable.contains(mclass))
@@ -157,7 +157,7 @@ object ClassTable extends KopitiamLogger {
     }
   }
 
-  def isMethodStatic (classname : String, methodname : String, args : List[String]) : Boolean = {
+  def isMethodStatic(classname : String, methodname : String, args : List[String]) : Boolean = {
     if (classtable.contains(classname)) {
       log.info("checking static of " + getModifiers(classname, methodname))
       getModifiers(classname, methodname).contains("static")
@@ -165,7 +165,7 @@ object ClassTable extends KopitiamLogger {
       Modifier.isStatic(getJClass(classname).getMethod(methodname, args.map(getJClass) : _*).getModifiers)
   }
 
-  def getFieldType (classname : String, fieldname : String) : String = {
+  def getFieldType(classname : String, fieldname : String) : String = {
     log.info("getfieldtype of " + fieldname + " in class " + classname)
     if (classtable.contains(classname))
       classtable(classname)._3(fieldname)
@@ -176,444 +176,110 @@ object ClassTable extends KopitiamLogger {
   def getLocalVar(id : String, method : String, name : String) : String = {
     if (name == "this")
       id
-    else
-      if (classtable(id)._4(method)._2.contains(name)) //local variable
-        classtable(id)._4(method)._2(name)
-      else if (classtable(id)._4(method)._3.contains(name)) //argument
-        classtable(id)._4(method)._3(name)
-      else if (classtable(id)._3.contains(name)) //field
-        classtable(id)._3(name)
-      //XXX: (static?) field of outer class
-      else {
-        log.warning("assuming static class " + name + ", since I couldn't find id " + id + " method " + method + " name " + name + " in CT")
-        name
-      }
+    else if (classtable(id)._4(method)._2.contains(name)) //local variable
+      classtable(id)._4(method)._2(name)
+    else if (classtable(id)._4(method)._3.contains(name)) //argument
+      classtable(id)._4(method)._3(name)
+    else if (classtable(id)._3.contains(name)) //field
+      classtable(id)._3(name)
+    //XXX: (static?) field of outer class
+    else {
+      log.warning("assuming static class " + name + ", since I couldn't find id " + id + " method " + method + " name " + name + " in CT")
+      name
+    }
   }
 
-  def setPrecondition (id : String, method : String, precon : String) : Unit = {
+  def setPrecondition(id : String, method : String, precon : String) : Unit = {
     assert(spectable(id)._1(method)._1 == null)
     spectable(id)._1(method) = (precon, spectable(id)._1(method)._2)
   }
 
-  def setPostcondition (id : String, method : String, postcon : String) : Unit = {
+  def setPostcondition(id : String, method : String, postcon : String) : Unit = {
     assert(spectable(id)._1(method)._2 == null)
     spectable(id)._1(method) = (spectable(id)._1(method)._1, postcon)
   }
 
-  def addCoq (id : String, module : String, data : String) : Unit = {
+  def addCoq(id : String, module : String, data : String) : Unit = {
     if (module == "PRELUDE" || module == "TOP")
       gspecs(module).append(data)
     else {
-      if (! spectable(id)._2.contains(module))
+      if (!spectable(id)._2.contains(module))
         spectable(id)._2(module) = new ListBuffer[String]()
       val lb = spectable(id)._2(module)
       lb.append(data)
     }
   }
 
-  def getSpecs (id : String) : HashMap[String,(String,String)] = {
-    val res = new HashMap[String,(String,String)]()
+  def getSpecs(id : String) : HashMap[String, (String, String)] = {
+    val res = new HashMap[String, (String, String)]()
     val ctc = spectable(id)._1
     ctc.keys.foreach { x => res += x -> (ctc(x)._1, ctc(x)._2) }
     res
   }
 
-  def getCoq (id : String, module : String) : List[String] = {
+  def getCoq(id : String, module : String) : List[String] = {
     if (spectable(id)._2.contains(module))
       spectable(id)._2(module).toList.reverse
     else
       List()
   }
 
-  def getCoq (module : String) : List[String] = {
+  def getCoq(module : String) : List[String] = {
     gspecs(module).toList.reverse
   }
 
-  def getArguments (id : String, method : String) : HashMap[String,String] = {
+  def getArguments(id : String, method : String) : HashMap[String, String] = {
     classtable(id)._4(method)._3
   }
 
-  def isInterface (name : String) : Boolean = {
+  def isInterface(name : String) : Boolean = {
     classtable(name)._1
   }
 
-  def getClasses () : List[String] = {
+  def getClasses() : List[String] = {
     classtable.keys.filterNot(isInterface).toList.filterNot(_ == "Coq")
   }
 
-  def getInterfaces () : List[String] = {
+  def getInterfaces() : List[String] = {
     classtable.keys.filter(isInterface).toList
   }
 }
 
 import scala.util.parsing.combinator.Parsers
+
+/*
+ * Object that can transform an AST expressed in the first intermediate language
+ * (JavaTerms) into an AST expressed in the second intermediate language (JavaAST).
+ */
 object FinishAST extends JavaTerms
-                    with Parsers
-                    with JavaToSimpleJava
-                    with CoqOutputter
-                    with KopitiamLogger{
+                  with Parsers
+                  with JavaToSimpleJava
+                  with CoqOutputter
+                  with KopitiamLogger {
+
   import scala.collection.mutable.HashMap
 
-  private var classid : String = ""
+  private var classid  : String = ""
   private var methodid : String = ""
-  private var lvars : HashMap[String,String] = new HashMap[String,String]()
-  private var argmap : HashMap[String,String] = new HashMap[String,String]()
+  private var lvars    : HashMap[String, String] = new HashMap[String, String]()
+  private var argmap   : HashMap[String, String] = new HashMap[String, String]()
 
-  def unpackR (r : Any) : String = {
-    r match {
-      case x~y => unpackR(x) + unpackR(y)
-      case QualId(xs) => "\"" + xs.map(unpackR).reduceLeft(_ + "." + _) + "\"" //XXX: ???
-      case Some(x) => unpackR(x)
-      case Modifier(x) => unpackR(x)
-      case Expr(x) => unpackR(x)
-      case PrimaryExpr(x) => unpackR(x)
-      case PostFixExpression(x) => unpackR(x)
-      case Name(x) => x
-      case Num(x) => x
-      case Lit(x) => unpackR(x)
-      case Str(x) => x
-      case x :: rt => unpackR(x) + unpackR(rt)
-      case x : String => x
-      case Primitive(x) => unpackR(x)
-      case Key(x) => unpackR(x)
-      case Nil => ""
-      case None => ""
-      case x => log.warning("wanted a string, but got " + x + " class: " + x.asInstanceOf[AnyRef].getClass.getName); ""
-    }
-  }
+  /*
+   *  ==============================
+   *  The public api
+   *  ==============================
+   */
 
-  def transformOLF (xs : Option[Any]) : List[String] = {
-    xs match {
-      case Some(xs : List[List[Any]]) => xs.flatten.map(unpackR)
-      case None => List[String]()
-    }
-  }
+  def doitHelper(a : Any) : List[JStatement] = {
 
-  def transformOL [T](xs : Option[Any], x : List[T]) : List[T] = {
-    xs match {
-      case None => List[T]()
-      case Some(x : List[Any]) =>
-        transformList(x).map(x => if (x.isInstanceOf[T]) Some(x.asInstanceOf[T]) else None).flatten
-      case Some(y) => log.info("transformOL dunno " + y); List[T]()
-    }
-  }
-
-  def transformList (xs : List[Any]) : List[JStatement] = {
-    xs.map(transform).flatten
-  }
-
-  def transformBlock (cs : Option[JStatement]) : JBlock = {
-    cs match {
-      case Some(x : JBlock) => x
-      case Some(xs : JBodyStatement) => JBlock(List(xs))
-      case x => log.info("transformBlock, dunno about " + x); null
-    }
-  }
-
-  def transformExpression (x : Any) : JExpression = {
-    val y = transformStatement(x)
-    y match {
-      case Some(e : JExpression) => e
-      case _ =>
-        log.warning("transformExpression: wanted an JExpression, got " + y);
-        null
-    }
-  }
-
-  def transformExpressions (x : Any) : List[JExpression] = {
-    x match {
-      case a~b => transformExpressions(a) ++ transformExpressions(b)
-      case hd :: tl => transformExpressions(hd) ++ transformExpressions(tl)
-      case a => List(transformExpression(a))
-    }
-  }
-
-  def transformStatement (x : Any) : Option[JStatement] = {
-    //log.info("transformstatement " + x)
-    x match {
-      case Name(x) => Some(JVariableAccess(x))
-      case (x : PrimaryExpr)~(y : List[Any]) =>
-        log.info("transformStatement with primary " + x + " and arguments " + y)
-        val rx = transformExpression(x)
-        log.info("  transformed primary is " + rx)
-        val rest = unpackR(y).drop(1)
-        log.info("  rest (unpacked arguments, dropped first ('.')) " + rest)
-        rx match {
-          case JVariableAccess(z) =>
-            if (z == "this")
-              if (ClassTable.getFields(classid).contains(rest))
-                Some(JFieldAccess(rx, rest))
-              else { //fields might be declared after use...
-                //we've most likely a call!?
-                log.warning("dunno what you mean with this (not a field): " + rx + " rest " + rest)
-                //y consists of .~(Name(addCount)~List(Expr(Prim(Post(Prim(Call(Qual(List(Name(c), Name(
-                //gather arguments from y
-                val args = transformExpressions(y).filterNot(_ == null).drop(1) //drop methodname
-                log.info(" Call, args are " + args)
-                Some(JCall(z, rest, args))
-              }
-            else {
-              log.info("access to non-this field (unchecked): " + rx + " fieldname " + rest)
-              Some(JFieldAccess(rx, rest))
-            }
-          case y =>
-            //now we have to lookup type of rx, and look whether rest is a field inside there
-            log.warning("unsafe field access (maybe non-existant?): " + rx + " rest " + rest)
-            Some(JFieldAccess(rx, rest))
-        }
-      case Expr(x) => transformStatement(x)
-      case PostFixExpression(x) => transformStatement(x)
-      case AnyStatement(x) => transformStatement(x)
-      case PrimaryExpr(x) => transformStatement(x)
-      case ParExpr(x) => transformStatement(x)
-      case Some(x) => transformStatement(x)
-      case "this" => Some(JVariableAccess("this"))
-      case PostExpr(k, x) => Some(JPostfixExpression(unpackR(k), transformExpression(x)))
-      case UnaryExpr(op, v) => Some(JUnaryExpression(unpackR(op), transformExpression(v)))
-      case NewExpression(ntype, args) => Some(JNewExpression(unpackR(ntype), args.map(transformExpression)))
-      case Conditional(test, consequence, alternative) =>
-        val cs = transformBlock(transformStatement(consequence))
-        val alt = alternative match {
-          case None => JBlock(List[JBodyStatement]())
-          case Some(x) => transformBlock(transformStatement(x))
-        }
-        Some(JConditional(transformExpression(test), cs, alt))
-      case While(test, body) =>
-        Some(JWhile(transformExpression(test), transformBlock(transformStatement(body))))
-      case BinaryExpr(op, le, ri) =>
-        val oper = unpackR(op)
-        if (oper == "=") { //assign -- but there are other assignments (+=, -=, ++,...)
-          val lef = transformStatement(le) //will be either FieldAccess or VariableAccess
-          lef match {
-            case Some(JFieldAccess(cnx, nam)) => Some(JFieldWrite(cnx, nam, transformExpression(ri)))
-            case Some(JVariableAccess(nam)) => Some(JAssignment(nam, transformExpression(ri)))
-            case x => log.warning("dunno about left hand side " + x); None
-          }
-        } else
-          Some(JBinaryExpression(oper, transformExpression(le), transformExpression(ri)))
-      case Call(QualId(fun), args) =>
-        //log.info("fun of call is " + fun)
-        val funs = fun.map(unpackR)
-        val (varia, rst) =
-          if (funs.length == 1)
-            ("this", funs)
-          else
-            (funs(0), funs.drop(1))
-        if (varia == "Coq") {
-          assert(rst.length == 1)
-          if (rst(0) == "requires" || rst(0) == "ensures") {
-            assert(args.length == 1)
-            val arg = exString(transformExpression(args(0)))
-            if (rst(0) == "requires")
-              ClassTable.setPrecondition(classid, methodid, arg)
-            else if (rst(0) == "ensures")
-              ClassTable.setPostcondition(classid, methodid, arg)
-          } else {
-            assert(rst(0) == "def")
-            assert(args.length == 2)
-            val mod : JFieldAccess = transformExpression(args(0)).asInstanceOf[JFieldAccess] //Coq.M.FOO -> JFieldAccess("Coq", "M.FOO")
-            val module = mod.field //get rid of "Coq.M."
-            val arg = exString(transformExpression(args(1)))
-            ClassTable.addCoq(classid, module, arg)
-          }
-          None
-        } else {
-          if (rst.length > 1)
-            log.info("should have recursed for methodname " + rst + "(in call:" + varia + ", arguments:" + args.map(transformExpression) + ")")
-          Some(JCall(varia, rst.reduceLeft(_ + "." + _), args.map(transformExpression))) //XXX: recurse
-        }
-      case Return(x) => Some(JReturn(transformExpression(x)))
-      case QualId(x) =>
-        //log.info("inspecting qualid: " + x)
-        val vs = x.map(unpackR)
-        if (vs.length == 1) {
-          val v = vs(0)
-          if (lvars.contains(v) | argmap.contains(v))
-            Some(JVariableAccess(v))
-          else if (ClassTable.getFields(classid).contains(v))
-            Some(JFieldAccess(JVariableAccess("this"), v))
-          else {
-            //might be defined later in the source as field
-            //or might be a field of an outer class
-            log.warning("got a qualid which isn't in lvars or fields " + vs + " (fields: " + ClassTable.getFields(classid) + ")(lvar: " + lvars + ", args: " + argmap + ")")
-            Some(JVariableAccess(vs.reduceLeft(_ + "." + _))) //XXX: recurse
-          }
-        } else if (vs.length == 2) {
-          //XXX: check whether typeof vs(0) has a field vs(1)!
-          Some(JFieldAccess(JVariableAccess(vs(0)), vs(1)))
-        } else {
-          log.info("all I got was this qualid, I'll try to make a fieldaccess out of it " + vs + " field: " + vs.takeRight(1)(0))
-          //XXX: recurse
-          val pre = transformExpression(QualId(x.dropRight(1)))
-          log.info("  managed to find out pre: " + pre)
-          Some(JFieldAccess(pre, vs.takeRight(1)(0)))
-        }
-      case Lit(x) => Some(JLiteral(unpackR(x)))
-      case Block(xs) =>
-        val res = walk(xs)
-        if (res.forall(_.isInstanceOf[JBodyStatement]))
-          Some(JBlock(res.map(_.asInstanceOf[JBodyStatement])))
-        else {
-          log.warning("transform: not valid block elements: " + res)
-          None
-        }
-      case y => log.warning("transformStatement dunno " + x); None
-    }
-  }
-
-  def exString (x : JExpression) : String =
-    x match {
-      case JLiteral(s) => s
-      case JBinaryExpression("+", l, r) => exString(l) + "\n" + exString(r)
-      case y => log.warning("dunno how to extract from " + y); ""
-    }
-
-  def transform (x : Any) : Option[JStatement] = {
-    //log.info("transform " + x)
-    x match {
-      case BodyDeclaration(mods, x) =>
-        //log.info("bodydecl " + mods)
-        val ted = transform(x)
-        ted match {
-          case Some(y) =>
-            val mod = mods.map(unpackR)
-            y match {
-              case JFieldDefinition(id, jtype) => ClassTable.setModifiers(classid, id, mod)
-              case JMethodDefinition(id, clasid, args, body) => ClassTable.setModifiers(classid, id, mod)
-              case x => log.warning("unexpected " + x + " during transformation of a bodydecl")
-            }
-          case None =>
-        }
-        ted
-      case Modifier(_) => None
-      case None => None
-      case Some(x) => transform(x)
-      case LocalVar(x) => x match {
-        case (mod~jtype)~(decls : List[Any]) =>
-          val typ = unpackR(jtype)
-          val vars = decls.map(_ match {
-            case (name : Name)~b~Some(y) =>
-              //log.info("WORKING on lv name " + name + " init is " + y)
-              val init = transformExpression(y)
-              val realn = unpackR(name)
-              lvars += realn -> typ
-              //log.info("lv " + realn + " init is " + init)
-              Some(JBinding(realn, typ, Some(init)))
-            case (name : Name)~b~None =>
-              val realn = unpackR(name)
-              lvars += realn -> typ
-              Some(JBinding(realn, typ, None))
-            case x => log.warning("dunno about decl " + x); None
-          })
-          assert(vars.length == 1)
-          vars(0)
-        case y => log.warning("dunno about lvar " + y); None
-      }
-      case FormalVariable(mods, jtype, name) => Some(JArgument(unpackR(name), unpackR(jtype)))
-      case FieldDeclaration(id, jtype, rest) =>
-        log.info("field pos info " + x.asInstanceOf[FieldDeclaration].pos)
-        val name = unpackR(id)
-        val typ = unpackR(jtype)
-        ClassTable.addField(classid, name, typ)
-        Some(JFieldDefinition(name, typ))
-      case ConstructorDeclaration(id, parameters, throws, body) =>
-        log.info("constructor pos info: " + x.asInstanceOf[ConstructorDeclaration].pos)
-        lvars = new HashMap[String,String]()
-        argmap = new HashMap[String,String]()
-        methodid = "init_"
-        val args = transformOL(parameters, List[JArgument]())
-        args.foreach { x => argmap += x.id -> x.jtype }
-        ClassTable.addMethod(classid, methodid, unpackR(id), argmap)
-        //log.info("walking over body " + body)
-        val realbody = walk(body)
-        //log.info("walked over body " + realbody)
-        val realrealbody : List[JBodyStatement] =
-          if (realbody.forall(_.isInstanceOf[JBodyStatement]))
-            realbody.map(_.asInstanceOf[JBodyStatement])
-          else {
-            log.warning("cannot convert constructor body " + realbody)
-            List[JBodyStatement]()
-          }
-        //log.info("MethodDeclaration done, lvars " + lvars)
-        ClassTable.addLocals(classid, methodid, lvars)
-        Some(JMethodDefinition(methodid, classid, args, realrealbody))
-      case MethodDeclaration(id, jtype, parameters, throws, body) =>
-        log.info("method pos info: " + x.asInstanceOf[MethodDeclaration].pos)
-        lvars = new HashMap[String,String]()
-        argmap = new HashMap[String,String]()
-        val name = unpackR(id)
-        methodid = name
-        val typ = unpackR(jtype)
-        val args = transformOL(parameters, List[JArgument]())
-        args.foreach { x => argmap += x.id -> x.jtype }
-        ClassTable.addMethod(classid, name, typ, argmap)
-        //log.info("walking over body " + body)
-        val realbody = walk(body)
-        //log.info("walked over body " + realbody)
-        val realrealbody : List[JBodyStatement] =
-          if (realbody.forall(_.isInstanceOf[JBodyStatement]))
-            realbody.map(_.asInstanceOf[JBodyStatement])
-          else {
-            log.warning("cannot convert method body " + realbody)
-            List[JBodyStatement]()
-          }
-        //log.info("MethodDeclaration done, lvars " + lvars)
-        ClassTable.addLocals(classid, name, lvars)
-        Some(JMethodDefinition(name, typ, args, realrealbody))
-      case JInterface(id, jtype, interfaces, body) =>
-        val is = transformOLF(interfaces)
-        val myclass = unpackR(id)
-        val outer = if (classid == "") None else Some(classid)
-        classid = myclass
-        ClassTable.registerClass(classid, outer, true)
-        val mybody = walk(body)
-        classid = ClassTable.getOuter(myclass) match { case None => ""; case Some(x) => x }
-        Some(JInterfaceDefinition(myclass, is, mybody))
-      case JClass(id, jtype, superclass, interfaces, bodyp) =>
-        log.info("transforming a JClass, ranging (pos) " + x.asInstanceOf[JClass].pos)
-        val is = transformOLF(interfaces)
-        val cs = unpackR(superclass)
-        val myclassid = unpackR(id)
-        val outer = if (classid == "") None else Some(classid)
-        classid = myclassid
-        ClassTable.registerClass(classid, outer, false)
-        val mybody = walk(bodyp)
-        classid = ClassTable.getOuter(myclassid) match { case None => ""; case Some(x) => x }
-        Some(JClassDefinition(myclassid, cs, is, mybody, outer))
-      case Expr(y) => transformStatement(y)
-      case (x : Conditional) => transformStatement(x)
-      case ";" => None
-      case x =>
-        val r = transformStatement(x)
-        r match {
-          case None =>
-            log.warning("transform: dunno about [" + x.asInstanceOf[AnyRef].getClass.toString + "] " + x)
-            None
-          case Some(x) => r
-        }
-    }
-  }
-
-  def walk (statements : Any) : List[JStatement] = {
-    statements match {
-      case Nil => List[JStatement]()
-      case x ~ y => walk(x) ++ walk(y)
-      case x :: xs => walk(x) ++ walk(xs)
-      case x =>
-        val res = transform(x)
-        //log.info("walk return value (for " + x + ") is " + res)
-        res match { case None => List[JStatement](); case Some(x) => List(x) }
-    }
-  }
-
-  def doitHelper (a : Any) : List[JStatement] = {
-    //log.info("walking over " + a)
-    classid = ""
+    classid  = ""
     methodid = ""
-    lvars = new HashMap[String,String]()
-    argmap = new HashMap[String,String]()
-    val x = walk(a)
-    //log.info("doit, walked " + x)
+    lvars    = new HashMap[String, String]()
+    argmap   = new HashMap[String, String]()
+
+    // At this point we only expect classes or interfaces to be declared
+    val x = transform(a)
+
     var innerclasses : List[JClassDefinition] = List[JClassDefinition]()
     val convert = (x : List[JStatement]) =>
       x.map(y => y match {
@@ -635,22 +301,482 @@ object FinishAST extends JavaTerms
       innerclasses = List[JClassDefinition]()
       workset = ci.map(i => convert(List(i)).head.asInstanceOf[JClassDefinition]) ++ workset
     }
-    //log.info("outputting Class in Java\n" + JavaOutputter.out(main(1)))
-    //log.info("outputting " + main + " inners " + workset)
     workset ++ main
   }
 
-  def doit (a : Any, name : String) : String = {
+  def doit(a : Any, name : String) : String = {
     val w = doitHelper(a)
     coqoutput(w, true, name).reduceLeft(_ + "\n" + _)
     //workset ++ main
   }
 
-  def doitNoSpec (a : Any, name : String) : (String, String) = {
+  def doitNoSpec(a : Any, name : String) : (String, String) = {
     val w = doitHelper(a)
     val re = coqoutput(w, false, name)
-    val prog = re.takeWhile(! _.contains("_spec.\nImport ")).reduceLeft(_ + "\n" + _)
-    val spec = re.dropWhile(! _.contains("_spec.\nImport ")).drop(1).reduceLeft(_ + "\n" + _)
+    val prog = re.takeWhile(!_.contains("_spec.\nImport ")).reduceLeft(_ + "\n" + _)
+    val spec = re.dropWhile(!_.contains("_spec.\nImport ")).drop(1).reduceLeft(_ + "\n" + _)
     (prog, spec)
+  }
+
+ /*
+  *  ========================================================
+  *  The methods that take care of the actual transformations
+  *  ========================================================
+  */
+
+  /*
+   * Method for unpacking some of the very nested structure where we're only
+   * interested in the contents of the "wrappers"
+   */
+  def unpackR(r : Any) : String = {
+    r match {
+      case x ~ y                => unpackR(x) + unpackR(y)
+      case QualId(xs)           => "\"" + xs.map(unpackR).reduceLeft(_ + "." + _) + "\"" //XXX: ???
+      case Some(x)              => unpackR(x)
+      case Modifier(x)          => unpackR(x)
+      case Expr(x)              => unpackR(x)
+      case PrimaryExpr(x)       => unpackR(x)
+      case PostFixExpression(x) => unpackR(x)
+      case Name(x)              => x
+      case Num(x)               => x
+      case Lit(x)               => unpackR(x)
+      case Str(x)               => x
+      case x :: rt              => unpackR(x) + unpackR(rt)
+      case x : String           => x
+      case Primitive(x)         => unpackR(x)
+      case Key(x)               => unpackR(x)
+      case Nil                  => ""
+      case None                 => ""
+      case x                    =>
+        log.warning("wanted a string, but got " + x + " class: " + x.asInstanceOf[AnyRef].getClass.getName)
+        ""
+    }
+  }
+
+  /*
+   * Main entry point for transforming the AST.
+   */
+  def transform( x : Any) : List[JStatement] = {
+    x match {
+      case Nil     => Nil
+      case x ~ y   => transform(x) ++ transform(y)
+      case x :: xs => transform(x) ++ transform(xs)
+      case x       => {
+        x match {
+          case i : Import => Nil // we don't care about imports for now.
+          case other      => List(transformClassOrInterface(other))
+        }
+      }
+    }
+  }
+
+  /*
+   * Transform a JClass or JInterface to a JClassDefinition or JInterfaceDefinition
+   * respectivly. Anything else will throw an exception
+   */
+  def transformClassOrInterface(x : Any) : JStatement = {
+    x match {
+      case JClass(id, jtype, superclass, interfaces, bodyp) => {
+        log.info("transforming a JClass, ranging (pos) " + x.asInstanceOf[JClass].pos)
+        val is        = transformOLF(interfaces)
+        val cs        = unpackR(superclass)
+        val myclassid = unpackR(id)
+        val outer     = if (classid == "") None else Some(classid)
+        classid       = myclassid
+        ClassTable.registerClass(classid, outer, false)
+        val mybody    = transformClassOrInterfaceBody(bodyp)
+        classid       = ClassTable.getOuter(myclassid) match { case None => ""; case Some(x) => x }
+        JClassDefinition(myclassid, cs, is, mybody, outer)
+      }
+      case JInterface(id, jtype, interfaces, body) => {
+        val is      = transformOLF(interfaces)
+        val myclass = unpackR(id)
+        val outer   = if (classid == "") None else Some(classid)
+        classid     = myclass
+        ClassTable.registerClass(classid, outer, true)
+        val mybody  = transformClassOrInterfaceBody(body)
+        classid     = ClassTable.getOuter(myclass) match { case None => ""; case Some(x) => x }
+        JInterfaceDefinition(myclass, is, mybody)
+      }
+      case x => throw new Exception("Expected JInterface or JClass but got: " + x)
+    }
+  }
+
+  /*
+   * Transforms the body of a class or interface into a List of JStatements. This assumes
+   * that a class or interface body will only contain:
+   *
+   * - methods
+   * - constructors
+   * - fields
+   * - classes or interfaces
+   *
+   * If anything else is passed as an argument it will throw an exception
+   *
+   * NOTE: This method can't return InnterStatement because class & interfaces
+   *       doesn't inherit from InnerStatement.
+   */
+  def transformClassOrInterfaceBody(body: List[Any]) : List[JStatement] = {
+
+    // little helper function to take care of modifiers (Setting global state)
+    def setModifier(modifiers: List[Modifier], declarations: List[JStatement]): Unit = {
+      val mod = modifiers.map(unpackR)
+      declarations foreach {
+        case JFieldDefinition(id, jtype)               => ClassTable.setModifiers(classid, id, mod)
+        case JMethodDefinition(id, clasid, args, body) => ClassTable.setModifiers(classid, id, mod)
+        case _                                         => log.warning("Setting modifier of unkown") //TODO
+      }
+    }
+
+    body flatMap { _ match {
+      case BodyDeclaration(mods, x)              =>
+        val transformed = transformClassOrInterfaceBody(List(x))
+        setModifier(mods,transformed);
+        transformed
+      case jclass       : JClass                 => transformClassOrInterface(jclass)     :: Nil
+      case jinterface   : JInterface             => transformClassOrInterface(jinterface) :: Nil
+      case jmethod      : MethodDeclaration      => transformMethodDeclaration(jmethod)   :: Nil
+      case jconstructor : ConstructorDeclaration => transformConstructor(jconstructor)    :: Nil
+      case jfield       : FieldDeclaration       => transformFieldDeclaration(jfield)     :: Nil
+      // things I would love the remove in some other way at some point
+      case y ~ (x: MethodDeclaration)            => transformMethodDeclaration(x)         :: Nil
+      case ";"                                   => Nil
+      case x                                     => throw new Exception("Can't have the following in a class/interface body"+x)
+    }}
+  }
+
+  /*
+   * Transforms a MethodDeclaration into a JMethodDefinition
+   */
+  def transformMethodDeclaration(method: MethodDeclaration): JMethodDefinition = {
+    val (mid, cid, args, body) = extractMethodOrConstructorInfo(method)
+    JMethodDefinition(mid, unpackR(method.jtype), args, body)
+  }
+
+  /*
+   * Transforms a ConstructorDeclaration into a JMethodDefinition
+   */
+  def transformConstructor(constructor: ConstructorDeclaration): JMethodDefinition = {
+    val (md, cid, args, body) = extractMethodOrConstructorInfo(constructor)
+    JMethodDefinition(md, cid, args, body)
+  }
+
+  /*
+   * Given a ConstructorDeclaration or MethodDeclaration it will extract the information needed
+   * to be transformd into a JMethodDefinition. This will also add the methods and locals to the
+   * global ClassTable.
+   */
+  def extractMethodOrConstructorInfo( term : Term ) : (String, String, List[JArgument], List[JBodyStatement]) = {
+
+    val (id, mid, parameters, throws, body) = term match {
+      case ConstructorDeclaration(id, parameters, throws, bdy)   => (unpackR(id), "init_", parameters, throws, bdy)
+      case MethodDeclaration(id, jtype, parameters, throws, bdy) => (unpackR(jtype), unpackR(id), parameters, throws, bdy)
+    }
+
+    methodid = mid
+    lvars    = new HashMap[String, String]()
+    argmap   = new HashMap[String, String]()
+
+    val args = parameters.getOrElse(Nil).asInstanceOf[List[Any]].flatMap {
+      case p : FormalVariable => Some(transformArgument(p))
+      case _ => None
+    }
+    args.foreach { x => argmap += x.id -> x.jtype }
+    ClassTable.addMethod(classid, methodid, id, argmap)
+
+    val transformedBody = body match {
+      case xs : List[Any] => transformMethodBody(xs)
+      case b  : Block     => JBlock(transformMethodBody(b.xs)) :: Nil
+      case None           => Nil
+    }
+
+    ClassTable.addLocals(classid, methodid, lvars)
+    (methodid, classid, args, transformedBody)
+  }
+
+  /*
+   * Transforms a FieldDeclaration into a JFieldDefinition
+   */
+  def transformFieldDeclaration(field: FieldDeclaration): JFieldDefinition = {
+    val FieldDeclaration(id, jtype, rest) = field
+    log.info("field pos info " + field.pos)
+    val name = unpackR(id)
+    val typ = unpackR(jtype)
+    ClassTable.addField(classid, name, typ)
+    JFieldDefinition(name, typ)
+  }
+
+  /*
+   * Transforms the body of method into a list of JBodyStatement. This assumes that
+   * a body only contains AnyExpr.
+   */
+  def transformMethodBody(body : List[Any]) : List[JBodyStatement] = {
+    body map { case expr: AnyExpr => transformAnyExpr(expr) } flatten
+  }
+
+  /*
+   * Transforms AnyExpr (or well, Any) to a List of JBodyStatements. It's a list because
+   * some statements in JavaTerms may turn into multiple statements in JavaAST.
+   *
+   * TODO: Isn't it possible to NOT use Any here.
+   */
+  def transformAnyExpr( expr: Any) : List[JBodyStatement] = {
+    expr match {
+      // statements
+      case AnyStatement(x)                     => transformAnyExpr(x)
+      case variable: LocalVar                  => transformLocalVariable(variable)
+      case Return(x)                           => JReturn(transformExpression(x))                                                :: Nil
+      case While(test, body)                   => JWhile(transformExpression(test), transformBlock(transformAnyExpr(body).head)) :: Nil
+      case Block(xs)                           => JBlock(xs map transformAnyExpr flatten)                                        :: Nil
+      case cond: Conditional                   => transformConditional(cond)                                                     :: Nil
+      // expressions
+      case binaryExpr: BinaryExpr              => transformBinaryExpr(binaryExpr)                                                :: Nil
+      case PrimaryExpr(x)                      => transformAnyExpr(x)
+      case ParExpr(x)                          => transformAnyExpr(x)
+      case "this"                              => JVariableAccess("this")                                                        :: Nil
+      case PostExpr(k, x)                      => JPostfixExpression(unpackR(k), transformExpression(x))                         :: Nil
+      case UnaryExpr(op, v)                    => JUnaryExpression(unpackR(op), transformExpression(v))                          :: Nil
+      case NewExpression(ntype, args)          => JNewExpression(unpackR(ntype), args.map(transformExpression))                  :: Nil
+      case Name(x)                             => JVariableAccess(x)                                                             :: Nil
+      case Expr(x)                             => transformAnyExpr(x)
+      case PostFixExpression(x)                => transformAnyExpr(x)
+      case Lit(x)                              => JLiteral(unpackR(x))                                                           :: Nil
+      case Some(x)                             => transformAnyExpr(x)
+      // TODO: This is a bit hacky. transformCall is called twice IFF it is a JCall and thus has no sideeffect
+      case c: Call if transformCall(c).isRight => transformCall(c).right.get                                                     :: Nil
+      case qualid : QualId                     => transformQualId(qualid)                                                        :: Nil
+      case (x : PrimaryExpr) ~ (y : List[Any]) => transformPrimaryExprFollowedByList(x,y)                                        :: Nil
+    }
+  }
+
+  /*
+   * Transforms a Conditional into a JConditional.
+   */
+  def transformConditional(cond: Conditional) : JBodyStatement = {
+    val Conditional(test, consequence, alternative) = cond
+    val cs = transformBlock(transformAnyExpr(consequence).head)
+    val alt = alternative match {
+      case None => JBlock(List[JBodyStatement]())
+      case Some(x) => transformBlock(transformAnyExpr(x).head)
+    }
+    JConditional(transformExpression(test), cs, alt)
+  }
+
+  /*
+   * Transforms a PrimaryExpr and a List of Any into a JBodyStatement
+   */
+  def transformPrimaryExprFollowedByList(x: PrimaryExpr, y: List[Any]): JBodyStatement = {
+    log.info("transformStatement with primary " + x + " and arguments " + y)
+    val rx = transformExpression(x)
+    log.info("  transformed primary is " + rx)
+    val rest = unpackR(y).drop(1)
+    log.info("  rest (unpacked arguments, dropped first ('.')) " + rest)
+    rx match {
+      case JVariableAccess(z) =>
+        if (z == "this")
+          if (ClassTable.getFields(classid).contains(rest))
+            JFieldAccess(rx, rest)
+          else { //fields might be declared after use...
+            //we've most likely a call!?
+            //           log.warning("dunno what you mean with this (not a field): " + rx + " rest " + rest)
+            //y consists of .~(Name(addCount)~List(Expr(Prim(Post(Prim(Call(Qual(List(Name(c), Name(
+            //gather arguments from y
+            val args = transformExpressions(y).filterNot(_ == null).drop(1) //drop methodname
+            log.info(" Call, args are " + args)
+            JCall(z, rest, args)
+          }
+          else {
+            log.info("access to non-this field (unchecked): " + rx + " fieldname " + rest)
+            JFieldAccess(rx, rest)
+          }
+      case y =>
+        //now we have to lookup type of rx, and look whether rest is a field inside there
+        log.warning("unsafe field access (maybe non-existant?): " + rx + " rest " + rest)
+      JFieldAccess(rx, rest)
+    }
+  }
+
+  /*
+   * Transforms a BinaryExpr to a JBodyStatement
+   *
+  * TODO: Implement the missing operators and JFieldAccess in +=
+   */
+  def transformBinaryExpr(expr: BinaryExpr) : JBodyStatement = {
+    val BinaryExpr(op, le, ri) = expr
+    val oper = unpackR(op)
+    oper match {
+      case "=" => {
+        val lef = transformAnyExpr(le).head //will be either FieldAccess or VariableAccess
+        lef match {
+          case JFieldAccess(cnx, nam) => JFieldWrite(cnx, nam, transformExpression(ri))
+          case JVariableAccess(nam)   => JAssignment(nam, transformExpression(ri))
+          case x                      => throw new Exception("dunno about left hand side " + x)
+      }}
+      case "+=" => {
+        transformAnyExpr(le).head match {
+          case JVariableAccess(name) => JAssignment(name, JBinaryExpression("+", JVariableAccess(name),transformExpression(ri)))
+      }}
+      case _ => JBinaryExpression(oper, transformExpression(le), transformExpression(ri))
+    }
+  }
+
+  /*
+   * Transforms a Call into a Either[Unit, JBodyStatement]. We're using a disjoint set here
+   * because it might be Coq related and in that case we simply modify the class table (side effect!)
+   * If the call isn't cog related we simply return a Right(JCall) (no side effect)
+   */
+  def transformCall(call: Call) : Either[Unit, JBodyStatement] = {
+    val Call(QualId(fun), args) = call
+    val funs = fun.map(unpackR)
+    val (varia, rst) = {
+      if (funs.length == 1) {
+        ("this", funs)
+      } else {
+        (funs(0), funs.drop(1))
+      }
+    }
+    if (varia == "Coq") {
+      assert(rst.length == 1)
+      if (rst(0) == "requires" || rst(0) == "ensures") {
+        assert(args.length == 1)
+        val arg = exString(transformExpression(args(0)))
+        if (rst(0) == "requires") {
+          Left(ClassTable.setPrecondition(classid, methodid, arg))
+        } else if (rst(0) == "ensures") {
+          Left(ClassTable.setPostcondition(classid, methodid, arg))
+        } else {
+          Left({})
+        }
+      } else {
+        assert(rst(0) == "def")
+        assert(args.length == 2)
+        val mod : JFieldAccess = transformExpression(args(0)).asInstanceOf[JFieldAccess] //Coq.M.FOO -> JFieldAccess("Coq", "M.FOO")
+        val module = mod.field //get rid of "Coq.M."
+        val arg = exString(transformExpression(args(1)))
+        Left(ClassTable.addCoq(classid, module, arg))
+      }
+    } else {
+      if (rst.length > 1) {
+        log.info("should have recursed for methodname " + rst + "(in call:" + varia + ", arguments:" + args.map(transformExpression) + ")")
+      }
+      Right(JCall(varia, rst.reduceLeft(_ + "." + _), args.map(transformExpression))) //XXX: recurse
+    }
+  }
+
+  /*
+   * Transforms a QuailId to a JBodyStatement
+   */
+  def transformQualId(qualid: QualId) : JBodyStatement = {
+    val QualId(x) = qualid
+    //log.info("inspecting qualid: " + x)
+    val vs = x.map(unpackR)
+    if (vs.length == 1) {
+      val v = vs(0)
+      if (lvars.contains(v) | argmap.contains(v))
+        JVariableAccess(v)
+      else if (ClassTable.getFields(classid).contains(v))
+        JFieldAccess(JVariableAccess("this"), v)
+      else {
+        //might be defined later in the source as field
+        //or might be a field of an outer class
+        log.warning("got a qualid which isn't in lvars or fields " + vs + " (fields: " + ClassTable.getFields(classid) + ")(lvar: " + lvars + ", args: " + argmap + ")")
+        JVariableAccess(vs.reduceLeft(_ + "." + _)) //XXX: recurse
+      }
+    } else if (vs.length == 2) {
+      //XXX: check whether typeof vs(0) has a field vs(1)!
+      JFieldAccess(JVariableAccess(vs(0)), vs(1))
+    } else {
+      log.info("all I got was this qualid, I'll try to make a fieldaccess out of it " + vs + " field: " + vs.takeRight(1)(0))
+      //XXX: recurse
+      val pre = transformExpression(QualId(x.dropRight(1)))
+      log.info("  managed to find out pre: " + pre)
+      JFieldAccess(pre, vs.takeRight(1)(0))
+    }
+  }
+
+  /*
+   * Transforms a FormalVariable into a JArgument.
+   */
+  def transformArgument(param: FormalVariable): JArgument = {
+    val FormalVariable(mods, jtype, name) = param
+    JArgument(unpackR(name), unpackR(jtype))
+  }
+
+  /*
+   * Transforms a LocalVar into (possibly multiple) JBindings.
+   */
+  def transformLocalVariable(variable : LocalVar): List[JBinding] = {
+    variable.x match {
+      case (mod ~ jtype) ~ (decls : List[Any]) => {
+        val typ = unpackR(jtype)
+        decls.map {
+          case (name : Name) ~ b ~ Some(y) => {
+            val init  = transformExpression(y)
+            val realn = unpackR(name)
+            lvars    += realn -> typ
+            JBinding(realn, typ, Some(init))
+          }
+          case (name : Name) ~ b ~ None => {
+            val realn = unpackR(name)
+            lvars    += realn -> typ
+            JBinding(realn, typ, None)
+          }
+          case x => throw new Exception("dunno about lvar " + x)
+        }
+      }
+      case y => throw new Exception("dunno about lvar " + y)
+    }
+  }
+
+  /*
+   * Transforms a JStatement into a JSBloack. If it is a JBlock already simply
+   * pass it.
+   */
+  def transformBlock(cs : JStatement) : JBlock = {
+    cs match {
+      case x  : JBlock         => x
+      case xs : JBodyStatement => JBlock(List(xs))
+      case x                   => throw new Exception("This isn't a block: " + x)
+    }
+  }
+
+ /*
+   * ====================================
+   * Are these methods still used at all?
+   * ====================================
+   */
+
+  def transformOLF(xs : Option[Any]) : List[String] = {
+    xs match {
+      case Some(xs : List[List[Any]]) => xs.flatten.map(unpackR)
+      case None => List[String]()
+    }
+  }
+
+  def transformExpression(x : Any) : JExpression = {
+    val y = transformAnyExpr(x)
+    y match {
+      case  e : JExpression => e
+      case (e : JExpression) :: Nil => e
+      case _ =>
+        log.warning("transformExpression: wanted an JExpression, got " + y);
+        null
+    }
+  }
+
+  def transformExpressions(x : Any) : List[JExpression] = {
+    x match {
+      case a ~ b    => transformExpressions(a) ++ transformExpressions(b)
+      case hd :: tl => transformExpressions(hd) ++ transformExpressions(tl)
+      case a        => List(transformExpression(a))
+    }
+  }
+
+  def exString(x : JExpression) : String = {
+    x match {
+      case JLiteral(s)                  => s
+      case JBinaryExpression("+", l, r) => exString(l) + "\n" + exString(r)
+      case y                            => log.warning("dunno how to extract from " + y); ""
+    }
   }
 }

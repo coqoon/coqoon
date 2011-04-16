@@ -109,8 +109,12 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing Binding2.txt" should "produce the correct AST" in {
-  // TODO: This pretty much just crashed the parser.
-    val expected = Nil
+    val expected = List(JClassDefinition("Foo","",Nil,List(
+      JMethodDefinition("foo","void",Nil,List(JBlock(List(
+        JBinding("a","int",Some(JLiteral("20"))),
+        JBinding("b","int",Some(JLiteral("10"))))
+      )))
+    ),None))
     getASTbyParsingFileNamed("Binding2.txt") should equal(expected)
   }
 
@@ -214,7 +218,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
       None))
     getASTbyParsingFileNamed("Postfix1.txt") should equal(expected)
   }
-                                         
+
   "Parsing Postfix2.txt" should "produce the correct AST" in {
     val expected = List(JClassDefinition("Foo", "", Nil, List(
       JMethodDefinition("bar", "void", Nil, List(JBlock(List(
@@ -223,7 +227,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
       None))
     getASTbyParsingFileNamed("Postfix2.txt") should equal(expected)
   }
-                                         
+
   "Parsing Postfix3.txt" should "produce the correct AST" in {
     val expected = List(JClassDefinition("Foo", "", Nil, List(
       JFieldDefinition("a", "int"),
@@ -300,7 +304,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     val expected =
       List(JClassDefinition("Fac", "", List(), List(JMethodDefinition("fac", "int",
        List(JArgument("n", "int")),
-        List(JBlock(List(JBinding("x", "int", None), 
+        List(JBlock(List(JBinding("x", "int", None),
           JConditional(JBinaryExpression(">=", JVariableAccess("n"), JLiteral("0")),
             JBlock(List(JAssignment("x", JCall("this", "fac",
                                   List(JBinaryExpression("-", JVariableAccess("n"), JLiteral("1"))))),
@@ -313,7 +317,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     val expected =
       List(JClassDefinition("Fac", "", List(), List(JMethodDefinition("fac", "int",
        List(JArgument("n", "int")),
-        List(JBlock(List(JBinding("x", "int", None), 
+        List(JBlock(List(JBinding("x", "int", None),
           JConditional(JBinaryExpression(">=", JVariableAccess("n"), JLiteral("0")),
             JBlock(List(JAssignment("x", JCall("this", "fac",
                                   List(JBinaryExpression("-", JVariableAccess("n"), JLiteral("1"))))),
@@ -345,11 +349,11 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
            JCall("context", "push", List(JVariableAccess("tmp_1"))),
            JBinding("tmp_2", "Node", Some(JFieldAccess(JVariableAccess("node"),"left"))),
            JAssignment("node", JVariableAccess("tmp_2"))))))))),
-       JMethodDefinition("hasNext", "boolean", List(), List(JBlock(List( 
+       JMethodDefinition("hasNext", "boolean", List(), List(JBlock(List(
          JBinding("tmp_1", "boolean", Some(JCall("context", "empty", List()))),
          JReturn(JUnaryExpression("!", JVariableAccess("tmp_1"))))))),
        JMethodDefinition("next", "Integer", List(), List(JBlock(List(
-         JBinding("result", "Integer", None), 
+         JBinding("result", "Integer", None),
          JBinding("tmp_1", "int", Some(JFieldAccess(JVariableAccess("this"), "oldStamp"))),
          JConditional(JBinaryExpression("!=", JVariableAccess("stamp"), JVariableAccess("tmp_1")),
                       JBlock(List(JNewExpression("ConcurrentModificationException", List(JLiteral("Tree was modified during iteration"))))),
@@ -410,8 +414,8 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
       JInterfaceDefinition("ITree", List("Iterable<Integer>"), List(
         JMethodDefinition("contains", "boolean", List(JArgument("item", "int")), List()),
         JMethodDefinition("add", "boolean", List(JArgument("item", "int")),List()),
-        JMethodDefinition("get", "int", List(JArgument("i", "int")), List()), 
-        JMethodDefinition("snapshot", "ITree", List(),List()), 
+        JMethodDefinition("get", "int", List(JArgument("i", "int")), List()),
+        JMethodDefinition("snapshot", "ITree", List(),List()),
         JMethodDefinition("iterator", "Iterator<Integer>", List(), List()))),
       JClassDefinition("A1B1Tree", "", List("ITree"), List(
         JFieldDefinition("root", "Node"),
@@ -427,7 +431,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
           JBinding("found", "boolean", Some(JLiteral("false"))),
           JWhile(JBinaryExpression("&&",
                                    JUnaryExpression("!", JVariableAccess("found")),
-                                   JBinaryExpression("!=", JVariableAccess("node"), JLiteral("null"))), 
+                                   JBinaryExpression("!=", JVariableAccess("node"), JLiteral("null"))),
                  JBlock(List(
                    JBinding("tmp_2", "int", Some(JFieldAccess(JVariableAccess("node"), "item"))),
                    JConditional(JBinaryExpression("<", JVariableAccess("item"), JVariableAccess("tmp_2")),
@@ -460,10 +464,10 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     JBinding("tmp_1", "Node", Some(JFieldAccess(JVariableAccess("n"), "left"))),
     JBinding("leftCount", "int", Some(JCall("this", "count", List(JVariableAccess("tmp_1"))))),
     JWhile(JBinaryExpression("!=", JVariableAccess("i"), JVariableAccess("leftCount")), JBlock(List(
-      JConditional(JBinaryExpression("<", JVariableAccess("i"), JVariableAccess("leftCount")), 
+      JConditional(JBinaryExpression("<", JVariableAccess("i"), JVariableAccess("leftCount")),
        JBlock(List(
          JBinding("tmp_3", "Node", Some(JFieldAccess(JVariableAccess("n"), "left"))),
-         JAssignment("n", JVariableAccess("tmp_3")))), 
+         JAssignment("n", JVariableAccess("tmp_3")))),
        JBlock(List(JBinding("tmp_4", "Node", Some(JFieldAccess(JVariableAccess("n"), "rght"))),
                    JAssignment("n", JVariableAccess("tmp_4")),
                    JAssignment("i", JBinaryExpression("-", JBinaryExpression("-", JVariableAccess("i"), JVariableAccess("leftCount")), JLiteral("1")))))),
@@ -498,12 +502,12 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
             JBinding("newLeft", "Node", Some(JCall("this", "addRecursive", List(JVariableAccess("tmp_3"), JVariableAccess("item"), JVariableAccess("updated"))))),
             JBinding("tmp_5", "boolean", Some(JFieldAccess(JVariableAccess("updated"), "value"))),
             JBinding("tmp_6", "boolean", Some(JFieldAccess(JVariableAccess("this"), "hasSnapshot"))),
-            JConditional(JBinaryExpression("&&", JVariableAccess("tmp_6"), JVariableAccess("tmp_5")), 
+            JConditional(JBinaryExpression("&&", JVariableAccess("tmp_6"), JVariableAccess("tmp_5")),
               JBlock(List(
                 JBinding("tmp_7", "int", Some(JFieldAccess(JVariableAccess("node"), "item"))),
                 JAssignment("res", JFieldAccess(JVariableAccess("node"), "rght")),
                 JAssignment("res", JNewExpression("Node", List(JVariableAccess("newLeft"), JVariableAccess("tmp_7"), JVariableAccess("res")))))),
-              JBlock(List(JFieldWrite(JVariableAccess("node"), "left", JVariableAccess("newLeft"))))))), 
+              JBlock(List(JFieldWrite(JVariableAccess("node"), "left", JVariableAccess("newLeft"))))))),
           JBlock(List(
             JBinding("tmp_8", "int", Some(JFieldAccess(JVariableAccess("node"), "item"))),
             JConditional(JBinaryExpression("<", JVariableAccess("tmp_8"), JVariableAccess("item")),
@@ -512,7 +516,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
                 JBinding("newRght", "Node", Some(JCall("this", "addRecursive", List(JVariableAccess("tmp_9"), JVariableAccess("item"), JVariableAccess("updated"))))),
                 JBinding("tmp_11", "boolean", Some(JFieldAccess(JVariableAccess("updated"), "value"))),
                 JBinding("tmp_12", "boolean", Some(JFieldAccess(JVariableAccess("this"), "hasSnapshot"))),
-                JConditional(JBinaryExpression("&&", JVariableAccess("tmp_12"), JVariableAccess("tmp_11")), 
+                JConditional(JBinaryExpression("&&", JVariableAccess("tmp_12"), JVariableAccess("tmp_11")),
                   JBlock(List(
                     JAssignment("res", JFieldAccess(JVariableAccess("node"), "left")),
                     JBinding("tmp_13", "int", Some(JFieldAccess(JVariableAccess("node"), "item"))),
