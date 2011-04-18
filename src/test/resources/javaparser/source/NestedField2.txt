@@ -1,0 +1,7 @@
+class Foo {
+  Foo f;
+  int a;
+  int bar () {
+    return f.f.f.f.f.a;
+  }
+}
