@@ -270,7 +270,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
            JClassDefinition("Bar", "", Nil, List(
              JFieldDefinition("f", "Foo"),
              JMethodDefinition("bar", "void", Nil, List(JBlock(List(
-               JBinding("tmp_1", "int", Some(JFieldAccess(JVariableAccess("this"), "f"))),
+               JBinding("tmp_1", "Foo", Some(JFieldAccess(JVariableAccess("this"), "f"))),
                JBinding("b", "int", Some(JFieldAccess(JVariableAccess("tmp_1"), "a")))
            ))))), None))
     getASTbyParsingFileNamed("NestedField1.txt") should equal(expected)

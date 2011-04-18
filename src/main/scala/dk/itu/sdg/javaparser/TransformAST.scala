@@ -664,11 +664,12 @@ object FinishAST extends JavaTerms
   }
 
   /*
-   * Transforms a QuailId to a JBodyStatement
+   * Transforms a QuailId to a JBodyStatement. This also takes care of making all calls to class varibles explicit
+   * by prepending 'this' if needed.
    */
   def transformQualId(qualid: QualId) : JBodyStatement = {
     val QualId(x) = qualid
-    //log.info("inspecting qualid: " + x)
+    log.warning("inspecting qualid: " + x)
     val vs = x.map(unpackR)
     if (vs.length == 1) {
       val v = vs(0)
@@ -684,7 +685,12 @@ object FinishAST extends JavaTerms
       }
     } else if (vs.length == 2) {
       //XXX: check whether typeof vs(0) has a field vs(1)!
-      JFieldAccess(JVariableAccess(vs(0)), vs(1))
+      val v  = vs(0)
+      val v2 = vs(1)
+      if (ClassTable.getFields(classid).contains(v))
+        JFieldAccess(JFieldAccess(JVariableAccess("this"), v), v2)
+      else
+        JFieldAccess(JVariableAccess(v), v2)
     } else {
       log.info("all I got was this qualid, I'll try to make a fieldaccess out of it " + vs + " field: " + vs.takeRight(1)(0))
       //XXX: recurse
