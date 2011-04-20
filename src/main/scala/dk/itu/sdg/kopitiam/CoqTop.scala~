@@ -87,17 +87,21 @@ case class CoqShellTokens (theorem : String, globalStep : Int, context : List[St
 
 object ValidCoqShell {
   def getTokens (s : String) : Option[CoqShellTokens] = {
+    Console.println("gettokens called with " + s)
     val tokens0 = s.split('\n')
     if (tokens0.length > 0) {
+      Console.println("tokens0.length is > 0")
       val tokens1 = tokens0(tokens0.length - 1).trim.split('<') //Thm < gstep |con|text| lstep < ?
       if (tokens1.length == 3) {
+        Console.println("tokens1.length is 3")
         val tokens2 = tokens1(1).split('|') //gstep |con|text| lstep
-        if (tokens2.length >= 2)
+        if (tokens2.length >= 2) {
+          Console.println("tokens2 length is >= 2 " + tokens2.length)
           Some(new CoqShellTokens(tokens1(0).trim,
                                   Integer.parseInt(tokens2(0).trim),
                                   tokens2.drop(1).toList.dropRight(1).toList.filterNot(_ == ""),
                                   Integer.parseInt(tokens2.takeRight(1)(0).trim)))
-        else
+        } else
           None
       } else None
     } else None
