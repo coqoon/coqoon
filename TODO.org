@@ -14,6 +14,8 @@
 ** Undo from just after End should jump to start of Section/Module/whatever
 ** after undo, do syntax highlighting again!
 ** unreliable with keyboard shortcuts -> look whether in action or not (otherwise risk error messages from coq)
+** Goal True.\n\n\nfoo. step, error reporting is above foo!
+** if you close editor and delete file coq was working on, get a NullPointerException
 ** outline for eclipse
 ** syntax highlighting based on coq parser
 *** source location information (hints at the bottom) - http://scala.sygneca.com/libs/parsing
