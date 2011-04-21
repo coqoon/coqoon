@@ -44,7 +44,11 @@ object PrintActor extends Actor with OutputChannel[String] {
   def register (c : CoqCallback) : Unit = { callbacks = (c :: callbacks.reverse).reverse }
   def deregister (c : CoqCallback) : Unit = { callbacks = callbacks.filterNot(_ == c) }
 
-  def distribute (c : CoqResponse) : Unit = { callbacks.foreach(_.dispatch(c)) }
+  def distribute (c : CoqResponse) : Unit = {
+    Console.println("distributing response to all callbacks (" + callbacks.length + ")")
+    callbacks.foreach(_.dispatch(c))
+    Console.println(" -> done distribution")
+  }
 
   def act() {
     var buf = ""
@@ -137,7 +141,7 @@ object ErrorOutputActor extends Actor with OutputChannel[String] {
           Console.println("receiving shell " + msg)
           ValidCoqShell.getTokens(msg) match {
             case Some(tokens : CoqShellTokens) => {
-              //Console.println("set coq ready " + tokens)
+              Console.println("set coq ready " + tokens)
               CoqState.setShell(tokens)
             }
             case None =>
@@ -255,10 +259,10 @@ object CoqTop {
     coqerr = new BusyStreamReader(coqprocess.getErrorStream)
     coqout.addActor(PrintActor)
     coqerr.addActor(ErrorOutputActor)
-    new Thread(coqout).start
-    new Thread(coqerr).start
     waiting = 0
     started = true
+    new Thread(coqout).start
+    new Thread(coqerr).start
     true
   }
   
@@ -277,7 +281,7 @@ object CoqTop {
           cdepth += 1
         else if (c == '*' && s(i - 1) == '(')
           cdepth -= 1
-        else if (cdepth == 0 && (c == ' ' || c == '\n') && s(i - 1) == '.')
+        else if (cdepth == 0 && (c == ' ' || c == '\n' || c == '\r') && s(i - 1) == '.')
           found = true
         i -= 1
       }
@@ -300,7 +304,7 @@ object CoqTop {
           cdepth += 1
         else if (c == '*' && s(i + 1) == ')')
           cdepth -= 1
-        else if (cdepth == 0 && c == '.' && (i + 1 == s.length || s(i + 1) == '\n' || s(i + 1) == ' ') && (i == 0 || s(i - 1) != '.'))
+        else if (cdepth == 0 && c == '.' && (i + 1 == s.length || s(i + 1) == '\n' || s(i + 1) == ' ' || (s(i + 1) == '\r' && s(i + 2) == '\n')) && (i == 0 || s(i - 1) != '.'))
           found = true
         i += 1
       }

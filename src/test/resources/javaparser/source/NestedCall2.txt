@@ -1,0 +1,8 @@
+class Foo {
+  Foo f;
+  int a;
+  Foo get () { return f; }
+  int bar () {
+    return f.get().get().f.f.get().get().f.f.f.a;
+  }
+}

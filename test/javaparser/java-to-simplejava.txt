@@ -9,10 +9,11 @@ class Foo {
     return x
   }
 }
-//allocation
+//allocation - constructor
 //typed temporary variables (with java.lang/util)
-//inner classes
+//inner classes + static
 //interface inheritance
+//static fields
 
 Changes to AST:
  no longer String, use proper types!
@@ -24,9 +25,10 @@ FUTURE:
 //static call
 //field initializer
 //multiple methods with same name (overloading)
+//assertions
+LATER FUTURE:
 //for loop
 //exceptions
-//assertions
 //generics
 //arrays
 //dynamic casts

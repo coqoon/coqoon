@@ -81,7 +81,6 @@ abstract class KCoqAction extends KAction {
         CoqOutputDispatcher.goalviewer.clear
 
       if (coqstarted) {
-        CoqStartUp.fini = false
         PrintActor.deregister(CoqOutputDispatcher)
         val shell = CoqState.getShell
         PrintActor.register(CoqStartUp)
@@ -281,6 +280,7 @@ class TranslateAction extends KAction {
   import dk.itu.sdg.javaparser.JavaAST
   object JavaTC extends JavaAST { }
 
+  import org.eclipse.jdt.core.ICompilationUnit
   override def execute (ev : ExecutionEvent) : Object = {
     Console.println("execute translation!")
     val sel = HandlerUtil.getActiveMenuSelection(ev).asInstanceOf[IStructuredSelection]
@@ -288,6 +288,8 @@ class TranslateAction extends KAction {
     Console.println("fe is " + fe + " type " + fe.asInstanceOf[AnyRef].getClass)
     if (fe.isInstanceOf[IFile])
       translate(fe.asInstanceOf[IFile])
+    else if (fe.isInstanceOf[ICompilationUnit])
+      translate(fe.asInstanceOf[ICompilationUnit].getResource.asInstanceOf[IFile])
     null
   }
 
@@ -299,7 +301,6 @@ class TranslateAction extends KAction {
       if (trfi.exists)
         trfi.delete(true, false, null)
       trfi.create(new ByteArrayInputStream(JavaTC.parse(is, nam.substring(0, nam.indexOf(".java"))).getBytes), IResource.NONE, null)
-      Console.println("translated file " + nam)
     } else
       Console.println("wasn't a java file")
   }
@@ -332,7 +333,6 @@ object CoqStartUp extends CoqCallback {
       if (! CoqTop.startCoq)
         EclipseBoilerPlate.warnUser("No Coq", "No Coq binary found, please specify one in the Kopitiam preferences page")
       else {
-        fini = false
         while (!fini) { }
         fini = false
       }
@@ -343,6 +343,7 @@ object CoqStartUp extends CoqCallback {
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqShellReady(m, t) =>
+      	Console.println("dispatch, first is " + first + " fini is " + fini + " in CoqStartUp")
         if (first) {
           CoqTop.writeToCoq("Add LoadPath \"" + EclipseBoilerPlate.getProjectDir + "\".")
           first = false
@@ -411,13 +412,13 @@ object CoqOutputDispatcher extends CoqCallback {
       case CoqGoal(n, goals) =>
         //Console.println("outputdispatcher, n is " + n + ", goals:\n" + goals)
         val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
-        val ht = if (hy.length > 0) hy.reduceLeft(_ + "\n" + _) else ""
+        val ht = if (hy.length > 0) hy.map(_.filterNot(_ == '\r')).reduceLeft(_ + "\n" + _) else ""
         val subd = res.findIndexOf(_.contains("subgoal "))
         val (g, r) = if (subd > 0) res.splitAt(subd) else (res, List[String]())
-        val gt = if (g.length > 1) g.drop(1).reduceLeft(_ + "\n" + _) else ""
+        val gt = if (g.length > 1) g.drop(1).map(_.filterNot(_ == '\r')).reduceLeft(_ + "\n" + _) else ""
         val ot = if (r.length > 0) {
           val r2 = r.map(x => { if (x.contains("subgoal ")) x.drop(1) else x })
-          r2.reduceLeft(_ + "\n" + _)
+          r2.map(_.filterNot(_ == '\r')).reduceLeft(_ + "\n" + _)
         } else ""
         if (goalviewer != null)
           goalviewer.writeGoal(ht, gt, ot)

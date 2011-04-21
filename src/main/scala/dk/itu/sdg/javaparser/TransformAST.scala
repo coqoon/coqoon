@@ -314,7 +314,7 @@ object FinishAST extends JavaTerms
     val w = doitHelper(a)
     val re = coqoutput(w, false, name)
     val prog = re.takeWhile(!_.contains("_spec.\nImport ")).reduceLeft(_ + "\n" + _)
-    val spec = re.dropWhile(!_.contains("_spec.\nImport ")).drop(1).reduceLeft(_ + "\n" + _)
+    val spec = re.dropWhile(!_.contains("_spec.\nImport ")).drop(1).mkString("\n")
     (prog, spec)
   }
 
@@ -469,7 +469,7 @@ object FinishAST extends JavaTerms
   def extractMethodOrConstructorInfo( term : Term ) : (String, String, List[JArgument], List[JBodyStatement]) = {
 
     val (id, mid, parameters, throws, body) = term match {
-      case ConstructorDeclaration(id, parameters, throws, bdy)   => (unpackR(id), "init_", parameters, throws, bdy)
+      case ConstructorDeclaration(id, parameters, throws, bdy)   => (unpackR(id), "new", parameters, throws, bdy)
       case MethodDeclaration(id, jtype, parameters, throws, bdy) => (unpackR(jtype), unpackR(id), parameters, throws, bdy)
     }
 
@@ -668,36 +668,18 @@ object FinishAST extends JavaTerms
    * by prepending 'this' if needed.
    */
   def transformQualId(qualid: QualId) : JBodyStatement = {
-    val QualId(x) = qualid
-    log.warning("inspecting qualid: " + x)
-    val vs = x.map(unpackR)
-    if (vs.length == 1) {
-      val v = vs(0)
-      if (lvars.contains(v) | argmap.contains(v))
-        JVariableAccess(v)
-      else if (ClassTable.getFields(classid).contains(v))
-        JFieldAccess(JVariableAccess("this"), v)
-      else {
-        //might be defined later in the source as field
-        //or might be a field of an outer class
-        log.warning("got a qualid which isn't in lvars or fields " + vs + " (fields: " + ClassTable.getFields(classid) + ")(lvar: " + lvars + ", args: " + argmap + ")")
-        JVariableAccess(vs.reduceLeft(_ + "." + _)) //XXX: recurse
+
+    def isFieldAccess(x: String) = ClassTable.getFields(classid).contains(x)
+
+    // recursive method - used to transform nested qualids like: a.a.a.a.b
+    def recTransform(xs: List[String]) : JExpression = { // TODO. Can't this be expressed as a fold1?
+      xs match {
+        case Nil      => throw new Exception("Don't know what to do about an empty qualid list")
+        case x :: Nil => if (isFieldAccess(x)) JFieldAccess(JVariableAccess("this"), x) else JVariableAccess(x)
+        case x :: xs  => JFieldAccess(recTransform(xs),x)
       }
-    } else if (vs.length == 2) {
-      //XXX: check whether typeof vs(0) has a field vs(1)!
-      val v  = vs(0)
-      val v2 = vs(1)
-      if (ClassTable.getFields(classid).contains(v))
-        JFieldAccess(JFieldAccess(JVariableAccess("this"), v), v2)
-      else
-        JFieldAccess(JVariableAccess(v), v2)
-    } else {
-      log.info("all I got was this qualid, I'll try to make a fieldaccess out of it " + vs + " field: " + vs.takeRight(1)(0))
-      //XXX: recurse
-      val pre = transformExpression(QualId(x.dropRight(1)))
-      log.info("  managed to find out pre: " + pre)
-      JFieldAccess(pre, vs.takeRight(1)(0))
     }
+    recTransform(qualid.xs.map(unpackR).reverse)
   }
 
   /*
@@ -711,7 +693,7 @@ object FinishAST extends JavaTerms
   /*
    * Transforms a LocalVar into (possibly multiple) JBindings.
    */
-  def transformLocalVariable(variable : LocalVar): List[JBinding] = {
+   def transformLocalVariable(variable : LocalVar): List[JBinding] = {
     variable.x match {
       case (mod ~ jtype) ~ (decls : List[Any]) => {
         val typ = unpackR(jtype)

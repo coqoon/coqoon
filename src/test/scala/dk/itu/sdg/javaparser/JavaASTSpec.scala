@@ -276,6 +276,22 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     getASTbyParsingFileNamed("NestedField1.txt") should equal(expected)
   }
 
+  "Parsing NestedField2.txt" should "produce the correct AST" in {
+    val expected =
+      List(JClassDefinition("Foo", "", Nil, List(
+        JFieldDefinition("f", "Foo"),
+        JFieldDefinition("a", "int"),
+        JMethodDefinition("bar","int",Nil, List(JBlock(List(
+          JBinding("tmp_1","Foo",Some(JFieldAccess(JVariableAccess("this"),"f"))),
+          JBinding("tmp_2","Foo",Some(JFieldAccess(JVariableAccess("tmp_1"),"f"))),
+          JBinding("tmp_3","Foo",Some(JFieldAccess(JVariableAccess("tmp_2"),"f"))),
+          JBinding("tmp_4","Foo",Some(JFieldAccess(JVariableAccess("tmp_3"),"f"))),
+          JBinding("tmp_5","Foo",Some(JFieldAccess(JVariableAccess("tmp_4"),"f"))),
+          JBinding("tmp_6","int",Some(JFieldAccess(JVariableAccess("tmp_5"),"a"))),
+          JReturn(JVariableAccess("tmp_6"))))))),None))
+    getASTbyParsingFileNamed("NestedField2.txt") should equal(expected)
+  }
+
 
   "Parsing NestedCall1.txt" should "produce the correct AST" in {
     val expected =
@@ -287,6 +303,29 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
                JCall("tmp_1", "bar", Nil)
            ))))), None))
     getASTbyParsingFileNamed("NestedCall1.txt") should equal(expected)
+  }
+
+  "Parsing NestedCall2.txt" should "produce the correct AST" in {
+    val expected =
+      List(JClassDefinition("Foo", "", Nil, List(
+        JFieldDefinition("f", "Foo"),
+        JFieldDefinition("a", "int"),
+        JMethodDefinition("get", "Foo", Nil, List(JBlock(List(JBinding("tmp_1", "foo", Some(JFieldAccess(JVariableAccess("this"), "f"))), JReturn(JVariableAccess("tmp_1")))))),
+        JMethodDefinition("bar", "int", Nil, List(JBlock(List(
+          JBinding("tmp_1", "Foo", Some(JFieldAccess(JVariableAccess("this"), "f"))),
+          JBinding("tmp_2", "Foo", Some(JCall("tmp_1", "get", Nil))),
+          JBinding("tmp_3", "Foo", Some(JCall("tmp_2", "get", Nil))),
+          JBinding("tmp_4", "Foo", Some(JFieldAccess(JVariableAccess("tmp_3"), "f"))),
+          JBinding("tmp_5", "Foo", Some(JFieldAccess(JVariableAccess("tmp_4"), "f"))),
+          JBinding("tmp_6", "Foo", Some(JCall("tmp_5", "get", Nil))),
+          JBinding("tmp_7", "Foo", Some(JCall("tmp_6", "get", Nil))),
+          JBinding("tmp_8", "Foo", Some(JFieldAccess(JVariableAccess("tmp_7"), "f"))),
+          JBinding("tmp_9", "Foo", Some(JFieldAccess(JVariableAccess("tmp_8"), "f"))),
+          JBinding("tmp_10", "Foo", Some(JFieldAccess(JVariableAccess("tmp_9"), "f"))),
+          JBinding("tmp_11", "int", Some(JFieldAccess(JVariableAccess("tmp_10"), "a"))),
+          JReturn(JVariableAccess("tmp_11"))
+))))), None))
+    getASTbyParsingFileNamed("NestedCall2.txt") should equal(expected)
   }
 
   "Parsing While1.txt" should "produce the correct AST" in {
@@ -331,14 +370,14 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
       JClassDefinition("NodeState", "", List(), List(
         JFieldDefinition("node", "Node"),
         JFieldDefinition("yielded", "boolean"),
-        JMethodDefinition("init_", "NodeState", List(JArgument("node", "Node")), List(JBlock(List(
+        JMethodDefinition("new", "NodeState", List(JArgument("node", "Node")), List(JBlock(List(
           JFieldWrite(JVariableAccess("this"), "node", JVariableAccess("node")),
           JFieldWrite(JVariableAccess("this"), "yielded", JLiteral("false"))))))),
         Some("TreeIterator")),
      JClassDefinition("TreeIterator", "", List("Iterator<Integer>"), List(
        JFieldDefinition("oldStamp", "int"),
        JFieldDefinition("context", "Stack<NodeState>"),
-       JMethodDefinition("init_", "TreeIterator",
+       JMethodDefinition("new", "TreeIterator",
          List(JArgument("tree", "A1B1Tree"), JArgument("oldStamp", "int")), List(JBlock(List(
            JBinding("tmp_1", "Node", Some(JFieldAccess(JVariableAccess("tree"), "root"))),
            JCall("this", "pushLeftPath", List(JVariableAccess("tmp_1"))),
@@ -388,7 +427,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
         JFieldDefinition("item", "int"),
         JFieldDefinition("left", "Node"),
         JFieldDefinition("rght", "Node"),
-        JMethodDefinition("init_", "Node", List(
+        JMethodDefinition("new", "Node", List(
           JArgument("left", "Node"), JArgument("item", "int"), JArgument("rght", "Node")), List(JBlock(List(
             JFieldWrite(JVariableAccess("this"), "left", JVariableAccess("left")),
             JFieldWrite(JVariableAccess("this"), "item", JVariableAccess("item")),
@@ -422,7 +461,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
         JFieldDefinition("isSnapshot", "boolean"),
         JFieldDefinition("hasSnapshot", "boolean"),
         JFieldDefinition("stamp", "int"),
-        JMethodDefinition("init_", "A1B1Tree", List(JArgument("tree", "A1B1Tree")), List(JBlock(List(
+        JMethodDefinition("new", "A1B1Tree", List(JArgument("tree", "A1B1Tree")), List(JBlock(List(
           JBinding("tmp_1", "Node", Some(JFieldAccess(JVariableAccess("tree"), "root"))),
           JFieldWrite(JVariableAccess("this"), "root", JVariableAccess("tmp_1")),
           JFieldWrite(JVariableAccess("this"), "isSnapshot", JLiteral("true")))))),
