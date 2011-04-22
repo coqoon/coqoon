@@ -621,11 +621,17 @@ object FinishAST extends JavaTerms
   }
 
   /*
+   * Small helper method to check if a string is a varible or field access
+   */
+  def isFieldAccess(x: String) = ClassTable.getFields(classid).contains(x)
+
+  /*
    * Transforms a Call into a Either[Unit, JBodyStatement]. We're using a disjoint set here
    * because it might be Coq related and in that case we simply modify the class table (side effect!)
    * If the call isn't cog related we simply return a Right(JCall) (no side effect)
    */
   def transformCall(call: Call) : Either[Unit, JBodyStatement] = {
+
     val Call(QualId(fun), args) = call
     val funs = fun.map(unpackR)
     val (varia, rst) = {
@@ -656,10 +662,20 @@ object FinishAST extends JavaTerms
         Left(ClassTable.addCoq(classid, module, arg))
       }
     } else {
-      if (rst.length > 1) {
-        log.info("should have recursed for methodname " + rst + "(in call:" + varia + ", arguments:" + args.map(transformExpression) + ")")
+
+      // TODO:  Somehow it doesn't get the full invocation chain (an in transformPrimaryExprFollowedByList)
+
+      log.warning(varia)
+      log.warning(rst.toString)
+      log.warning(args.toString)
+
+      val fst = if (isFieldAccess(varia)) JFieldAccess(JVariableAccess("this"), varia) else JVariableAccess(varia)
+
+      val result = rst.foldRight(fst) { (current, acc) =>
+        JCall(acc, current, args.map(transformExpression)) // TODO, is Nil right here?
       }
-      Right(JCall(JVariableAccess(varia), rst.reduceLeft(_ + "." + _), args.map(transformExpression))) //XXX: recurse
+
+      Right(result) //XXX: recurse
     }
   }
 
@@ -668,8 +684,6 @@ object FinishAST extends JavaTerms
    * by prepending 'this' if needed.
    */
   def transformQualId(qualid: QualId) : JBodyStatement = {
-
-    def isFieldAccess(x: String) = ClassTable.getFields(classid).contains(x)
 
     // recursive method - used to transform nested qualids like: a.a.a.a.b
     def recTransform(xs: List[String]) : JExpression = { // TODO. Can't this be expressed as a fold1?

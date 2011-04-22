@@ -120,10 +120,10 @@ trait JavaToSimpleJava {
           else
             JBlock(r)
         ti ++ List(JConditional(ta, con2, alt))
-      case JCall(variable, name, args) =>
-        val (ars, ins) = exL(args)
-        //Console.println("results from extracthelper: " + ars + " ins " + ins)
-        ins ++ List(JCall(variable, name, ars))
+      case JCall(receiver, name, args) =>
+        val (temp, lines) = extractHelper(receiver)
+        val (ars, ins)    = exL(args)
+        lines ++ ins ++ List(JCall(temp, name, ars))
       case JNewExpression(name, arguments) =>
         val (ars, ins) = exL(arguments)
         ins ++ List(JNewExpression(name, ars))
@@ -198,14 +198,15 @@ trait JavaToSimpleJava {
           (JVariableAccess(t), i ++ List(JBinding(t, tclass, Some(JFieldAccess(a, f)))))
         else
           (JVariableAccess(t), i ++ List(JAssignment(t, JFieldAccess(a, f))))
-      case JCall(JVariableAccess(variable), name, args) =>
-        val (as, ins) = exL(args)
-        val ttype = ClassTable.getMethodType(cname, mname, variable, name, as.map(exprtotype))
+      case JCall(receiver, name, args) =>
+        val (a,i)      = extractHelper(receiver)
+        val (as, ins)  = exL(args)
+        val ttype      = ClassTable.getMethodType(cname, mname, exprtotype(a), name, as.map(exprtotype))
         val (t, fresh) = sym(ttype)
         if (fresh)
-          (JVariableAccess(t), ins ++ List(JBinding(t, ttype, Some(JCall(JVariableAccess(variable), name, as)))))
+          (JVariableAccess(t), i ++ ins ++ List(JBinding(t, ttype, Some(JCall(a, name, as)))))
         else
-          (JVariableAccess(t), ins ++ List(JAssignment(t, JCall(JVariableAccess(variable), name, as))))
+          (JVariableAccess(t), i ++ ins ++ List(JAssignment(t, JCall(a, name, as))))
       case JNewExpression(name, args) =>
         val (as, ins) = exL(args)
         val (t, fresh) = sym(name)
