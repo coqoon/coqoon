@@ -26,7 +26,7 @@ case class JConditional (test : JExpression, consequent : JBodyStatement, altern
 case class JBinaryExpression (operation : String, left : JExpression, right : JExpression) extends JExpression
 case class JUnaryExpression (operation : String, expr : JExpression) extends JExpression
 case class JPostfixExpression (operation : String, expr : JExpression) extends JExpression
-case class JCall (variable : String, fun : String, arguments : List[JExpression]) extends JExpression
+case class JCall (receiver : JExpression, fun : String, arguments : List[JExpression]) extends JExpression
 case class JNewExpression (jtype : String, arguments : List[JExpression]) extends JExpression
 case class JLiteral (value : String) extends JExpression
 case class JVariableAccess (variable : String) extends JExpression

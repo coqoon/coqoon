@@ -148,7 +148,7 @@ trait TransformCoqJavaToSimpleJava extends StdTokenParsers {
           assert(xs(4).isInstanceOf[SList])
           val as = xs(4).asInstanceOf[SList].x.filterNot(x => x == SAtom("::")).dropRight(1).map(transformE)
           val re = transformS(xs(1))
-          JAssignment(re, JCall(va, fu, as))
+          JAssignment(re, JCall(JVariableAccess(va), fu, as)) //TODO: Not sure if JVariableAccess is correct
         case SAtom("cassign") =>
           assert(xs.length == 3)
           JAssignment(transformS(xs(1)), transformE(xs(2)))

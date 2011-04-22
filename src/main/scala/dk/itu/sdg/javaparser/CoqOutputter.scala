@@ -84,11 +84,17 @@ trait CoqOutputter extends JavaToSimpleJava {
   }
 
   def callword (c : JCall) : (String, String) = {
-    val cl = ClassTable.getLocalVar(myclass, mymethod, c.variable)
-    if (ClassTable.isMethodStatic(cl, c.fun, c.arguments.map(exprtotype)))
-      ("cscall", cl)
-    else
-      ("cdcall", c.variable)
+
+    c.receiver match {
+      case JVariableAccess(v) => {
+        val cl = ClassTable.getLocalVar(myclass, mymethod, v)
+        if (ClassTable.isMethodStatic(cl, c.fun, c.arguments.map(exprtotype)))
+          ("cscall", cl)
+        else
+          ("cdcall", v)
+      }
+      case x => throw new Exception("Expected JVariableAccess but got: " + x)
+    }
   }
 
   def printStatement (something : JBodyStatement) : String = {
@@ -101,7 +107,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         val argstring = args.map(printStatement).foldRight("nil")(_ + " :: " + _)
         "(" + callw + " \"" + name + "\" \"" + callpre + "\" \"" + funname + "\" (" + argstring + "))"
       case JAssignment(name, JNewExpression(typ, arg)) =>
-        printStatement(JAssignment(name, JCall(typ, "new", arg)))
+        printStatement(JAssignment(name, JCall(JVariableAccess(typ), "new", arg))) //TODO, no idea if JVariableAccess is correct
       case JAssignment(name, JFieldAccess(variable, field)) =>
         val v = variable match {
           case JVariableAccess(x) => x
@@ -131,7 +137,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         "(" + callw + " \"ignored\" \"" + callpre + "\" \"" + fun + "\" (" + args + "))"
       case JNewExpression(typ, arg) =>
         val t = Gensym.newsym
-        printStatement(JAssignment(t, JCall(typ, "new", arg)))
+        printStatement(JAssignment(t, JCall(JVariableAccess(typ), "new", arg))) //TODO: No idea if JVariableAccess is correct
       case y => Console.println("printStatement: no handler for " + y); ""
     }
   }
@@ -197,7 +203,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         "var_expr \"" + ret + "\""
     (defi, res)
   }
-  
+
   def classMethods (body : List[JStatement]) : List[Pair[String,String]] = {
     body.flatMap {
       case JMethodDefinition(name, typ, params, body) =>

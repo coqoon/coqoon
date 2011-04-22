@@ -583,7 +583,7 @@ object FinishAST extends JavaTerms
             //gather arguments from y
             val args = transformExpressions(y).filterNot(_ == null).drop(1) //drop methodname
             log.info(" Call, args are " + args)
-            JCall(z, rest, args)
+            JCall(JVariableAccess(z), rest, args)
           }
           else {
             log.info("access to non-this field (unchecked): " + rx + " fieldname " + rest)
@@ -659,7 +659,7 @@ object FinishAST extends JavaTerms
       if (rst.length > 1) {
         log.info("should have recursed for methodname " + rst + "(in call:" + varia + ", arguments:" + args.map(transformExpression) + ")")
       }
-      Right(JCall(varia, rst.reduceLeft(_ + "." + _), args.map(transformExpression))) //XXX: recurse
+      Right(JCall(JVariableAccess(varia), rst.reduceLeft(_ + "." + _), args.map(transformExpression))) //XXX: recurse
     }
   }
 
