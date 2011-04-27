@@ -9,6 +9,10 @@
 ** read scala style guide
 ** use mkString instead of reduceLeft at several places!
 * Coq side
+** string literal "foo" is printed as foo, while it should be "foo" (or ("foo":expr))
+** find disjoint definition names (newR, newM,...)
+** constructor might have body, emit that!
+** Use Set Cwd instead of Add LoadPath for project diretory
 ** Response/Message buffer (or below Goal Viewer?)
 ** clear Goal Buffer at right places
 ** Undo from just after End should jump to start of Section/Module/whatever

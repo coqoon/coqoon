@@ -158,7 +158,9 @@ object ClassTable extends KopitiamLogger {
   }
 
   def isMethodStatic(classname : String, methodname : String, args : List[String]) : Boolean = {
-    if (classtable.contains(classname)) {
+	if (methodname == "new")
+	  true
+    else if (classtable.contains(classname)) {
       log.info("checking static of " + getModifiers(classname, methodname))
       getModifiers(classname, methodname).contains("static")
     } else

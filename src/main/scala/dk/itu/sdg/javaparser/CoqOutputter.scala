@@ -84,7 +84,6 @@ trait CoqOutputter extends JavaToSimpleJava {
   }
 
   def callword (c : JCall) : (String, String) = {
-
     c.receiver match {
       case JVariableAccess(v) => {
         val cl = ClassTable.getLocalVar(myclass, mymethod, v)

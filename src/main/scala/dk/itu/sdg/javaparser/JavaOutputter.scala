@@ -92,7 +92,7 @@ trait JavaOutputter {
       case JBinaryExpression(op, l, r) => indent(ind) + out(l, 0) + " " + op + " " + out(r, 0)
       case JUnaryExpression(op, e) => indent(ind) + op + out(e, 0)
       case JPostfixExpression(op, e) => indent(ind) + out(e, 0) + op
-      case JCall(v, f, as) =>
+      case JCall(JVariableAccess(v), f, as) =>
         val va = v + "."
         indent(ind) + va + f + "(" + red(mapi(as, 0), ", ") + ")"
       case JNewExpression(t, a) =>
