@@ -145,7 +145,7 @@ trait Expression extends ImplicitConversions
     rep ( "." ~
           ( opt(genericTypeArgumentList) ~> id ~ opt(arguments) ^^ { //that's either call or field access (depending on arguments or no arguments)
             case x~None => x
-            case x~Some(y) => new ~(x, y)
+            case x~Some(y) => Call(QualId(List(x)), y)
           }
            | "this"
            | "super" ~ arguments
