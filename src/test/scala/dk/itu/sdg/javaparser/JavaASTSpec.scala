@@ -365,6 +365,58 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     getASTbyParsingFileNamed("Fac2.txt") should equal(expected)
   }
 
+  "Parsing assert.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition("Foo", "", List[String](), List(
+      JMethodDefinition("foo", "void", List[JArgument](), List(JBlock(List(
+        JAssert(JBinaryExpression("==", JLiteral("5"), JLiteral("5")))))))), None))
+    getASTbyParsingFileNamed("assert.txt") should equal(expected)    
+  }
+
+  "Parsing Tree_client.txt" should "produce the correct AST" in {
+    val expected = List(
+      JInterfaceDefinition("ITreeIterator", List[String](), List(
+        JMethodDefinition("hasNext", "boolean", List[JArgument](), List[JBodyStatement]()),
+        JMethodDefinition("next", "int", List[JArgument](), List[JBodyStatement]()))),
+      JInterfaceDefinition("ITree", List[String](), List(
+        JMethodDefinition("contains", "boolean", List(JArgument("item", "int")), List[JBodyStatement]()),
+        JMethodDefinition("add", "int", List(JArgument("item", "int")), List[JBodyStatement]()),
+        JMethodDefinition("snapshot", "ITree", List[JArgument](), List[JBodyStatement]()),
+        JMethodDefinition("iterator", "ITreeIterator", List[JArgument](), List[JBodyStatement]()))),
+      JClassDefinition("A1B1Tree", "", List("ITree"), List[JStatement](), None),
+      JClassDefinition("World", "", List[String](), List(
+        JMethodDefinition("main", "void", List[JArgument](), List(JBlock(List(
+          JBinding("t", "ITree", Some(JNewExpression("A1B1Tree", List[JExpression]()))),
+          JCall(JVariableAccess("t"), "add", List(JLiteral("1"))),
+          JCall(JVariableAccess("t"), "add", List(JLiteral("2"))),
+          JCall(JVariableAccess("t"), "add", List(JLiteral("3"))),
+          JBinding("s", "ITree", Some(JCall(JVariableAccess("t"), "snapshot", List[JExpression]()))),
+          JBinding("lc", "boolean", Some(JCall(JVariableAccess("it"), "hasNext", List[JExpression]()))),
+          JWhile(JBinaryExpression("==", JVariableAccess("lc"), JLiteral("true")),
+            JBlock(List(
+              JBinding("x", "int", Some(JCall(JVariableAccess("it"), "next", List[JExpression]()))),
+              JCall(JVariableAccess("t"), "add", List(JBinaryExpression("*", JVariableAccess("x"), JLiteral("3")))),
+              JAssignment("lc", JCall(JVariableAccess("it"), "hasNext", List[JExpression]()))))),
+          JBinding("tmp_1", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("1"))))),
+          JAssert(JBinaryExpression("==", JVariableAccess("tmp_1"), JLiteral("true"))),
+          JBinding("tmp_2", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("2"))))),
+          JAssert(JBinaryExpression("==", JVariableAccess("tmp_2"), JLiteral("true"))),
+          JBinding("tmp_3", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("3"))))),
+          JAssert(JBinaryExpression("==", JVariableAccess("tmp_3"), JLiteral("true"))),
+          JBinding("tmp_4", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("4"))))),
+          JAssert(JBinaryExpression("==", JVariableAccess("tmp_4"), JLiteral("false"))),
+          JBinding("tmp_5", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("5"))))),
+          JAssert(JBinaryExpression("==", JVariableAccess("tmp_5"), JLiteral("false"))),
+          JBinding("tmp_6", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("6"))))),
+          JAssert(JBinaryExpression("==", JVariableAccess("tmp_6"), JLiteral("true"))),
+          JBinding("tmp_7", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("7"))))),
+          JAssert(JBinaryExpression("==", JVariableAccess("tmp_7"), JLiteral("false"))),
+          JBinding("tmp_8", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("8"))))),
+          JAssert(JBinaryExpression("==", JVariableAccess("tmp_8"), JLiteral("false"))),
+          JBinding("tmp_9", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("9"))))),
+          JAssert(JBinaryExpression("==", JVariableAccess("tmp_9"), JLiteral("true")))))))), None))
+    getASTbyParsingFileNamed("Tree_client.txt") should equal(expected)
+  }
+
   /*
    * Returns the JavaAST produced by parsing the file named "name" inside of the
    * folder src/test/resources/javaparser/source.

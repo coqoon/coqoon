@@ -1,0 +1,38 @@
+interface ITreeIterator {
+  public boolean hasNext();
+  public int next ();
+}
+
+interface ITree {
+  public boolean contains(int item);
+  public boolean add(int item);
+  public ITree snapshot();
+  public ITreeIterator iterator();
+}
+
+class A1B1Tree implements ITree {
+}
+
+class World {
+  void main () {
+    ITree t = new A1B1Tree();
+    t.add(1); t.add(2); t.add(3);
+    ITree s = t.snapshot();
+    TreeIterator it = s.iterator();
+    boolean lc = it.hasNext();
+    while (lc) {
+      int x = it.next();
+      t.add(x * 3);
+      lc = it.hasNext();
+    } 
+    assert(t.contains(1) == true);
+    assert(t.contains(2) == true);
+    assert(t.contains(3) == true);
+    assert(t.contains(4) == false);
+    assert(t.contains(5) == false);
+    assert(t.contains(6) == true);
+    assert(t.contains(7) == false);
+    assert(t.contains(8) == false);
+    assert(t.contains(9) == true);
+  }
+}
