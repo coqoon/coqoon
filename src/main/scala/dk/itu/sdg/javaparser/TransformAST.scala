@@ -548,6 +548,7 @@ object FinishAST extends JavaTerms
       case c: Call if transformCall(c).isRight => transformCall(c).right.get                                                     :: Nil
       case qualid : QualId                     => transformQualId(qualid)                                                        :: Nil
       case (x : PrimaryExpr) ~ (y : List[Any]) => transformPrimaryExprFollowedByList(x,y)                                        :: Nil
+      case ("." ~ expr)                        => transformAnyExpr(expr)
     }
   }
 
@@ -565,36 +566,30 @@ object FinishAST extends JavaTerms
   }
 
   /*
-   * Transforms a PrimaryExpr and a List of Any into a JBodyStatement
+   * Transforms a PrimaryExpr and a List of Any into a JBodyStatement. The List of Any is
+   * the result from the parser. This happens when it parses a chained expression.
    */
   def transformPrimaryExprFollowedByList(x: PrimaryExpr, y: List[Any]): JBodyStatement = {
-    log.info("transformStatement with primary " + x + " and arguments " + y)
-    val rx = transformExpression(x)
-    log.info("  transformed primary is " + rx)
-    val rest = unpackR(y).drop(1)
-    log.info("  rest (unpacked arguments, dropped first ('.')) " + rest)
-    rx match {
-      case JVariableAccess(z) =>
-        if (z == "this")
-          if (ClassTable.getFields(classid).contains(rest))
-            JFieldAccess(rx, rest)
-          else { //fields might be declared after use...
-            //we've most likely a call!?
-            //           log.warning("dunno what you mean with this (not a field): " + rx + " rest " + rest)
-            //y consists of .~(Name(addCount)~List(Expr(Prim(Post(Prim(Call(Qual(List(Name(c), Name(
-            //gather arguments from y
-            val args = transformExpressions(y).filterNot(_ == null).drop(1) //drop methodname
-            log.info(" Call, args are " + args)
-            JCall(JVariableAccess(z), rest, args)
-          }
-          else {
-            log.info("access to non-this field (unchecked): " + rx + " fieldname " + rest)
-            JFieldAccess(rx, rest)
-          }
-      case y =>
-        //now we have to lookup type of rx, and look whether rest is a field inside there
-        log.warning("unsafe field access (maybe non-existant?): " + rx + " rest " + rest)
-      JFieldAccess(rx, rest)
+
+    /**
+     * Dear reader,
+     *
+     * y.map(transformAnyExpr) will convert the parse-result into SimpleJavaAST however
+     * because of lack of information Call(...) and Name(...) will be turned into JCall(this,_,_)
+     * and JVariableAccess(...) - this is wrong as we want JFieldAccess and JCall(expr,name,args) to
+     * be called on the result of the call and field accesses before it. To fix this we reverse the list
+     * and use foldRgiht to build up the proper AST and do the transformations.
+     *
+     * /Mads
+     */
+
+    val x_ = transformExpression(x)
+    val y_ = y.map(transformAnyExpr).flatten
+    y_.reverse.foldRight(x_) { (cur,acc) =>
+      cur match {
+        case JVariableAccess(name) => JFieldAccess(acc,name)
+        case JCall(_,name, args)   => JCall(acc, name, args)
+      }
     }
   }
 
@@ -674,7 +669,7 @@ object FinishAST extends JavaTerms
       val fst = if (isFieldAccess(varia)) JFieldAccess(JVariableAccess("this"), varia) else JVariableAccess(varia)
 
       val result = rst.foldRight(fst) { (current, acc) =>
-        JCall(acc, current, args.map(transformExpression)) // TODO, is Nil right here?
+        JCall(acc, current, args.map(transformExpression))
       }
 
       Right(result) //XXX: recurse
