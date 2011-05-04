@@ -2,7 +2,7 @@
 
 package dk.itu.sdg.javaparser
 
-trait JStatement { }
+sealed abstract class JStatement { }
 
 sealed abstract class JModifier()
 
