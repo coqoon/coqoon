@@ -9,7 +9,7 @@ case class SJInterfaceDefinition (id : String, interfaces : List[String], body :
 sealed abstract class SJBodyDefinition { }
 
 case class SJFieldDefinition (id : String, jtype : String) extends SJBodyDefinition
-case class SJMethodDefinition (id : String, jtype : String, parameters : List[SJArgument], body : List[SJBodyStatement]) extends SJBodyDefinition
+case class SJMethodDefinition (id : String, jtype : String, parameters : List[SJArgument], body : List[SJStatement]) extends SJBodyDefinition
 
 case class SJArgument (id : String, jtype : String)
 
