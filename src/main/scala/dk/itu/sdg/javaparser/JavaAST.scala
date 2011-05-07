@@ -10,7 +10,7 @@ trait InnerStatement extends JStatement
 
 case class JFieldDefinition (id : String, jtype : String) extends InnerStatement
 case class JMethodDefinition (id : String, jtype : String, parameters : List[JArgument], body : List[JBodyStatement]) extends InnerStatement
-case class JConstructorDefinition (id : String, jtype : String, parameters : List[JArgument], body : List[JBodyStatement]) extends InnerStatement
+case class JConstructorDefinition (jtype : String, parameters : List[JArgument], body : List[JBodyStatement]) extends InnerStatement
 
 case class JArgument (id : String, jtype : String) extends InnerStatement
 

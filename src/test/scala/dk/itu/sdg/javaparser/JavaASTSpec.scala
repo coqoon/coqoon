@@ -421,7 +421,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     val expected = List(
       JClassDefinition("Person","",Nil,List(
         JFieldDefinition("name","String"), 
-        JConstructorDefinition("new","Person",List(JArgument("name","String")),
+        JConstructorDefinition("Person",List(JArgument("name","String")),
           List(JBlock(List(JFieldWrite(JVariableAccess("this"),"name",JFieldAccess(JVariableAccess("this"),"name"))))))),None))
      getASTbyParsingFileNamed("ClassWithConstructor.txt") should equal(expected)    
    }
