@@ -2,16 +2,17 @@
 
 package dk.itu.sdg.javaparser
 
-sealed abstract class SJDefinition { }
-case class SJClassDefinition (id : String, superclass : String, interfaces : List[String], body : List[JStatement], outerclass : Option[String]) extends SJDefinition
-case class SJInterfaceDefinition (id : String, interfaces : List[String], body : List[SJStatement]) extends SJDefinition
+sealed abstract class SJDefinition (modifiers : List[String]) { }
+case class SJClassDefinition (modifiers : List[String], id : String, superclass : String, interfaces : List[String], body : List[SJBodyDefinition], outerclass : Option[String]) extends SJDefinition (modifiers)
+case class SJInterfaceDefinition (modifiers : List[String], id : String, interfaces : List[String], body : List[SJBodyDefinition]) extends SJDefinition (modifiers)
 
-sealed abstract class SJBodyDefinition { }
+sealed abstract class SJBodyDefinition (modifiers : List[String]) { }
+case class SJFieldDefinition (modifiers : List[String], id : String, jtype : String, init : Option[SJStatement]) extends SJBodyDefinition (modifiers)
+case class SJMethodDefinition (modifiers : List[String], id : String, jtype : String, parameters : List[SJArgument], body : SJStatement) extends SJBodyDefinition (modifiers)
+case class SJConstructorDefinition (modifiers : List[String], jtype : String, parameters : List[SJArgument], body : SJStatement) extends SJBodyDefinition (modifiers)
+case class SJBodyBlock (modifiers : List[String], body : SJStatement) extends SJBodyDefinition (modifiers)
 
-case class SJFieldDefinition (id : String, jtype : String) extends SJBodyDefinition
-case class SJMethodDefinition (id : String, jtype : String, parameters : List[SJArgument], body : List[SJStatement]) extends SJBodyDefinition
-
-case class SJArgument (id : String, jtype : String)
+sealed case class SJArgument (id : String, jtype : String)
 
 sealed abstract class SJStatement
 case class SJBlock (body : List[SJStatement]) extends SJStatement
