@@ -456,11 +456,11 @@ object FinishAST extends JavaTerms
   }
 
   /*
-   * Transforms a ConstructorDeclaration into a JMethodDefinition
+   * Transforms a ConstructorDeclaration into a JConstructorDefinition
    */
-  def transformConstructor(constructor: ConstructorDeclaration): JMethodDefinition = {
+  def transformConstructor(constructor: ConstructorDeclaration): JConstructorDefinition = {
     val (md, cid, args, body) = extractMethodOrConstructorInfo(constructor)
-    JMethodDefinition(md, cid, args, body)
+    JConstructorDefinition(md, cid, args, body)
   }
 
   /*

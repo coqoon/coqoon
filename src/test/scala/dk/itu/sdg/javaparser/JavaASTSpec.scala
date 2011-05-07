@@ -417,6 +417,15 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     getASTbyParsingFileNamed("Tree_client.txt") should equal(expected)
   }
 
+  "Parsing ClassWithConstructor.txt" should "produce the correct AST" in {
+    val expected = List(
+      JClassDefinition("Person","",Nil,List(
+        JFieldDefinition("name","String"), 
+        JConstructorDefinition("new","Person",List(JArgument("name","String")),
+          List(JBlock(List(JFieldWrite(JVariableAccess("this"),"name",JFieldAccess(JVariableAccess("this"),"name"))))))),None))
+     getASTbyParsingFileNamed("ClassWithConstructor.txt") should equal(expected)    
+   }
+
   /*
    * Returns the JavaAST produced by parsing the file named "name" inside of the
    * folder src/test/resources/javaparser/source.
