@@ -15,14 +15,13 @@ case class SJBodyBlock (modifiers : List[String], body : SJStatement) extends SJ
 sealed case class SJArgument (id : String, jtype : String)
 
 sealed abstract class SJStatement
-case class SJBlock (body : List[SJStatement]) extends SJStatement
 case class SJAssert (assertion : SJExpression) extends SJStatement
-case class SJAssignment (left : String, right : SJStatement) extends SJStatement
+case class SJAssignment (left : SJVariableAccess, right : SJStatement) extends SJStatement
 case class SJFieldWrite (variable : SJVariableAccess, field : String, value : SJExpression) extends SJStatement
 case class SJReturn (ret : SJExpression) extends SJStatement
 case class SJBinding (name : String, jtype : String, init : Option[SJStatement]) extends SJStatement
-case class SJWhile (test : SJExpression, body : SJBlock) extends SJStatement
-case class SJConditional (test : SJExpression, consequent : SJStatement, alternative : SJStatement) extends SJStatement
+case class SJWhile (test : SJExpression, body : List[SJStatement]) extends SJStatement
+case class SJConditional (test : SJExpression, consequent : List[SJStatement], alternative : List[SJStatement]) extends SJStatement
 case class SJCall (receiver : SJVariableAccess, fun : String, arguments : List[SJExpression]) extends SJStatement
 case class SJNewExpression (jtype : String, arguments : List[SJExpression]) extends SJStatement
 case class SJFieldAccess (variable : SJVariableAccess, field : String) extends SJStatement
