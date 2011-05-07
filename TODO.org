@@ -90,7 +90,6 @@ same in contains: [item stack variable, integer argument ; node a local variable
 method init_, new Node(i, l, r) vs new Node(i) <- also new should be followed by call to init
 also, inner classes should be kept inner (how to do that in Coq?)
 ** name newly introduced variables not tmp_xx, but find a logical name for them (as done in LOOP/Umbra/...)
-** operator translation (x += y --> x = x + y) (Composite example)
 ** types for ternary Bool ? x : y <- intersect x y
 ** proper syntax (not only a string) for pre/postcondition and loop invariants - plus completion!
 ** for loops -> translate to while
