@@ -549,6 +549,8 @@ object FinishAST extends JavaTerms
       case qualid : QualId                     => transformQualId(qualid)                                                        :: Nil
       case (x : PrimaryExpr) ~ (y : List[Any]) => transformPrimaryExprFollowedByList(x,y)                                        :: Nil
       case ("." ~ expr)                        => transformAnyExpr(expr)
+      // I have no idea what could come instead of None so it's best to crash it if something else comes up.  
+      case (("assert" ~ x) ~ None)             => JAssert(transformAnyExpr(x).head)                                              :: Nil
     }
   }
 
