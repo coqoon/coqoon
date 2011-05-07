@@ -597,10 +597,13 @@ object FinishAST extends JavaTerms
 
   /*
    * Transforms a BinaryExpr to a JBodyStatement
-   *
-  * TODO: Implement the missing operators and JFieldAccess in +=
    */
   def transformBinaryExpr(expr: BinaryExpr) : JBodyStatement = {
+    
+    // Checks an operator as an assignemnt operator. 
+    val isAssignmentOperator: String => Boolean = (operator: String) =>
+      List("+=", "-=", "*=", "/=", "%=", "&=", "^=", "|=", "<<=", ">>=", ">>>=").contains(operator)
+    
     val BinaryExpr(op, le, ri) = expr
     val oper = unpackR(op)
     oper match {
@@ -609,11 +612,12 @@ object FinishAST extends JavaTerms
         lef match {
           case JFieldAccess(cnx, nam) => JFieldWrite(cnx, nam, transformExpression(ri))
           case JVariableAccess(nam)   => JAssignment(nam, transformExpression(ri))
-          case x                      => throw new Exception("dunno about left hand side " + x)
       }}
-      case "+=" => {
+      case assignmentOperator if isAssignmentOperator(assignmentOperator) => {
+        val binOp = assignmentOperator.replace("=","") // all assignment operators are just the normal operator with '=' appended
         transformAnyExpr(le).head match {
-          case JVariableAccess(name) => JAssignment(name, JBinaryExpression("+", JVariableAccess(name),transformExpression(ri)))
+          case va @ JVariableAccess(name)  => JAssignment(name, JBinaryExpression(binOp, va ,transformExpression(ri)))
+          case fa @ JFieldAccess(cnx, nam) => JFieldWrite(cnx, nam, JBinaryExpression(binOp, fa,transformExpression(ri)))
       }}
       case _ => JBinaryExpression(oper, transformExpression(le), transformExpression(ri))
     }

@@ -426,6 +426,46 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
      getASTbyParsingFileNamed("ClassWithConstructor.txt") should equal(expected)    
    }
 
+  "Parsing OperatorTranslation.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition("Foo","",Nil,List(JFieldDefinition("number","int"),   
+         JMethodDefinition("bar","void",Nil,List(JBlock(List(
+           JBinding("a","int",Some(JLiteral("1"))), 
+           JAssignment("a",JBinaryExpression("+",JVariableAccess("a"),JLiteral("1"))), 
+           JAssignment("a",JBinaryExpression("-",JVariableAccess("a"),JLiteral("1"))), 
+           JAssignment("a",JBinaryExpression("*",JVariableAccess("a"),JLiteral("1"))), 
+           JAssignment("a",JBinaryExpression("/",JVariableAccess("a"),JLiteral("1"))), 
+           JAssignment("a",JBinaryExpression("%",JVariableAccess("a"),JLiteral("1"))), 
+           JAssignment("a",JBinaryExpression("&",JVariableAccess("a"),JLiteral("1"))), 
+           JAssignment("a",JBinaryExpression("^",JVariableAccess("a"),JLiteral("1"))), 
+           JAssignment("a",JBinaryExpression("|",JVariableAccess("a"),JLiteral("1"))), 
+           JAssignment("a",JBinaryExpression("<<",JVariableAccess("a"),JLiteral("1"))), 
+           JAssignment("a",JBinaryExpression(">>",JVariableAccess("a"),JLiteral("1"))), 
+           JAssignment("a",JBinaryExpression(">>>",JVariableAccess("a"),JLiteral("1"))), 
+           JBinding("tmp_1","int",Some(JFieldAccess(JVariableAccess("this"),"number"))), 
+           JFieldWrite(JVariableAccess("this"),"number",JBinaryExpression("+",JVariableAccess("tmp_1"),JLiteral("1"))), 
+           JBinding("tmp_2","int",Some(JFieldAccess(JVariableAccess("this"),"number"))), 
+           JFieldWrite(JVariableAccess("this"),"number",JBinaryExpression("-",JVariableAccess("tmp_2"),JLiteral("1"))), 
+           JBinding("tmp_3","int",Some(JFieldAccess(JVariableAccess("this"),"number"))), 
+           JFieldWrite(JVariableAccess("this"),"number",JBinaryExpression("*",JVariableAccess("tmp_3"),JLiteral("1"))), 
+           JBinding("tmp_4","int",Some(JFieldAccess(JVariableAccess("this"),"number"))), 
+           JFieldWrite(JVariableAccess("this"),"number",JBinaryExpression("/",JVariableAccess("tmp_4"),JLiteral("1"))), 
+           JBinding("tmp_5","int",Some(JFieldAccess(JVariableAccess("this"),"number"))), 
+           JFieldWrite(JVariableAccess("this"),"number",JBinaryExpression("%",JVariableAccess("tmp_5"),JLiteral("1"))), 
+           JBinding("tmp_6","int",Some(JFieldAccess(JVariableAccess("this"),"number"))), 
+           JFieldWrite(JVariableAccess("this"),"number",JBinaryExpression("&",JVariableAccess("tmp_6"),JLiteral("1"))), 
+           JBinding("tmp_7","int",Some(JFieldAccess(JVariableAccess("this"),"number"))), 
+           JFieldWrite(JVariableAccess("this"),"number",JBinaryExpression("^",JVariableAccess("tmp_7"),JLiteral("1"))), 
+           JBinding("tmp_8","int",Some(JFieldAccess(JVariableAccess("this"),"number"))), 
+           JFieldWrite(JVariableAccess("this"),"number",JBinaryExpression("|",JVariableAccess("tmp_8"),JLiteral("1"))), 
+           JBinding("tmp_9","int",Some(JFieldAccess(JVariableAccess("this"),"number"))), 
+           JFieldWrite(JVariableAccess("this"),"number",JBinaryExpression("<<",JVariableAccess("tmp_9"),JLiteral("1"))), 
+           JBinding("tmp_10","int",Some(JFieldAccess(JVariableAccess("this"),"number"))), 
+           JFieldWrite(JVariableAccess("this"),"number",JBinaryExpression(">>",JVariableAccess("tmp_10"),JLiteral("1"))), 
+           JBinding("tmp_11","int",Some(JFieldAccess(JVariableAccess("this"),"number"))), 
+           JFieldWrite(JVariableAccess("this"),"number",JBinaryExpression(">>>",JVariableAccess("tmp_11"),JLiteral("1")))))))),None))
+    getASTbyParsingFileNamed("OperatorTranslation.txt") should equal(expected)    
+  }
+
   /*
    * Returns the JavaAST produced by parsing the file named "name" inside of the
    * folder src/test/resources/javaparser/source.
