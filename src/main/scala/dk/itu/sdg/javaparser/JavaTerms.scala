@@ -35,6 +35,8 @@ trait JavaTerms
 
   case class FormalVariable (modifiers : Any, jtype : Any, id : Term) extends Term
 
+  case class SomethingWithModifiers(modifiers: List[Modifier], something: Any)
+
   // expressions
   trait AnyExpr extends Term
   case class Expr (e : Any) extends AnyExpr //{ override def toString = "EXPR" }

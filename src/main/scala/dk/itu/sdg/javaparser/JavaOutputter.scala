@@ -34,7 +34,7 @@ trait JavaOutputter {
       case JInterfaceDefinition(id, is, b) =>
         val ints = if (is.length > 0) " extends " + is.mkString(", ") else ""
         indent(ind) + "interface " + id + ints + "{\n" + mr(mapi(b, ind + 2)) + "\n" + indent(ind) + "}"
-      case JClassDefinition(id, s, i, b, o) =>
+      case JClassDefinition(modifiers, id, s, i, b, o) =>
         myclass = id
         val specp = ClassTable.getCoq("PRELUDE").reverse.map(x => coqout("PRELUDE", x, 4))
         val specpr = ClassTable.getCoq(id, "PROGRAM").reverse.map(x => coqout("PROGRAM", x, 4))
@@ -48,7 +48,7 @@ trait JavaOutputter {
           else
             ""
         val is = if (i.length > 0) " implements " + i.reduceLeft(_ + ", " + _) else " "
-        indent(ind) + "class " + id + is + "{\n" + st + mr(mapi(b, ind + 2)) + "\n" + indent(ind) + "}"
+        indent(ind) + modifiers.mkString(" ") + " class " + id + is + "{\n" + st + mr(mapi(b, ind + 2)) + "\n" + indent(ind) + "}"
       case JFieldDefinition(id, t) => indent(ind) + t + " " + id + ";"
       case JMethodDefinition(id, typ, ar, b) =>
         val sp = ClassTable.getSpecs(myclass)

@@ -3,8 +3,64 @@
 package dk.itu.sdg.javaparser
 
 trait JStatement { }
-case class JClassDefinition (id : String, superclass : String, interfaces : List[String], body : List[JStatement], outerclass : Option[String]) extends JStatement
-case class JInterfaceDefinition (id : String, interfaces : List[String], body : List[JStatement]) extends JStatement
+
+sealed abstract class JModifier()
+
+case class Private() extends JModifier
+case class Protected() extends JModifier
+case class Default() extends JModifier
+case class Public() extends JModifier
+case class Package() extends JModifier
+case class Final() extends JModifier
+case class Abstract() extends JModifier
+case class Static() extends JModifier
+case class Native() extends JModifier
+case class Transient() extends JModifier
+case class Volatile() extends JModifier
+case class Synchronized() extends JModifier
+case class Strictfp() extends JModifier
+
+object JModifier extends JavaTerms {
+      
+  def apply(str: String): Option[JModifier] = str match {
+    case "private"      => Some(Private())
+    case "protected"    => Some(Protected())
+    case "default"      => Some(Default())
+    case "public"       => Some(Public())
+    case "package"      => Some(Package())
+    case "final"        => Some(Final())
+    case "abstract"     => Some(Abstract())
+    case "static"       => Some(Static())
+    case "native"       => Some(Native())
+    case "transient"    => Some(Transient())
+    case "volatile"     => Some(Volatile())
+    case "synchronized" => Some(Synchronized())
+    case "strictfp"     => Some(Strictfp())
+    case _              => None
+  }
+  
+  def unapply(modifier: JModifier): Option[String] = modifier match {
+    case Private()      => Some("private")
+    case Protected()    => Some("protected")
+    case Default()      => Some("default")
+    case Public()       => Some("public")
+    case Package()      => Some("package")
+    case Final()        => Some("final")
+    case Abstract()     => Some("abstract")
+    case Static()       => Some("static")
+    case Native()       => Some("native")
+    case Transient()    => Some("transient")
+    case Volatile()     => Some("volatile")
+    case Synchronized() => Some("synchronized")
+    case Strictfp()     => Some("strictfp")
+    case _              => None
+  }
+}
+
+
+
+case class JClassDefinition (modifiers : Set[JModifier], id : String, superclass : String, interfaces : List[String], body : List[JStatement], outerclass : Option[String]) extends JStatement
+case class JInterfaceDefinition (/*accessModifier : AccessModifier,*/id : String, interfaces : List[String], body : List[JStatement]) extends JStatement
 
 trait InnerStatement extends JStatement
 

@@ -285,7 +285,7 @@ object FinishAST extends JavaTerms
     var innerclasses : List[JClassDefinition] = List[JClassDefinition]()
     val convert = (x : List[JStatement]) =>
       x.map(y => y match {
-        case JClassDefinition(name, supers, interf, body, outer) =>
+        case JClassDefinition(modifiers, name, supers, interf, body, outer) =>
           val nb = body.flatMap(z => z match {
             case (x : JClassDefinition) =>
               innerclasses ::= x; None
@@ -293,7 +293,7 @@ object FinishAST extends JavaTerms
               Some(translate(name, x))
             case x => Some(x)
           })
-          JClassDefinition(name, supers, interf, nb, outer)
+          JClassDefinition(modifiers, name, supers, interf, nb, outer)
         case x => x
       })
     val main = convert(x)
@@ -366,7 +366,11 @@ object FinishAST extends JavaTerms
       case x       => {
         x match {
           case i : Import => Nil // we don't care about imports for now.
-          case other      => List(transformClassOrInterface(other))
+          case SomethingWithModifiers(modifiers, classOrInterface) => 
+            val jmodifiers = modifiers.flatMap { case Modifier(Key(mod)) => JModifier(mod) }.toSet
+            List(transformClassOrInterface(classOrInterface, jmodifiers))
+          case other => 
+            List(transformClassOrInterface(other))
         }
       }
     }
@@ -374,9 +378,9 @@ object FinishAST extends JavaTerms
 
   /*
    * Transform a JClass or JInterface to a JClassDefinition or JInterfaceDefinition
-   * respectivly. Anything else will throw an exception
+   * respectively. Anything else will throw an exception
    */
-  def transformClassOrInterface(x : Any) : JStatement = {
+  def transformClassOrInterface(x : Any, modifiers: Set[JModifier] = Set[JModifier]()) : JStatement = {
     x match {
       case JClass(id, jtype, superclass, interfaces, bodyp) => {
         log.info("transforming a JClass, ranging (pos) " + x.asInstanceOf[JClass].pos)
@@ -388,7 +392,7 @@ object FinishAST extends JavaTerms
         ClassTable.registerClass(classid, outer, false)
         val mybody    = transformClassOrInterfaceBody(bodyp)
         classid       = ClassTable.getOuter(myclassid) match { case None => ""; case Some(x) => x }
-        JClassDefinition(myclassid, cs, is, mybody, outer)
+        JClassDefinition(modifiers, myclassid, cs, is, mybody, outer)
       }
       case JInterface(id, jtype, interfaces, body) => {
         val is      = transformOLF(interfaces)
@@ -398,7 +402,7 @@ object FinishAST extends JavaTerms
         ClassTable.registerClass(classid, outer, true)
         val mybody  = transformClassOrInterfaceBody(body)
         classid     = ClassTable.getOuter(myclass) match { case None => ""; case Some(x) => x }
-        JInterfaceDefinition(myclass, is, mybody)
+        JInterfaceDefinition(/*accessModifier,*/ myclass, is, mybody)
       }
       case x => throw new Exception("Expected JInterface or JClass but got: " + x)
     }

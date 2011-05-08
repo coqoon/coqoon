@@ -19,12 +19,12 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
    */
 
   "Parsing SimpleClass.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, Nil, None))
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, Nil, None))
     getASTbyParsingFileNamed("SimpleClass.txt") should equal(expected)
   }
 
   "Parsing SimpleClassWithMethod.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", List(),
+    val expected = List(JClassDefinition(Set(),"Foo", "", List(),
       List(JMethodDefinition("foo", "void", Nil,
         List(JBlock(Nil)))), None))
     getASTbyParsingFileNamed("SimpleClassWithMethod.txt") should equal(expected)
@@ -32,7 +32,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
 
   "Parsing SimpleClassMoreComplexMethod.txt" should "produce the correct AST" in {
     val expected = List(
-      JClassDefinition("Foo", "", Nil,
+      JClassDefinition(Set(),"Foo", "", Nil,
         List(
           JMethodDefinition("foo", "int",
             List(JArgument("a", "int")),
@@ -41,7 +41,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing SimpleClassMoreComplexMethod2.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil,
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil,
       List(JMethodDefinition("foo", "int",
         List(JArgument("a", "int")),
         List(JBlock(
@@ -53,13 +53,13 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing SimpleClassWithSimpleField.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil,
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil,
       List(JFieldDefinition("foo", "int")), None))
     getASTbyParsingFileNamed("SimpleClassWithSimpleField.txt") should equal(expected)
   }
 
   "Parsing MethodWithNoFieldAccessOrCallInAnExpression.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil,
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil,
       List(JFieldDefinition("f", "int"),
         JMethodDefinition("a", "int", Nil, List(JBlock(List(JReturn(JLiteral("10")))))),
         JMethodDefinition("b", "int", List(JArgument("c", "int")),
@@ -72,7 +72,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing FieldAssignment3.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JFieldDefinition("b", "int"),
       JMethodDefinition("a", "int", Nil, List(JBlock(List(JReturn(JLiteral("10")))))),
       JMethodDefinition("foo", "void", Nil, List(JBlock(List(
@@ -83,7 +83,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing FieldAssignment2.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JFieldDefinition("b", "int"),
       JMethodDefinition("set", "void", Nil, List(JBlock(List(
         JBinding("tmp_1", "int", Some(JFieldAccess(JVariableAccess("this"), "b"))),
@@ -93,7 +93,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing FieldAssignment1.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JFieldDefinition("b", "int"),
       JMethodDefinition("set", "void", Nil, List(JBlock(List(
         JFieldWrite(JVariableAccess("this"), "b", JLiteral("10"))))))),
@@ -102,14 +102,14 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing Binding1.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JMethodDefinition("foo", "void", Nil, List(JBlock(List(JBinding("a", "int", Some(JLiteral("20")))))))),
       None))
     getASTbyParsingFileNamed("Binding1.txt") should equal(expected)
   }
 
   "Parsing Binding2.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo","",Nil,List(
+    val expected = List(JClassDefinition(Set(),"Foo","",Nil,List(
       JMethodDefinition("foo","void",Nil,List(JBlock(List(
         JBinding("a","int",Some(JLiteral("20"))),
         JBinding("b","int",Some(JLiteral("10"))))
@@ -119,7 +119,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing Binding3.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JMethodDefinition("bar", "int", Nil, List(JBlock(List(JReturn(JLiteral("10")))))),
       JMethodDefinition("foo", "void", Nil, List(JBlock(List(JBinding("a", "int", Some(JCall(JVariableAccess("this"), "bar", Nil)))))))),
       None))
@@ -127,7 +127,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing Binding4.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JFieldDefinition("a", "int"),
       JMethodDefinition("bar", "int", Nil, List(JBlock(List(
         JBinding("tmp_1", "int", Some(JFieldAccess(JVariableAccess("this"), "a"))),
@@ -162,7 +162,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing Assignment1.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JMethodDefinition("bar", "void", Nil, List(JBlock(List(
         JBinding("a", "int", Some(JLiteral("10"))),
         JAssignment("a", JLiteral("20"))))))), None))
@@ -170,7 +170,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing Assignment2.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JMethodDefinition("bar", "void", Nil, List(JBlock(List(
         JBinding("a", "int", Some(JLiteral("10"))),
         JAssignment("a", JBinaryExpression("+", JVariableAccess("a"), JLiteral("20")))))))),
@@ -179,7 +179,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing Assignment3.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JMethodDefinition("bar", "void", Nil, List(JBlock(List(
         JBinding("a", "int", Some(JLiteral("10"))),
         JAssignment("a", JBinaryExpression("+", JVariableAccess("a"), JLiteral("20")))))))),
@@ -188,7 +188,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing Assignment4.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JMethodDefinition("bar", "void", Nil, List(JBlock(List(
         JBinding("a", "int", Some(JLiteral("10"))),
         JAssignment("a", JCall(JVariableAccess("this"), "foobar", List())))))),
@@ -199,7 +199,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing Assignment5.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JMethodDefinition("bar", "void", Nil, List(JBlock(List(
         JBinding("a", "int", Some(JLiteral("10"))),
         JBinding("tmp_1", "int", Some(JCall(JVariableAccess("this"), "foobar", List()))),
@@ -211,7 +211,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing Postfix1.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JMethodDefinition("bar", "void", Nil, List(JBlock(List(
         JBinding("a", "int", Some(JLiteral("0"))),
         JAssignment("a", JBinaryExpression("+", JVariableAccess("a"), JLiteral("1")))))))),
@@ -220,7 +220,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing Postfix2.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JMethodDefinition("bar", "void", Nil, List(JBlock(List(
         JBinding("a", "int", Some(JLiteral("0"))),
         JAssignment("a", JBinaryExpression("-", JVariableAccess("a"), JLiteral("1")))))))),
@@ -229,7 +229,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing Postfix3.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JFieldDefinition("a", "int"),
       JMethodDefinition("bar", "void", Nil, List(JBlock(List(
         JBinding("tmp_1", "int", Some(JFieldAccess(JVariableAccess("this"), "a"))),
@@ -239,7 +239,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing Conditional1.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JMethodDefinition("bar", "void", List(JArgument("a", "int")), List(JBlock(List(
         JBinding("tmp_1", "int", None),
         JConditional(JBinaryExpression("==", JVariableAccess("a"), JLiteral("10")),
@@ -251,7 +251,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing Conditional2.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", Nil, List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
       JFieldDefinition("c", "int"),
       JMethodDefinition("bar", "void", List(JArgument("a", "int")), List(JBlock(List(
         JBinding("tmp_2", "int", Some(JFieldAccess(JVariableAccess("this"), "c"))),
@@ -266,8 +266,8 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
 
   "Parsing NestedField1.txt" should "produce the correct AST" in {
     val expected =
-      List(JClassDefinition("Foo", "", Nil, List(JFieldDefinition("a", "int")), None),
-           JClassDefinition("Bar", "", Nil, List(
+      List(JClassDefinition(Set(),"Foo", "", Nil, List(JFieldDefinition("a", "int")), None),
+           JClassDefinition(Set(),"Bar", "", Nil, List(
              JFieldDefinition("f", "Foo"),
              JMethodDefinition("bar", "void", Nil, List(JBlock(List(
                JBinding("tmp_1", "Foo", Some(JFieldAccess(JVariableAccess("this"), "f"))),
@@ -278,7 +278,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
 
   "Parsing NestedField2.txt" should "produce the correct AST" in {
     val expected =
-      List(JClassDefinition("Foo", "", Nil, List(
+      List(JClassDefinition(Set(),"Foo", "", Nil, List(
         JFieldDefinition("f", "Foo"),
         JFieldDefinition("a", "int"),
         JMethodDefinition("bar","int",Nil, List(JBlock(List(
@@ -295,8 +295,8 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
 
   "Parsing NestedCall1.txt" should "produce the correct AST" in {
     val expected =
-      List(JClassDefinition("Foo", "", Nil, List(JMethodDefinition("bar", "void", Nil, List(JBlock(List())))), None),
-           JClassDefinition("Bar", "", Nil, List(
+      List(JClassDefinition(Set(),"Foo", "", Nil, List(JMethodDefinition("bar", "void", Nil, List(JBlock(List())))), None),
+           JClassDefinition(Set(),"Bar", "", Nil, List(
              JFieldDefinition("f", "Foo"),
              JMethodDefinition("bar", "void", Nil, List(JBlock(List(
                JBinding("tmp_1", "Foo", Some(JFieldAccess(JVariableAccess("this"), "f"))),
@@ -307,7 +307,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
 
   "Parsing NestedCall2.txt" should "produce the correct AST" in {
     val expected =
-      List(JClassDefinition("Foo", "", Nil, List(
+      List(JClassDefinition(Set(),"Foo", "", Nil, List(
         JFieldDefinition("f", "Foo"),
         JFieldDefinition("a", "int"),
         JMethodDefinition("get", "Foo", Nil, List(JBlock(List(JBinding("tmp_1", "Foo", Some(JFieldAccess(JVariableAccess("this"), "f"))), JReturn(JVariableAccess("tmp_1")))))),
@@ -330,7 +330,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
 
   "Parsing While1.txt" should "produce the correct AST" in {
     val expected =
-      List(JClassDefinition("Foo", "", Nil, List(
+      List(JClassDefinition(Set(),"Foo", "", Nil, List(
         JMethodDefinition("bar", "void", Nil, List(JBlock(List(
           JBinding("i", "int", Some(JLiteral("1"))),
           JWhile(JBinaryExpression(">", JVariableAccess("i"), JLiteral("0")),
@@ -341,7 +341,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
 
   "Parsing Fac.txt" should "produce the correct AST" in {
     val expected =
-      List(JClassDefinition("Fac", "", List(), List(JMethodDefinition("fac", "int",
+      List(JClassDefinition(Set(),"Fac", "", List(), List(JMethodDefinition("fac", "int",
        List(JArgument("n", "int")),
         List(JBlock(List(JBinding("x", "int", None),
           JConditional(JBinaryExpression(">=", JVariableAccess("n"), JLiteral("0")),
@@ -354,7 +354,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
 
   "Parsing Fac2.txt" should "produce the correct AST" in {
     val expected =
-      List(JClassDefinition("Fac", "", List(), List(JMethodDefinition("fac", "int",
+      List(JClassDefinition(Set(),"Fac", "", List(), List(JMethodDefinition("fac", "int",
        List(JArgument("n", "int")),
         List(JBlock(List(JBinding("x", "int", None),
           JConditional(JBinaryExpression(">=", JVariableAccess("n"), JLiteral("0")),
@@ -366,7 +366,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing assert.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo", "", List[String](), List(
+    val expected = List(JClassDefinition(Set(),"Foo", "", List[String](), List(
       JMethodDefinition("foo", "void", List[JArgument](), List(JBlock(List(
         JAssert(JBinaryExpression("==", JLiteral("5"), JLiteral("5")))))))), None))
     getASTbyParsingFileNamed("assert.txt") should equal(expected)    
@@ -382,8 +382,8 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
         JMethodDefinition("add", "int", List(JArgument("item", "int")), List[JBodyStatement]()),
         JMethodDefinition("snapshot", "ITree", List[JArgument](), List[JBodyStatement]()),
         JMethodDefinition("iterator", "ITreeIterator", List[JArgument](), List[JBodyStatement]()))),
-      JClassDefinition("A1B1Tree", "", List("ITree"), List[JStatement](), None),
-      JClassDefinition("World", "", List[String](), List(
+      JClassDefinition(Set(),"A1B1Tree", "", List("ITree"), List[JStatement](), None),
+      JClassDefinition(Set(),"World", "", List[String](), List(
         JMethodDefinition("main", "void", List[JArgument](), List(JBlock(List(
           JBinding("t", "ITree", Some(JNewExpression("A1B1Tree", List[JExpression]()))),
           JCall(JVariableAccess("t"), "add", List(JLiteral("1"))),
@@ -419,7 +419,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
 
   "Parsing ClassWithConstructor.txt" should "produce the correct AST" in {
     val expected = List(
-      JClassDefinition("Person","",Nil,List(
+      JClassDefinition(Set(),"Person","",Nil,List(
         JFieldDefinition("name","String"), 
         JConstructorDefinition("Person",List(JArgument("name","String")),
           List(JBlock(List(JFieldWrite(JVariableAccess("this"),"name",JFieldAccess(JVariableAccess("this"),"name"))))))),None))
@@ -427,7 +427,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
    }
 
   "Parsing OperatorTranslation.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition("Foo","",Nil,List(JFieldDefinition("number","int"),   
+    val expected = List(JClassDefinition(Set(),"Foo","",Nil,List(JFieldDefinition("number","int"),   
          JMethodDefinition("bar","void",Nil,List(JBlock(List(
            JBinding("a","int",Some(JLiteral("1"))), 
            JAssignment("a",JBinaryExpression("+",JVariableAccess("a"),JLiteral("1"))), 
@@ -465,7 +465,12 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
            JFieldWrite(JVariableAccess("this"),"number",JBinaryExpression(">>>",JVariableAccess("tmp_11"),JLiteral("1")))))))),None))
     getASTbyParsingFileNamed("OperatorTranslation.txt") should equal(expected)    
   }
-
+  
+  "Parsing Modifiers.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(Private(), Abstract()),"A","",Nil,Nil,None))    
+    getASTbyParsingFileNamed("Modifiers.txt") should equal(expected)    
+  }
+  
   /*
    * Returns the JavaAST produced by parsing the file named "name" inside of the
    * folder src/test/resources/javaparser/source.

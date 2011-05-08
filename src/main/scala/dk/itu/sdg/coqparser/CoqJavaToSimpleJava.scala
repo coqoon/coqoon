@@ -44,7 +44,7 @@ trait TransformCoqJavaToSimpleJava extends StdTokenParsers {
             val bod = findDefs(s(3))
             ClassTable.registerClass(id(0), None, false)
             //ClassTable.addMethod()
-            JClassDefinition(id(0), "", List[String](), bod, None)
+            JClassDefinition(Set(), id(0), "", List[String](), bod, None)
           case SAtom("Build_Program") => //class, interfaces
             "Program, well, dunno yet"
           case SAtom("Build_spec") => //unit, fun

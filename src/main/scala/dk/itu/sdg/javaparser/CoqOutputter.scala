@@ -255,8 +255,8 @@ Qed."""
         val superms = if (supermethods.length == 0) "" else supermethods.reduceLeft(_ + " " + _)
         val superis = if (interfaces.length == 0) "" else interfaces.reduceLeft(_ + "\n  " + _) + "\n  "
         interfs ::= "Definition " + id + " (C : class) (T : Type) (R : val -> T -> upred heap_alg) " + superms + " " + mmeths + " : spec :=\n  " + superis + mspecs + "."
-      case JClassDefinition("Coq", supers, inters, body, par) =>
-      case JClassDefinition(id, supers, inters, body, par) =>
+      case JClassDefinition(modifiers, "Coq", supers, inters, body, par) =>
+      case JClassDefinition(modifiers, id, supers, inters, body, par) =>
         //let's hope only a single class and interfaces before that!
         outp ::= "Module " + name + " <: PROGRAM."
         myclass = id
@@ -282,8 +282,8 @@ Definition """ + id + """ :=
     }
     //method specs go here
     xs.foreach(x => x match {
-      case JClassDefinition("Coq", supers, inters, body, par) =>
-      case JClassDefinition(id, supers, inters, body, par) =>
+      case JClassDefinition(modifiers, "Coq", supers, inters, body, par) =>
+      case JClassDefinition(modifiers, id, supers, inters, body, par) =>
         myclass = id
         val specs = ClassTable.getSpecs(myclass)
         //filter out empty specs which are provided by an interface

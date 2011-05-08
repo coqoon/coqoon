@@ -198,7 +198,10 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
      | ";"
     )
 
-  def classOrInterfaceDeclaration = rep(modifier) ~ (classDeclaration | interfaceDeclaration)
+  def classOrInterfaceDeclaration = rep(modifier) ~ (classDeclaration | interfaceDeclaration) ^^ {
+    case Nil ~ classOrInterface => classOrInterface
+    case modifiers ~ classOrInterface => SomethingWithModifiers(modifiers, classOrInterface)
+  }
   def classDeclaration: Parser[Any] =
     ( normalClassDeclaration
      | enumDeclaration
