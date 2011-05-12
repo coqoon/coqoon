@@ -51,14 +51,12 @@ object JModifier extends JavaTerms {
   }
 }
 
-
-
 case class JClassDefinition (modifiers : Set[JModifier], id : String, superclass : String, interfaces : List[String], body : List[JStatement], outerclass : Option[String]) extends JStatement
 case class JInterfaceDefinition (modifiers : Set[JModifier], id : String, interfaces : List[String], body : List[JStatement]) extends JStatement
 
 trait InnerStatement extends JStatement
 
-case class JFieldDefinition (modifiers : Set[JModifier], id : String, jtype : String) extends InnerStatement
+case class JFieldDefinition (modifiers : Set[JModifier], id : String, jtype : String, initializer: Option[JExpression]) extends InnerStatement
 case class JMethodDefinition (modifiers : Set[JModifier], id : String, jtype : String, parameters : List[JArgument], body : List[JBodyStatement]) extends InnerStatement
 case class JConstructorDefinition (modifiers : Set[JModifier], jtype : String, parameters : List[JArgument], body : List[JBodyStatement]) extends InnerStatement
 

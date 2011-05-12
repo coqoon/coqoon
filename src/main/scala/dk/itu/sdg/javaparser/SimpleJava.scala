@@ -27,6 +27,35 @@ trait JavaToSimpleJava {
     //Console.println("body translated: " + tb)
     JMethodDefinition(modifiers, mname, mtype, margs, tb)
   }
+  
+  /*
+    Rewrite a JClassDefinition such that all initializers of JFieldDefinition's are moved into the
+    constructor of the class. If a constructor exists the statements are prepended, otherwise a 
+    default constructor is created.
+  */
+  def rewriteConstructor( clazz: JClassDefinition) = {
+    
+    val defaultConstructor = JConstructorDefinition(Set(Public()), clazz.id, Nil, Nil)
+    
+    // fold the list extracting all initializers and statements in constructors 
+    val constructorStatements = clazz.body.foldLeft(defaultConstructor){ (folded, current) => current match {
+      case JFieldDefinition(_,id,_,Some(initializer)) => folded.copy(body = folded.body :+ JFieldWrite(JVariableAccess("this"),id,initializer))
+      case JConstructorDefinition(mods,jtype,parameters,body) => 
+        val flattened = body.flatMap { 
+          case JBlock(_,stms) => stms
+          case other => List(other)
+        }
+      folded.copy(mods,jtype,parameters, folded.body ::: flattened)
+      case _ => folded
+    }}
+
+    val newBody = clazz.body.flatMap {
+      case jf @ JFieldDefinition(_,_,_,_) => Some(jf.copy( initializer = None))
+      case jcd : JConstructorDefinition => None
+      case other => Some(other)
+    } ::: List(constructorStatements)
+    clazz.copy( body = newBody)
+  }
 
   def exprtotype (x : JExpression) : String = {
     x match {

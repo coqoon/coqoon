@@ -283,8 +283,15 @@ object FinishAST extends JavaTerms
     val x = transform(a)
 
     var innerclasses : List[JClassDefinition] = List[JClassDefinition]()
-    val convert = (x : List[JStatement]) =>
-      x.map(y => y match {
+
+    val convert = (x : List[JStatement]) => {
+      
+      val classesAndInterfaces = x.map { 
+        case jcd : JClassDefinition => rewriteConstructor(jcd)
+        case other => other  
+      }
+      
+      classesAndInterfaces.map(y => y match {
         case JClassDefinition(modifiers, name, supers, interf, body, outer) =>
           val nb = body.flatMap(z => z match {
             case (x : JClassDefinition) =>
@@ -296,6 +303,8 @@ object FinishAST extends JavaTerms
           JClassDefinition(modifiers, name, supers, interf, nb, outer)
         case x => x
       })
+    }
+    
     val main = convert(x)
     var workset : List[JClassDefinition] = List[JClassDefinition]()
     while (innerclasses.length > 0) {
@@ -428,7 +437,7 @@ object FinishAST extends JavaTerms
     def setModifier(modifiers: List[Modifier], declarations: List[JStatement]): Unit = {
       val mod = modifiers.map(unpackR)
       declarations foreach {
-        case JFieldDefinition(modifiers, id, jtype)               => ClassTable.setModifiers(classid, id, mod)
+        case JFieldDefinition(modifiers, id, jtype, initializer)  => ClassTable.setModifiers(classid, id, mod)
         case JMethodDefinition(modifiers, id, clasid, args, body) => ClassTable.setModifiers(classid, id, mod)
         case _                                         => log.warning("Setting modifier of unkown") //TODO
       }
@@ -517,10 +526,16 @@ object FinishAST extends JavaTerms
   def transformFieldDeclaration(field: FieldDeclaration, modifiers: Set[JModifier] = Set()): JFieldDefinition = {
     val FieldDeclaration(id, jtype, rest) = field
     log.info("field pos info " + field.pos)
+    
+    val initializer = rest match { 
+      case x ~ Some("=" ~ y) => transformAnyExpr(y).asInstanceOf[List[JExpression]].headOption
+      case _ => log.warning("Skipped initializer: " + rest.toString) ; None
+    }
+    
     val name = unpackR(id)
     val typ = unpackR(jtype)
     ClassTable.addField(classid, name, typ)
-    JFieldDefinition(modifiers, name, typ)
+    JFieldDefinition(modifiers, name, typ, initializer)
   }
 
   /*
