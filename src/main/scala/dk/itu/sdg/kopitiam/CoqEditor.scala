@@ -112,6 +112,7 @@ class CoqEditor extends TextEditor with EclipseUtils {
 import org.eclipse.jface.viewers.ITreeContentProvider
 protected class CoqContentProvider extends ITreeContentProvider {
   import dk.itu.sdg.coqparser.VernacularRegion
+  import dk.itu.sdg.coqparser.OutlineVernacular
   import org.eclipse.jface.text.IDocument
   import org.eclipse.jface.viewers.Viewer
   import org.eclipse.ui.part.FileEditorInput
@@ -122,8 +123,8 @@ protected class CoqContentProvider extends ITreeContentProvider {
   def dispose() : Unit = {}
 
   var content : List[VernacularRegion] = Nil
-  val parser = new dk.itu.sdg.coqparser.VernacularParser {}
-  var root : parser.VernacularDocument = null
+  val parser = new dk.itu.sdg.coqparser.VernacularOutliner {}
+  var root : OutlineVernacular.Document = null
   def parse(document : IDocument) : Unit = {
     require(document != null)
     import scala.util.parsing.input.CharSequenceReader

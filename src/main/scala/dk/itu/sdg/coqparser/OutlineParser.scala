@@ -24,6 +24,8 @@ object OutlineVernacular {
   case class Module (name : String, override val contents : List[VernacularRegion]) extends OutlineStructure {
     override def toString = "Module " + name + contents.mkString("(", ",", ")")
   }
+
+  case class Document (override val contents : List[VernacularRegion]) extends OutlineStructure
 }
 
 trait OutlinerTokens extends Tokens {
@@ -131,6 +133,11 @@ class VernacularOutliner extends LengthPositionParsers with TokenParsers with Ve
   def unknown : Parser[UnknownSentence] = acceptMatch ("Sentence", {
     case tok : lexical.Command => UnknownSentence(tok.chars)
   })
+
+  def parseString (input : String) : ParseResult[Document] = {
+    import scala.util.parsing.input.CharSequenceReader
+    phrase(outline)(new lexical.Scanner(input)) map Document
+  }
 }
 
 object TestOutliner extends VernacularOutliner with Application {
