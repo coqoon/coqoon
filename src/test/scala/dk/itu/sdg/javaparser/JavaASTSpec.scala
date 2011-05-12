@@ -505,10 +505,11 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   
   "Parsing NestedInterfaceModifiers.txt" should "produce the correct AST" in {
     /*
-      TODO: This will currently fail because nested interfaces are not treated like
-            nested classes. 
+      TODO: The JInterfaces are not *pulled* out in the outer scope yet. 
     */
-    val expected = Nil
+    val expected = List(
+      JInterfaceDefinition(Set(Public()),"A",List(),List(
+        JInterfaceDefinition(Set(Private()),"B",List(),List()))))
     getASTbyParsingFileNamed("NestedInterfaceModifiers.txt") should equal(expected)    
   }
   

@@ -434,26 +434,27 @@ object FinishAST extends JavaTerms
       }
     }
     
-    val transformModifiers = (mods: List[Modifier]) => mods.flatMap { 
+    val transformModifiers: List[Modifier] =>  Set[JModifier] = (mods) => mods.flatMap { 
       case Modifier(Key(str)) => JModifier(str)
-    }
+    }.toSet
         
     body flatMap { 
       case BodyDeclaration(mods, x)              =>      
-        val jmods = transformModifiers(mods).toSet
+        val jmods = transformModifiers(mods)
         val transformed = transformClassOrInterfaceBody(List(x), jmods)
         setModifier(mods,transformed);
         transformed
-      case jclass       : JClass                 => transformClassOrInterface(jclass, modifiers)     :: Nil
-      case jinterface   : JInterface             => transformClassOrInterface(jinterface, modifiers) :: Nil
-      case jmethod      : MethodDeclaration      => transformMethodDeclaration(jmethod, modifiers)   :: Nil
-      case jconstructor : ConstructorDeclaration => transformConstructor(jconstructor, modifiers)    :: Nil
-      case jfield       : FieldDeclaration       => transformFieldDeclaration(jfield, modifiers)     :: Nil
+      case jclass       : JClass                  => transformClassOrInterface(jclass, modifiers)     :: Nil
+      case jinterface   : JInterface              => transformClassOrInterface(jinterface, modifiers) :: Nil
+      case jmethod      : MethodDeclaration       => transformMethodDeclaration(jmethod, modifiers)   :: Nil
+      case jconstructor : ConstructorDeclaration  => transformConstructor(jconstructor, modifiers)    :: Nil
+      case jfield       : FieldDeclaration        => transformFieldDeclaration(jfield, modifiers)     :: Nil
       // TODO: It should be possible to remove these by improving the parser so they're turned into BodyDeclaration's
-      case Some("static") ~ (x: Block)           => transformBlock(x, Some(Static()))            :: Nil
-      case y ~ (x: MethodDeclaration)            => transformMethodDeclaration(x, modifiers)         :: Nil
-      case ";"                                   => Nil
-      case x                                     => throw new Exception("Can't have the following in a class/interface body"+x)
+      case (ys: List[Modifier]) ~ (i: JInterface) => transformClassOrInterface(i, transformModifiers(ys)) :: Nil
+      case Some("static") ~ (x: Block)            => transformBlock(x, Some(Static()))                :: Nil
+      case y ~ (x: MethodDeclaration)             => transformMethodDeclaration(x, modifiers)         :: Nil
+      case ";"                                    => Nil
+      case x                                      => throw new Exception("Can't have the following in a class/interface body"+x)
     }
   }
 
