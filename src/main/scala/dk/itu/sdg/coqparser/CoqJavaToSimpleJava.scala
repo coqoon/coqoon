@@ -138,7 +138,7 @@ trait TransformCoqJavaToSimpleJava extends StdTokenParsers {
           JBinaryExpression("*", transformE(xs(1)), transformE(xs(2)))
         case SAtom("cseq") =>
           assert(xs.length == 3)
-          JBlock(List(transformCode(xs(1)), transformCode(xs(2))))
+          JBlock(None, List(transformCode(xs(1)), transformCode(xs(2))))
         case SAtom("ccall") =>
           assert(xs.length == 6)
           //ccall ret var meth arglist class

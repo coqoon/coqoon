@@ -449,10 +449,16 @@ object FinishAST extends JavaTerms
       case jmethod      : MethodDeclaration      => transformMethodDeclaration(jmethod, modifiers)   :: Nil
       case jconstructor : ConstructorDeclaration => transformConstructor(jconstructor, modifiers)    :: Nil
       case jfield       : FieldDeclaration       => transformFieldDeclaration(jfield, modifiers)     :: Nil
+      // TODO: It should be possible to remove these by improving the parser so they're turned into BodyDeclaration's
+      case Some("static") ~ (x: Block)           => transformBlock(x, Some(Static()))            :: Nil
       case y ~ (x: MethodDeclaration)            => transformMethodDeclaration(x, modifiers)         :: Nil
       case ";"                                   => Nil
       case x                                     => throw new Exception("Can't have the following in a class/interface body"+x)
     }
+  }
+
+  def transformBlock(block: Block, modifier: Option[Static] = None): JBlock = {
+    JBlock(modifier, block.xs.flatMap(transformAnyExpr(_)))
   }
 
   /*
@@ -496,7 +502,7 @@ object FinishAST extends JavaTerms
 
     val transformedBody = body match {
       case xs : List[Any] => transformMethodBody(xs)
-      case b  : Block     => JBlock(transformMethodBody(b.xs)) :: Nil
+      case b  : Block     => JBlock(None, transformMethodBody(b.xs)) :: Nil
       case None           => Nil
     }
 
@@ -535,30 +541,30 @@ object FinishAST extends JavaTerms
       // statements
       case AnyStatement(x)                     => transformAnyExpr(x)
       case variable: LocalVar                  => transformLocalVariable(variable)
-      case Return(x)                           => JReturn(transformExpression(x))                                                :: Nil
-      case While(test, body)                   => JWhile(transformExpression(test), transformBlock(transformAnyExpr(body).head)) :: Nil
-      case Block(xs)                           => JBlock(xs map transformAnyExpr flatten)                                        :: Nil
-      case cond: Conditional                   => transformConditional(cond)                                                     :: Nil
+      case Return(x)                           => JReturn(transformExpression(x))                                                 :: Nil
+      case While(test, body)                   => JWhile(transformExpression(test), transformJBlock(transformAnyExpr(body).head)) :: Nil
+      case Block(xs)                           => JBlock(None, xs map transformAnyExpr flatten)                                   :: Nil
+      case cond: Conditional                   => transformConditional(cond)                                                      :: Nil
       // expressions
-      case binaryExpr: BinaryExpr              => transformBinaryExpr(binaryExpr)                                                :: Nil
+      case binaryExpr: BinaryExpr              => transformBinaryExpr(binaryExpr)                                                 :: Nil
       case PrimaryExpr(x)                      => transformAnyExpr(x)
       case ParExpr(x)                          => transformAnyExpr(x)
-      case "this"                              => JVariableAccess("this")                                                        :: Nil
-      case PostExpr(k, x)                      => JPostfixExpression(unpackR(k), transformExpression(x))                         :: Nil
-      case UnaryExpr(op, v)                    => JUnaryExpression(unpackR(op), transformExpression(v))                          :: Nil
-      case NewExpression(ntype, args)          => JNewExpression(unpackR(ntype), args.map(transformExpression))                  :: Nil
-      case Name(x)                             => JVariableAccess(x)                                                             :: Nil
-      case Expr(x)                             => transformAnyExpr(x)
-      case PostFixExpression(x)                => transformAnyExpr(x)
-      case Lit(x)                              => JLiteral(unpackR(x))                                                           :: Nil
-      case Some(x)                             => transformAnyExpr(x)
-      // TODO: This is a bit hacky. transformCall is called twice IFF it is a JCall and thus has no sideeffect
-      case c: Call if transformCall(c).isRight => transformCall(c).right.get                                                     :: Nil
-      case qualid : QualId                     => transformQualId(qualid)                                                        :: Nil
-      case (x : PrimaryExpr) ~ (y : List[Any]) => transformPrimaryExprFollowedByList(x,y)                                        :: Nil
-      case ("." ~ expr)                        => transformAnyExpr(expr)
-      // I have no idea what could come instead of None so it's best to crash it if something else comes up.  
-      case (("assert" ~ x) ~ None)             => JAssert(transformAnyExpr(x).head)                                              :: Nil
+      case "this"                              => JVariableAccess("this")                                                         :: Nil
+      case PostExpr(k, x)                      => JPostfixExpression(unpackR(k), transformExpression(x))                          :: Nil
+      case UnaryExpr(op, v)                    => JUnaryExpression(unpackR(op), transformExpression(v))                           :: Nil
+      case NewExpression(ntype, args)          => JNewExpression(unpackR(ntype), args.map(transformExpression))                   :: Nil
+      case Name(x)                             => JVariableAccess(x)                                                              :: Nil
+      case Expr(x)                             => transformAnyExpr(x)                                                             
+      case PostFixExpression(x)                => transformAnyExpr(x)                                                             
+      case Lit(x)                              => JLiteral(unpackR(x))                                                            :: Nil
+      case Some(x)                             => transformAnyExpr(x)                                                             
+      // TODO: This is a bit hacky. transformCall is called twice IFF it is a JCall and thus has no sideeffect                    
+      case c: Call if transformCall(c).isRight => transformCall(c).right.get                                                      :: Nil
+      case qualid : QualId                     => transformQualId(qualid)                                                         :: Nil
+      case (x : PrimaryExpr) ~ (y : List[Any]) => transformPrimaryExprFollowedByList(x,y)                                         :: Nil
+      case ("." ~ expr)                        => transformAnyExpr(expr)                                                          
+      // I have no idea what could come instead of None so it's best to crash it if something else comes up.                      
+      case (("assert" ~ x) ~ None)             => JAssert(transformAnyExpr(x).head)                                               :: Nil
     }
   }
 
@@ -567,10 +573,10 @@ object FinishAST extends JavaTerms
    */
   def transformConditional(cond: Conditional) : JBodyStatement = {
     val Conditional(test, consequence, alternative) = cond
-    val cs = transformBlock(transformAnyExpr(consequence).head)
+    val cs = transformJBlock(transformAnyExpr(consequence).head)
     val alt = alternative match {
-      case None => JBlock(List[JBodyStatement]())
-      case Some(x) => transformBlock(transformAnyExpr(x).head)
+      case None => JBlock(None, List[JBodyStatement]())
+      case Some(x) => transformJBlock(transformAnyExpr(x).head)
     }
     JConditional(transformExpression(test), cs, alt)
   }
@@ -742,13 +748,13 @@ object FinishAST extends JavaTerms
   }
 
   /*
-   * Transforms a JStatement into a JSBloack. If it is a JBlock already simply
+   * Transforms a JStatement into a JBlock. If it is a JBlock already simply
    * pass it.
    */
-  def transformBlock(cs : JStatement) : JBlock = {
+  def transformJBlock(cs : JStatement, modifier: Option[Static] = None) : JBlock = {
     cs match {
       case x  : JBlock         => x
-      case xs : JBodyStatement => JBlock(List(xs))
+      case xs : JBodyStatement => JBlock(modifier, List(xs))
       case x                   => throw new Exception("This isn't a block: " + x)
     }
   }

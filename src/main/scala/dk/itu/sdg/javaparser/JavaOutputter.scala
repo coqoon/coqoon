@@ -68,12 +68,14 @@ trait JavaOutputter {
         val entirebody = if (completebody.length == 0) " " else "\n" + completebody + ";\n" + indent(ind)
         indent(ind) + modifiers.mkString(" ") +  " " + typ + " " + id + " (" + red(mapi(ar, 0), ", ") + ") {" + entirebody + "}\n"
       case JArgument(id, t) => indent(ind) + t + " " + id
-      case JBlock(xs) =>
-        if (xs.length > 1)
-          " {\n" + red(mapi(xs, ind + 2), ";\n") + ";\n" + indent(ind) + "} "
-        else if (xs.length == 1)
+      case JBlock(modifier, xs) => {           
+        if (xs.length > 1 || !modifier.isEmpty) {
+          val JModifier(mod) = modifier
+          mod + " {\n" + red(mapi(xs, ind + 2), ";\n") + ";\n" + indent(ind) + "} "
+        } else if (xs.length == 1) {
           "\n" + out(xs(0), ind + 2)
-        else  ""
+        } else  ""
+      }  
       case JAssignment(l, r) => indent(ind) + l + " = " + out(r, 0)
       case JFieldWrite(va, f, v) => indent(ind) + out(va, 0) + "." + f + " = " + out(v, 0)
       case JReturn(r) => indent(ind) + "return " + out(r, 0)

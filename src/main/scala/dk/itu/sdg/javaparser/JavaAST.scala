@@ -65,7 +65,7 @@ case class JConstructorDefinition (modifiers : Set[JModifier], jtype : String, p
 case class JArgument (id : String, jtype : String) extends InnerStatement
 
 trait JBodyStatement extends InnerStatement
-case class JBlock (body : List[JBodyStatement]) extends JBodyStatement
+case class JBlock (modifier: Option[Static] = None, body : List[JBodyStatement]) extends JBodyStatement 
 case class JAssert(assertion : JBodyStatement) extends JBodyStatement
 case class JAssignment (left : String, right : JExpression) extends JBodyStatement
 case class JFieldWrite (variable : JExpression, field : String, value : JExpression) extends JBodyStatement

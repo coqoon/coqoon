@@ -58,7 +58,7 @@ trait JavaToSimpleJava {
   def extractCalls (statement : JBodyStatement) : List[JBodyStatement] = {
     //Console.println("calling extract for " + statement)
     statement match {
-      case JBlock(xs) => List(JBlock(xs.foldLeft(List[JBodyStatement]())((b, a) => b ++ extractCalls(a))))
+      case JBlock(modifier, xs) => List(JBlock(modifier, xs.foldLeft(List[JBodyStatement]())((b, a) => b ++ extractCalls(a))))
       case JAssignment(x, r) =>
         if (! getUsedVars(r).contains(x))
           tmp = x
@@ -113,13 +113,13 @@ trait JavaToSimpleJava {
         val con2 = if (con.length == 1)
                      con(0)
                    else
-                     JBlock(con)
+                     JBlock(None, con)
         val r = extractCalls(a)
         val alt =
           if (r.length == 1)
             r(0)
           else
-            JBlock(r)
+            JBlock(None, r)
         ti ++ List(JConditional(ta, con2, alt))
       case JCall(receiver, name, args) =>
         val (temp, lines) = extractHelper(receiver)
@@ -230,9 +230,9 @@ trait JavaToSimpleJava {
           val lastc = ca.takeRight(1)(0)
           ttyp = lowerBound(ttyp, ClassTable.getLocalVar(cname, mname, exprtotype(lastc)))
           if (ca.length == 1)
-            JBlock(ci ++ List(JAssignment(t, lastc)))
+            JBlock(None, ci ++ List(JAssignment(t, lastc)))
           else
-            JBlock(ci ++ ca.dropRight(1) ++ List(JAssignment(t, lastc)))
+            JBlock(None, ci ++ ca.dropRight(1) ++ List(JAssignment(t, lastc)))
         }
         val newc = getb(c)
         val newa = getb(a)

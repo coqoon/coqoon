@@ -165,7 +165,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         val tr = optPrintBody(getBS(consequence))
         val fa = optPrintBody(getBS(alternative))
         Some(List("(cif " + te + " " + tr + " " + fa + ")"))
-      case JBlock(xs) => Some(xs.map(getBS).flatten.flatten)
+      case JBlock(modifier, xs) => Some(xs.map(getBS).flatten.flatten) //TODO: Deal with modifer (Option[Static])
       case JWhile(test, body) =>
         Some(List("(cwhile " + printStatement(test) + " " + optPrintBody(getBS(body)) + ")"))
       case JBinding(x, typ, init) =>
