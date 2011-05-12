@@ -31,9 +31,9 @@ trait JavaOutputter {
 
   def out (x : JStatement, ind : Int) : String = {
     x match {
-      case JInterfaceDefinition(id, is, b) =>
+      case JInterfaceDefinition(modifiers, id, is, b) =>
         val ints = if (is.length > 0) " extends " + is.mkString(", ") else ""
-        indent(ind) + "interface " + id + ints + "{\n" + mr(mapi(b, ind + 2)) + "\n" + indent(ind) + "}"
+        indent(ind) + modifiers.mkString(" ") +  " interface " + id + ints + "{\n" + mr(mapi(b, ind + 2)) + "\n" + indent(ind) + "}"
       case JClassDefinition(modifiers, id, s, i, b, o) =>
         myclass = id
         val specp = ClassTable.getCoq("PRELUDE").reverse.map(x => coqout("PRELUDE", x, 4))

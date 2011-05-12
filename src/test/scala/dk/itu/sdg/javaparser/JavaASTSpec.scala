@@ -143,19 +143,19 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   }
 
   "Parsing Interface0.txt" should "produce the correct AST" in {
-    val expected = List(JInterfaceDefinition("Foo", List[String](), List[JBodyStatement]()))
+    val expected = List(JInterfaceDefinition(Set(), "Foo", List[String](), List[JBodyStatement]()))
     getASTbyParsingFileNamed("Interface0.txt") should equal(expected)
   }
 
   "Parsing Interface1.txt" should "produce the correct AST" in {
-    val expected = List(JInterfaceDefinition("Foo", List[String](), List(
+    val expected = List(JInterfaceDefinition(Set(), "Foo", List[String](), List(
       JMethodDefinition("bar", "int", List[JArgument](), List[JBodyStatement]())
     )))
     getASTbyParsingFileNamed("Interface1.txt") should equal(expected)
   }
 
   "Parsing Interface2.txt" should "produce the correct AST" in {
-    val expected = List(JInterfaceDefinition("Foo", List[String](), List(
+    val expected = List(JInterfaceDefinition(Set(), "Foo", List[String](), List(
       JMethodDefinition("bar", "void", List[JArgument](), List[JBodyStatement]())
     )))
     getASTbyParsingFileNamed("Interface2.txt") should equal(expected)
@@ -374,10 +374,10 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
 
   "Parsing Tree_client.txt" should "produce the correct AST" in {
     val expected = List(
-      JInterfaceDefinition("ITreeIterator", List[String](), List(
+      JInterfaceDefinition(Set(), "ITreeIterator", List[String](), List(
         JMethodDefinition("hasNext", "boolean", List[JArgument](), List[JBodyStatement]()),
         JMethodDefinition("next", "int", List[JArgument](), List[JBodyStatement]()))),
-      JInterfaceDefinition("ITree", List[String](), List(
+      JInterfaceDefinition(Set(), "ITree", List[String](), List(
         JMethodDefinition("contains", "boolean", List(JArgument("item", "int")), List[JBodyStatement]()),
         JMethodDefinition("add", "int", List(JArgument("item", "int")), List[JBodyStatement]()),
         JMethodDefinition("snapshot", "ITree", List[JArgument](), List[JBodyStatement]()),
@@ -466,9 +466,14 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     getASTbyParsingFileNamed("OperatorTranslation.txt") should equal(expected)    
   }
   
-  "Parsing Modifiers.txt" should "produce the correct AST" in {
+  "Parsing ClassModifiers.txt" should "produce the correct AST" in {
     val expected = List(JClassDefinition(Set(Private(), Abstract()),"A","",Nil,Nil,None))    
-    getASTbyParsingFileNamed("Modifiers.txt") should equal(expected)    
+    getASTbyParsingFileNamed("ClassModifiers.txt") should equal(expected)    
+  }
+  
+  "Parsing InterfaceModifiers.txt" should "produce the correct AST" in {
+    val expected = List(JInterfaceDefinition(Set(Private()),"A",Nil,Nil))    
+    getASTbyParsingFileNamed("InterfaceModifiers.txt") should equal(expected)    
   }
   
   /*

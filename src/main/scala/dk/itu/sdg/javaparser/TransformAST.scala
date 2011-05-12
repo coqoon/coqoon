@@ -402,7 +402,7 @@ object FinishAST extends JavaTerms
         ClassTable.registerClass(classid, outer, true)
         val mybody  = transformClassOrInterfaceBody(body)
         classid     = ClassTable.getOuter(myclass) match { case None => ""; case Some(x) => x }
-        JInterfaceDefinition(/*accessModifier,*/ myclass, is, mybody)
+        JInterfaceDefinition(modifiers, myclass, is, mybody)
       }
       case x => throw new Exception("Expected JInterface or JClass but got: " + x)
     }

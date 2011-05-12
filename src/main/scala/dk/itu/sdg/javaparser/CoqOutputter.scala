@@ -246,7 +246,7 @@ Qed."""
       outp = List("\n") ++ ClassTable.getCoq("PRELUDE") ++ outp
     var interfs : List[String] = List[String]()
     xs.foreach(x => x match {
-      case JInterfaceDefinition(id, inters, body) =>
+      case JInterfaceDefinition(modifiers, id, inters, body) =>
         //Console.println("interfaces are " + inters)
         val (mmethods, methodspecs) = interfaceMethods(id, body)
         val mmeths = if (mmethods.length == 0) "" else mmethods.reduceLeft(_ + " " + _)
