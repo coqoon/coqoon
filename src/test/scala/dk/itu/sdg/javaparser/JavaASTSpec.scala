@@ -421,7 +421,7 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     val expected = List(
       JClassDefinition(Set(),"Person","",Nil,List(
         JFieldDefinition(Set(), "name","String"), 
-        JConstructorDefinition("Person",List(JArgument("name","String")),
+        JConstructorDefinition(Set(Public()), "Person",List(JArgument("name","String")),
           List(JBlock(List(JFieldWrite(JVariableAccess("this"),"name",JFieldAccess(JVariableAccess("this"),"name"))))))),None))
      getASTbyParsingFileNamed("ClassWithConstructor.txt") should equal(expected)    
    }
@@ -484,6 +484,11 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
   "Parsing FieldModifiers.txt" should "produce the correct AST" in {
     val expected = List(JClassDefinition(Set(),"Foo","",Nil,List(JFieldDefinition(Set(Private()),"a","int")),None))
     getASTbyParsingFileNamed("FieldModifiers.txt") should equal(expected)    
+  }
+  
+  "Parsing ConstructorModifiers.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"A","",Nil,List(JConstructorDefinition(Set(Private()),"A",Nil,List(JBlock(Nil)))),None))
+    getASTbyParsingFileNamed("ConstructorModifiers.txt") should equal(expected)    
   }
   
   /*

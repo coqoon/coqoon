@@ -447,7 +447,7 @@ object FinishAST extends JavaTerms
       case jclass       : JClass                 => transformClassOrInterface(jclass)              :: Nil
       case jinterface   : JInterface             => transformClassOrInterface(jinterface)          :: Nil
       case jmethod      : MethodDeclaration      => transformMethodDeclaration(jmethod, modifiers) :: Nil
-      case jconstructor : ConstructorDeclaration => transformConstructor(jconstructor)             :: Nil
+      case jconstructor : ConstructorDeclaration => transformConstructor(jconstructor, modifiers)  :: Nil
       case jfield       : FieldDeclaration       => transformFieldDeclaration(jfield, modifiers)   :: Nil
       case y ~ (x: MethodDeclaration)            => transformMethodDeclaration(x, modifiers)       :: Nil
       case ";"                                   => Nil
@@ -466,9 +466,9 @@ object FinishAST extends JavaTerms
   /*
    * Transforms a ConstructorDeclaration into a JConstructorDefinition
    */
-  def transformConstructor(constructor: ConstructorDeclaration): JConstructorDefinition = {
+  def transformConstructor(constructor: ConstructorDeclaration, modifiers: Set[JModifier] = Set()): JConstructorDefinition = {
     val (_, cid, args, body) = extractMethodOrConstructorInfo(constructor)
-    JConstructorDefinition(cid, args, body)
+    JConstructorDefinition(modifiers, cid, args, body)
   }
 
   /*
