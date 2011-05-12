@@ -6,209 +6,32 @@ import org.scalatest.matchers.ShouldMatchers
 import java.io._
 import scala.util.parsing.input.{ StreamReader }
 
+trait ASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
+  /*
+    * Returns the JavaAST produced by parsing the file named "name" inside of the
+    * folder src/test/resources/javaparser/source.
+    */
+   def getASTbyParsingFileNamed(name : String) : List[JStatement] = {
+     val in = StreamReader(new InputStreamReader(new FileInputStream(getSourceFileNamed(name))))
+     FinishAST.doitHelper(parseH(in))
+   }
+
+   def getSourceFileNamed(name : String) : File = {
+     new File(List("src", "test", "resources", "javaparser", "source", name).mkString(File.separator))
+   }
+}
+
 /*
  * Parses each file in src/test/resources/javaparser/source
  * and tests that the expected JavaAST AST is generated.
  */
-class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
+class JavaASTSpec extends ASTSpec {
 
   /*
    * NOTE:
    * The easiest way to do this is to run the Main method in sbt with the
    * given file and then in Emacs: M-x query-replace-regexp RET \([a-z0-9_+-*]+\) RET "\1"
    */
-
-  "Parsing SimpleClass.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, Nil, None))
-    getASTbyParsingFileNamed("SimpleClass.txt") should equal(expected)
-  }
-
-  "Parsing SimpleClassWithMethod.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", List(),
-      List(JMethodDefinition(Set(), "foo", "void", Nil,
-        List(JBlock(None, Nil)))), None))
-    getASTbyParsingFileNamed("SimpleClassWithMethod.txt") should equal(expected)
-  }
-
-  "Parsing SimpleClassMoreComplexMethod.txt" should "produce the correct AST" in {
-    val expected = List(
-      JClassDefinition(Set(),"Foo", "", Nil,
-        List(
-          JMethodDefinition(Set(), "foo", "int",
-            List(JArgument("a", "int")),
-            List(JBlock(None, List(JReturn(JVariableAccess("a"))))))), None))
-    getASTbyParsingFileNamed("SimpleClassMoreComplexMethod.txt") should equal(expected)
-  }
-
-  "Parsing SimpleClassMoreComplexMethod2.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", Nil,
-      List(JMethodDefinition(Set(), "foo", "int",
-        List(JArgument("a", "int")),
-        List(JBlock(None, 
-          List(JBinding("tmp_1", "int", Some(JCall(JVariableAccess("this"), "foo",
-            List(JVariableAccess("a"))))), JBinding("tmp_2", "int", Some(JCall(JVariableAccess("this"), "foo",
-            List(JVariableAccess("tmp_1"))))),
-            JReturn(JVariableAccess("tmp_2"))))))), None))
-    getASTbyParsingFileNamed("SimpleClassMoreComplexMethod2.txt") should equal(expected)
-  }
-
-  "Parsing SimpleClassWithSimpleField.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", Nil,
-      List(JFieldDefinition(Set(), "foo", "int")), None))
-    getASTbyParsingFileNamed("SimpleClassWithSimpleField.txt") should equal(expected)
-  }
-
-  "Parsing MethodWithNoFieldAccessOrCallInAnExpression.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", Nil,
-      List(JFieldDefinition(Set(), "f", "int"),
-        JMethodDefinition(Set(), "a", "int", Nil, List(JBlock(None, List(JReturn(JLiteral("10")))))),
-        JMethodDefinition(Set(), "b", "int", List(JArgument("c", "int")),
-          List(JBlock(None, List(
-            JBinding("tmp_1", "int", Some(JCall(JVariableAccess("this"), "a", Nil))),
-            JBinding("tmp_2", "int", Some(JFieldAccess(JVariableAccess("this"), "f"))),
-            JReturn(JBinaryExpression("+", JBinaryExpression("+", JVariableAccess("tmp_2"), JVariableAccess("tmp_1")), JVariableAccess("c")))))))),
-      None))
-    getASTbyParsingFileNamed("MethodWithNoFieldAccessOrCallInAnExpression.txt") should equal(expected)
-  }
-
-  "Parsing FieldAssignment3.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
-      JFieldDefinition(Set(), "b", "int"),
-      JMethodDefinition(Set(), "a", "int", Nil, List(JBlock(None, List(JReturn(JLiteral("10")))))),
-      JMethodDefinition(Set(), "foo", "void", Nil, List(JBlock(None, List(
-        JBinding("tmp_1", "int", Some(JCall(JVariableAccess("this"), "a", Nil))),
-        JFieldWrite(JVariableAccess("this"), "b", JVariableAccess("tmp_1"))))))),
-      None))
-    getASTbyParsingFileNamed("FieldAssignment3.txt") should equal(expected)
-  }
-
-  "Parsing FieldAssignment2.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
-      JFieldDefinition(Set(), "b", "int"),
-      JMethodDefinition(Set(), "set", "void", Nil, List(JBlock(None, List(
-        JBinding("tmp_1", "int", Some(JFieldAccess(JVariableAccess("this"), "b"))),
-        JFieldWrite(JVariableAccess("this"), "b", JBinaryExpression("+", JVariableAccess("tmp_1"), JLiteral("10")))))))),
-      None))
-    getASTbyParsingFileNamed("FieldAssignment2.txt") should equal(expected)
-  }
-
-  "Parsing FieldAssignment1.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
-      JFieldDefinition(Set(), "b", "int"),
-      JMethodDefinition(Set(), "set", "void", Nil, List(JBlock(None, List(
-        JFieldWrite(JVariableAccess("this"), "b", JLiteral("10"))))))),
-      None))
-    getASTbyParsingFileNamed("FieldAssignment1.txt") should equal(expected)
-  }
-
-  "Parsing Binding1.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
-      JMethodDefinition(Set(), "foo", "void", Nil, List(JBlock(None, List(JBinding("a", "int", Some(JLiteral("20")))))))),
-      None))
-    getASTbyParsingFileNamed("Binding1.txt") should equal(expected)
-  }
-
-  "Parsing Binding2.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo","",Nil,List(
-      JMethodDefinition(Set(), "foo","void",Nil,List(JBlock(None, List(
-        JBinding("a","int",Some(JLiteral("20"))),
-        JBinding("b","int",Some(JLiteral("10"))))
-      )))
-    ),None))
-    getASTbyParsingFileNamed("Binding2.txt") should equal(expected)
-  }
-
-  "Parsing Binding3.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
-      JMethodDefinition(Set(), "bar", "int", Nil, List(JBlock(None, List(JReturn(JLiteral("10")))))),
-      JMethodDefinition(Set(), "foo", "void", Nil, List(JBlock(None, List(JBinding("a", "int", Some(JCall(JVariableAccess("this"), "bar", Nil)))))))),
-      None))
-    getASTbyParsingFileNamed("Binding3.txt") should equal(expected)
-  }
-
-  "Parsing Binding4.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
-      JFieldDefinition(Set(), "a", "int"),
-      JMethodDefinition(Set(), "bar", "int", Nil, List(JBlock(None, List(
-        JBinding("tmp_1", "int", Some(JFieldAccess(JVariableAccess("this"), "a"))),
-        JBinding("tmp_2", "int", Some(JFieldAccess(JVariableAccess("this"), "a"))),
-        JReturn(JBinaryExpression("+", JVariableAccess("tmp_2"), JVariableAccess("tmp_1"))))))),
-      JMethodDefinition(Set(), "foo", "void", Nil, List(JBlock(None, List(
-        JBinding("b", "int", Some(JFieldAccess(JVariableAccess("this"), "a"))),
-        JBinding("tmp_2", "int", Some(JCall(JVariableAccess("this"), "bar", Nil))),
-        JBinding("tmp_3", "int", Some(JFieldAccess(JVariableAccess("this"), "a"))),
-        JBinding("c", "int", Some(JBinaryExpression("+", JVariableAccess("tmp_3"), JVariableAccess("tmp_2"))))))))),
-      None))
-    getASTbyParsingFileNamed("Binding4.txt") should equal(expected)
-  }
-
-  "Parsing Interface0.txt" should "produce the correct AST" in {
-    val expected = List(JInterfaceDefinition(Set(), "Foo", List[String](), List[JBodyStatement]()))
-    getASTbyParsingFileNamed("Interface0.txt") should equal(expected)
-  }
-
-  "Parsing Interface1.txt" should "produce the correct AST" in {
-    val expected = List(JInterfaceDefinition(Set(), "Foo", List[String](), List(
-      JMethodDefinition(Set(), "bar", "int", List[JArgument](), List[JBodyStatement]())
-    )))
-    getASTbyParsingFileNamed("Interface1.txt") should equal(expected)
-  }
-
-  "Parsing Interface2.txt" should "produce the correct AST" in {
-    val expected = List(JInterfaceDefinition(Set(), "Foo", List[String](), List(
-      JMethodDefinition(Set(), "bar", "void", List[JArgument](), List[JBodyStatement]())
-    )))
-    getASTbyParsingFileNamed("Interface2.txt") should equal(expected)
-  }
-
-  "Parsing Assignment1.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
-      JMethodDefinition(Set(), "bar", "void", Nil, List(JBlock(None, List(
-        JBinding("a", "int", Some(JLiteral("10"))),
-        JAssignment("a", JLiteral("20"))))))), None))
-    getASTbyParsingFileNamed("Assignment1.txt") should equal(expected)
-  }
-
-  "Parsing Assignment2.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
-      JMethodDefinition(Set(), "bar", "void", Nil, List(JBlock(None, List(
-        JBinding("a", "int", Some(JLiteral("10"))),
-        JAssignment("a", JBinaryExpression("+", JVariableAccess("a"), JLiteral("20")))))))),
-      None))
-    getASTbyParsingFileNamed("Assignment2.txt") should equal(expected)
-  }
-
-  "Parsing Assignment3.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
-      JMethodDefinition(Set(), "bar", "void", Nil, List(JBlock(None, List(
-        JBinding("a", "int", Some(JLiteral("10"))),
-        JAssignment("a", JBinaryExpression("+", JVariableAccess("a"), JLiteral("20")))))))),
-      None))
-    getASTbyParsingFileNamed("Assignment3.txt") should equal(expected)
-  }
-
-  "Parsing Assignment4.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
-      JMethodDefinition(Set(), "bar", "void", Nil, List(JBlock(None, List(
-        JBinding("a", "int", Some(JLiteral("10"))),
-        JAssignment("a", JCall(JVariableAccess("this"), "foobar", List())))))),
-      JMethodDefinition(Set(), "foobar", "int", Nil, List(JBlock(None, List(
-        JReturn(JLiteral("10"))))))),
-      None))
-    getASTbyParsingFileNamed("Assignment4.txt") should equal(expected)
-  }
-
-  "Parsing Assignment5.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
-      JMethodDefinition(Set(), "bar", "void", Nil, List(JBlock(None, List(
-        JBinding("a", "int", Some(JLiteral("10"))),
-        JBinding("tmp_1", "int", Some(JCall(JVariableAccess("this"), "foobar", List()))),
-        JAssignment("a", JBinaryExpression("+", JVariableAccess("a"), JVariableAccess("tmp_1"))))))),
-      JMethodDefinition(Set(), "foobar", "int", Nil, List(JBlock(None, List(
-        JReturn(JLiteral("10"))))))),
-      None))
-    getASTbyParsingFileNamed("Assignment5.txt") should equal(expected)
-  }
 
   "Parsing Postfix1.txt" should "produce the correct AST" in {
     val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
@@ -465,7 +288,237 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
            JFieldWrite(JVariableAccess("this"),"number",JBinaryExpression(">>>",JVariableAccess("tmp_11"),JLiteral("1")))))))),None))
     getASTbyParsingFileNamed("OperatorTranslation.txt") should equal(expected)    
   }
+}
+
+
+/*
+  Tests related to binding
+*/
+class BindingsSpec extends ASTSpec {
+  "Parsing Binding1.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
+      JMethodDefinition(Set(), "foo", "void", Nil, List(JBlock(None, List(JBinding("a", "int", Some(JLiteral("20")))))))),
+      None))
+    getASTbyParsingFileNamed("Binding1.txt") should equal(expected)
+  }
+
+  "Parsing Binding2.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo","",Nil,List(
+      JMethodDefinition(Set(), "foo","void",Nil,List(JBlock(None, List(
+        JBinding("a","int",Some(JLiteral("20"))),
+        JBinding("b","int",Some(JLiteral("10"))))
+      )))
+    ),None))
+    getASTbyParsingFileNamed("Binding2.txt") should equal(expected)
+  }
+
+  "Parsing Binding3.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
+      JMethodDefinition(Set(), "bar", "int", Nil, List(JBlock(None, List(JReturn(JLiteral("10")))))),
+      JMethodDefinition(Set(), "foo", "void", Nil, List(JBlock(None, List(JBinding("a", "int", Some(JCall(JVariableAccess("this"), "bar", Nil)))))))),
+      None))
+    getASTbyParsingFileNamed("Binding3.txt") should equal(expected)
+  }
+
+  "Parsing Binding4.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
+      JFieldDefinition(Set(), "a", "int"),
+      JMethodDefinition(Set(), "bar", "int", Nil, List(JBlock(None, List(
+        JBinding("tmp_1", "int", Some(JFieldAccess(JVariableAccess("this"), "a"))),
+        JBinding("tmp_2", "int", Some(JFieldAccess(JVariableAccess("this"), "a"))),
+        JReturn(JBinaryExpression("+", JVariableAccess("tmp_2"), JVariableAccess("tmp_1"))))))),
+      JMethodDefinition(Set(), "foo", "void", Nil, List(JBlock(None, List(
+        JBinding("b", "int", Some(JFieldAccess(JVariableAccess("this"), "a"))),
+        JBinding("tmp_2", "int", Some(JCall(JVariableAccess("this"), "bar", Nil))),
+        JBinding("tmp_3", "int", Some(JFieldAccess(JVariableAccess("this"), "a"))),
+        JBinding("c", "int", Some(JBinaryExpression("+", JVariableAccess("tmp_3"), JVariableAccess("tmp_2"))))))))),
+      None))
+    getASTbyParsingFileNamed("Binding4.txt") should equal(expected)
+  }
+}
+
+/*
+  Tests related to assignments
+*/
+class AssignmentsSpec extends ASTSpec {
+  "Parsing FieldAssignment3.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
+      JFieldDefinition(Set(), "b", "int"),
+      JMethodDefinition(Set(), "a", "int", Nil, List(JBlock(None, List(JReturn(JLiteral("10")))))),
+      JMethodDefinition(Set(), "foo", "void", Nil, List(JBlock(None, List(
+        JBinding("tmp_1", "int", Some(JCall(JVariableAccess("this"), "a", Nil))),
+        JFieldWrite(JVariableAccess("this"), "b", JVariableAccess("tmp_1"))))))),
+      None))
+    getASTbyParsingFileNamed("FieldAssignment3.txt") should equal(expected)
+  }
+
+  "Parsing FieldAssignment2.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
+      JFieldDefinition(Set(), "b", "int"),
+      JMethodDefinition(Set(), "set", "void", Nil, List(JBlock(None, List(
+        JBinding("tmp_1", "int", Some(JFieldAccess(JVariableAccess("this"), "b"))),
+        JFieldWrite(JVariableAccess("this"), "b", JBinaryExpression("+", JVariableAccess("tmp_1"), JLiteral("10")))))))),
+      None))
+    getASTbyParsingFileNamed("FieldAssignment2.txt") should equal(expected)
+  }
+
+  "Parsing FieldAssignment1.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
+      JFieldDefinition(Set(), "b", "int"),
+      JMethodDefinition(Set(), "set", "void", Nil, List(JBlock(None, List(
+        JFieldWrite(JVariableAccess("this"), "b", JLiteral("10"))))))),
+      None))
+    getASTbyParsingFileNamed("FieldAssignment1.txt") should equal(expected)
+  }
   
+  "Parsing Assignment1.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
+      JMethodDefinition(Set(), "bar", "void", Nil, List(JBlock(None, List(
+        JBinding("a", "int", Some(JLiteral("10"))),
+        JAssignment("a", JLiteral("20"))))))), None))
+    getASTbyParsingFileNamed("Assignment1.txt") should equal(expected)
+  }
+
+  "Parsing Assignment2.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
+      JMethodDefinition(Set(), "bar", "void", Nil, List(JBlock(None, List(
+        JBinding("a", "int", Some(JLiteral("10"))),
+        JAssignment("a", JBinaryExpression("+", JVariableAccess("a"), JLiteral("20")))))))),
+      None))
+    getASTbyParsingFileNamed("Assignment2.txt") should equal(expected)
+  }
+
+  "Parsing Assignment3.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
+      JMethodDefinition(Set(), "bar", "void", Nil, List(JBlock(None, List(
+        JBinding("a", "int", Some(JLiteral("10"))),
+        JAssignment("a", JBinaryExpression("+", JVariableAccess("a"), JLiteral("20")))))))),
+      None))
+    getASTbyParsingFileNamed("Assignment3.txt") should equal(expected)
+  }
+
+  "Parsing Assignment4.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
+      JMethodDefinition(Set(), "bar", "void", Nil, List(JBlock(None, List(
+        JBinding("a", "int", Some(JLiteral("10"))),
+        JAssignment("a", JCall(JVariableAccess("this"), "foobar", List())))))),
+      JMethodDefinition(Set(), "foobar", "int", Nil, List(JBlock(None, List(
+        JReturn(JLiteral("10"))))))),
+      None))
+    getASTbyParsingFileNamed("Assignment4.txt") should equal(expected)
+  }
+
+  "Parsing Assignment5.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, List(
+      JMethodDefinition(Set(), "bar", "void", Nil, List(JBlock(None, List(
+        JBinding("a", "int", Some(JLiteral("10"))),
+        JBinding("tmp_1", "int", Some(JCall(JVariableAccess("this"), "foobar", List()))),
+        JAssignment("a", JBinaryExpression("+", JVariableAccess("a"), JVariableAccess("tmp_1"))))))),
+      JMethodDefinition(Set(), "foobar", "int", Nil, List(JBlock(None, List(
+        JReturn(JLiteral("10"))))))),
+      None))
+    getASTbyParsingFileNamed("Assignment5.txt") should equal(expected)
+  }
+}
+
+/*
+  Tests related to interfaces
+*/
+class InterfacesSpec extends ASTSpec {
+  "Parsing Interface0.txt" should "produce the correct AST" in {
+    val expected = List(JInterfaceDefinition(Set(), "Foo", List[String](), List[JBodyStatement]()))
+    getASTbyParsingFileNamed("Interface0.txt") should equal(expected)
+  }
+
+  "Parsing Interface1.txt" should "produce the correct AST" in {
+    val expected = List(JInterfaceDefinition(Set(), "Foo", List[String](), List(
+      JMethodDefinition(Set(), "bar", "int", List[JArgument](), List[JBodyStatement]())
+    )))
+    getASTbyParsingFileNamed("Interface1.txt") should equal(expected)
+  }
+
+  "Parsing Interface2.txt" should "produce the correct AST" in {
+    val expected = List(JInterfaceDefinition(Set(), "Foo", List[String](), List(
+      JMethodDefinition(Set(), "bar", "void", List[JArgument](), List[JBodyStatement]())
+    )))
+    getASTbyParsingFileNamed("Interface2.txt") should equal(expected)
+  }
+}
+
+/*
+  Tests related to classes
+*/
+class ClassesSpec extends ASTSpec {
+  "Parsing SimpleClass.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil, Nil, None))
+    getASTbyParsingFileNamed("SimpleClass.txt") should equal(expected)
+  }
+
+  "Parsing SimpleClassWithMethod.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", List(),
+      List(JMethodDefinition(Set(), "foo", "void", Nil,
+        List(JBlock(None, Nil)))), None))
+    getASTbyParsingFileNamed("SimpleClassWithMethod.txt") should equal(expected)
+  }
+
+  "Parsing SimpleClassMoreComplexMethod.txt" should "produce the correct AST" in {
+    val expected = List(
+      JClassDefinition(Set(),"Foo", "", Nil,
+        List(
+          JMethodDefinition(Set(), "foo", "int",
+            List(JArgument("a", "int")),
+            List(JBlock(None, List(JReturn(JVariableAccess("a"))))))), None))
+    getASTbyParsingFileNamed("SimpleClassMoreComplexMethod.txt") should equal(expected)
+  }
+
+  "Parsing SimpleClassMoreComplexMethod2.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil,
+      List(JMethodDefinition(Set(), "foo", "int",
+        List(JArgument("a", "int")),
+        List(JBlock(None, 
+          List(JBinding("tmp_1", "int", Some(JCall(JVariableAccess("this"), "foo",
+            List(JVariableAccess("a"))))), JBinding("tmp_2", "int", Some(JCall(JVariableAccess("this"), "foo",
+            List(JVariableAccess("tmp_1"))))),
+            JReturn(JVariableAccess("tmp_2"))))))), None))
+    getASTbyParsingFileNamed("SimpleClassMoreComplexMethod2.txt") should equal(expected)
+  }
+
+  "Parsing SimpleClassWithSimpleField.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil,
+      List(JFieldDefinition(Set(), "foo", "int")), None))
+    getASTbyParsingFileNamed("SimpleClassWithSimpleField.txt") should equal(expected)
+  }
+
+  "Parsing MethodWithNoFieldAccessOrCallInAnExpression.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo", "", Nil,
+      List(JFieldDefinition(Set(), "f", "int"),
+        JMethodDefinition(Set(), "a", "int", Nil, List(JBlock(None, List(JReturn(JLiteral("10")))))),
+        JMethodDefinition(Set(), "b", "int", List(JArgument("c", "int")),
+          List(JBlock(None, List(
+            JBinding("tmp_1", "int", Some(JCall(JVariableAccess("this"), "a", Nil))),
+            JBinding("tmp_2", "int", Some(JFieldAccess(JVariableAccess("this"), "f"))),
+            JReturn(JBinaryExpression("+", JBinaryExpression("+", JVariableAccess("tmp_2"), JVariableAccess("tmp_1")), JVariableAccess("c")))))))),
+      None))
+    getASTbyParsingFileNamed("MethodWithNoFieldAccessOrCallInAnExpression.txt") should equal(expected)
+  }
+}
+
+/*
+  Tests related to field initializers
+*/
+class InitializersSpec extends ASTSpec {
+  
+  // "Parsing fieldWithInitializer.txt" should "produce the correct AST" in {
+  //     val expected = Nil
+  //     getASTbyParsingFileNamed("fieldWithInitializer.txt") should equal(expected)
+  //   }
+  
+}
+
+/*
+  Tests related to Modifiers
+*/
+class ModifiersSpec extends ASTSpec {
   "Parsing ClassModifiers.txt" should "produce the correct AST" in {
     val expected = List(JClassDefinition(Set(Private(), Abstract()),"A","",Nil,Nil,None))    
     getASTbyParsingFileNamed("ClassModifiers.txt") should equal(expected)    
@@ -512,18 +565,4 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
         JInterfaceDefinition(Set(Private()),"B",List(),List()))))
     getASTbyParsingFileNamed("NestedInterfaceModifiers.txt") should equal(expected)    
   }
-  
-  /*
-   * Returns the JavaAST produced by parsing the file named "name" inside of the
-   * folder src/test/resources/javaparser/source.
-   */
-  def getASTbyParsingFileNamed(name : String) : List[JStatement] = {
-    val in = StreamReader(new InputStreamReader(new FileInputStream(getSourceFileNamed(name))))
-    FinishAST.doitHelper(parseH(in))
-  }
-
-  def getSourceFileNamed(name : String) : File = {
-    new File(List("src", "test", "resources", "javaparser", "source", name).mkString(File.separator))
-  }
-
 }
