@@ -37,7 +37,7 @@ trait TransformCoqJavaToSimpleJava extends StdTokenParsers {
             assert(s(1).isInstanceOf[SList])
             val args = s(1).asInstanceOf[SList].x.filterNot(x => x == SAtom("::")).dropRight(1).map(x => JArgument(x.asInstanceOf[SAtom].x.drop(1).dropRight(1), "int"))
             val lv = s(2).asInstanceOf[SList].x.filterNot(x => x == SAtom("::")).dropRight(1).map(x => JBinding(x.asInstanceOf[SAtom].x.drop(1).dropRight(1), "int", None))
-            val m = JMethodDefinition(id(0), "void", args, lv ++ List(VernacularDefinitions.defs(s(3).asInstanceOf[SAtom].x).asInstanceOf[JBodyStatement], JReturn(JVariableAccess(s(4).asInstanceOf[SList].x(1).asInstanceOf[SAtom].x.drop(1).dropRight(1))))) //void is wrong here!
+            val m = JMethodDefinition(Set(), id(0), "void", args, lv ++ List(VernacularDefinitions.defs(s(3).asInstanceOf[SAtom].x).asInstanceOf[JBodyStatement], JReturn(JVariableAccess(s(4).asInstanceOf[SList].x(1).asInstanceOf[SAtom].x.drop(1).dropRight(1))))) //void is wrong here!
             VernacularDefinitions.defs += id(0) -> m
             m
           case SAtom("Build_Class") => //super, fields, methods
@@ -85,7 +85,7 @@ trait TransformCoqJavaToSimpleJava extends StdTokenParsers {
           //SM.add name ident rest
           assert(x.length == 4)
           val m = VernacularDefinitions.defs(x(2).asInstanceOf[SAtom].x).asInstanceOf[JMethodDefinition]
-          JMethodDefinition(x(1).asInstanceOf[SAtom].x.drop(1).dropRight(1), "void", m.parameters, m.body) :: findDefs(x(3)) //void is wrong here!
+          JMethodDefinition(Set(), x(1).asInstanceOf[SAtom].x.drop(1).dropRight(1), "void", m.parameters, m.body) :: findDefs(x(3)) //void is wrong here!
         }
     }
   }

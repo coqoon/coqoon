@@ -27,7 +27,7 @@ trait CoqOutputter extends JavaToSimpleJava {
     // post is (non-void): "r", sm_bin R (this) (sm_bin name t args) </\> r = name t
     var ms : List[String] = List[String]()
     val results = body.flatMap {
-      case JMethodDefinition(name, typ, params, body) =>
+      case JMethodDefinition(modifiers, name, typ, params, body) =>
         val pre = "sm_bin R (\"this\":expr) (sm_const t)"
         var paras = getArgs(params)
         val ps = if (paras.length == 0) "" else paras.map("(\"" + _ + "\":expr)").reduceLeft(_ + _)
@@ -205,7 +205,7 @@ trait CoqOutputter extends JavaToSimpleJava {
 
   def classMethods (body : List[JStatement]) : List[Pair[String,String]] = {
     body.flatMap {
-      case JMethodDefinition(name, typ, params, body) =>
+      case JMethodDefinition(modifiers, name, typ, params, body) =>
         //Console.println("starting to print method " + name + " with body " + body)
         mymethod = name
         val bodyref = name + "_body"

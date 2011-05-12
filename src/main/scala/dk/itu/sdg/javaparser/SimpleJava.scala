@@ -19,12 +19,13 @@ trait JavaToSimpleJava {
     val mtype = x.jtype
     val mbody = x.body
     val margs = x.parameters
+    val modifiers = x.modifiers
     cname = classname
     //Console.println("body: " + body)
     Gensym.count = 0
     val tb = mbody.foldLeft(List[JBodyStatement]())((b,a) => b ++ extractCalls(a))
     //Console.println("body translated: " + tb)
-    JMethodDefinition(mname, mtype, margs, tb)
+    JMethodDefinition(modifiers, mname, mtype, margs, tb)
   }
 
   def exprtotype (x : JExpression) : String = {

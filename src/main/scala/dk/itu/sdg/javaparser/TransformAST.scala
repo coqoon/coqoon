@@ -422,41 +422,45 @@ object FinishAST extends JavaTerms
    * NOTE: This method can't return InnterStatement because class & interfaces
    *       doesn't inherit from InnerStatement.
    */
-  def transformClassOrInterfaceBody(body: List[Any]) : List[JStatement] = {
+  def transformClassOrInterfaceBody(body: List[Any], modifiers: Set[JModifier] = Set()) : List[JStatement] = {
 
     // little helper function to take care of modifiers (Setting global state)
     def setModifier(modifiers: List[Modifier], declarations: List[JStatement]): Unit = {
       val mod = modifiers.map(unpackR)
       declarations foreach {
         case JFieldDefinition(id, jtype)               => ClassTable.setModifiers(classid, id, mod)
-        case JMethodDefinition(id, clasid, args, body) => ClassTable.setModifiers(classid, id, mod)
+        case JMethodDefinition(modifiers, id, clasid, args, body) => ClassTable.setModifiers(classid, id, mod)
         case _                                         => log.warning("Setting modifier of unkown") //TODO
       }
     }
-
-    body flatMap { _ match {
+    
+    val transformModifiers = (mods: List[Modifier]) => mods.flatMap { 
+      case Modifier(Key(str)) => JModifier(str)
+    }
+    
+    body flatMap { 
       case BodyDeclaration(mods, x)              =>
-        val transformed = transformClassOrInterfaceBody(List(x))
+        val jmods = transformModifiers(mods).toSet
+        val transformed = transformClassOrInterfaceBody(List(x), jmods)
         setModifier(mods,transformed);
         transformed
-      case jclass       : JClass                 => transformClassOrInterface(jclass)     :: Nil
-      case jinterface   : JInterface             => transformClassOrInterface(jinterface) :: Nil
-      case jmethod      : MethodDeclaration      => transformMethodDeclaration(jmethod)   :: Nil
-      case jconstructor : ConstructorDeclaration => transformConstructor(jconstructor)    :: Nil
-      case jfield       : FieldDeclaration       => transformFieldDeclaration(jfield)     :: Nil
-      // things I would love the remove in some other way at some point
-      case y ~ (x: MethodDeclaration)            => transformMethodDeclaration(x)         :: Nil
+      case jclass       : JClass                 => transformClassOrInterface(jclass)              :: Nil
+      case jinterface   : JInterface             => transformClassOrInterface(jinterface)          :: Nil
+      case jmethod      : MethodDeclaration      => transformMethodDeclaration(jmethod, modifiers) :: Nil
+      case jconstructor : ConstructorDeclaration => transformConstructor(jconstructor)             :: Nil
+      case jfield       : FieldDeclaration       => transformFieldDeclaration(jfield)              :: Nil
+      case y ~ (x: MethodDeclaration)            => transformMethodDeclaration(x, modifiers)       :: Nil
       case ";"                                   => Nil
       case x                                     => throw new Exception("Can't have the following in a class/interface body"+x)
-    }}
+    }
   }
 
   /*
    * Transforms a MethodDeclaration into a JMethodDefinition
    */
-  def transformMethodDeclaration(method: MethodDeclaration): JMethodDefinition = {
+  def transformMethodDeclaration(method: MethodDeclaration, modifiers: Set[JModifier]): JMethodDefinition = {
     val (mid, cid, args, body) = extractMethodOrConstructorInfo(method)
-    JMethodDefinition(mid, unpackR(method.jtype), args, body)
+    JMethodDefinition(modifiers, mid, unpackR(method.jtype), args, body)
   }
 
   /*

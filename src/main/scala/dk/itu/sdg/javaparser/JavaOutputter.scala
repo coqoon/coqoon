@@ -50,7 +50,7 @@ trait JavaOutputter {
         val is = if (i.length > 0) " implements " + i.reduceLeft(_ + ", " + _) else " "
         indent(ind) + modifiers.mkString(" ") + " class " + id + is + "{\n" + st + mr(mapi(b, ind + 2)) + "\n" + indent(ind) + "}"
       case JFieldDefinition(id, t) => indent(ind) + t + " " + id + ";"
-      case JMethodDefinition(id, typ, ar, b) =>
+      case JMethodDefinition(modifiers, id, typ, ar, b) =>
         val sp = ClassTable.getSpecs(myclass)
         val (pre, pos) =
           if (sp.contains(id) && sp(id)._1 != null && sp(id)._2 != null) {
@@ -66,7 +66,7 @@ trait JavaOutputter {
         val body = red(mapi(bo, ind + 2), ";\n")
         val completebody = pre + pos + body
         val entirebody = if (completebody.length == 0) " " else "\n" + completebody + ";\n" + indent(ind)
-        indent(ind) + typ + " " + id + " (" + red(mapi(ar, 0), ", ") + ") {" + entirebody + "}\n"
+        indent(ind) + modifiers.mkString(" ") +  " " + typ + " " + id + " (" + red(mapi(ar, 0), ", ") + ") {" + entirebody + "}\n"
       case JArgument(id, t) => indent(ind) + t + " " + id
       case JBlock(xs) =>
         if (xs.length > 1)
