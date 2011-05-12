@@ -23,6 +23,12 @@ object OutlineVernacular {
 
   case class Module (name : String, override val contents : List[VernacularRegion]) extends OutlineStructure {
     override def toString = "Module " + name + contents.mkString("(", ",", ")")
+    override def outlineName = "Module " + name
+  }
+
+  case class Section (name : String, override val contents : List[VernacularRegion]) extends OutlineStructure {
+    override def toString = "Section " + name + contents.mkString("(", ",", ")")
+    override def outlineName = "Section " + name
   }
 
   case class Document (override val contents : List[VernacularRegion]) extends OutlineStructure
@@ -57,20 +63,19 @@ class OutlinerLexer extends Lexical with RegexParsers with OutlinerTokens {
     | failure("String not properly terminated")
     )
 
-  private def commandStart = """[a-zA-Z]""".r
+  private def commandStart = """\S""".r
 
   private def commandContents =
     ( comment ^^^ " "
     | string
-    | not(commandEnd)~>elem("char", (e)=>e != EofCh) ^^ { char => char.toString }
+    | not(commandEnd)~!elem("char", (e) => e != EofCh) ^^ { case _~char => char.toString }
     )
 
-  private def commandEnd = """\.([\r\n\t ]|$)""".r
+  private def commandEnd = '.' ~ (accept('\n') | '\r' | '\t' | ' ' | EofCh)
 
   def command : Parser[Command] = commandStart~rep(commandContents)~commandEnd ^^ {
     case start~contents~end => Command(start + contents.mkString)
   }
-//"""[^\r\n\t ].*\.([\r\n\t ]|$)""".r ^^ Command
 
   def token = command
 }
@@ -101,30 +106,47 @@ class VernacularOutliner extends LengthPositionParsers with TokenParsers with Ve
 
   def outline = rep(outlineItem)
 
-  def outlineItem = lengthPositioned(module | sentence)
+  def outlineItem = lengthPositioned(module | section | sentence) ^^ {x => println(x); x}
 
   def sentence = unknown
 
   def module : Parser[Module] = for {
     name <- moduleStart
-    body <- rep(not(moduleEnd(name))~>outlineItem)
+    body <- rep(not(moduleEnd(name))~!outlineItem ^^ { case _~item => item })
     _ <- moduleEnd(name)
   } yield Module(name, body)
 
-  private val ModulePattern = """Module\s+(\S+)""".r
+  private val ModulePattern = """Module\s+([a-zA-Z0-9\.]+)""".r
   def moduleStart : Parser[String] = elem("Module", {
     case lexical.Command(chars) if chars.startsWith("Module") => true
     case _ => false
   }) ^^ {
     case lexical.Command(chars) => {
-      val ModulePattern(name) = chars
-      name
+      (for (ModulePattern(name) <- ModulePattern findPrefixOf chars)
+       yield name) getOrElse ""
+    }
+  }
+
+  def section : Parser[Section] = for {
+    name <- sectionStart
+    body <- rep(not(moduleEnd(name))~!outlineItem ^^ { case _~item => item })
+    _ <- moduleEnd(name)
+  } yield Section(name, body)
+
+  private val SectionPattern = """Section\s+([a-zA-Z0-9]+)""".r
+  def sectionStart : Parser[String] = elem("Section", {
+    case lexical.Command(chars) if chars.startsWith("Section") => true
+    case _ => false
+  }) ^^ {
+    case lexical.Command(chars) => {
+      (for (SectionPattern(name) <- SectionPattern findPrefixOf chars)
+       yield name) getOrElse ""
     }
   }
 
   private val ModuleEndPattern = """End\s(\S+)""".r
   def moduleEnd(name : String) : Parser[Any] =
-    elem("End of module " + name,
+    elem("End of module/section " + name,
          (cmd : Elem) =>  cmd match {
            case lexical.Command(ModuleEndPattern(chars)) if chars == name => true
            case _ => false
