@@ -13,6 +13,22 @@ object OutlineVernacular {
   }
 
   case class UnknownSentence (chars : String) extends OutlineSentence {
+    override def outlineName = chars.split(":=")(0).replace("""\s+""", " ")
+  }
+
+  case class Definition (chars : String) extends OutlineSentence {
+    override def outlineName = chars.split(":=")(0).replace("""\s+""", " ")
+  }
+
+  case class Assertion (chars : String, name : String) extends OutlineSentence {
+    override def outlineName = chars.replace("""\s+""", " ")
+  }
+
+  case class Goal (chars : String) extends OutlineSentence {
+    override def outlineName = chars.take(60)
+  }
+
+  case class Import (chars : String) extends OutlineSentence {
     override def outlineName = chars.take(60)
   }
 
@@ -104,11 +120,47 @@ class VernacularOutliner extends LengthPositionParsers with TokenParsers with Ve
   val lexical = new OutlinerLexer
   type Tokens = OutlinerLexer
 
+  def commandIf (name : String, pred : String => Boolean) : Parser[String] = acceptMatch(name, {
+    case lexical.Command(chars) if pred(chars) => chars
+  })
+
   def outline = rep(outlineItem)
 
-  def outlineItem = lengthPositioned(module | section | sentence) ^^ {x => println(x); x}
+  def outlineItem = lengthPositioned(`import` | module | section | sentence) ^^ {x => println(x); x}
 
-  def sentence = unknown
+  def sentence = definition | assertion | unknown
+
+  private val ImportPattern = """Module\s+Import|Require\s+Import|Import""".r
+  def `import` = commandIf("import directive", { str : String =>
+    !(ImportPattern findPrefixOf str isEmpty)
+  }) ^^ Import
+
+  def definition : Parser[OutlineSentence] = elem("definition", {
+    case lexical.Command(chars) =>
+      (chars.startsWith("Definition") || chars.startsWith("Let")) && chars.contains(":=")
+    case _ => false
+  }) ^^ { case lexical.Command(chars) => Definition(chars) }
+
+  private val AssertionPattern =
+    """(Theorem|Lemma|Remark|Fact|Corollary|Proposition|Definition|Let|Example)\s+(\S+)""".r
+  def assertion : Parser[OutlineSentence] = elem("assertion", {
+    case lexical.Command(chars) if !AssertionPattern.findPrefixOf(chars).isEmpty && !chars.contains(":=") => true
+    case lexical.Command(chars) if chars.startsWith("Goal") => true
+    case _ => false
+  })<~proof ^^ {
+    case lexical.Command(chars) =>
+    (for (AssertionPattern(name) <- AssertionPattern findPrefixOf chars)
+     yield Assertion(chars, name)) getOrElse Goal(chars)
+  }
+
+  def proof : Parser[Any] = rep1(proofStep)~proofEnd //rep(proofStep)~proofEnd
+  def proofStep = not(proofEnd)~!elem("proof step", (s) => true)
+  def proofEnd = elem("end of proof", {
+    case lexical.Command(chars) if proofEnders contains chars => true
+    case lexical.Command(chars) if chars startsWith "Abort" => true
+    case lexical.Command(chars) if chars startsWith "Suspend" => true
+    case _ => false
+  })
 
   def module : Parser[Module] = for {
     name <- moduleStart
