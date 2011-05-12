@@ -380,7 +380,7 @@ object FinishAST extends JavaTerms
    * Transform a JClass or JInterface to a JClassDefinition or JInterfaceDefinition
    * respectively. Anything else will throw an exception
    */
-  def transformClassOrInterface(x : Any, modifiers: Set[JModifier] = Set[JModifier]()) : JStatement = {
+  def transformClassOrInterface(x : Any, modifiers: Set[JModifier] = Set()) : JStatement = {
     x match {
       case JClass(id, jtype, superclass, interfaces, bodyp) => {
         log.info("transforming a JClass, ranging (pos) " + x.asInstanceOf[JClass].pos)
@@ -437,19 +437,19 @@ object FinishAST extends JavaTerms
     val transformModifiers = (mods: List[Modifier]) => mods.flatMap { 
       case Modifier(Key(str)) => JModifier(str)
     }
-    
+        
     body flatMap { 
-      case BodyDeclaration(mods, x)              =>
+      case BodyDeclaration(mods, x)              =>      
         val jmods = transformModifiers(mods).toSet
         val transformed = transformClassOrInterfaceBody(List(x), jmods)
         setModifier(mods,transformed);
         transformed
-      case jclass       : JClass                 => transformClassOrInterface(jclass)              :: Nil
-      case jinterface   : JInterface             => transformClassOrInterface(jinterface)          :: Nil
-      case jmethod      : MethodDeclaration      => transformMethodDeclaration(jmethod, modifiers) :: Nil
-      case jconstructor : ConstructorDeclaration => transformConstructor(jconstructor, modifiers)  :: Nil
-      case jfield       : FieldDeclaration       => transformFieldDeclaration(jfield, modifiers)   :: Nil
-      case y ~ (x: MethodDeclaration)            => transformMethodDeclaration(x, modifiers)       :: Nil
+      case jclass       : JClass                 => transformClassOrInterface(jclass, modifiers)     :: Nil
+      case jinterface   : JInterface             => transformClassOrInterface(jinterface, modifiers) :: Nil
+      case jmethod      : MethodDeclaration      => transformMethodDeclaration(jmethod, modifiers)   :: Nil
+      case jconstructor : ConstructorDeclaration => transformConstructor(jconstructor, modifiers)    :: Nil
+      case jfield       : FieldDeclaration       => transformFieldDeclaration(jfield, modifiers)     :: Nil
+      case y ~ (x: MethodDeclaration)            => transformMethodDeclaration(x, modifiers)         :: Nil
       case ";"                                   => Nil
       case x                                     => throw new Exception("Can't have the following in a class/interface body"+x)
     }

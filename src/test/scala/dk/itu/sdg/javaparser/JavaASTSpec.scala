@@ -491,6 +491,22 @@ class JavaASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     getASTbyParsingFileNamed("ConstructorModifiers.txt") should equal(expected)    
   }
   
+  "Parsing NestedClassModifiers.txt" should "produce the correct AST" in {
+    val expected = List(
+      JClassDefinition(Set(Private()),"B","",List(),List(),Some("A")), 
+      JClassDefinition(Set(Public()),"A","",List(),List(),None))
+    getASTbyParsingFileNamed("NestedClassModifiers.txt") should equal(expected)    
+  }
+  
+  "Parsing NestedInterfaceModifiers.txt" should "produce the correct AST" in {
+    /*
+      TODO: This will currently fail because nested interfaces are not treated like
+            nested classes. 
+    */
+    val expected = Nil
+    getASTbyParsingFileNamed("NestedInterfaceModifiers.txt") should equal(expected)    
+  }
+  
   /*
    * Returns the JavaAST produced by parsing the file named "name" inside of the
    * folder src/test/resources/javaparser/source.
