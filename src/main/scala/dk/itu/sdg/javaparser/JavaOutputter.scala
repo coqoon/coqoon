@@ -49,7 +49,7 @@ trait JavaOutputter {
             ""
         val is = if (i.length > 0) " implements " + i.reduceLeft(_ + ", " + _) else " "
         indent(ind) + modifiers.mkString(" ") + " class " + id + is + "{\n" + st + mr(mapi(b, ind + 2)) + "\n" + indent(ind) + "}"
-      case JFieldDefinition(id, t) => indent(ind) + t + " " + id + ";"
+      case JFieldDefinition(modifiers, id, t) => indent(ind) + modifiers.mkString(" ") + " " + t + " " + id + ";"
       case JMethodDefinition(modifiers, id, typ, ar, b) =>
         val sp = ClassTable.getSpecs(myclass)
         val (pre, pos) =

@@ -428,7 +428,7 @@ object FinishAST extends JavaTerms
     def setModifier(modifiers: List[Modifier], declarations: List[JStatement]): Unit = {
       val mod = modifiers.map(unpackR)
       declarations foreach {
-        case JFieldDefinition(id, jtype)               => ClassTable.setModifiers(classid, id, mod)
+        case JFieldDefinition(modifiers, id, jtype)               => ClassTable.setModifiers(classid, id, mod)
         case JMethodDefinition(modifiers, id, clasid, args, body) => ClassTable.setModifiers(classid, id, mod)
         case _                                         => log.warning("Setting modifier of unkown") //TODO
       }
@@ -448,7 +448,7 @@ object FinishAST extends JavaTerms
       case jinterface   : JInterface             => transformClassOrInterface(jinterface)          :: Nil
       case jmethod      : MethodDeclaration      => transformMethodDeclaration(jmethod, modifiers) :: Nil
       case jconstructor : ConstructorDeclaration => transformConstructor(jconstructor)             :: Nil
-      case jfield       : FieldDeclaration       => transformFieldDeclaration(jfield)              :: Nil
+      case jfield       : FieldDeclaration       => transformFieldDeclaration(jfield, modifiers)   :: Nil
       case y ~ (x: MethodDeclaration)            => transformMethodDeclaration(x, modifiers)       :: Nil
       case ";"                                   => Nil
       case x                                     => throw new Exception("Can't have the following in a class/interface body"+x)
@@ -507,13 +507,13 @@ object FinishAST extends JavaTerms
   /*
    * Transforms a FieldDeclaration into a JFieldDefinition
    */
-  def transformFieldDeclaration(field: FieldDeclaration): JFieldDefinition = {
+  def transformFieldDeclaration(field: FieldDeclaration, modifiers: Set[JModifier] = Set()): JFieldDefinition = {
     val FieldDeclaration(id, jtype, rest) = field
     log.info("field pos info " + field.pos)
     val name = unpackR(id)
     val typ = unpackR(jtype)
     ClassTable.addField(classid, name, typ)
-    JFieldDefinition(name, typ)
+    JFieldDefinition(modifiers, name, typ)
   }
 
   /*

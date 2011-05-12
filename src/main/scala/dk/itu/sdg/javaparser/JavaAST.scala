@@ -58,7 +58,7 @@ case class JInterfaceDefinition (modifiers : Set[JModifier], id : String, interf
 
 trait InnerStatement extends JStatement
 
-case class JFieldDefinition (id : String, jtype : String) extends InnerStatement
+case class JFieldDefinition (modifiers : Set[JModifier], id : String, jtype : String) extends InnerStatement
 case class JMethodDefinition (modifiers : Set[JModifier], id : String, jtype : String, parameters : List[JArgument], body : List[JBodyStatement]) extends InnerStatement
 case class JConstructorDefinition (jtype : String, parameters : List[JArgument], body : List[JBodyStatement]) extends InnerStatement
 
