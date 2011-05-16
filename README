@@ -8,7 +8,7 @@ Information about this project can be found:
 
 Prerequisites:
 * Eclipse SDK (from http://download.eclipse.org/eclipse/downloads/) tested is 3.6
-* Scala IDE (from http://www.scala-ide.org/) tested is 201009062352
+* Scala IDE (from http://www.scala-ide.org/) tested is Scala IDE 2.0.0-beta4 with Scala 2.9.0.final
 * runtime: Coq (from http://coq.inria.fr/download) tested is 8.3pl1
 
 Setup:
