@@ -1,36 +1,22 @@
+/*
+  This tests the conversion from JavaAST to SimpleJavaAST (well, not yet but in the future 
+  it will) It parses each file in src/test/resources/javaparser/source and tests that the 
+  expected SimpleJavaAST AST is generated.
+  
+  @author Mads Hartman Jensen
+*/
+
 package dk.itu.sdg.javaparser
 
 import org.scalatest.FlatSpec
 import org.scalatest.matchers.ShouldMatchers
 
-import java.io._
-import scala.util.parsing.input.{ StreamReader }
-
-trait ASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
-  /*
-    * Returns the JavaAST produced by parsing the file named "name" inside of the
-    * folder src/test/resources/javaparser/source.
-    */
-   def getASTbyParsingFileNamed(name : String) : List[JStatement] = {
-     val in = StreamReader(new InputStreamReader(new FileInputStream(getSourceFileNamed(name))))
-     FinishAST.doitHelper(parseH(in))
-   }
-
-   def getSourceFileNamed(name : String) : File = {
-     new File(List("src", "test", "resources", "javaparser", "source", name).mkString(File.separator))
-   }
-}
-
-/*
- * Parses each file in src/test/resources/javaparser/source
- * and tests that the expected JavaAST AST is generated.
- */
 class JavaASTSpec extends ASTSpec {
 
   /*
-   * NOTE:
-   * The easiest way to do this is to run the Main method in sbt with the
-   * given file and then in Emacs: M-x query-replace-regexp RET \([a-z0-9_+-*]+\) RET "\1"
+     NOTE:
+     The easiest way to do this is to run the Main method in sbt with the
+     given file and then in Emacs: M-x query-replace-regexp RET \([a-z0-9_+-*]+\) RET "\1"
    */
 
   "Parsing Postfix1.txt" should "produce the correct AST" in {

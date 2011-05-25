@@ -272,6 +272,19 @@ object FinishAST extends JavaTerms
    *  ==============================
    */
 
+  /*
+    Given an AST in JavaTerms it will convert it to an AST in JavaAST
+  */
+  def javaTermsToJavaAST(ast: Any): List[JStatement] = {
+    
+    classid  = ""
+    methodid = ""
+    lvars    = new HashMap[String, String]()
+    argmap   = new HashMap[String, String]()
+    
+    transform(ast)
+  }
+
   def doitHelper(a : Any) : List[JStatement] = {
 
     classid  = ""
