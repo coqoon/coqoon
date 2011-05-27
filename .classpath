@@ -5,7 +5,6 @@
 	<classpathentry exported="true" kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
 	<classpathentry kind="src" path="src/test/scala"/>
 	<classpathentry kind="src" path="src/main/scala"/>
-	<classpathentry exported="true" kind="lib" path="lib_managed/scala_2.8.1/test/scalatest-1.3.jar"/>
 	<classpathentry kind="lib" path="lib/compile/org.eclipse.core.commands_3.6.0.I20100512-1500.jar"/>
 	<classpathentry kind="lib" path="lib/compile/org.eclipse.core.contenttype_3.4.100.v20100505-1235.jar"/>
 	<classpathentry kind="lib" path="lib/compile/org.eclipse.core.expressions_3.4.200.v20100505.jar"/>
@@ -36,5 +35,6 @@
 	<classpathentry kind="lib" path="lib/compile/org.eclipse.ui.views_3.5.0.I20100527-0800.jar"/>
 	<classpathentry kind="lib" path="lib/compile/org.eclipse.ui.workbench_3.6.0.I20100603-1100.jar"/>
 	<classpathentry kind="lib" path="lib/compile/org.eclipse.ui.workbench.texteditor_3.6.0.v20100520-0800.jar"/>
+	<classpathentry kind="lib" path="lib_managed/scala_2.9.0/test/scalatest-1.4.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
