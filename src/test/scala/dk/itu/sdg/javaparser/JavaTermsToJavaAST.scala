@@ -77,6 +77,13 @@ class JavaTermsToJavaASTSPec extends ASTSpec {
     val expected = List(JClassDefinition(Set(),"Foo","",Nil,List(JMethodDefinition(Set(),"bar","void",Nil,List(JBlock(None,List(JBinding("i","int",Some(JLiteral("1"))), JWhile(JBinaryExpression(">",JVariableAccess("i"),JLiteral("0")),JBlock(None,List(JPostfixExpression("++",JVariableAccess("i")))))))))),None))
     getJavaASTbyParsingFileNamed("While1.txt") should equal(expected)
   }
+
+  "Parsing While2.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo","",Nil,List(
+      JFieldDefinition(Set(), "b", "boolean", None),
+      JMethodDefinition(Set(),"bar","void",Nil,List(JBlock(None,List(JBinding("i","int",Some(JLiteral("1"))), JFieldWrite(JVariableAccess("this"), "b", JLiteral("true")), JWhile(JFieldAccess(JVariableAccess("this"), "b"),JBlock(None,List(JFieldWrite(JVariableAccess("this"), "b", JLiteral("false")), JPostfixExpression("++",JVariableAccess("i")))))))))),None))
+    getJavaASTbyParsingFileNamed("While2.txt") should equal(expected)
+  }
   
   "Parsing Fac.txt" should "produce the correct AST" in {
     val expected = List(JClassDefinition(Set(),"Fac","",Nil,List(JMethodDefinition(Set(Static()),"fac","int",List(JArgument("n","int")),List(JBlock(None,List(JBinding("x","int",None), JConditional(JBinaryExpression(">=",JVariableAccess("n"),JLiteral("0")),JBlock(None,List(JAssignment("x",JCall(JVariableAccess("this"),"fac",List(JBinaryExpression("-",JVariableAccess("n"),JLiteral("1"))))), JAssignment("x",JBinaryExpression("*",JVariableAccess("n"),JVariableAccess("x"))))),JBlock(None,List(JAssignment("x",JLiteral("1"))))), JReturn(JVariableAccess("x"))))))),None))

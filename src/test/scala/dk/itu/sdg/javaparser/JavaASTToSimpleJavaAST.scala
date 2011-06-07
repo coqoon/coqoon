@@ -157,6 +157,23 @@ class JavaASTSpec extends ASTSpec {
     getASTbyParsingFileNamed("While1.txt") should equal(expected)
   }
 
+  "Parsing While2.txt" should "produce the correct AST" in {
+    val expected =
+      List(JClassDefinition(Set(),"Foo", "", Nil, List(
+        JFieldDefinition(Set(), "b", "boolean", None),
+        JMethodDefinition(Set(), "bar", "void", Nil, List(JBlock(None, List(
+          JBinding("i", "int", Some(JLiteral("1"))),
+          JFieldWrite(JVariableAccess("this"), "b", JLiteral("true")),
+          JBinding("tmp_1", "boolean", Some(JFieldAccess(JVariableAccess("this"), "b"))),
+          JWhile(JBinaryExpression("==", JVariableAccess("tmp_1"), JLiteral("true")),
+                 JBlock(None, List(JFieldWrite(JVariableAccess("this"), "b", JLiteral("false")),
+                                   JAssignment("i", JBinaryExpression("+", JVariableAccess("i"), JLiteral("1"))),
+                                   JAssignment("tmp_1", JFieldAccess(JVariableAccess("this"), "b")))))
+        )))), 
+        JConstructorDefinition(Set(Public()),"Foo",List(),List())),None))
+    getASTbyParsingFileNamed("While2.txt") should equal(expected)
+  }
+
   "Parsing Fac.txt" should "produce the correct AST" in {
     val expected =
       List(JClassDefinition(Set(),"Fac", "", List(), List(JMethodDefinition(Set(Static()), "fac", "int",

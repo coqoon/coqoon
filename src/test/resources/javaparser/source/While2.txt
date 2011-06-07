@@ -1,0 +1,11 @@
+class Foo {
+  boolean b;
+  void bar () {
+    int i = 1;
+    b = true;
+    while (b) {
+      b = false;
+      i++;
+    }
+  }
+}
