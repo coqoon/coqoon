@@ -25,7 +25,7 @@ case class SJAssignment (left : SJVariableAccess, right : SJExpression) extends 
 case class SJFieldWrite (variable : SJVariableAccess, field : String, value : SJExpression) extends SJStatement //x.f := e
 case class SJFieldRead (value : SJVariableAccess, variable : SJVariableAccess, field : String) extends SJStatement //x := y.f
 case class SJReturn (ret : SJExpression) extends SJStatement //return e
-case class SJCall (value : SJVariableAccess, receiver : SJVariableAccess, fun : String, arguments : List[SJExpression]) extends SJStatement //x := y.m(e)
+case class SJCall (value : Option[SJVariableAccess], receiver : SJVariableAccess, fun : String, arguments : List[SJExpression]) extends SJStatement //x := y.m(e)
 case class SJNewExpression (value : SJVariableAccess, jtype : String, arguments : List[SJExpression]) extends SJStatement //x := alloc C
 
 trait SJExpression extends SJStatement
