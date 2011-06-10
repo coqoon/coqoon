@@ -278,7 +278,7 @@ class JavaASTSpec extends ASTSpec {
         SJFieldDefinition(Set(), "name", "String"), 
         SJConstructorDefinition(Set(Public()), "Person", List(SJArgument("name","String")), List(
           SJFieldWrite(SJVariableAccess("this"), "name", SJVariableAccess("name"))),
-                              HashMap()), None))
+                              HashMap())), None))
      getASTbyParsingFileNamed("ClassWithConstructor.txt") should equal(expected)    
    }
 
