@@ -6,12 +6,12 @@ sealed abstract class SJDefinition () { }
 case class SJClassDefinition (modifiers : Set[JModifier], id : String, superclass : String, interfaces : List[String], body : List[SJBodyDefinition], outerclass : Option[String]) extends SJDefinition
 case class SJInterfaceDefinition (modifiers : Set[JModifier], id : String, interfaces : List[String], body : List[SJBodyDefinition]) extends SJDefinition
 
-import scala.collection.mutable.HashMap
+import scala.collection.immutable.HashMap
 
 sealed abstract class SJBodyDefinition () { }
 case class SJFieldDefinition (modifiers : Set[JModifier], id : String, jtype : String) extends SJBodyDefinition
-case class SJMethodDefinition (modifiers : Set[JModifier], id : String, jtype : String, parameters : List[SJArgument], body : SJStatement, localvariables : HashMap[String, String]) extends SJBodyDefinition
-case class SJConstructorDefinition (modifiers : Set[JModifier], jtype : String, parameters : List[SJArgument], body : SJStatement, localvariables : HashMap[String, String]) extends SJBodyDefinition
+case class SJMethodDefinition (modifiers : Set[JModifier], id : String, jtype : String, parameters : List[SJArgument], body : List[SJStatement], localvariables : HashMap[String, String]) extends SJBodyDefinition
+case class SJConstructorDefinition (modifiers : Set[JModifier], jtype : String, parameters : List[SJArgument], body : List[SJStatement], localvariables : HashMap[String, String]) extends SJBodyDefinition
 case class SJBodyBlock (modifiers : Set[JModifier], body : SJStatement) extends SJBodyDefinition
 
 sealed case class SJArgument (id : String, jtype : String)
