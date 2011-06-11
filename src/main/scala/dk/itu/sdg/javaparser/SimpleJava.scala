@@ -2,6 +2,9 @@
 
 package dk.itu.sdg.javaparser
 
+import scala.collection.immutable.{ HashMap }
+import dk.itu.sdg.util.{ KopitiamLogger }
+
 object Gensym {
   var count : Int = 0
   def newsym () : String = {
@@ -10,22 +13,40 @@ object Gensym {
   }
 }
 
-trait JavaToSimpleJava {
+/*
+  This trait provides methods for parsing an AST expressed in JavaAST into an AST expressed in 
+  SimpleJavaAst. 
+*/
+trait JavaToSimpleJava extends KopitiamLogger {
+  
   private var cname : String = ""
   private var mname : String = ""
 
-  def translate (classname : String, x : JMethodDefinition) : JMethodDefinition = {
+  /*
+    Translates a JMethodDefinition into a SJMethodDefinition
+  */
+  def translate (classname : String, x : JMethodDefinition) : SJMethodDefinition = {
     mname = x.id
     val mtype = x.jtype
     val mbody = x.body
-    val margs = x.parameters
+    val margs = x.parameters.map( param => SJArgument(param.id, param.jtype) )
     val modifiers = x.modifiers
     cname = classname
     //Console.println("body: " + body)
     Gensym.count = 0
-    val tb = mbody.foldLeft(List[JBodyStatement]())((b,a) => b ++ extractCalls(a))
+    val tb = mbody.foldLeft(List[SJStatement]())((b,a) => b ++ extractCalls(a))
+    
+    // for {
+    //   statement <- mbody 
+    //   (translatedStatements, localVariables) <- extractCalls(statement)
+    // } yield 
+    
+    /*
+      TODO: Need to extract the local variables 
+    */
+    val localVariables = new HashMap[String, String]()
     //Console.println("body translated: " + tb)
-    JMethodDefinition(modifiers, mname, mtype, margs, tb)
+    SJMethodDefinition(modifiers, mname, mtype, margs, tb, localVariables)
   }
   
   /*
@@ -33,7 +54,7 @@ trait JavaToSimpleJava {
     constructor of the class. If a constructor exists the statements are prepended, otherwise a 
     default constructor is created.
   */
-  def rewriteConstructor( clazz: JClassDefinition) = {
+  def rewriteConstructor( clazz: JClassDefinition): JClassDefinition = {
     
     val defaultConstructor = JConstructorDefinition(Set(Public()), clazz.id, Nil, Nil)
     
@@ -57,14 +78,13 @@ trait JavaToSimpleJava {
     clazz.copy( body = newBody)
   }
 
-  def exprtotype (x : JExpression) : String = {
+  def exprtotype (x : SJExpression) : String = {
     x match {
-      case JBinaryExpression(op, l, r) => exprtotype(l) //assumption: typeof(x op y) == typeof(x) == typeof(y)
-      case JUnaryExpression(op, e) => exprtotype(e) //assumption: typeof(op x) == typeof(x)
-      case JPostfixExpression(op, e) => exprtotype(e)
-      case JLiteral(x) => if (x == "null") "Object" else try { x.toInt.toString; "int" } catch { case e => "String" }
-      case JVariableAccess(v) => ClassTable.getLocalVar(cname, mname, v)
-      case x => Console.println("didn't expect to need to convert this expr to a type: " + x); "Object"
+      case SJBinaryExpression(op, l, r) => exprtotype(l) //assumption: typeof(x op y) == typeof(x) == typeof(y)
+      case SJUnaryExpression(op, e)     => exprtotype(e) //assumption: typeof(op x) == typeof(x)
+      case SJLiteral(x)                 => if (x == "null") "Object" else try { x.toInt.toString; "int" } catch { case e => "String" }
+      case SJVariableAccess(v)          => ClassTable.getLocalVar(cname, mname, v)
+      case x                            => Console.println("didn't expect to need to convert this expr to a type: " + x); "Object"
     }
   }
 
@@ -84,104 +104,113 @@ trait JavaToSimpleJava {
 
   var tmp : String = null
 
-  def extractCalls (statement : JBodyStatement) : List[JBodyStatement] = {
-    //Console.println("calling extract for " + statement)
-    statement match {
-      case JBlock(modifier, xs) => List(JBlock(modifier, xs.foldLeft(List[JBodyStatement]())((b, a) => b ++ extractCalls(a))))
-      case JAssignment(x, r) =>
-        if (! getUsedVars(r).contains(x))
-          tmp = x
-        val (arg, ins) = extractHelper(r)
-        tmp = null
-        if (arg.isInstanceOf[JVariableAccess] && arg.asInstanceOf[JVariableAccess].variable == x)
-          ins
-        else
-          ins ++ List(JAssignment(x, arg))
-      case JBinding(n, t, i) =>
-        //Console.println("extracting jbinding " + n + " type " + t + " init " + i)
-        i match {
-          case None => List(JBinding(n, t, i))
-          case Some(x) =>
-            val (ih, ins) = extractHelper(x)
-            Console.println("working on a binding with initializer: " + x + ", extracthelper gave me ih " + ih + " and ins " + ins)
-            if (ih.isInstanceOf[JVariableAccess] && ins.length > 0 && ins.takeRight(1)(0).isInstanceOf[JBinding]) {
-              val tmpvar = ih.asInstanceOf[JVariableAccess].variable
-              val lb = ins.takeRight(1)(0).asInstanceOf[JBinding]
-              if (lb.name == tmpvar && lb.jtype == t)
-                ins.dropRight(1) ++ List(JBinding(n, t, lb.init))
-              else
-                ins ++ List(JBinding(n, t, Some(ih)))
-            } else
-              ins ++ List(JBinding(n, t, Some(ih)))
-        }
+  /*
+    Transforms a JBodyStatement into a List[SJStatement] and HashMap[String, String] the latter being the local 
+    variables in the body of the method.
+  */
+  def extractCalls (statement : JBodyStatement) : (List[SJStatement], HashMap[String, String]) = statement match {
+
+      case JBlock(modifier, xs) => 
+        log.warning("Converting a JBlock into a List[SJStatement]")
+        xs.foldLeft(List[SJStatement]())((b, a) => b ++ extractCalls(a))
+
+      // case JAssignment(x, r) =>
+      //   if (! getUsedVars(r).contains(x))
+      //     tmp = x
+      //   val (arg, ins) = extractHelper(r)
+      //   tmp = null
+      //   if (arg.isInstanceOf[SJVariableAccess] && arg.asInstanceOf[SJVariableAccess].variable == x)
+      //     ins
+      //   else
+      //     ins ++ List(SJAssignment(SJVariableAccess(x), arg))
+
+      // case JBinding(n, t, i) =>
+      //   i match {
+      //     case None => List(JBinding(n, t, i)) // TODO: JBinding? 
+      //     case Some(x) =>
+      //       val (ih, ins) = extractHelper(x)
+      // 
+      //       if (ih.isInstanceOf[SJVariableAccess] && ins.length > 0 && ins.takeRight(1)(0).isInstanceOf[JBinding]) { // TODO, JBinding
+      //         val tmpvar = ih.asInstanceOf[SJVariableAccess].variable
+      //         val lb = ins.takeRight(1)(0).asInstanceOf[JBinding] // TODO, JBinding
+      //         if (lb.name == tmpvar && lb.jtype == t)
+      //           ins.dropRight(1) ++ List(JBinding(n, t, lb.init)) // TODO, JBinding
+      //         else
+      //           ins ++ List(JBinding(n, t, Some(ih))) // TODO, JBinding
+      //       } else
+      //         ins ++ List(JBinding(n, t, Some(ih))) // TODO, JBinding
+      //   }
+
       case JBinaryExpression(op, l, r) =>
         val (larg, lins) = extractHelper(l)
         val (rarg, rins) = extractHelper(r)
-        lins ++ rins ++ List(JBinaryExpression(op, larg, rarg))
+        lins ++ rins ++ List(SJBinaryExpression(op, larg, rarg))
+
       case JUnaryExpression(op, v) =>
         val (va, vis) = extractHelper(v)
-        vis ++ List(JUnaryExpression(op, va))
-      case JPostfixExpression(op, v) =>
-        val oper = op match {
-          case "++" => "+"
-          case "--" => "-"
-        }
-        val res = JBinaryExpression(oper, v, JLiteral("1"))
-        val ass = v match {
-          case JFieldAccess(variable, value) => JFieldWrite(variable, value, res)
-          case JVariableAccess(x) => JAssignment(x, res)
-        }
-        extractCalls(ass)
+        vis ++ List(SJUnaryExpression(op, va))
+
+      // case JPostfixExpression(op, v) =>
+      //   val oper = op match {
+      //     case "++" => "+"
+      //     case "--" => "-"
+      //   }
+      //   val res = SJBinaryExpression(oper, v, SJLiteral("1")) //TODO is it right to convert it here? 
+      //   val ass = v match {
+      //     case JFieldAccess(variable, value) => JFieldWrite(variable, value, res)
+      //     case JVariableAccess(x) => JAssignment(x, res)
+      //   }
+      //   extractCalls(ass)
+
       case JFieldWrite(x, f, v) =>
         val (a, i) = extractHelper(v)
         val (va, vi) = extractHelper(x)
-        vi ++ i ++ List(JFieldWrite(va, f, a))
+        
+        val variable = va match {
+          case sjv @ SJVariableAccess(name) => sjv
+          // TODO: Not sure what to do here if we don't get a SJVariableAccess
+        }
+        
+        vi ++ i ++ List(SJFieldWrite(variable, f, a))
+
       case JConditional(t, c, a) =>
         val (ta, ti) = extractHelper(t)
         val con = extractCalls(c)
-        val con2 = if (con.length == 1)
-                     con(0)
-                   else
-                     JBlock(None, con)
-        val r = extractCalls(a)
-        val alt =
-          if (r.length == 1)
-            r(0)
-          else
-            JBlock(None, r)
-        ti ++ List(JConditional(ta, con2, alt))
-      case JCall(receiver, name, args) =>
-        val (temp, lines) = extractHelper(receiver)
-        val (ars, ins)    = exL(args)
-        lines ++ ins ++ List(JCall(temp, name, ars))
-      case JNewExpression(name, arguments) =>
-        val (ars, ins) = exL(arguments)
-        ins ++ List(JNewExpression(name, ars))
+        val alt = extractCalls(a)
+        ti ++ List(SJConditional(ta, con, alt))
+
+      // case JCall(receiver, name, args) =>
+      //   val (temp, lines) = extractHelper(receiver)
+      //   val (ars, ins)    = exL(args)
+      //   /*
+      //     TODO: Using None here for now. The option of SJCall seems out of place to me, I thought that 
+      //           SJ should always use temp variables. Ask Hannes 
+      //   */
+      //   lines ++ ins ++ List(SJCall(None, temp, name, ars)) 
+
+      // case JNewExpression(name, arguments) =>
+      //   val (ars, ins) = exL(arguments)
+      //   ins ++ List(SJNewExpression(name, ars)) // TODO: How to I find the type? 
+
       case JWhile(test, body) =>
         val (ta, ti) = extractHelper(test)
-        //Console.println("old body for while is " + body)
         val newbody = extractCalls(body)
-        assert(newbody.length == 1)
-        val nn = newbody(0)
-        assert(nn.isInstanceOf[JBlock])
-        //Console.println("new body for while is " + nn)
-        ti ++ List(JWhile(ta, nn.asInstanceOf[JBlock]))
-      case JReturn(e : JVariableAccess) =>
-        List(JReturn(e))
+        ti ++ List(SJWhile(ta, newbody))
+
+      case JReturn(e : JVariableAccess) => 
+        List(SJReturn(SJVariableAccess(e.variable)))
+
       case JReturn(e : JLiteral) =>
-        List(JReturn(e))
+        List(SJReturn(SJLiteral(e.value)))
+
       case JReturn(exxx) =>
-        Console.println("return of an expression " + exxx)
         val (ra, ri) = extractHelper(exxx)
-        ri ++ List(JReturn(ra))
-      case x => {
-        Console.println("extract default case encountered " + x);
-        List(x)
-      }
-    }
+        ri ++ List(SJReturn(ra))
+
+      // NB: We don't want a default case, we want it to crash early 
   }
 
-  def exL (xs : List[JExpression]) : (List[JExpression], List[JBodyStatement]) = {
+  def exL (xs : List[JExpression]) : (List[SJExpression], List[SJStatement]) = {
     val vals = xs.map(extractHelper)
     (vals.map(z => z._1), vals.map(z => z._2).flatten)
   }
@@ -196,82 +225,90 @@ trait JavaToSimpleJava {
     }
   }
 
-  def extractHelper (x : JExpression) : (JExpression, List[JBodyStatement]) = {
-    //Console.println("extracthelper called with " + xs + " acca " + acca + " acci " + acci)
-    x match {
+  /*
+    TODO: Explain what it does
+  */
+  def extractHelper (x : JExpression) : (SJExpression, List[SJStatement]) = x match {
+
       case JBinaryExpression(op, l, r) =>
         val (ri, rii) = extractHelper(r)
         val (le, lei) = extractHelper(l)
-        //Console.println("HELP le " + le + " ri " + ri + " is " + lei)
-        (JBinaryExpression(op, le, ri), rii ++ lei)
+        (SJBinaryExpression(op, le, ri), rii ++ lei)
+
       case JUnaryExpression(op, v) =>
         val (va, vis) = extractHelper(v)
-        (JUnaryExpression(op, va), vis)
-      case JPostfixExpression(op, v) =>
-        val (va, vis) = extractHelper(v)
-        val typ = "int"
-        val (t, fresh) = sym(typ)
-        val oper = if (op == "++") "+" else if (op == "--") "-" else { Console.println("dunno postfix " + op); op }
-        if (fresh)
-          (JVariableAccess(t),
-           JBinding(t, typ, Some(va)) :: List(JBinaryExpression(oper, va, JLiteral("1"))))
-        else
-          (JVariableAccess(t),
-           JAssignment(t, va) :: List(JBinaryExpression(oper, va, JLiteral("1"))))
-      case JFieldAccess(con, f) =>
-        Console.println("extractHelper with FieldAccess " + con + " field " + f)
-        val (a, i) = extractHelper(con)
-        Console.println("extracted " + a + " (" + i + ")")
-        val tclass = ClassTable.getFieldType(ClassTable.getLocalVar(cname, mname, exprtotype(a)), f)
-        val (t, fresh) = sym(tclass)
-        if (fresh)
-          (JVariableAccess(t), i ++ List(JBinding(t, tclass, Some(JFieldAccess(a, f)))))
-        else
-          (JVariableAccess(t), i ++ List(JAssignment(t, JFieldAccess(a, f))))
-      case JCall(receiver, name, args) =>
-        val (a,i)      = extractHelper(receiver)
-        val (as, ins)  = exL(args)
-        val ttype      = ClassTable.getMethodType(cname, mname, exprtotype(a), name, as.map(exprtotype))
-        val (t, fresh) = sym(ttype)
-        if (fresh)
-          (JVariableAccess(t), i ++ ins ++ List(JBinding(t, ttype, Some(JCall(a, name, as)))))
-        else
-          (JVariableAccess(t), i ++ ins ++ List(JAssignment(t, JCall(a, name, as))))
-      case JNewExpression(name, args) =>
-        val (as, ins) = exL(args)
-        val (t, fresh) = sym(name)
-        if (fresh)
-          (JVariableAccess(t), ins ++ List(JBinding(t, name, Some(JNewExpression(name, as)))))
-        else
-          (JVariableAccess(t), ins ++ List(JAssignment(t, JNewExpression(name, as))))
-      case JConditional(test, c, a) =>
-        val (t, fresh) = sym("Object")
-        val (ta, ti) = extractHelper(test)
-        var ttyp : String = ""
-        val getb = (x : JBodyStatement) => {
-          //Console.println("extracting conditional, body is " + x)
-          assert(x.isInstanceOf[JBlock])
-          val ps = x.asInstanceOf[JBlock].body
-          ps.foreach(x => assert(x.isInstanceOf[JExpression]))
-          val bs = ps.map(x => x.asInstanceOf[JExpression])
-          val (ca, ci) = exL(bs)
-          //Console.println("extracted ca: " + ca + "\nci: " + ci)
-          val lastc = ca.takeRight(1)(0)
-          ttyp = lowerBound(ttyp, ClassTable.getLocalVar(cname, mname, exprtotype(lastc)))
-          if (ca.length == 1)
-            JBlock(None, ci ++ List(JAssignment(t, lastc)))
-          else
-            JBlock(None, ci ++ ca.dropRight(1) ++ List(JAssignment(t, lastc)))
-        }
-        val newc = getb(c)
-        val newa = getb(a)
-        if (fresh) {
-          ClassTable.addLocal(cname, mname, t, ttyp)
-          (JVariableAccess(t), ti ++ List(JBinding(t, ttyp, None), JConditional(ta, newc, newa)))
-        } else
-          (JVariableAccess(t), ti ++ List(JConditional(ta, newc, newa)))
-      case x => (x, List[JBodyStatement]())
-    }
+        (SJUnaryExpression(op, va), vis)
+
+      // case JPostfixExpression(op, v) =>
+      //   val (va, vis) = extractHelper(v)
+      //   val typ = "int"
+      //   val (t, fresh) = sym(typ)
+      //   val oper = if (op == "++") "+" else if (op == "--") "-" else { Console.println("dunno postfix " + op); op }
+      //   if (fresh)
+      //     (SJVariableAccess(t),
+      //      JBinding(t, typ, Some(va)) :: List(SJBinaryExpression(oper, va, SJLiteral("1")))) // TODO JBinding
+      //   else
+      //     (SJVariableAccess(t),
+      //      SJAssignment(SJVariableAccess(t), va) :: List(SJBinaryExpression(oper, va, SJLiteral("1"))))
+
+      // TODO: Shoul also only be part of JBinding or JAssignment I think
+      // case JFieldAccess(con, f) =>
+      //   val (a, i) = extractHelper(con)
+      //   val tclass = ClassTable.getFieldType(ClassTable.getLocalVar(cname, mname, exprtotype(a)), f)
+      //   val (t, fresh) = sym(tclass)
+      //   if (fresh)
+      //     (SJVariableAccess(t), i ++ List(JBinding(t, tclass, Some(SJFieldAccess(a, f))))) // TODO JBinding
+      //   else
+      //     (SJVariableAccess(t), i ++ List(SJAssignment(SJVariableAccess(t), SJFieldAccess(a, f))))
+      
+      // TODO: We'll never hit a JNewExpression on it's own, always as part of JBinding or JAssignment 
+      // case JCall(receiver, name, args) =>
+      //   val (a,i)      = extractHelper(receiver)
+      //   val (as, ins)  = exL(args)
+      //   val ttype      = ClassTable.getMethodType(cname, mname, exprtotype(a), name, as.map(exprtotype))
+      //   val (t, fresh) = sym(ttype)
+      //   if (fresh)
+      //     (SJVariableAccess(t), i ++ ins ++ List(JBinding(t, ttype, Some(SJCall(a, name, as))))) // TODO JBinding
+      //   else
+      //     (SJVariableAccess(t), i ++ ins ++ List(SJAssignment(SJVariableAccess(t), SJCall(a, name, as))))
+      
+      // TODO: We'll never hit a JNewExpression on it's own, always as part of JBinding or JAssignment 
+      // case JNewExpression(name, args) =>
+      //   val (as, ins) = exL(args)
+      //   val (t, fresh) = sym(name)
+      //   if (fresh)
+      //     (SJVariableAccess(t), ins ++ List(JBinding(t, name, Some(SJNewExpression(name, as))))) // TODO JBinding
+      //   else
+      //     (SJVariableAccess(t), ins ++ List(SJAssignment(SJVariableAccess(t), SJNewExpression(name, as))))
+
+      // case JConditional(test, c, a) => Nil
+        // val (t, fresh) = sym("Object")
+        //         val (ta, ti) = extractHelper(test)
+        //         var ttyp : String = ""
+        //   
+        //         val getb = (x : JBodyStatement) => {
+        //           assert(x.isInstanceOf[SJBodyBlock])
+        //           val ps = x.asInstanceOf[SJBodyBlock].body
+        //           ps.foreach(x => assert(x.isInstanceOf[SJExpression]))
+        //           val bs = ps.map(x => x.asInstanceOf[SJExpression])
+        //           val (ca, ci) = exL(bs)
+        //           //Console.println("extracted ca: " + ca + "\nci: " + ci)
+        //           val lastc = ca.takeRight(1)(0)
+        //           ttyp = lowerBound(ttyp, ClassTable.getLocalVar(cname, mname, exprtotype(lastc)))
+        //           if (ca.length == 1)
+        //             SJBodyBlock(None, ci ++ List(SJAssignment(SJVariableAccess(t), lastc)))
+        //           else
+        //             SJBodyBlock(None, ci ++ ca.dropRight(1) ++ List(SJAssignment(SJVariableAccess(t), lastc)))
+        //}
+        // val newc = getb(c)
+        // val newa = getb(a)
+        // if (fresh) {
+        //   ClassTable.addLocal(cname, mname, t, ttyp)
+        //   (SJVariableAccess(t), ti ++ List(JBinding(t, ttyp, None), SJConditional(ta, newc, newa))) // TODO JBinding
+        // } else
+        //   (SJVariableAccess(t), ti ++ List(SJConditional(ta, newc, newa)))
+
+      // No default case - We want it to crash early! 
   }
 
   def lowerBound (typea : String, typeb : String) : String = {
