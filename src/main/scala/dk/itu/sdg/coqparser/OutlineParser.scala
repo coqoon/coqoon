@@ -190,7 +190,13 @@ trait SentenceParser extends Parsers with TokenParsers {
     
   def tok : Parser[String] = accept("name", {case Tok(name) => name})
     
-  def sentence : Parser[OutlineSentence] = withDot(endSentence) | unknownSentence
+  def sentence : Parser[OutlineSentence] =
+    withDot( moduleStartSentence
+           | endSentence
+           ) | unknownSentence
+  
+  def moduleStartSentence : Parser[ModuleStart] =
+    "Module"~>(tok<~rep(tok)) ^^ ModuleStart
   
   def endSentence : Parser[End] = "End"~>tok ^^ End
   
