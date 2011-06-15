@@ -34,11 +34,23 @@ object OutlineVernacular {
     override def outlineName = chars.take(60)
   }
 
+  case class ModuleStart (chars : String) extends OutlineSentence {
+    override def outlineName = chars.take(60)
+  }
+  
+  case class SectionStart (chars : String) extends OutlineSentence {
+    override def outlineName = chars.take(60)
+  }
+  
+  case class End (name : String) extends OutlineSentence {
+    override def outlineName = "End " + name + "."
+  }
+  
   trait OutlineStructure extends VernacularRegion {
     override val outline = true
     val contents : List[VernacularRegion] = Nil
   }
-
+  
   case class Module (name : String, override val contents : List[VernacularRegion]) extends OutlineStructure {
     override def toString = "Module " + name + contents.mkString("(", ",", ")")
     override def outlineName = "Module " + name
@@ -114,18 +126,85 @@ object SentenceFinder {
   }
 }
 
-trait SentenceParser extends Parsers {
-  import OutlineVernacular._
-  
-  def sentence : Parser[VernacularRegion] = unknownSentence
-  
-  def unknownSentence : Parser[UnknownSentence] =
-    rep(elem("character", {ch : Elem => true})) ^^ {
-      case chars => UnknownSentence(chars.mkString)
-    }
+trait OutlineTokens extends Tokens {
+  case class Tok (chars : String) extends Token
 }
 
-object TestSentences extends Application {
+class OutlineLexer extends Lexical with VernacularReserved with OutlineTokens with RegexParsers { //with ImplicitConversions {
+  import scala.util.parsing.input.CharArrayReader.EofCh
+
+  type Tokens <: OutlineTokens
+  override type Elem = Char
+
+  def whitespace = rep('('~'*'~commentContents | '\t' | '\r' | '\n' | ' ')
+
+  def ident : Parser[Token] = """[\p{L}_][\p{L}_0-9']*""".r ^^ Tok //TODO: unicode-id-part from Coq reference
+
+  def accessIdent : Parser[Token] = """\.[\p{L}_][\p{L}_0-9']*""".r ^^ Tok
+
+  def num : Parser[Token] = """-?\d+""".r ^^ Tok
+
+  def string : Parser[Token] = '"'~>inString ^^ { chars => Tok("\"" + chars.mkString + "\"") }
+  private def inString : Parser[List[Char]] =
+    ( '"'~'"' ~ inString ^^ { case '"'~'"'~rest => '"' :: rest }
+    | chrExcept(EofCh, '"') ~ inString ^^ { case ch~rest => ch :: rest }
+    | '"' ^^^ Nil
+    | failure("String not properly terminated")
+    )
+
+  def comment : Parser[Token] =
+    ('('~'*')~>commentContents ^^ { chars => Tok("(*" + chars.mkString) }
+  private def commentContents : Parser[List[Char]] =
+    ( '('~'*'~commentContents~commentContents ^^ { case '('~'*'~nested~rest => '(' :: '*' :: (nested ++ rest) }
+    | '*'~')' ^^^ List('*', ')')
+    | chrExcept(EofCh)~commentContents ^^ { case char~contents => char :: contents }
+    | failure("Comment not finished")
+    )
+
+  // Based on technique from scala/util/parsing/combinator/lexical/StdLexical.scala
+  private lazy val _delim : Parser[Token] = {
+    def parseDelim (s : String) : Parser[Token] = accept(s.toList) ^^ { x => Tok(x.mkString) }
+    operator.sortWith(_ < _).map(parseDelim).foldRight(failure("no matching special token") : Parser[Token]) {
+      (x, y) => y | x
+    }
+  }
+  def delim : Parser[Token] = _delim
+
+  def token = ident | accessIdent | num | string | delim
+}
+
+trait SentenceParser extends Parsers with TokenParsers {
+  import OutlineVernacular._
+  
+  val lexical = new OutlineLexer
+  type Tokens = OutlineLexer
+
+  import lexical.Tok 
+    
+  implicit def acceptLiteral(str : String) : Parser[String] =
+    Tok(str) ^^^ str
+  
+  def dot : Parser[Any] = "."
+    
+  def withDot[P](p : Parser[P]) : Parser[P] = p<~dot
+    
+  def tok : Parser[String] = accept("name", {case Tok(name) => name})
+    
+  def sentence : Parser[OutlineSentence] = withDot(endSentence) | unknownSentence
+  
+  def endSentence : Parser[End] = "End"~>tok ^^ End
+  
+  def unknownSentence : Parser[UnknownSentence] =
+    rep(tok) ^^ { tokens => UnknownSentence(tokens.mkString(" ")) }
+
+  def parseString (input : String) : ParseResult[VernacularRegion] = {
+    import scala.util.parsing.input.CharSequenceReader
+    phrase(sentence)(new lexical.Scanner(input))
+  }
+}
+
+
+object TestSentences extends Application with SentenceParser {
   def read(filename : String) = scala.io.Source.fromFile(filename).mkString
   
   def test() : Unit = {
@@ -136,7 +215,7 @@ object TestSentences extends Application {
       println(text)
       for ((pos, len) <- SentenceFinder.findCommands(text)) {
         val sentence = text.substring(pos, pos+len)
-        println("Found [" + sentence + "]")
+        println("Found [" + parseString(sentence) + "]")
       }
       test()
     } else println("done")
