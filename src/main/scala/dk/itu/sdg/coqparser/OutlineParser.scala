@@ -22,7 +22,7 @@ object OutlineVernacular {
     override def outlineName = chars.split(":=")(0).replace("""\s+""", " ")
   }
 
-  case class Assertion (assertionType : String, name : String, prop : String) extends OutlineSentence {
+  case class Assertion (assertionType : String, name : String, args : String, prop : String) extends OutlineSentence {
     override def outlineName = assertionType + " " + name + " : " + prop
   }
 
@@ -174,13 +174,13 @@ class OutlineLexer extends Lexical with VernacularReserved with OutlineTokens wi
     )
 
   // Based on technique from scala/util/parsing/combinator/lexical/StdLexical.scala
-  private lazy val _delim : Parser[Token] = {
-    def parseDelim (s : String) : Parser[Token] = accept(s.toList) ^^ { x => Tok(x.mkString) }
-    operator.sortWith(_ < _).map(parseDelim).foldRight(failure("no matching special token") : Parser[Token]) {
+  private lazy val _delim : Parser[String] = {
+    def parseDelim (s : String) : Parser[String] = accept(s.toList) ^^ { x => x.mkString }
+    operator.sortWith(_ < _).map(parseDelim).foldRight(failure("no matching special token") : Parser[String]) {
       (x, y) => y | x
     }
   }
-  def delim : Parser[Token] = _delim
+  def delim : Parser[Token] = (_delim | """[^a-zA-Z \r\n\t0-9]+""".r) ^^ Tok //_delim
 
   def token = ident | accessIdent | num | string | delim
 }
@@ -214,6 +214,7 @@ trait SentenceParser extends Parsers with TokenParsers {
     
   def sentence : Parser[OutlineSentence] =
     ( moduleStartSentence
+    | sectionStartSentence
     | endSentence
     | assertion
     | proofStart
@@ -226,14 +227,19 @@ trait SentenceParser extends Parsers with TokenParsers {
       case name if name != "Import" => ModuleStart(name)
     }
   
+  def sectionStartSentence : Parser[SectionStart] =
+    withDot(Tok("Section")~>(notDot<~rep(notDot))) ^^ {
+      case name if name != "Import" => SectionStart(name)
+    }
+  
   def endSentence : Parser[End] = withDot("End"~>tok) ^^ End
   
   def unknownSentence : Parser[UnknownSentence] =
     rep(tok) ^^ { tokens => UnknownSentence(tokens.mkString(" ")) }
 
   def assertion : Parser[Assertion] =
-    assertionKeyword~tok~":"~rep(notDotOrColonEqual)~dot ^^ {
-      case kwd~name~_~prop~_ => Assertion(kwd, name, prop.mkString(" "))
+    assertionKeyword~tok~rep(notTok(":"))~":"~rep(notDotOrColonEqual)~dot ^^ {
+      case kwd~name~args~_~prop~_ => Assertion(kwd, name, args.mkString(" "), prop.mkString(" "))
     }
   
   def assertionKeyword : Parser[String] =
@@ -280,8 +286,9 @@ object OutlineBuilder {
   private def buildOutline(sentences : List[VernacularRegion]) : List[VernacularRegion] = {
     sentences match {
       case Nil => Nil
-      case ModuleStart(name) :: rest => buildOutline(findModule(rest, name))
-      case Assertion(kwd, name, prop) :: rest => buildOutline(findProof(rest, Assertion(kwd, name, prop)))
+      case ModuleStart(name) :: rest => buildOutline(findModule({(id, contents) => Module(id, contents)}, rest, name))
+      case SectionStart(name) :: rest => println("  ---Section " + name);buildOutline(findModule({(id, contents) => Section(id, contents)}, rest, name))
+      case Assertion(kwd, name, args, prop) :: rest => buildOutline(findProof(rest, Assertion(kwd, name, args, prop)))
       case s :: ss => s :: buildOutline(ss)
     }
   }
@@ -297,11 +304,11 @@ object OutlineBuilder {
   }
   
   @tailrec
-  private def findModule(sentences : List[VernacularRegion], name : String, soFar : List[VernacularRegion] = Nil) : List[VernacularRegion] = {
+  private def findModule(constructor : (String, List[VernacularRegion]) => OutlineStructure, sentences : List[VernacularRegion], name : String, soFar : List[VernacularRegion] = Nil) : List[VernacularRegion] = {
     sentences match {
       case Nil => Nil
-      case End(what) :: rest if name == what => Module(name, buildOutline(soFar.reverse)) :: rest
-      case s :: ss => findModule(ss, name, s :: soFar)
+      case End(what) :: rest if name == what => constructor(name, buildOutline(soFar.reverse)) :: rest
+      case s :: ss => findModule(constructor, ss, name, s :: soFar)
     }
   }
   
