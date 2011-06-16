@@ -54,6 +54,15 @@ object OutlineVernacular {
     override def outlineName = "End " + name
   }
   
+  case class InductiveCase (name : String, `type` : String) extends VernacularRegion {
+    override def outlineName = name + " " + `type`
+    override val outline = true
+  }
+  
+  case class Inductive (name : String, `type` : String, cases : List[InductiveCase]) extends OutlineSentence {
+    override def outlineName = "<I>Inductive " + name + " : " + `type` + cases
+  }
+  
   trait OutlineStructure extends VernacularRegion {
     override val outline = true
     val contents : List[VernacularRegion] = Nil
@@ -159,7 +168,7 @@ class OutlineLexer extends Lexical with VernacularReserved with OutlineTokens wi
   def string : Parser[Token] = '"'~>inString ^^ { chars => Tok("\"" + chars.mkString + "\"") }
   private def inString : Parser[List[Char]] =
     ( '"'~'"' ~ inString ^^ { case '"'~'"'~rest => '"' :: rest }
-    | chrExcept(EofCh, '"') ~ inString ^^ { case ch~rest => ch :: rest }
+    | chrExcept(EofCh, '"')~inString ^^ { case ch~rest => ch :: rest }
     | '"' ^^^ Nil
     | failure("String not properly terminated")
     )
@@ -214,14 +223,15 @@ trait SentenceParser extends Parsers with TokenParsers {
     
   def sentence : Parser[OutlineSentence] =
     ( moduleStartSentence
-    | sectionStartSentence
+    | sectionStartSentence     
     | endSentence
+    | inductive
     | assertion
     | proofStart
     | proofEnd
     | unknownSentence
     )
-  
+
   def moduleStartSentence : Parser[ModuleStart] =
     withDot(Tok("Module")~>(notTok("Import", ".")<~rep(notDot))) ^^ {
       case name if name != "Import" => ModuleStart(name)
@@ -233,6 +243,16 @@ trait SentenceParser extends Parsers with TokenParsers {
     }
   
   def endSentence : Parser[End] = withDot("End"~>tok) ^^ End
+  
+  def inductive : Parser[Inductive] =
+    "Inductive"~notTok(".", ":=", ":")~rep(notTok(":="))~":="~
+    opt("|")~opt(repsep(inductiveCase, "|"))~dot ^^ {
+      case _~name~typ~_~_~cases~_ => Inductive(name, typ.mkString(" "), cases getOrElse Nil)
+    }
+  
+  def inductiveCase : Parser[InductiveCase] = tok~rep(notTok("|", ".")) ^^ {
+    case name~typ => InductiveCase(name, typ.mkString(" "))
+  }
   
   def unknownSentence : Parser[UnknownSentence] =
     rep(tok) ^^ { tokens => UnknownSentence(tokens.mkString(" ")) }
@@ -288,7 +308,7 @@ object OutlineBuilder {
       case Nil => Nil
       case ModuleStart(name) :: rest => buildOutline(findModule({(id, contents) => Module(id, contents)}, rest, name))
       case SectionStart(name) :: rest => println("  ---Section " + name);buildOutline(findModule({(id, contents) => Section(id, contents)}, rest, name))
-      case Assertion(kwd, name, args, prop) :: rest => buildOutline(findProof(rest, Assertion(kwd, name, args, prop)))
+      case (a@Assertion(kwd, name, args, prop)) :: rest => buildOutline(findProof(rest, a))
       case s :: ss => s :: buildOutline(ss)
     }
   }
@@ -298,7 +318,17 @@ object OutlineBuilder {
     sentences match {
       case Nil => Nil
       case ProofStart() :: rest => findProof(rest, assertion, soFar)
-      case ProofEnd(end) :: rest => Proof(assertion, buildOutline(soFar.reverse), end) :: rest
+      case (pe@ProofEnd(end)) :: rest => {
+        val proof = Proof(assertion, buildOutline(soFar.reverse), end)
+        (assertion.pos, pe.pos) match {
+          case (RegionPosition(offset, _), RegionPosition(endOffset, endLength)) => {
+            val length = (endOffset + endLength) - offset
+            proof.setPos(offset, length)
+          }
+          case _ => ()
+        }
+        proof :: rest
+      }
       case s :: rest => findProof(rest, assertion, s :: soFar)
     }
   }
