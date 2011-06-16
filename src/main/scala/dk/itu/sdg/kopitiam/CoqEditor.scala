@@ -113,6 +113,7 @@ import org.eclipse.jface.viewers.ITreeContentProvider
 protected class CoqContentProvider extends ITreeContentProvider {
   import dk.itu.sdg.coqparser.VernacularRegion
   import dk.itu.sdg.coqparser.OutlineVernacular
+  import dk.itu.sdg.coqparser.OutlineBuilder
   import org.eclipse.jface.text.IDocument
   import org.eclipse.jface.viewers.Viewer
   import org.eclipse.ui.part.FileEditorInput
@@ -123,58 +124,13 @@ protected class CoqContentProvider extends ITreeContentProvider {
   def dispose() : Unit = {}
 
   var content : List[VernacularRegion] = Nil
-  val parser = new dk.itu.sdg.coqparser.VernacularOutliner {}
   var root : OutlineVernacular.Document = null
   def parse(document : IDocument) : Unit = {
     require(document != null)
     import scala.util.parsing.input.CharSequenceReader
 
     println("parse the coq")
-    val result = parser.parseString(document.get) match {
-      case parser.Success(doc, _) => root = doc; doc
-      case r : parser.NoSuccess => println("Could not parse: " + r)
-    }
-    // Remove beginning whitespace from parse result positions
-    if (root != null) killLeadingWhitespace(root, document.get)
-    println("got " + result)
-  }
-
-  def killLeadingWhitespace(reg : VernacularRegion, doc : String) : Unit = {
-    import dk.itu.sdg.parsing._
-    def advance(reg : VernacularRegion) : Unit = {
-      reg.pos match {
-        case NoLengthPosition => ()
-        case RegionPosition(off, len) if len > 0 => {
-          if ((doc(off) == ' ' || doc(off) == '\t' || doc(off) == '\n' || doc(off) == '\r') && reg.advancePosStart) advance(reg)
-          else if (doc.substring(off, off+2) == "(*") advanceComment(reg, 1)
-        }
-        case _ => ()
-      }
-    }
-    def advanceComment(reg : VernacularRegion, depth : Int) : Unit = {
-      reg.pos match {
-        case NoLengthPosition => ()
-        case RegionPosition(off, len) if len > 0=> {
-          println("Advancing " + doc.substring(off, off+len) + " at " + off)
-          if (doc.substring(off, off+2) == "(*") {
-            reg.advancePosStart(2)
-            advanceComment(reg, depth + 1)
-          }
-          else if (doc.substring(off, off+2) == "*)") {
-            reg.advancePosStart(2)
-            if (depth > 1) advanceComment(reg, depth - 1)
-            else advance(reg)
-          }
-          else {
-            reg.advancePosStart
-            advanceComment(reg, depth)
-          }
-        }
-        case _ => ()
-      }
-    }
-    advance(reg)
-    reg.subRegions foreach { r => killLeadingWhitespace(r, doc) }
+    root = OutlineBuilder.parse(document.get)
   }
 
   def inputChanged(viewer : Viewer, oldInput : Any, newInput : Any) : Unit = {

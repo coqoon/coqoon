@@ -34,8 +34,8 @@ object OutlineVernacular {
     override def outlineName = chars.take(60)
   }
 
-  case class ModuleStart (chars : String) extends OutlineSentence {
-    override def outlineName = chars.take(60)
+  case class ModuleStart (name : String) extends OutlineSentence {
+    override def outlineName = "Module " + name
   }
   
   case class SectionStart (chars : String) extends OutlineSentence {
@@ -43,7 +43,7 @@ object OutlineVernacular {
   }
   
   case class End (name : String) extends OutlineSentence {
-    override def outlineName = "End " + name + "."
+    override def outlineName = "End " + name
   }
   
   trait OutlineStructure extends VernacularRegion {
@@ -67,12 +67,12 @@ object OutlineVernacular {
 object SentenceFinder {
   private val whitespace = Set(' ', '\r', '\n', '\t')
   
-  def findCommands(script : String, offset : Int = 0) : Stream[(Int, Int)] = {
-    if (offset >= script.length) Stream.Empty
+  def findCommands(script : String, offset : Int = 0) : List[(Int, Int)] = {
+    if (offset >= script.length) Nil
     else if (whitespace contains script(offset)) findCommands(script, offset + 1)
     else {
       (for (end <- getCommand(script, offset))
-       yield (offset, end - offset + 1) #:: findCommands(script, end + 1)) getOrElse Stream.Empty 
+       yield (offset, end - offset + 1) :: findCommands(script, end + 1)) getOrElse Nil 
     }
   }
   
@@ -186,29 +186,65 @@ trait SentenceParser extends Parsers with TokenParsers {
   
   def dot : Parser[Any] = "."
     
+  def notDot : Parser[String] = accept("not dot", {case Tok(name) if name != "." => name})
+    
   def withDot[P](p : Parser[P]) : Parser[P] = p<~dot
     
   def tok : Parser[String] = accept("name", {case Tok(name) => name})
     
   def sentence : Parser[OutlineSentence] =
-    withDot( moduleStartSentence
-           | endSentence
-           ) | unknownSentence
+    ( moduleStartSentence
+    | endSentence
+    | unknownSentence
+    )
   
   def moduleStartSentence : Parser[ModuleStart] =
-    "Module"~>(tok<~rep(tok)) ^^ ModuleStart
+    withDot(Tok("Module")~>(tok<~rep(notDot))) ^^ ModuleStart
   
-  def endSentence : Parser[End] = "End"~>tok ^^ End
+  def endSentence : Parser[End] = withDot("End"~>tok) ^^ End
   
   def unknownSentence : Parser[UnknownSentence] =
     rep(tok) ^^ { tokens => UnknownSentence(tokens.mkString(" ")) }
 
-  def parseString (input : String) : ParseResult[VernacularRegion] = {
+  def parseString (input : String) : ParseResult[OutlineSentence] = {
     import scala.util.parsing.input.CharSequenceReader
     phrase(sentence)(new lexical.Scanner(input))
   }
 }
 
+object OutlineBuilder {
+  import OutlineVernacular._
+  
+  val parser = new SentenceParser {}
+  def parse(coqSource : String) : Document = {
+    val sentences = SentenceFinder.findCommands(coqSource) map {
+      case (pos, len) => parser.parseString(coqSource.substring(pos, pos+len))
+    } collect {
+      case parser.Success(v, _) => v 
+    }
+    getDocument(sentences)
+  }
+  
+  def getDocument(sentences : List[OutlineSentence]) : Document =
+    Document(buildOutline(sentences))
+  
+  private def buildOutline(sentences : List[VernacularRegion]) : List[VernacularRegion] = {
+    sentences match {
+      case Nil => Nil
+      case ModuleStart(name) :: rest => buildOutline(findModule(rest, name))
+      case s :: ss => s :: buildOutline(ss)
+    }
+  }
+  
+  private def findModule(sentences : List[VernacularRegion], name : String, soFar : List[VernacularRegion] = Nil) : List[VernacularRegion] = {
+    sentences match {
+      case Nil => Nil
+      case End(what) :: rest if name == what => Module(name, soFar.reverse) :: rest
+      case s :: ss => findModule(ss, name, s :: soFar)
+    }
+  }
+  
+}
 
 object TestSentences extends Application with SentenceParser {
   def read(filename : String) = scala.io.Source.fromFile(filename).mkString
@@ -217,7 +253,7 @@ object TestSentences extends Application with SentenceParser {
     Console.print("filename> ")
     val input = Console.readLine
     if (input != "q") {
-      val text = read(input)
+      val text = input //read(input)
       println(text)
       for ((pos, len) <- SentenceFinder.findCommands(text)) {
         val sentence = text.substring(pos, pos+len)
