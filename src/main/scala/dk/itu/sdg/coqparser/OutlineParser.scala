@@ -273,9 +273,9 @@ object OutlineBuilder {
   val parser = new SentenceParser {}
   def parse(coqSource : String) : Document = {
     val sentences = SentenceFinder.findCommands(coqSource) map {
-      case (pos, len) => parser.parseString(coqSource.substring(pos, pos+len))
+      case (pos, len) => (pos, len, parser.parseString(coqSource.substring(pos, pos+len)))
     } collect {
-      case parser.Success(v, _) => v 
+      case (pos, len, parser.Success(v, _)) => v.setPos(pos, len); v 
     }
     getDocument(sentences)
   }
