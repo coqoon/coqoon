@@ -18,16 +18,8 @@ object OutlineVernacular {
     override def outlineName = chars.split(":=")(0).replace("""\s+""", " ")
   }
 
-  case class Definition (chars : String) extends OutlineSentence {
-    override def outlineName = chars.split(":=")(0).replace("""\s+""", " ")
-  }
-
   case class Assertion (assertionType : String, name : String, args : String, prop : String) extends OutlineSentence {
     override def outlineName = assertionType + " " + name + " : " + prop
-  }
-
-  case class Goal (chars : String) extends OutlineSentence {
-    override def outlineName = chars.take(60)
   }
 
   case class Import (chars : String) extends OutlineSentence {
