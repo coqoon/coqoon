@@ -22,8 +22,8 @@ object OutlineVernacular {
     override def outlineName = chars.split(":=")(0).replace("""\s+""", " ")
   }
 
-  case class Assertion (chars : String, name : String) extends OutlineSentence {
-    override def outlineName = chars.replace("""\s+""", " ")
+  case class Assertion (assertionType : String, name : String, prop : String) extends OutlineSentence {
+    override def outlineName = assertionType + " " + name + " : " + prop
   }
 
   case class Goal (chars : String) extends OutlineSentence {
@@ -34,6 +34,14 @@ object OutlineVernacular {
     override def outlineName = chars.take(60)
   }
 
+  case class ProofStart () extends OutlineSentence {
+    override def outlineName = "Proof"
+  }
+  
+  case class ProofEnd (chars : String) extends OutlineSentence {
+    override def outlineName = chars
+  }
+  
   case class ModuleStart (name : String) extends OutlineSentence {
     override def outlineName = "Module " + name
   }
@@ -59,6 +67,10 @@ object OutlineVernacular {
   case class Section (name : String, override val contents : List[VernacularRegion]) extends OutlineStructure {
     override def toString = "Section " + name + contents.mkString("(", ",", ")")
     override def outlineName = "Section " + name
+  }
+  
+  case class Proof (assertion : Assertion, override val contents : List[VernacularRegion], end : String) extends OutlineStructure {
+    override def outlineName = assertion.outlineName + " ... " + end
   }
 
   case class Document (override val contents : List[VernacularRegion]) extends OutlineStructure
@@ -187,6 +199,14 @@ trait SentenceParser extends Parsers with TokenParsers {
   def dot : Parser[Any] = "."
     
   def notDot : Parser[String] = accept("not dot", {case Tok(name) if name != "." => name})
+  
+  def notDotOrColonEqual : Parser[String] = accept("not dot or :=", {
+    case Tok(name) if name != "." && name != ":=" => name
+  })
+  
+  def notTok(strs : String*) : Parser[String] = accept("not " + strs.mkString(", "), {
+    case Tok(name) if !(strs contains name) => name
+  })
     
   def withDot[P](p : Parser[P]) : Parser[P] = p<~dot
     
@@ -195,17 +215,46 @@ trait SentenceParser extends Parsers with TokenParsers {
   def sentence : Parser[OutlineSentence] =
     ( moduleStartSentence
     | endSentence
+    | assertion
+    | proofStart
+    | proofEnd
     | unknownSentence
     )
   
   def moduleStartSentence : Parser[ModuleStart] =
-    withDot(Tok("Module")~>(tok<~rep(notDot))) ^^ ModuleStart
+    withDot(Tok("Module")~>(notTok("Import", ".")<~rep(notDot))) ^^ {
+      case name if name != "Import" => ModuleStart(name)
+    }
   
   def endSentence : Parser[End] = withDot("End"~>tok) ^^ End
   
   def unknownSentence : Parser[UnknownSentence] =
     rep(tok) ^^ { tokens => UnknownSentence(tokens.mkString(" ")) }
 
+  def assertion : Parser[Assertion] =
+    assertionKeyword~tok~":"~rep(notDotOrColonEqual)~dot ^^ {
+      case kwd~name~_~prop~_ => Assertion(kwd, name, prop.mkString(" "))
+    }
+  
+  def assertionKeyword : Parser[String] =
+    ( "Theorem"
+    | "Lemma"
+    | "Remark"
+    | "Fact"
+    | "Corollary"
+    | "Proposition"
+    | "Definition"
+    | "Example"
+    )
+
+  def proofStart : Parser[ProofStart] = "Proof"~dot ^^^ ProofStart()
+  
+  def proofEnd : Parser[ProofEnd] =
+    ("End" | "Qed" | "Admitted" | "Defined" | "Save" | "Proof"~"term")<~dot ^^ {
+      case str : String => ProofEnd(str)
+      case proof~term => ProofEnd(proof + " " + term)
+    }
+  
   def parseString (input : String) : ParseResult[OutlineSentence] = {
     import scala.util.parsing.input.CharSequenceReader
     phrase(sentence)(new lexical.Scanner(input))
@@ -232,14 +281,26 @@ object OutlineBuilder {
     sentences match {
       case Nil => Nil
       case ModuleStart(name) :: rest => buildOutline(findModule(rest, name))
+      case Assertion(kwd, name, prop) :: rest => buildOutline(findProof(rest, Assertion(kwd, name, prop)))
       case s :: ss => s :: buildOutline(ss)
     }
   }
   
+  @tailrec
+  private def findProof(sentences : List[VernacularRegion], assertion : Assertion, soFar : List[VernacularRegion] = Nil) : List[VernacularRegion] = {
+    sentences match {
+      case Nil => Nil
+      case ProofStart() :: rest => findProof(rest, assertion, soFar)
+      case ProofEnd(end) :: rest => Proof(assertion, buildOutline(soFar.reverse), end) :: rest
+      case s :: rest => findProof(rest, assertion, s :: soFar)
+    }
+  }
+  
+  @tailrec
   private def findModule(sentences : List[VernacularRegion], name : String, soFar : List[VernacularRegion] = Nil) : List[VernacularRegion] = {
     sentences match {
       case Nil => Nil
-      case End(what) :: rest if name == what => Module(name, soFar.reverse) :: rest
+      case End(what) :: rest if name == what => Module(name, buildOutline(soFar.reverse)) :: rest
       case s :: ss => findModule(ss, name, s :: soFar)
     }
   }
