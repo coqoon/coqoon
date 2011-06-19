@@ -38,6 +38,13 @@ class CoqEditor extends TextEditor with EclipseUtils {
     projViewer.doOperation(ProjectionViewer.TOGGLE)
 
     annotationModel = projViewer.getProjectionAnnotationModel()
+    
+    val doc = this.getDocumentProvider.getDocument(getEditorInput)
+    val outline = CoqJavaDocumentProvider.getOutline(doc)
+    
+    outline map (_.root) foreach { root =>
+      updateFolding(root, doc)
+    }
   }
 
   //Create the source viewer as one that supports folding
@@ -79,6 +86,11 @@ class CoqEditor extends TextEditor with EclipseUtils {
     super.doSetInput(input)
     if (input != null && outlinePage != null) {
       outlinePage foreach { _.setInput(input) }
+    }
+    val doc = this.getDocumentProvider.getDocument(input)
+    val outline = CoqJavaDocumentProvider.getOutline(doc)
+    outline map (_.root) foreach {root =>
+      if (annotationModel != null) this.updateFolding(root, doc)
     }
   }
 
@@ -291,6 +303,7 @@ class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor
 
     // update folding
     outline map (_.root) foreach { root =>
+      println("Time to update folding for editor: " + editor + " and root: " + root)
       if (editor != null && root != null) editor.updateFolding(root, document)
     }
   }
