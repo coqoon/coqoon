@@ -77,6 +77,8 @@ object OutlineVernacular {
   case class Document (override val contents : List[VernacularRegion]) extends OutlineStructure
 }
 
+
+// Pass 1: split the source document into sentences / tactic applications
 object SentenceFinder {
   private val whitespace = Set(' ', '\r', '\n', '\t')
   
@@ -138,7 +140,10 @@ object SentenceFinder {
     }
   }
 }
+// End pass 1
 
+
+//Pass 2: Attempt to parse each sentence
 trait OutlineTokens extends Tokens {
   case class Tok (chars : String) extends Token
 }
@@ -278,7 +283,10 @@ trait SentenceParser extends Parsers with TokenParsers {
     phrase(sentence)(new lexical.Scanner(input))
   }
 }
+// End pass 2
 
+
+// Pass 3: Construct the hierarchical structure (group modules, sections, and proofs)
 object OutlineBuilder {
   import OutlineVernacular._
   
@@ -336,6 +344,11 @@ object OutlineBuilder {
   
 }
 
+// End pass 3
+
+/**
+ * Simple test app for sentence splitting and parsing
+ */
 object TestSentences extends Application with SentenceParser {
   def read(filename : String) = scala.io.Source.fromFile(filename).mkString
   
