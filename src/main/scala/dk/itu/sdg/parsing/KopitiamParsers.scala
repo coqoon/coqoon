@@ -2,7 +2,7 @@ package dk.itu.sdg.parsing
 
 import scala.util.parsing.combinator._
 
-trait LengthPosition {
+sealed trait LengthPosition {
   def hasPosition : Boolean
 
   def offset : Int
