@@ -123,6 +123,7 @@ object JavaOutput extends JavaOutputter with JavaAST {
 
   def parseandoutput (s : String) : String = {
     val intermediate = FinishAST.doitHelper(parseH(new CharArrayReader(s.toArray)))
-    intermediate.map(out(_, 0)).reduceLeft(_ + "\n\n" + _)
+    //intermediate.map(out(_, 0)).reduceLeft(_ + "\n\n" + _)
+    "barf!"
   }
 }

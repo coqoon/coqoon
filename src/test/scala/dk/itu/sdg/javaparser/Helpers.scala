@@ -20,7 +20,7 @@ trait ASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     FinishAST.javaTermsToJavaAST(parseH(in))
   }
   
-  def getASTbyParsingFileNamed(name : String) : List[JStatement] = {
+  def getASTbyParsingFileNamed(name : String) : List[SJDefinition] = {
     val in = StreamReader(new InputStreamReader(new FileInputStream(getSourceFileNamed(name))))
     FinishAST.doitHelper(parseH(in))
   }

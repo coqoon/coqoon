@@ -85,6 +85,14 @@ same in contains: [item stack variable, integer argument ; node a local variable
  (means: remove variable tmp, conditionals from JBinding, JAssignment, JConditional)
 method init_, new Node(i, l, r) vs new Node(i) <- also new should be followed by call to init
 also, inner classes should be kept inner (how to do that in Coq?)
+
+int tmp_1 = node.item
+Node foo = node
+..
+foo.item = 200
+..
+if (node.item > 20)
+
 ** name newly introduced variables not tmp_xx, but find a logical name for them (as done in LOOP/Umbra/...)
 ** types for ternary Bool ? x : y <- intersect x y
 ** proper syntax (not only a string) for pre/postcondition and loop invariants - plus completion!

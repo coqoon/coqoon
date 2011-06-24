@@ -87,9 +87,9 @@ trait CoqOutputter extends JavaToSimpleJava {
     c.receiver match {
       case JVariableAccess(v) => {
         val cl = ClassTable.getLocalVar(myclass, mymethod, v)
-        if (ClassTable.isMethodStatic(cl, c.fun, c.arguments.map(exprtotype)))
-          ("cscall", cl)
-        else
+        //if (ClassTable.isMethodStatic(cl, c.fun, c.arguments.map(exprtotype)))
+        //  ("cscall", cl)
+        //else
           ("cdcall", v)
       }
       case x => throw new Exception("Expected JVariableAccess but got: " + x)
