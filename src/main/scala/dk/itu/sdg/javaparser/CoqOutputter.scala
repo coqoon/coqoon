@@ -3,21 +3,16 @@
 package dk.itu.sdg.javaparser
 
 trait CoqOutputter extends JavaToSimpleJava {
-  private var myclass : String = ""
-  private var mymethod : String = ""
+  import scala.collection.immutable.HashMap
 
-  def getArgs (x : List[InnerStatement]) : List[String] = {
+  def getArgs (x : List[SJArgument]) : List[String] = {
     x.flatMap {
-      case JArgument(id, jtype) =>
-        Some(id)
-      case (x : JBinaryExpression) =>
-        Console.println("in getArgs, didn't expect binary expression (but printing anyways): " + x)
-        Some(printStatement(x))
-      case y => Console.println("in getArgs, unexpected " + y); None
+      case SJArgument(id, jtype) => Some(id)
+      case y => log.warning("in getArgs, unexpected " + y); None
     }
   }
 
-  def interfaceMethods (interface : String, body : List[JStatement]) : (List[String], List[String]) = {
+  def interfaceMethods (interface : String, body : List[SJBodyDefinition]) : (List[String], List[String]) = {
     //input: (int get(), void set (int v))
     //output: ("get : T -> val", "set : T -> val -> T"),
     //        ([A]t:T, C:.:"get" |-> (params) {{ pre }}-{{ post }}, [A]t:T, C:.:"set" |-> (params) {{ pre }}-{{ post }})
@@ -27,7 +22,7 @@ trait CoqOutputter extends JavaToSimpleJava {
     // post is (non-void): "r", sm_bin R (this) (sm_bin name t args) </\> r = name t
     var ms : List[String] = List[String]()
     val results = body.flatMap {
-      case JMethodDefinition(modifiers, name, typ, params, body) =>
+      case SJMethodDefinition(modifiers, name, typ, params, body, locals) =>
         val pre = "sm_bin R (\"this\":expr) (sm_const t)"
         var paras = getArgs(params)
         val ps = if (paras.length == 0) "" else paras.map("(\"" + _ + "\":expr)").reduceLeft(_ + _)
@@ -69,7 +64,7 @@ trait CoqOutputter extends JavaToSimpleJava {
       (results.map(_._1).reduceLeft(_ ++ _), results.map(_._2))
   }
 
-  //TODO: that's wrong, since at least == and != depend on the type...
+  //TODO: that's wrong, since operations depend on argument types...
   def translateOp (x : String) : String = {
     if (x == ">") "egt"
     else if (x == "<") "elt"
@@ -83,68 +78,95 @@ trait CoqOutputter extends JavaToSimpleJava {
     else { Console.println("translateOp dunno Key " + x); "" }
   }
 
-  def callword (c : JCall) : (String, String) = {
-    c.receiver match {
-      case JVariableAccess(v) => {
-        val cl = ClassTable.getLocalVar(myclass, mymethod, v)
-        //if (ClassTable.isMethodStatic(cl, c.fun, c.arguments.map(exprtotype)))
-        //  ("cscall", cl)
-        //else
-          ("cdcall", v)
-      }
-      case x => throw new Exception("Expected JVariableAccess but got: " + x)
+/*
+  def exprtotype (x : SJExpression) : String = {
+    x match {
+      case SJBinaryExpression(op, l, r) => exprtotype(l) //assumption: typeof(x op y) == typeof(x) == typeof(y)
+      case SJUnaryExpression(op, e)     => exprtotype(e) //assumption: typeof(op x) == typeof(x)
+      case SJLiteral(x)                 => if (x == "null") "Object" else try { x.toInt.toString; "int" } catch { case e => "String" }
+      case SJVariableAccess(v)          => ClassTable.getLocalVar(cname, mname, v)
+      case x                            => Console.println("didn't expect to need to convert this expr to a type: " + x); "Object"
+    }
+  }
+*/
+
+  def printEOpt (ex : SJExpression) : String = {
+    ex match {
+      case (x : SJBinaryExpression) => printE(ex)
+      //XXX: actually only if ex is a boolean expression...
+      case y => "(eeqbool " + printE(ex) + " true)"
     }
   }
 
-  def printStatement (something : JBodyStatement) : String = {
+  def printE (ex : SJExpression) : String = {
+    ex match {
+      case SJVariableAccess(x) => "(var_expr \"" + x + "\")"
+      case SJUnaryExpression(op, e) => translateOp(op) + " " + printE(e)
+      case SJBinaryExpression(op, l, r) => translateOp(op) + " " + printE(l) + " " + printE(r)
+      case SJLiteral(v) =>
+        if (v == "null" || v == "true" || v == "false")
+          v
+        else
+          try { "(" + v.toInt.toString + ":expr)" }
+          catch { case e => "\"" + e + "\"" }
+    }
+  }
+
+  def argstring (as : List[SJExpression]) : String = {
+    as.map(printE).foldRight("nil")(_ + " :: " + _)
+  }
+
+  def printStatement (something : SJStatement, locals : HashMap[String, String]) : String = {
     //Console.println("getexpr called with " + something + " class " + something.asInstanceOf[AnyRef].getClass.getName)
     something match {
-      case JAssignment(name, value : JCall) =>
-        val funname = value.fun
-        val args = value.arguments
-        val (callw, callpre) = callword(value)
-        val argstring = args.map(printStatement).foldRight("nil")(_ + " :: " + _)
-        "(" + callw + " \"" + name + "\" \"" + callpre + "\" \"" + funname + "\" (" + argstring + "))"
-      case JAssignment(name, JNewExpression(typ, arg)) =>
-        printStatement(JAssignment(name, JCall(JVariableAccess(typ), "new", arg))) //TODO, no idea if JVariableAccess is correct
-      case JAssignment(name, JFieldAccess(variable, field)) =>
-        val v = variable match {
-          case JVariableAccess(x) => x
-          case y =>
-            Console.println("FieldAccess to " + y)
-            y
+      case SJAssert(x) =>
+        "(cassert " + printEOpt(x) + ")"
+      case SJAssignment(l, r) =>
+        "(cassign " + printE(l) + " " + printE(r) + ")"
+      case SJFieldWrite(v, fi, va) =>
+        "(cwrite " + printE(v) + " " + fi + " " + printE(va) + ")"
+      case SJFieldRead(va, v, fi) =>
+        "(cread " + printE(va) + " " + printE(va) + " " + fi + " )"
+      case SJReturn(SJVariableAccess(x)) =>
+        ret = "var_expr \"" + x + "\""; ""
+      case SJReturn(y : SJLiteral) =>
+        ret = printE(y); ""
+      case SJCall(v, r, f, a) =>
+        val value = v match {
+          case None => ""
+          case Some(x) => printE(x)
         }
-        "(cread \"" + name + "\" \"" + v + "\" \"" + field + "\")"
-      case JFieldWrite(v, f, n) =>
-        var va = v match {
-          case JVariableAccess(x) => x
-          case y =>
-            Console.println("FieldWrite to " + y)
-            y
+        val (cl, static : Boolean) = r match {
+          case SJVariableAccess(x) => (locals(x), false)
+          case SJLiteral(y) => (y, true)
         }
-        "(cwrite \"" + va + "\" \"" + f + "\" " + printStatement(n) + ")"
-      case JAssignment(name, value) => "(cassign \"" + name + "\" " + printStatement(value) + ")"
-      case JBinaryExpression(op, l, r) =>
-        "(" + translateOp(op) + " " + printStatement(l) + " " + printStatement(r) + ")"
-      case JUnaryExpression(op, v) =>
-        "(" + translateOp(op) + " " + printStatement(v) + ")"
-      case JLiteral(x) => x
-      case JVariableAccess(x) => "(var_expr \"" + x + "\")"
-      case JCall(v, fun, arg) =>
-        val args = arg.map(printStatement).foldRight("nil")(_ + " :: " + _)
-        val (callw, callpre) = callword(something.asInstanceOf[JCall])
-        "(" + callw + " \"ignored\" \"" + callpre + "\" \"" + fun + "\" (" + args + "))"
-      case JNewExpression(typ, arg) =>
-        val t = Gensym.newsym
-        printStatement(JAssignment(t, JCall(JVariableAccess(typ), "new", arg))) //TODO: No idea if JVariableAccess is correct
-      case y => Console.println("printStatement: no handler for " + y); ""
+        val isstatic =
+          if (static)
+            true
+          else {
+            SJTable.findMethodInClass(cl, f) match {
+              case None => log.warning("dunno, can't find " + cl + " method " + f); false
+              case Some(x) => x.modifiers.contains(Static())
+            }
+          }
+        val (cw, cp) = if (isstatic) ("cscall", cl) else ("cdcall", printE(r))
+        "(" + cw + " " + value + " " + cp + " \"" + f + "\" " +  argstring(a) + ")"
+      case SJNewExpression(v, t, a) =>
+        "(cscall " + printE(v) + " " + t + " " + argstring(a) + ")"
+      case SJConditional(test, consequence, alternative) =>
+        val te = printStatement(test, locals)
+        val tr = optPrintBody(consequence.map(x => printStatement(x, locals)))
+        val fa = optPrintBody(alternative.map(x => printStatement(x, locals)))
+        "(cif " + te + " " + tr + " " + fa + ")"
+      case SJWhile(test, body) =>
+        "(cwhile " + printStatement(test, locals) + " " + optPrintBody(body.map(x => printStatement(x, locals))) + ")"
     }
   }
 
-  def optPrintBody (b : Option[List[String]]) : String = {
+  def optPrintBody (b : List[String]) : String = {
     b match {
-      case None => ""
-      case Some(x) => printBody(x)
+      case Nil => "(cskip)"
+      case x => printBody(x)
     }
   }
 
@@ -158,72 +180,40 @@ trait CoqOutputter extends JavaToSimpleJava {
 
   private var ret : String = "myreturnvaluedummy"
 
-  def getBS (xs : JBodyStatement) : Option[List[String]] = {
-    xs match {
-      case JConditional(test, consequence, alternative) =>
-        val te = printStatement(test)
-        val tr = optPrintBody(getBS(consequence))
-        val fa = optPrintBody(getBS(alternative))
-        Some(List("(cif " + te + " " + tr + " " + fa + ")"))
-      case JBlock(modifier, xs) => Some(xs.map(getBS).flatten.flatten) //TODO: Deal with modifer (Option[Static])
-      case JWhile(test, body) =>
-        Some(List("(cwhile " + printStatement(test) + " " + optPrintBody(getBS(body)) + ")"))
-      case JBinding(x, typ, init) =>
-        init match {
-          case None => None
-          case Some(y) => Some(List(printStatement(JAssignment(x, y))))
-        }
-      case JReturn(JVariableAccess(r)) => ret = r; None
-      case a @ JAssignment(n, x) => Some(List(printStatement(a)))
-      case (x : JBodyStatement) => Some(List(printStatement(x)))
-      case y => Console.println("no handler for getBS " + y); None
-    }
-  }
-
-  def getBody (xs : List[JStatement], myname : String) : String = {
-    val (ou, ret) = getBodyHelper(xs, myname)
-    outp ::= ou
-    ret
-  }
-
-  def getBodyHelper (xs : List[JStatement], myname : String) : (String, String) = {
+  def getBody (xs : List[SJStatement], myname : String, locals : HashMap[String, String]) : (String, String) = {
     ret = "myreturnvaluedummy"
-    //Console.println("getbody, flattening " + xs)
-    val body = xs.flatMap {
-      case (x : JBodyStatement) => getBS(x)
-    }
-    //Console.println("getbody, flattened " + body)
-    val b = printBody(body.flatten)
+    val body = xs.map(x => printStatement(x, locals))
+    val b = printBody(body)
     val defi = "\nDefinition " + myname + " := " + b + "."
     val res =
       if (ret == "myreturnvaluedummy")
         "0"
       else
-        "var_expr \"" + ret + "\""
+        ret
     (defi, res)
   }
 
-  def classMethods (body : List[JStatement]) : List[Pair[String,String]] = {
+  def classMethods (body : List[SJBodyDefinition]) : List[Pair[String,String]] = {
     body.flatMap {
-      case JMethodDefinition(modifiers, name, typ, params, body) =>
+      case SJMethodDefinition(modifiers, name, typ, params, body, lvars) =>
         //Console.println("starting to print method " + name + " with body " + body)
-        mymethod = name
         val bodyref = name + "_body"
         val args = getArgs(params)
-        val returnvar =
-          if (name == "new") {
-            //assert(body.length == 0)
-            outp ::= "Definition " + bodyref + " := (calloc \"x\" \"" + typ + "\")."
-            "var_expr \"x\""
-          } else
-            getBody(body, bodyref)
+        val (bodyp, returnvar) = getBody(body, bodyref, lvars)
+        outp ::= bodyp
         val t =
-          if (ClassTable.isMethodStatic(myclass, mymethod, args) || name == "new")
+          if (modifiers.contains(Static()))
             args
           else
             "this" :: args
         outp ::= "\nDefinition " + name + "M := Build_Method (" + printArgList(t) + ") " + bodyref + " (" + returnvar + ")."
         Some(("\"" + name + "\"", name + "M"))
+      case SJConstructorDefinition(modifiers, typ, params, body, lvars) =>
+        val args = getArgs(params)
+        val bodi = body.map(x => printStatement(x, lvars))
+        val bodip = printBody("(calloc \"this\" \"" + typ + "\")" :: bodi)
+        outp ::= "Definition " + typ + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\")."
+        Some(("\"" + typ + "\"" , typ))
       case _ => None
     }
   }
@@ -240,13 +230,13 @@ Proof.
 Qed."""
 
 
-  def coqoutput (xs : List[JStatement], spec : Boolean, name : String) : List[String] = {
+  def coqoutput (xs : List[SJDefinition], spec : Boolean, name : String) : List[String] = {
     outp = List[String]()
     if (spec)
       outp = List("\n") ++ ClassTable.getCoq("PRELUDE") ++ outp
     var interfs : List[String] = List[String]()
     xs.foreach(x => x match {
-      case JInterfaceDefinition(modifiers, id, inters, body) =>
+      case SJInterfaceDefinition(modifiers, id, inters, body) =>
         //Console.println("interfaces are " + inters)
         val (mmethods, methodspecs) = interfaceMethods(id, body)
         val mmeths = if (mmethods.length == 0) "" else mmethods.reduceLeft(_ + " " + _)
@@ -255,12 +245,11 @@ Qed."""
         val superms = if (supermethods.length == 0) "" else supermethods.reduceLeft(_ + " " + _)
         val superis = if (interfaces.length == 0) "" else interfaces.reduceLeft(_ + "\n  " + _) + "\n  "
         interfs ::= "Definition " + id + " (C : class) (T : Type) (R : val -> T -> upred heap_alg) " + superms + " " + mmeths + " : spec :=\n  " + superis + mspecs + "."
-      case JClassDefinition(modifiers, "Coq", supers, inters, body, par) =>
-      case JClassDefinition(modifiers, id, supers, inters, body, par) =>
+      case SJClassDefinition(modifiers, "Coq", supers, inters, body, par, fs) =>
+      case SJClassDefinition(modifiers, id, supers, inters, body, par, fs) =>
         //let's hope only a single class and interfaces before that!
         outp ::= "Module " + name + " <: PROGRAM."
-        myclass = id
-        val fields = ClassTable.getFields(id).keys.toList
+        val fields = fs.keys.toList
         val methods = classMethods(body)
         outp ::= """
 Definition """ + id + """ :=
@@ -269,7 +258,7 @@ Definition """ + id + """ :=
     })
     val cs = printFiniteMap(ClassTable.getClasses.map(x => ("\"" + x + "\"", x)))
     outp ::= "\nDefinition Prog := Build_Program " + cs + "."
-    if (ClassTable.getCoq(myclass, "PROGRAM").length == 0)
+/*    if (ClassTable.getCoq(myclass, "PROGRAM").length == 0)
       outp ::= unique_names
     else
       outp = ClassTable.getCoq(myclass, "PROGRAM") ++ outp
@@ -282,8 +271,8 @@ Definition """ + id + """ :=
     }
     //method specs go here
     xs.foreach(x => x match {
-      case JClassDefinition(modifiers, "Coq", supers, inters, body, par) =>
-      case JClassDefinition(modifiers, id, supers, inters, body, par) =>
+      case SJClassDefinition(modifiers, "Coq", supers, inters, body, par, fs) =>
+      case SJClassDefinition(modifiers, id, supers, inters, body, par, fs) =>
         myclass = id
         val specs = ClassTable.getSpecs(myclass)
         //filter out empty specs which are provided by an interface
@@ -321,7 +310,7 @@ Definition """ + id + """ :=
       outp = ClassTable.getCoq(myclass, "AFTERSPEC") ++ outp
       outp ::= "End " + name + "_spec."
       outp = ClassTable.getCoq("TOP") ++ outp
-    }
+    } */
     outp ::= "" //we need a newline...
     outp.reverse
   }

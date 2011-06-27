@@ -188,6 +188,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
 
       case JReturn(e) =>
         val (at, ri, ls0) = extractHelper(None, e, fields, ms, ls)
+        //assert(at.isInstanceOf[SJVariableAccess])
         (ri ++ List(SJReturn(at)), ls0)
 
       case JCall(receiver, name, args) =>

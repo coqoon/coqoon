@@ -25,6 +25,7 @@ case class SJConditional (test : SJExpression, consequent : List[SJStatement], a
 case class SJAssignment (left : SJVariableAccess, right : SJExpression) extends SJStatement //x := e
 case class SJFieldWrite (variable : SJVariableAccess, field : String, value : SJExpression) extends SJStatement //x.f := e
 case class SJFieldRead (value : SJVariableAccess, variable : SJVariableAccess, field : String) extends SJStatement //x := y.f
+//actually, ret should either be a SJVariableAccess or a SJLiteral
 case class SJReturn (ret : SJExpression) extends SJStatement //return e
 //actually, receiver should be a SJVariableAccess or a SJLiteral (class methods)
 case class SJCall (value : Option[SJVariableAccess], receiver : SJExpression, fun : String, arguments : List[SJExpression]) extends SJStatement //x := y.m(e)

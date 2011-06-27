@@ -18,22 +18,30 @@ object SJTable {
     ct(name)
   }
 
-  def getMethodTypeOfClass (name : String, method : String) : String = {
-    val c = getClass(name)
+  def findMethodInClass (clazz : String, method : String) : Option[SJMethodDefinition] = {
+    //TODO: multiple methods with different arguments (types/amount)
+    val c = getClass(clazz)
     assert(c.isInstanceOf[SJClassDefinition])
     val cl = c.asInstanceOf[SJClassDefinition]
-    var res : String = ""
+    var res : Option[SJMethodDefinition] = None
     var i : Integer = 0
     while (res == "" && i < cl.body.length) {
       val sjb = cl.body(i)
       if (sjb.isInstanceOf[SJMethodDefinition]) {
         val sjm = sjb.asInstanceOf[SJMethodDefinition]
         if (sjm.id == method)
-          res = sjm.jtype
+          res = Some(sjm)
       }
       i += 1
     }
     res
+  }
+
+  def getMethodTypeOfClass (name : String, method : String) : String = {
+    findMethodInClass(name, method) match {
+      case None => ""
+      case Some(x) => x.id
+    }
   }
 
   def reset () = { ct = HashMap[String, SJDefinition]() }
@@ -336,17 +344,15 @@ object FinishAST extends JavaTerms
 
   def doit (a : Any, name : String) : String = {
     val w = doitHelper(a)
-    //coqoutput(w, true, name).reduceLeft(_ + "\n" + _)
-    "bar"
+    coqoutput(w, true, name).reduceLeft(_ + "\n" + _)
   }
 
   def doitNoSpec (a : Any, name : String) : (String, String) = {
     val w = doitHelper(a)
-    //val re = coqoutput(w, false, name)
-    //val prog = re.takeWhile(!_.contains("_spec.\nImport ")).reduceLeft(_ + "\n" + _)
-    //val spec = re.dropWhile(!_.contains("_spec.\nImport ")).drop(1).mkString("\n")
-    //(prog, spec)
-    ("foo", "bar")
+    val re = coqoutput(w, false, name)
+    val prog = re.takeWhile(!_.contains("_spec.\nImport ")).reduceLeft(_ + "\n" + _)
+    val spec = re.dropWhile(!_.contains("_spec.\nImport ")).drop(1).mkString("\n")
+    (prog, spec)
   }
 
  /*
