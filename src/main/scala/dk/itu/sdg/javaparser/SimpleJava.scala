@@ -56,7 +56,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
              body ++ List(JConstructorDefinition(Set(Public()), name, List(), List()))
            else
              body
-        val (nbody, rt) = translateCIBody(bdy, fs, ms, fields)
+        val (nbody, rt) = translateCIBody(bdy, fs, ms, HashMap("this" -> name), fields)
         working ++= rt
         SJClassDefinition(mods, name, supers, interf, nbody, out, fs)
       case JInterfaceDefinition(mods, name, interf, body) =>
@@ -68,8 +68,8 @@ trait JavaToSimpleJava extends KopitiamLogger {
     (res, working.map(x => (x, Some(res.id))))
   }
 
-  def tArgs (a : List[JArgument]) : (List[SJArgument], HashMap[String, String]) = {
-    var ls = HashMap[String,String]()
+  def tArgs (a : List[JArgument], locals : HashMap[String, String]) : (List[SJArgument], HashMap[String, String]) = {
+    var ls : HashMap[String, String] = locals;
     (a.map(x => x match { case JArgument(n, t) => ls += n -> t; SJArgument(n, t)}), ls)
   }
 
@@ -77,7 +77,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
     (body.flatMap(x => x match {
       case JMethodDefinition (m, n, t, a, b) =>
         assert(b.length == 0)
-        val (x, l) = tArgs(a)
+        val (x, l) = tArgs(a, HashMap[String, String]())
         Some(SJMethodDefinition(m, n, t, x, List(), l))
       case JFieldDefinition (m, n, t, i) =>
         assert(m.contains(Final()))
@@ -89,18 +89,18 @@ trait JavaToSimpleJava extends KopitiamLogger {
   /*
    translates class body, returns translated AST plus inner classes and interfaces
   */
-  def translateCIBody (body : List[JStatement], fs : HashMap[String, String], ms : HashMap[String, String], fields : List[JFieldDefinition]) : (List[SJBodyDefinition], List[JStatement]) = {
+  def translateCIBody (body : List[JStatement], fs : HashMap[String, String], ms : HashMap[String, String], locals : HashMap[String, String], fields : List[JFieldDefinition]) : (List[SJBodyDefinition], List[JStatement]) = {
     var rest = List[JStatement]()
     (body.flatMap(x => x match {
       case (x : JClassDefinition) => rest ::= x; None //only true for static inner classes, others need ptr to class (not in context here :/)
       case (x : JInterfaceDefinition) => rest ::= x; None
       case JFieldDefinition(mods, name, jtype, init) => Some(SJFieldDefinition(mods, name, jtype))
       case JMethodDefinition(mods, name, jtype, args, body) =>
-        val (targs, ls0) = tArgs(args)
+        val (targs, ls0) = tArgs(args, locals)
         val (nbody, ls1) = translateBody(body, fs, ms, ls0)
         Some(SJMethodDefinition(mods, name, jtype, targs, nbody, ls1))
       case JConstructorDefinition(mods, jtype, args, body) =>
-        val (targs, ls0) = tArgs(args)
+        val (targs, ls0) = tArgs(args, locals)
         val (nbody, ls1) = translateCBody(body, fields, fs, ms, ls0)
         Some(SJConstructorDefinition(mods, jtype, targs, nbody, ls1))
       case JBlock(mods, body) =>
@@ -291,8 +291,10 @@ trait JavaToSimpleJava extends KopitiamLogger {
           case None =>
             val t = Gensym.newsym()
             val ty = a.asInstanceOf[SJVariableAccess].variable match {
-              case "this" => fields(f)
-              case y => SJTable.getClass(ls0(y)).asInstanceOf[SJClassDefinition].fields(f)
+              case y => if (ls0(y) == ls0("this"))
+                          fields(f)
+                        else
+                          SJTable.getClass(ls0(y)).asInstanceOf[SJClassDefinition].fields(f)
             }
             (SJVariableAccess(t), ls0 + (t -> ty))
           case Some(x) => (x, ls0)
@@ -305,9 +307,12 @@ trait JavaToSimpleJava extends KopitiamLogger {
         val (r, ls2) = res match {
           case None =>
             val t = Gensym.newsym()
+            Console.println("a is " + a) 
             val ty = a.asInstanceOf[SJVariableAccess].variable match {
-              case "this" => ms(name)
-              case y => SJTable.getMethodTypeOfClass(ls0(y), name)
+              case y => if (ls0(y) == ls0("this"))
+                          ms(name)
+                        else
+                          SJTable.getMethodTypeOfClass(ls0(y), name)
             }
             (SJVariableAccess(t), ls1 + (t -> ty))
           case Some(x) => (x, ls1)

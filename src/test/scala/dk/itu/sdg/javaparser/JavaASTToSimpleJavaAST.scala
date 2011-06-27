@@ -25,8 +25,8 @@ class JavaASTSpec extends ASTSpec {
       SJMethodDefinition(Set(), "bar", "void", Nil, List(
         SJAssignment(SJVariableAccess("a"), (SJLiteral("0"))),
         SJAssignment(SJVariableAccess("a"), SJBinaryExpression("+", SJVariableAccess("a"), SJLiteral("1")))),
-                        HashMap("a" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+                        HashMap("a" -> "int", "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("Postfix1.txt") should equal(expected)
   }
 
@@ -35,8 +35,8 @@ class JavaASTSpec extends ASTSpec {
       SJMethodDefinition(Set(), "bar", "void", Nil, List(
         SJAssignment(SJVariableAccess("a"), SJLiteral("0")),
         SJAssignment(SJVariableAccess("a"), SJBinaryExpression("-", SJVariableAccess("a"), SJLiteral("1")))),
-                      HashMap("a" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+                      HashMap("a" -> "int", "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("Postfix2.txt") should equal(expected)
   }
 
@@ -46,8 +46,8 @@ class JavaASTSpec extends ASTSpec {
       SJMethodDefinition(Set(), "bar", "void", Nil, List(
         SJFieldRead(SJVariableAccess("tmp_1"), SJVariableAccess("this"), "a"),
         SJFieldWrite(SJVariableAccess("this"), "a", SJBinaryExpression("+", SJVariableAccess("tmp_1"), SJLiteral("1")))),
-                       HashMap("tmp_1" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("a" -> "int")))
+                       HashMap("tmp_1" -> "int", "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap("a" -> "int")))
     getASTbyParsingFileNamed("Postfix3.txt") should equal(expected)
   }
 
@@ -57,8 +57,8 @@ class JavaASTSpec extends ASTSpec {
         SJConditional(SJBinaryExpression("==", SJVariableAccess("a"), SJLiteral("10")),
                       List(SJAssignment(SJVariableAccess("b"), SJLiteral("20"))),
                       List(SJAssignment(SJVariableAccess("b"), SJLiteral("30"))))),
-                       HashMap("b" -> "int", "a" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+                       HashMap("b" -> "int", "a" -> "int", "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("Conditional1.txt") should equal(expected)
   }
 
@@ -70,8 +70,9 @@ class JavaASTSpec extends ASTSpec {
         SJConditional(SJBinaryExpression("==", SJVariableAccess("a"), SJVariableAccess("tmp_1")),
                       List(SJAssignment(SJVariableAccess("b"), SJLiteral("20"))),
                       List(SJAssignment(SJVariableAccess("b"), SJLiteral("30"))))),
-                       HashMap("tmp_1" -> "int", "b" -> "int", "a" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("c" -> "int")))
+                       HashMap("tmp_1" -> "int", "b" -> "int", "a" -> "int", "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))),
+                                          None, HashMap("c" -> "int")))
     getASTbyParsingFileNamed("Conditional2.txt") should equal(expected)
   }
 
@@ -84,8 +85,9 @@ class JavaASTSpec extends ASTSpec {
         SJConditional(SJBinaryExpression("==", SJVariableAccess("a"), SJVariableAccess("tmp_1")),
                       List(SJFieldWrite(SJVariableAccess("this"), "b", SJLiteral("20"))),
                       List(SJFieldWrite(SJVariableAccess("this"), "b", SJLiteral("30"))))),
-                       HashMap("tmp_1" -> "int", "a" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("c" -> "int", "b" -> "int")))
+                       HashMap("tmp_1" -> "int", "a" -> "int", "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))),
+                                          None, HashMap("c" -> "int", "b" -> "int")))
     getASTbyParsingFileNamed("Conditional3.txt") should equal(expected)
   }
 
@@ -94,14 +96,14 @@ class JavaASTSpec extends ASTSpec {
       List(
         SJClassDefinition(Set(), "Foo", "", Nil, List(
           SJFieldDefinition(Set(), "a", "int"),
-          SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("a" -> "int")),
+          SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap("a" -> "int")),
         SJClassDefinition(Set(), "Bar", "", Nil, List(
           SJFieldDefinition(Set(), "f", "Foo"),
           SJMethodDefinition(Set(), "bar", "void", Nil, List(
             SJFieldRead(SJVariableAccess("tmp_1"), SJVariableAccess("this"), "f"),
             SJFieldRead(SJVariableAccess("b"), SJVariableAccess("tmp_1"), "a")),
-                             HashMap("tmp_1" -> "Foo", "b" -> "int")),
-          SJConstructorDefinition(Set(Public()), "Bar", List(), List(), HashMap())), None, HashMap("f" -> "Foo")))
+                             HashMap("tmp_1" -> "Foo", "b" -> "int", "this" -> "Bar")),
+          SJConstructorDefinition(Set(Public()), "Bar", List(), List(), HashMap("this" -> "Bar"))), None, HashMap("f" -> "Foo")))
     getASTbyParsingFileNamed("NestedField1.txt") should equal(expected)
   }
 
@@ -118,8 +120,9 @@ class JavaASTSpec extends ASTSpec {
         SJFieldRead(SJVariableAccess("tmp_6"), SJVariableAccess("tmp_5"), "a"),
         SJReturn(SJVariableAccess("tmp_6"))),
                        HashMap("tmp_1" -> "Foo", "tmp_2" -> "Foo", "tmp_3" -> "Foo",
-                               "tmp_4" -> "Foo", "tmp_5" -> "Foo", "tmp_6" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None,
+                               "tmp_4" -> "Foo", "tmp_5" -> "Foo", "tmp_6" -> "int",
+                             "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None,
                                         HashMap("a" -> "int", "f" -> "Foo")))
     getASTbyParsingFileNamed("NestedField2.txt") should equal(expected)
   }
@@ -128,15 +131,15 @@ class JavaASTSpec extends ASTSpec {
   "Parsing NestedCall1.txt" should "produce the correct AST" in {
     val expected = List(
       SJClassDefinition(Set(), "Foo", "", Nil, List(
-        SJMethodDefinition(Set(), "bar", "void", Nil, List(), HashMap()),
-        SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()),
+        SJMethodDefinition(Set(), "bar", "void", Nil, List(), HashMap("this" -> "Foo")),
+        SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()),
       SJClassDefinition(Set(), "Bar", "", Nil, List(
         SJFieldDefinition(Set(), "f", "Foo"),
         SJMethodDefinition(Set(), "bar", "void", Nil, List(
           SJFieldRead(SJVariableAccess("tmp_1"), SJVariableAccess("this"), "f"),
           SJCall(None, SJVariableAccess("tmp_1"), "bar", Nil)),
-                           HashMap("tmp_1" -> "Foo")),
-        SJConstructorDefinition(Set(Public()), "Bar", List(), List(), HashMap())), None, HashMap("f" -> "Foo")))
+                           HashMap("tmp_1" -> "Foo", "this" -> "Bar")),
+        SJConstructorDefinition(Set(Public()), "Bar", List(), List(), HashMap("this" -> "Bar"))), None, HashMap("f" -> "Foo")))
     getASTbyParsingFileNamed("NestedCall1.txt") should equal(expected)
   }
 
@@ -148,7 +151,7 @@ class JavaASTSpec extends ASTSpec {
         SJMethodDefinition(Set(), "get", "Foo", Nil, List(
           SJFieldRead(SJVariableAccess("tmp_1"), SJVariableAccess("this"), "f"),
           SJReturn(SJVariableAccess("tmp_1"))),
-                           HashMap("tmp_1" -> "Foo")),
+                           HashMap("tmp_1" -> "Foo", "this" -> "Foo")),
         SJMethodDefinition(Set(), "bar", "int", Nil, List(
           SJFieldRead(SJVariableAccess("tmp_1"), SJVariableAccess("this"), "f"),
           SJCall(Some(SJVariableAccess("tmp_2")), SJVariableAccess("tmp_1"), "get", Nil),
@@ -164,8 +167,8 @@ class JavaASTSpec extends ASTSpec {
           SJReturn(SJVariableAccess("tmp_11"))),
                            HashMap("tmp_1" -> "Foo", "tmp_2" -> "Foo", "tmp_3" -> "Foo", "tmp_4" -> "Foo",
                                    "tmp_5" -> "Foo", "tmp_6" -> "Foo", "tmp_7" -> "Foo", "tmp_8" -> "Foo",
-                                   "tmp_9" -> "Foo", "tmp_10" -> "Foo", "tmp_11" -> "int")),
-        SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None,
+                                   "tmp_9" -> "Foo", "tmp_10" -> "Foo", "tmp_11" -> "int", "this" -> "Foo")),
+        SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None,
                            HashMap("f" -> "Foo", "a" -> "int")))
     getASTbyParsingFileNamed("NestedCall2.txt") should equal(expected)
   }
@@ -177,8 +180,8 @@ class JavaASTSpec extends ASTSpec {
           SJAssignment(SJVariableAccess("i"), SJLiteral("1")),
           SJWhile(SJBinaryExpression(">", SJVariableAccess("i"), SJLiteral("0")),
                   List(SJAssignment(SJVariableAccess("i"), SJBinaryExpression("+", SJVariableAccess("i"), SJLiteral("1")))))),
-                           HashMap("i" -> "int")),
-        SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+                           HashMap("i" -> "int", "this" -> "Foo")),
+        SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("While1.txt") should equal(expected)
   }
 
@@ -194,8 +197,8 @@ class JavaASTSpec extends ASTSpec {
                  List(SJFieldWrite(SJVariableAccess("this"), "b", SJLiteral("false")),
                       SJAssignment(SJVariableAccess("i"), SJBinaryExpression("+", SJVariableAccess("i"), SJLiteral("1"))),
                       SJFieldRead(SJVariableAccess("tmp_1"), SJVariableAccess("this"), "b")))),
-                           HashMap("i" -> "int", "tmp_1" -> "boolean")),
-        SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("b" -> "boolean")))
+                           HashMap("i" -> "int", "tmp_1" -> "boolean", "this" -> "Foo")),
+        SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap("b" -> "boolean")))
     getASTbyParsingFileNamed("While2.txt") should equal(expected)
   }
 
@@ -210,7 +213,7 @@ class JavaASTSpec extends ASTSpec {
             List(SJAssignment(SJVariableAccess("x"), SJLiteral("1")))),
          SJReturn(SJVariableAccess("x"))),
            HashMap("x" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Fac", List(), List(), HashMap())), None, HashMap()))
+      SJConstructorDefinition(Set(Public()), "Fac", List(), List(), HashMap("this" -> "Fac"))), None, HashMap()))
     getASTbyParsingFileNamed("Fac.txt") should equal(expected)
   }
 
@@ -225,7 +228,7 @@ class JavaASTSpec extends ASTSpec {
             List(SJAssignment(SJVariableAccess("x"), SJLiteral("1")))),
          SJReturn(SJVariableAccess("x"))),
            HashMap("x" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Fac", List(), List(), HashMap())), None, HashMap()))
+      SJConstructorDefinition(Set(Public()), "Fac", List(), List(), HashMap("this" -> "Fac"))), None, HashMap()))
     getASTbyParsingFileNamed("Fac2.txt") should equal(expected)
   }
 
@@ -233,8 +236,8 @@ class JavaASTSpec extends ASTSpec {
     val expected = List(SJClassDefinition(Set(), "Foo", "", List(), List(
       SJMethodDefinition(Set(), "foo", "void", List(), List(
         SJAssert(SJBinaryExpression("==", SJLiteral("5"), SJLiteral("5")))),
-                       HashMap()),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+                       HashMap("this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("assert.txt") should equal(expected)
   }
 
@@ -291,7 +294,7 @@ class JavaASTSpec extends ASTSpec {
         SJFieldDefinition(Set(), "name", "String"), 
         SJConstructorDefinition(Set(Public()), "Person", List(SJArgument("name","String")), List(
           SJFieldWrite(SJVariableAccess("this"), "name", SJVariableAccess("name"))),
-                              HashMap("name" -> "String"))), None, HashMap("name" -> "String")))
+                              HashMap("name" -> "String", "this" -> "Person"))), None, HashMap("name" -> "String")))
      getASTbyParsingFileNamed("ClassWithConstructor.txt") should equal(expected)    
    }
 
@@ -332,10 +335,12 @@ class JavaASTSpec extends ASTSpec {
            SJFieldWrite(SJVariableAccess("this"), "number", SJBinaryExpression(">>", SJVariableAccess("tmp_10"), SJLiteral("1"))),
            SJFieldRead(SJVariableAccess("tmp_11"), SJVariableAccess("this"), "number"),
            SJFieldWrite(SJVariableAccess("this"), "number", SJBinaryExpression(">>>", SJVariableAccess("tmp_11"), SJLiteral("1")))),
-             HashMap("a" -> "int", "tmp_1" -> "int", "tmp_2" -> "int", "tmp_3" -> "int", "tmp_4" -> "int", "tmp_5" -> "int",
-                 "tmp_6" -> "int", "tmp_7" -> "int", "tmp_8" -> "int", "tmp_9" -> "int", "tmp_10" -> "int", "tmp_11" -> "int")),
+             HashMap("a" -> "int", "tmp_1" -> "int", "tmp_2" -> "int", "tmp_3" -> "int",
+                     "tmp_4" -> "int", "tmp_5" -> "int", "tmp_6" -> "int", "tmp_7" -> "int",
+                     "tmp_8" -> "int", "tmp_9" -> "int", "tmp_10" -> "int", "tmp_11" -> "int",
+                     "this" -> "Foo")),
         SJConstructorDefinition(Set(Public()), "Foo", List(), List(SJFieldWrite(SJVariableAccess("this"), "number", SJLiteral("0"))),
-                              HashMap())), None, HashMap("number" -> "int")))
+                              HashMap("this" -> "Foo"))), None, HashMap("number" -> "int")))
     getASTbyParsingFileNamed("OperatorTranslation.txt") should equal(expected)    
   }
 }
@@ -347,8 +352,8 @@ class JavaASTSpec extends ASTSpec {
 class BindingsSpec extends ASTSpec {
   "Parsing Binding1.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(
-      SJMethodDefinition(Set(), "foo", "void", Nil, List(SJAssignment(SJVariableAccess("a"), SJLiteral("20"))), HashMap("a" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+      SJMethodDefinition(Set(), "foo", "void", Nil, List(SJAssignment(SJVariableAccess("a"), SJLiteral("20"))), HashMap("a" -> "int", "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("Binding1.txt") should equal(expected)
   }
 
@@ -357,16 +362,16 @@ class BindingsSpec extends ASTSpec {
       SJMethodDefinition(Set(), "foo", "void", Nil, List(
         SJAssignment(SJVariableAccess("a"), SJLiteral("20")),
         SJAssignment(SJVariableAccess("b"), SJLiteral("10"))),
-                         HashMap("a" -> "int", "b" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+                         HashMap("a" -> "int", "b" -> "int", "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("Binding2.txt") should equal(expected)
   }
 
   "Parsing Binding3.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(
-      SJMethodDefinition(Set(), "bar", "int", Nil, List(SJReturn(SJLiteral("10"))), HashMap()),
-      SJMethodDefinition(Set(), "foo", "void", Nil, List(SJCall(Some(SJVariableAccess("a")), SJVariableAccess("this"), "bar", Nil)), HashMap("a" -> "int")), 
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+      SJMethodDefinition(Set(), "bar", "int", Nil, List(SJReturn(SJLiteral("10"))), HashMap("this" -> "Foo")),
+      SJMethodDefinition(Set(), "foo", "void", Nil, List(SJCall(Some(SJVariableAccess("a")), SJVariableAccess("this"), "bar", Nil)), HashMap("a" -> "int", "this" -> "Foo")), 
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("Binding3.txt") should equal(expected)
   }
 
@@ -377,14 +382,14 @@ class BindingsSpec extends ASTSpec {
         SJFieldRead(SJVariableAccess("tmp_1"), SJVariableAccess("this"), "a"),
         SJFieldRead(SJVariableAccess("tmp_2"), SJVariableAccess("this"), "a"),
         SJReturn(SJBinaryExpression("+", SJVariableAccess("tmp_2"), SJVariableAccess("tmp_1")))),
-                       HashMap("tmp_1" -> "int", "tmp_2" -> "int")),
+                       HashMap("tmp_1" -> "int", "tmp_2" -> "int", "this" -> "Foo")),
       SJMethodDefinition(Set(), "foo", "void", Nil, List(
         SJFieldRead(SJVariableAccess("b"), SJVariableAccess("this"), "a"),
         SJCall(Some(SJVariableAccess("tmp_1")), SJVariableAccess("this"), "bar", Nil),
         SJFieldRead(SJVariableAccess("tmp_2"), SJVariableAccess("this"), "a"),
         SJAssignment(SJVariableAccess("c"), SJBinaryExpression("+", SJVariableAccess("tmp_2"), SJVariableAccess("tmp_1")))),
-                       HashMap("b" -> "int", "c" -> "int", "tmp_1" -> "int", "tmp_2" -> "int")), 
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("a" -> "int")))
+                       HashMap("b" -> "int", "c" -> "int", "tmp_1" -> "int", "tmp_2" -> "int", "this" -> "Foo")), 
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap("a" -> "int")))
     getASTbyParsingFileNamed("Binding4.txt") should equal(expected)
   }
 }
@@ -396,12 +401,12 @@ class AssignmentsSpec extends ASTSpec {
   "Parsing FieldAssignment3.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(
       SJFieldDefinition(Set(), "b", "int"),
-      SJMethodDefinition(Set(), "a", "int", Nil, List(SJReturn(SJLiteral("10"))), HashMap()),
+      SJMethodDefinition(Set(), "a", "int", Nil, List(SJReturn(SJLiteral("10"))), HashMap("this" -> "Foo")),
       SJMethodDefinition(Set(), "foo", "void", Nil, List(
         SJCall(Some(SJVariableAccess("tmp_1")), SJVariableAccess("this"), "a", Nil),
         SJFieldWrite(SJVariableAccess("this"), "b", SJVariableAccess("tmp_1"))),
-                       HashMap("tmp_1" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("b" -> "int")))
+                       HashMap("tmp_1" -> "int", "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap("b" -> "int")))
     getASTbyParsingFileNamed("FieldAssignment3.txt") should equal(expected)
   }
 
@@ -411,8 +416,8 @@ class AssignmentsSpec extends ASTSpec {
       SJMethodDefinition(Set(), "set", "void", Nil, List(
         SJFieldRead(SJVariableAccess("tmp_1"), SJVariableAccess("this"), "b"),
         SJFieldWrite(SJVariableAccess("this"), "b", SJBinaryExpression("+", SJVariableAccess("tmp_1"), SJLiteral("10")))),
-                       HashMap("tmp_1" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("b" -> "int")))
+                       HashMap("tmp_1" -> "int", "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap("b" -> "int")))
     getASTbyParsingFileNamed("FieldAssignment2.txt") should equal(expected)
   }
 
@@ -421,8 +426,8 @@ class AssignmentsSpec extends ASTSpec {
       SJFieldDefinition(Set(), "b", "int"),
       SJMethodDefinition(Set(), "set", "void", Nil, List(
         SJFieldWrite(SJVariableAccess("this"), "b", SJLiteral("10"))),
-                       HashMap()),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("b" -> "int")))
+                       HashMap("this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap("b" -> "int")))
     getASTbyParsingFileNamed("FieldAssignment1.txt") should equal(expected)
   }
   
@@ -431,8 +436,8 @@ class AssignmentsSpec extends ASTSpec {
       SJMethodDefinition(Set(), "bar", "void", Nil, List(
         SJAssignment(SJVariableAccess("a"), SJLiteral("10")),
         SJAssignment(SJVariableAccess("a"), SJLiteral("20"))),
-                       HashMap("a" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+                       HashMap("a" -> "int", "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("Assignment1.txt") should equal(expected)
   }
 
@@ -441,8 +446,8 @@ class AssignmentsSpec extends ASTSpec {
       SJMethodDefinition(Set(), "bar", "void", Nil, List(
         SJAssignment(SJVariableAccess("a"), SJLiteral("10")),
         SJAssignment(SJVariableAccess("a"), SJBinaryExpression("+", SJVariableAccess("a"), SJLiteral("20")))),
-                       HashMap("a" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+                       HashMap("a" -> "int", "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("Assignment2.txt") should equal(expected)
   }
 
@@ -451,8 +456,8 @@ class AssignmentsSpec extends ASTSpec {
       SJMethodDefinition(Set(), "bar", "void", Nil, List(
         SJAssignment(SJVariableAccess("a"), SJLiteral("10")),
         SJAssignment(SJVariableAccess("a"), SJBinaryExpression("+", SJVariableAccess("a"), SJLiteral("20")))),
-                       HashMap("a" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+                       HashMap("a" -> "int", "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("Assignment3.txt") should equal(expected)
   }
 
@@ -461,9 +466,9 @@ class AssignmentsSpec extends ASTSpec {
       SJMethodDefinition(Set(), "bar", "void", Nil, List(
         SJAssignment(SJVariableAccess("a"), SJLiteral("10")),
         SJCall(Some(SJVariableAccess("a")), SJVariableAccess("this"), "foobar", List())),
-                       HashMap("a" -> "int")),
-      SJMethodDefinition(Set(), "foobar", "int", Nil, List(SJReturn(SJLiteral("10"))), HashMap()), 
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+                       HashMap("a" -> "int", "this" -> "Foo")),
+      SJMethodDefinition(Set(), "foobar", "int", Nil, List(SJReturn(SJLiteral("10"))), HashMap("this" -> "Foo")), 
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("Assignment4.txt") should equal(expected)
   }
 
@@ -473,9 +478,9 @@ class AssignmentsSpec extends ASTSpec {
         SJAssignment(SJVariableAccess("a"), SJLiteral("10")),
         SJCall(Some(SJVariableAccess("tmp_1")), SJVariableAccess("this"), "foobar", List()),
         SJAssignment(SJVariableAccess("a"), SJBinaryExpression("+", SJVariableAccess("a"), SJVariableAccess("tmp_1")))),
-                       HashMap("a" -> "int", "tmp_1" -> "int")),
-      SJMethodDefinition(Set(), "foobar", "int", Nil, List(SJReturn(SJLiteral("10"))), HashMap()),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+                       HashMap("a" -> "int", "tmp_1" -> "int", "this" -> "Foo")),
+      SJMethodDefinition(Set(), "foobar", "int", Nil, List(SJReturn(SJLiteral("10"))), HashMap("this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("Assignment5.txt") should equal(expected)
   }
 }
@@ -510,14 +515,14 @@ class InterfacesSpec extends ASTSpec {
 class ClassesSpec extends ASTSpec {
   "Parsing SimpleClass.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("SimpleClass.txt") should equal(expected)
   }
 
   "Parsing SimpleClassWithMethod.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "Foo", "", List(), List(
-      SJMethodDefinition(Set(), "foo", "void", Nil, List(), HashMap()), 
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+      SJMethodDefinition(Set(), "foo", "void", Nil, List(), HashMap("this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("SimpleClassWithMethod.txt") should equal(expected)
   }
 
@@ -525,8 +530,8 @@ class ClassesSpec extends ASTSpec {
     val expected = List(
       SJClassDefinition(Set(), "Foo", "", Nil, List(
         SJMethodDefinition(Set(), "foo", "int", List(SJArgument("a", "int")),
-          List(SJReturn(SJVariableAccess("a"))), HashMap("a" -> "int")),
-        SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+          List(SJReturn(SJVariableAccess("a"))), HashMap("a" -> "int", "this" -> "Foo")),
+        SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("SimpleClassMoreComplexMethod.txt") should equal(expected)
   }
 
@@ -536,28 +541,28 @@ class ClassesSpec extends ASTSpec {
         SJCall(Some(SJVariableAccess("tmp_1")), SJVariableAccess("this"), "foo", List(SJVariableAccess("a"))),
         SJCall(Some(SJVariableAccess("tmp_2")), SJVariableAccess("this"), "foo", List(SJVariableAccess("tmp_1"))),
         SJReturn(SJVariableAccess("tmp_2"))),
-                       HashMap("a" -> "int", "tmp_1" -> "int", "tmp_2" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+                       HashMap("a" -> "int", "tmp_1" -> "int", "tmp_2" -> "int", "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("SimpleClassMoreComplexMethod2.txt") should equal(expected)
   }
 
   "Parsing SimpleClassWithSimpleField.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(
       SJFieldDefinition(Set(), "foo", "int"),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("foo" -> "int")))
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap("foo" -> "int")))
     getASTbyParsingFileNamed("SimpleClassWithSimpleField.txt") should equal(expected)
   }
 
   "Parsing MethodWithNoFieldAccessOrCallInAnExpression.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(),"Foo", "", List(), List(
       SJFieldDefinition(Set(), "f", "int"), 
-      SJMethodDefinition(Set(), "a", "int", List(), List(SJReturn(SJLiteral("10"))), HashMap()),
+      SJMethodDefinition(Set(), "a", "int", List(), List(SJReturn(SJLiteral("10"))), HashMap("this" -> "Foo")),
       SJMethodDefinition(Set(), "b", "int", List(SJArgument("c", "int")), List(
         SJCall(Some(SJVariableAccess("tmp_1")), SJVariableAccess("this"), "a", List()),
         SJFieldRead(SJVariableAccess("tmp_2"), SJVariableAccess("this"), "f"),
         SJReturn(SJBinaryExpression("+", SJBinaryExpression("+", SJVariableAccess("tmp_2"), SJVariableAccess("tmp_1")), SJVariableAccess("c")))),
-                       HashMap("c" -> "int", "tmp_1" -> "int", "tmp_2" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("f" -> "int")))
+                       HashMap("c" -> "int", "tmp_1" -> "int", "tmp_2" -> "int", "this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap("f" -> "int")))
     getASTbyParsingFileNamed("MethodWithNoFieldAccessOrCallInAnExpression.txt") should equal(expected)
   }
 }
@@ -571,7 +576,7 @@ class InitializersSpec extends ASTSpec {
      val expected = List(SJClassDefinition(Set(), "A", "", Nil, List(
         SJFieldDefinition(Set(), "i", "int"), 
         SJConstructorDefinition(Set(Public()), "A", Nil, List(
-          SJFieldWrite(SJVariableAccess("this"), "i", SJLiteral("0"))), HashMap())), None, HashMap("i" -> "int")))
+          SJFieldWrite(SJVariableAccess("this"), "i", SJLiteral("0"))), HashMap("this" -> "A"))), None, HashMap("i" -> "int")))
      getASTbyParsingFileNamed("fieldWithInitializer.txt") should equal(expected)
    }
   
@@ -579,7 +584,7 @@ class InitializersSpec extends ASTSpec {
      val expected = List(SJClassDefinition(Set(), "A", "", Nil, List(
        SJFieldDefinition(Set(), "i", "int"), 
        SJConstructorDefinition(Set(Public()), "A", Nil, List(
-         SJFieldWrite(SJVariableAccess("this"), "i", SJLiteral("0"))), HashMap())), None, HashMap("i" -> "int")))
+         SJFieldWrite(SJVariableAccess("this"), "i", SJLiteral("0"))), HashMap("this" -> "A"))), None, HashMap("i" -> "int")))
      getASTbyParsingFileNamed("fieldWithInitializerNoPreviousConstructor.txt") should equal(expected)
    }
  
@@ -591,7 +596,7 @@ class InitializersSpec extends ASTSpec {
 class ModifiersSpec extends ASTSpec {
   "Parsing ClassModifiers.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(Private(), Abstract()), "A", "", Nil, List(
-      SJConstructorDefinition(Set(Public()), "A", List(), List(), HashMap())), None, HashMap()))
+      SJConstructorDefinition(Set(Public()), "A", List(), List(), HashMap("this" -> "A"))), None, HashMap()))
     getASTbyParsingFileNamed("ClassModifiers.txt") should equal(expected)
   }
   
@@ -602,35 +607,35 @@ class ModifiersSpec extends ASTSpec {
   
   "Parsing MethodModifiers.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "Foo", "", List(),List(
-      SJMethodDefinition(Set(Private()), "bar", "void", List(), List(), HashMap()),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+      SJMethodDefinition(Set(Private()), "bar", "void", List(), List(), HashMap("this" -> "Foo")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("MethodModifiers.txt") should equal(expected)
   }
   
   "Parsing FieldModifiers.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(
       SJFieldDefinition(Set(Private()), "a", "int"),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("a" -> "int")))
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap("a" -> "int")))
     getASTbyParsingFileNamed("FieldModifiers.txt") should equal(expected)
   }
   
   "Parsing ConstructorModifiers.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "A", "", Nil, List(
-      SJConstructorDefinition(Set(Private()), "A", Nil, List(), HashMap())), None, HashMap()))
+      SJConstructorDefinition(Set(Private()), "A", Nil, List(), HashMap("this" -> "A"))), None, HashMap()))
     getASTbyParsingFileNamed("ConstructorModifiers.txt") should equal(expected)
   }
   
   "Parsing NestedClassModifiers.txt" should "produce the correct AST" in {
     val expected = List(
       SJClassDefinition(Set(Private()), "B", "", List(), List(
-        SJConstructorDefinition(Set(Public()), "B", List(), List(), HashMap())), Some("A"), HashMap()),
+        SJConstructorDefinition(Set(Public()), "B", List(), List(), HashMap("this" -> "B"))), Some("A"), HashMap()),
       SJClassDefinition(Set(Public()), "A", "", List(), List(
-        SJConstructorDefinition(Set(Public()), "A", List(), List(), HashMap())), None, HashMap()))
+        SJConstructorDefinition(Set(Public()), "A", List(), List(), HashMap("this" -> "A"))), None, HashMap()))
     getASTbyParsingFileNamed("NestedClassModifiers.txt") should equal(expected)
   }
   
   "Parsing BlockModifiers.txt" should "produce the correct AST" in {
-    val expected = List(SJClassDefinition(Set(), "A", "", List(), List(SJBodyBlock(Some(Static()),List()), SJConstructorDefinition(Set(Public()), "A", List(), List(), HashMap())), None, HashMap()))
+    val expected = List(SJClassDefinition(Set(), "A", "", List(), List(SJBodyBlock(Some(Static()),List()), SJConstructorDefinition(Set(Public()), "A", List(), List(), HashMap("this" -> "A"))), None, HashMap()))
     getASTbyParsingFileNamed("BlockModifiers.txt") should equal(expected)
   }
   
