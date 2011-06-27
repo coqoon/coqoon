@@ -132,9 +132,9 @@ trait JavaToSimpleJava extends KopitiamLogger {
     var i = 0
     while (i < xs.length) {
       val y = xs(i)
-      Console.println("translating y " + y)
+      //log.warning("translating y " + y)
       val (re : List[SJStatement], h : HashMap[String, String]) = translateStatement(y, fields, ms, hm)
-      Console.println("result is re " + re)
+      //log.warning("result is re " + re)
       hm = h
       r = r ++ re
       i += 1
@@ -149,7 +149,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
 
       case JAssignment(x, r) =>
         val (a, b, c) = extractHelper(Some(SJVariableAccess(x)), r, fields, ms, ls)
-        log.warning("transforming JAssignment returned (a): " + a + " (b): " + b)
+        //log.warning("transforming JAssignment returned (a): " + a + " (b): " + b)
         if ((b.length == 0) || !(a.isInstanceOf[SJVariableAccess] && (a.asInstanceOf[SJVariableAccess].variable == x)))
           (b ++ List(SJAssignment(SJVariableAccess(x), a)), c)
         else
@@ -307,7 +307,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
         val (r, ls2) = res match {
           case None =>
             val t = Gensym.newsym()
-            Console.println("a is " + a) 
+            //log.warning("a is " + a) 
             val ty = a.asInstanceOf[SJVariableAccess].variable match {
               case y => if (ls0(y) == ls0("this"))
                           ms(name)

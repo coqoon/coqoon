@@ -212,7 +212,7 @@ class JavaASTSpec extends ASTSpec {
                  SJAssignment(SJVariableAccess("x"), SJBinaryExpression("*", SJVariableAccess("n"), SJVariableAccess("x")))),
             List(SJAssignment(SJVariableAccess("x"), SJLiteral("1")))),
          SJReturn(SJVariableAccess("x"))),
-           HashMap("x" -> "int")),
+           HashMap("x" -> "int", "n" -> "int", "this" -> "Fac")),
       SJConstructorDefinition(Set(Public()), "Fac", List(), List(), HashMap("this" -> "Fac"))), None, HashMap()))
     getASTbyParsingFileNamed("Fac.txt") should equal(expected)
   }
@@ -222,12 +222,12 @@ class JavaASTSpec extends ASTSpec {
       List(SJClassDefinition(Set(), "Fac", "", List(), List(SJMethodDefinition(Set(Static()), "fac", "int",
        List(SJArgument("n", "int")), List(
          SJConditional(SJBinaryExpression(">=", SJVariableAccess("n"), SJLiteral("0")),
-            List(SJCall(Some(SJVariableAccess("x")), SJVariableAccess("this"), "fac",
+            List(SJCall(Some(SJVariableAccess("tmp_1")), SJVariableAccess("this"), "fac",
                                   List(SJBinaryExpression("-", SJVariableAccess("n"), SJLiteral("1")))),
-                 SJAssignment(SJVariableAccess("x"), SJBinaryExpression("*", SJVariableAccess("n"), SJVariableAccess("x")))),
+                 SJAssignment(SJVariableAccess("x"), SJBinaryExpression("*", SJVariableAccess("n"), SJVariableAccess("tmp_1")))),
             List(SJAssignment(SJVariableAccess("x"), SJLiteral("1")))),
          SJReturn(SJVariableAccess("x"))),
-           HashMap("x" -> "int")),
+           HashMap("x" -> "int", "tmp_1" -> "int", "n" -> "int", "this" -> "Fac")),
       SJConstructorDefinition(Set(Public()), "Fac", List(), List(), HashMap("this" -> "Fac"))), None, HashMap()))
     getASTbyParsingFileNamed("Fac2.txt") should equal(expected)
   }

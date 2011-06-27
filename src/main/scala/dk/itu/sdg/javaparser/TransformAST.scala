@@ -512,7 +512,7 @@ object FinishAST extends JavaTerms
    * to be transformd into a JMethodDefinition. This will also add the methods and locals to the
    * global ClassTable.
    */
-  def extractMethodOrConstructorInfo (term : Term ) : (String, String, List[JArgument], List[JBodyStatement]) = {
+  def extractMethodOrConstructorInfo (term : Term) : (String, String, List[JArgument], List[JBodyStatement]) = {
 
     val (id, mid, parameters, throws, body) = term match {
       case ConstructorDeclaration(id, parameters, throws, bdy)   => (unpackR(id), "new", parameters, throws, bdy)
@@ -715,6 +715,8 @@ object FinishAST extends JavaTerms
       }
     } else {
       val fst = if (isFieldAccess(varia)) JFieldAccess(JVariableAccess("this"), varia) else JVariableAccess(varia)
+
+      
 
       val result = rst.foldRight(fst) { (current, acc) =>
         JCall(acc, current, args.map(transformExpression))
