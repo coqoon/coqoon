@@ -132,9 +132,9 @@ trait JavaToSimpleJava extends KopitiamLogger {
     var i = 0
     while (i < xs.length) {
       val y = xs(i)
-      Console.println("translating y ", y)
+      Console.println("translating y " + y)
       val (re : List[SJStatement], h : HashMap[String, String]) = translateStatement(y, fields, ms, hm)
-      Console.println("result is re ", re)
+      Console.println("result is re " + re)
       hm = h
       r = r ++ re
       i += 1
@@ -208,6 +208,11 @@ trait JavaToSimpleJava extends KopitiamLogger {
       case JPostfixExpression(op, v) =>
         val (a, i, l) = extractHelper(None, statement.asInstanceOf[JPostfixExpression], fields, ms, ls)
         (i, l)
+
+      case JAssert(y) =>
+        assert(y.isInstanceOf[JExpression])
+        val (a, i, ls1) = extractHelper(None, y.asInstanceOf[JExpression], fields, ms, ls)
+        (i ++ List(SJAssert(a)), ls1)
 
 /*
       //below here there is no real sense

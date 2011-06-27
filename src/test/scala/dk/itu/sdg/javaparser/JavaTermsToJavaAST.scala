@@ -156,11 +156,11 @@ class JavaTermsToJavaASTSPec extends ASTSpec {
   }
 
   "Parsing ClassWithConstructor.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Person","",Nil,List(
-      JFieldDefinition(Set(),"name","String",None), 
-      JConstructorDefinition(Set(Public()),"Person",List(JArgument("name","String")),List(JBlock(None,List(
-        JFieldWrite(JVariableAccess("this"),"name",JFieldAccess(JVariableAccess("this"),"name"))))))),None))
-     getJavaASTbyParsingFileNamed("ClassWithConstructor.txt") should equal(expected)    
+    val expected = List(JClassDefinition(Set(), "Person", "", Nil, List(
+      JFieldDefinition(Set(), "name", "String", None),
+      JConstructorDefinition(Set(Public()), "Person", List(JArgument("name","String")), List(JBlock(None,List(
+        JFieldWrite(JVariableAccess("this"), "name", JVariableAccess("name"))))))), None))
+     getJavaASTbyParsingFileNamed("ClassWithConstructor.txt") should equal(expected)
    }
 
   "Parsing OperatorTranslation.txt" should "produce the correct AST" in {
