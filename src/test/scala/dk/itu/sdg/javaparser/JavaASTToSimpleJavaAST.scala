@@ -55,27 +55,38 @@ class JavaASTSpec extends ASTSpec {
     val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(
       SJMethodDefinition(Set(), "bar", "void", List(SJArgument("a", "int")), List(
         SJConditional(SJBinaryExpression("==", SJVariableAccess("a"), SJLiteral("10")),
-                      List(SJAssignment(SJVariableAccess("tmp_1"), SJLiteral("20"))),
-                      List(SJAssignment(SJVariableAccess("tmp_1"), SJLiteral("30")))),
-        SJAssignment(SJVariableAccess("b"), SJVariableAccess("tmp_1"))),
-                       HashMap("tmp_1" -> "int", "b" -> "int")),
+                      List(SJAssignment(SJVariableAccess("b"), SJLiteral("20"))),
+                      List(SJAssignment(SJVariableAccess("b"), SJLiteral("30"))))),
+                       HashMap("b" -> "int", "a" -> "int")),
       SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
     getASTbyParsingFileNamed("Conditional1.txt") should equal(expected)
   }
 
-  //TODO: optimizer should get rid of tmp_1 (assign directly to b)!
   "Parsing Conditional2.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(
       SJFieldDefinition(Set(), "c", "int"),
       SJMethodDefinition(Set(), "bar", "void", List(SJArgument("a", "int")), List(
-        SJFieldRead(SJVariableAccess("tmp_2"), SJVariableAccess("this"), "c"),
-        SJConditional(SJBinaryExpression("==", SJVariableAccess("a"), SJVariableAccess("tmp_2")),
-                      List(SJAssignment(SJVariableAccess("tmp_1"), SJLiteral("20"))),
-                      List(SJAssignment(SJVariableAccess("tmp_1"), SJLiteral("30")))),
-        SJAssignment(SJVariableAccess("b"), SJVariableAccess("tmp_1"))),
-                       HashMap("tmp_1" -> "int", "tmp_2" -> "int", "b" -> "int")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
+        SJFieldRead(SJVariableAccess("tmp_1"), SJVariableAccess("this"), "c"),
+        SJConditional(SJBinaryExpression("==", SJVariableAccess("a"), SJVariableAccess("tmp_1")),
+                      List(SJAssignment(SJVariableAccess("b"), SJLiteral("20"))),
+                      List(SJAssignment(SJVariableAccess("b"), SJLiteral("30"))))),
+                       HashMap("tmp_1" -> "int", "b" -> "int", "a" -> "int")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("c" -> "int")))
     getASTbyParsingFileNamed("Conditional2.txt") should equal(expected)
+  }
+
+  "Parsing Conditional3.txt" should "produce the correct AST" in {
+    val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(
+      SJFieldDefinition(Set(), "c", "int"),
+      SJFieldDefinition(Set(), "b", "int"),
+      SJMethodDefinition(Set(), "bar", "void", List(SJArgument("a", "int")), List(
+        SJFieldRead(SJVariableAccess("tmp_1"), SJVariableAccess("this"), "c"),
+        SJConditional(SJBinaryExpression("==", SJVariableAccess("a"), SJVariableAccess("tmp_1")),
+                      List(SJFieldWrite(SJVariableAccess("this"), "b", SJLiteral("20"))),
+                      List(SJFieldWrite(SJVariableAccess("this"), "b", SJLiteral("30"))))),
+                       HashMap("tmp_1" -> "int", "a" -> "int")),
+      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("c" -> "int", "b" -> "int")))
+    getASTbyParsingFileNamed("Conditional3.txt") should equal(expected)
   }
 
   "Parsing NestedField1.txt" should "produce the correct AST" in {
@@ -369,10 +380,10 @@ class BindingsSpec extends ASTSpec {
                        HashMap("tmp_1" -> "int", "tmp_2" -> "int")),
       SJMethodDefinition(Set(), "foo", "void", Nil, List(
         SJFieldRead(SJVariableAccess("b"), SJVariableAccess("this"), "a"),
-        SJCall(Some(SJVariableAccess("tmp_2")), SJVariableAccess("this"), "bar", Nil),
-        SJFieldRead(SJVariableAccess("tmp_3"), SJVariableAccess("this"), "a"),
-        SJAssignment(SJVariableAccess("c"), SJBinaryExpression("+", SJVariableAccess("tmp_3"), SJVariableAccess("tmp_2")))),
-                       HashMap("b" -> "int", "c" -> "int", "tmp_1" -> "int", "tmp_2" -> "int", "tmp_3" -> "int")), 
+        SJCall(Some(SJVariableAccess("tmp_1")), SJVariableAccess("this"), "bar", Nil),
+        SJFieldRead(SJVariableAccess("tmp_2"), SJVariableAccess("this"), "a"),
+        SJAssignment(SJVariableAccess("c"), SJBinaryExpression("+", SJVariableAccess("tmp_2"), SJVariableAccess("tmp_1")))),
+                       HashMap("b" -> "int", "c" -> "int", "tmp_1" -> "int", "tmp_2" -> "int")), 
       SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("a" -> "int")))
     getASTbyParsingFileNamed("Binding4.txt") should equal(expected)
   }

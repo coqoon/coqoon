@@ -43,10 +43,12 @@ trait JavaToSimpleJava extends KopitiamLogger {
     val res : SJDefinition = s match {
       case JClassDefinition(mods, name, supers, interf, body, outer) =>
         var fs = HashMap[String,String]()
+        var ms = HashMap[String,String]()
         var hasc : Boolean = false
         val fields = body.flatMap(x => x match {
           case (x : JFieldDefinition) => fs += x.id -> x.jtype; Some(x)
           case (x : JConstructorDefinition) => hasc = true; None
+          case JMethodDefinition(m, n, t, o, b) => ms += n -> t; None
           case y => None
         })
         val bdy =
@@ -54,7 +56,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
              body ++ List(JConstructorDefinition(Set(Public()), name, List(), List()))
            else
              body
-        val (nbody, rt) = translateCIBody(bdy, fs, fields)
+        val (nbody, rt) = translateCIBody(bdy, fs, ms, fields)
         working ++= rt
         SJClassDefinition(mods, name, supers, interf, nbody, out, fs)
       case JInterfaceDefinition(mods, name, interf, body) =>
@@ -87,7 +89,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
   /*
    translates class body, returns translated AST plus inner classes and interfaces
   */
-  def translateCIBody (body : List[JStatement], fs : HashMap[String, String], fields : List[JFieldDefinition]) : (List[SJBodyDefinition], List[JStatement]) = {
+  def translateCIBody (body : List[JStatement], fs : HashMap[String, String], ms : HashMap[String, String], fields : List[JFieldDefinition]) : (List[SJBodyDefinition], List[JStatement]) = {
     var rest = List[JStatement]()
     (body.flatMap(x => x match {
       case (x : JClassDefinition) => rest ::= x; None //only true for static inner classes, others need ptr to class (not in context here :/)
@@ -95,43 +97,43 @@ trait JavaToSimpleJava extends KopitiamLogger {
       case JFieldDefinition(mods, name, jtype, init) => Some(SJFieldDefinition(mods, name, jtype))
       case JMethodDefinition(mods, name, jtype, args, body) =>
         val (targs, ls0) = tArgs(args)
-        val (nbody, ls1) = translateBody(body, fs, ls0)
+        val (nbody, ls1) = translateBody(body, fs, ms, ls0)
         Some(SJMethodDefinition(mods, name, jtype, targs, nbody, ls1))
       case JConstructorDefinition(mods, jtype, args, body) =>
         val (targs, ls0) = tArgs(args)
-        val (nbody, ls1) = translateCBody(body, fields, fs, ls0)
+        val (nbody, ls1) = translateCBody(body, fields, fs, ms, ls0)
         Some(SJConstructorDefinition(mods, jtype, targs, nbody, ls1))
       case JBlock(mods, body) =>
-        Some(SJBodyBlock(mods, translateBody(body, fs, HashMap())._1))
+        Some(SJBodyBlock(mods, translateBody(body, fs, HashMap(), HashMap())._1))
     }), rest)
   }
 
-  def translateCBody (x : List[JBodyStatement], fdefs : List[JFieldDefinition], fields : HashMap[String, String], ls : HashMap[String,String]) : (List[SJStatement], HashMap[String, String]) = {
+  def translateCBody (x : List[JBodyStatement], fdefs : List[JFieldDefinition], fields : HashMap[String, String], ms : HashMap[String, String], ls : HashMap[String,String]) : (List[SJStatement], HashMap[String, String]) = {
     val fs = fdefs.flatMap(x => x match {
       case JFieldDefinition(m, a, b, None) => None
       case JFieldDefinition(m, a, b, Some(c)) => Some(JFieldWrite(JVariableAccess("this"), a, c))
     })
     //how is the initialization? first fields or first constructor?
-    translateBody(fs ++ x, fields, ls)
+    translateBody(fs ++ x, fields, ms, ls)
   }
 
   /*
     Translates a list of body statements into a list of SJStatement, using
     fields and arguments to find out about bindings, returning map of local variables
   */
-  def translateBody (xs : List[JBodyStatement], fields : HashMap[String, String], ls : HashMap[String,String]) : (List[SJStatement], HashMap[String, String]) = {
+  def translateBody (xs : List[JBodyStatement], fields : HashMap[String, String], ms : HashMap[String, String], ls : HashMap[String,String]) : (List[SJStatement], HashMap[String, String]) = {
     Gensym.count = 0
-    translateBodyInner(xs, fields, ls)
+    translateBodyInner(xs, fields, ms, ls)
   }
 
-  def translateBodyInner (xs : List[JBodyStatement], fields : HashMap[String, String], ls : HashMap[String,String]) : (List[SJStatement], HashMap[String, String]) = {
+  def translateBodyInner (xs : List[JBodyStatement], fields : HashMap[String, String], ms : HashMap[String, String], ls : HashMap[String,String]) : (List[SJStatement], HashMap[String, String]) = {
     var hm : HashMap[String, String] = ls
     var r : List[SJStatement] = List[SJStatement]()
     var i = 0
     while (i < xs.length) {
       val y = xs(i)
       Console.println("translating y ", y)
-      val (re : List[SJStatement], h : HashMap[String, String]) = translateStatement(y, fields, hm)
+      val (re : List[SJStatement], h : HashMap[String, String]) = translateStatement(y, fields, ms, hm)
       Console.println("result is re ", re)
       hm = h
       r = r ++ re
@@ -140,15 +142,16 @@ trait JavaToSimpleJava extends KopitiamLogger {
     (r, hm)
   }
   
-  def translateStatement (statement : JBodyStatement, fields : HashMap[String, String], ls : HashMap[String, String]) : (List[SJStatement], HashMap[String, String]) = 
+  def translateStatement (statement : JBodyStatement, fields : HashMap[String, String], ms : HashMap[String, String], ls : HashMap[String, String]) : (List[SJStatement], HashMap[String, String]) = 
     statement match {
       case JBlock(modifier, xs) => 
-        translateBodyInner(xs, fields, ls)
+        translateBodyInner(xs, fields, ms, ls)
 
       case JAssignment(x, r) =>
-        val (a, b, c) = extractHelper(Some(SJVariableAccess(x)), r, fields, ls)
-        if (b.length == 0)
-          (List(SJAssignment(SJVariableAccess(x), a)), c)
+        val (a, b, c) = extractHelper(Some(SJVariableAccess(x)), r, fields, ms, ls)
+        log.warning("transforming JAssignment returned (a): " + a + " (b): " + b)
+        if ((b.length == 0) || !(a.isInstanceOf[SJVariableAccess] && (a.asInstanceOf[SJVariableAccess].variable == x)))
+          (b ++ List(SJAssignment(SJVariableAccess(x), a)), c)
         else
           (b, c)
 
@@ -156,25 +159,25 @@ trait JavaToSimpleJava extends KopitiamLogger {
         val (r, ls0) = i match {
           case None => (List[SJStatement](), ls)
           case Some(x) =>
-            translateStatement(JAssignment(n, x), fields, ls)
+            translateStatement(JAssignment(n, x), fields, ms, ls)
         }
         (r, ls0 + (n -> t))
 
       case JFieldWrite(va, f, nv) =>
-        val (nva, nvi, ls0) = extractHelper(None, va, fields, ls)
-        val (vaa, vai, ls1) = extractHelper(None, nv, fields, ls0)
+        val (nva, nvi, ls0) = extractHelper(None, va, fields, ms, ls)
+        val (vaa, vai, ls1) = extractHelper(None, nv, fields, ms, ls0)
         assert(nva.isInstanceOf[SJVariableAccess])
         (nvi ++ vai ++ List(SJFieldWrite(nva.asInstanceOf[SJVariableAccess], f, vaa)), ls1)
 
       case JConditional(t, c, a) =>
-        val (at, ti, ls0) = extractHelper(None, t, fields, ls)
-        val (ci, ls1) = translateStatement(c, fields, ls0)
-        val (ai, ls2) = translateStatement(a, fields, ls1)
+        val (at, ti, ls0) = extractHelper(None, t, fields, ms, ls)
+        val (ci, ls1) = translateStatement(c, fields, ms, ls0)
+        val (ai, ls2) = translateStatement(a, fields, ms, ls1)
         (ti ++ List(SJConditional(at, ci, ai)), ls2)
 
       case JWhile(test, body) =>
-        val (at, ti, ls0) = extractHelper(None, test, fields, ls)
-        val (newbody, ls1) = translateStatement(body, fields, ls0)
+        val (at, ti, ls0) = extractHelper(None, test, fields, ms, ls)
+        val (newbody, ls1) = translateStatement(body, fields, ms, ls0)
         (ti ++ List(SJWhile(at, newbody)), ls1)
 
       case JReturn(e : JVariableAccess) =>
@@ -184,17 +187,17 @@ trait JavaToSimpleJava extends KopitiamLogger {
         (List(SJReturn(SJLiteral(e.value))), ls)
 
       case JReturn(e) =>
-        val (at, ri, ls0) = extractHelper(None, e, fields, ls)
+        val (at, ri, ls0) = extractHelper(None, e, fields, ms, ls)
         (ri ++ List(SJReturn(at)), ls0)
 
       case JCall(receiver, name, args) =>
-        val (ra, ri, ls0) = extractHelper(None, receiver, fields, ls)
+        val (ra, ri, ls0) = extractHelper(None, receiver, fields, ms, ls)
         var j : Integer = 0
         var newa : List[SJExpression] = List[SJExpression]()
         var lsprime = ls0
         var is : List[SJStatement] = List[SJStatement]()
         while (j < args.length) {
-          val (a, i, ls1) = extractHelper(None, args(j), fields, lsprime)
+          val (a, i, ls1) = extractHelper(None, args(j), fields, ms, lsprime)
           newa ::= a
           is ++= i
           lsprime = ls1
@@ -203,7 +206,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
         (ri ++ is.reverse ++ List(SJCall(None, ra, name, newa.reverse)), lsprime)
 
       case JPostfixExpression(op, v) =>
-        val (a, i, l) = extractHelper(None, statement.asInstanceOf[JPostfixExpression], fields, ls)
+        val (a, i, l) = extractHelper(None, statement.asInstanceOf[JPostfixExpression], fields, ms, ls)
         (i, l)
 
 /*
@@ -233,14 +236,14 @@ trait JavaToSimpleJava extends KopitiamLogger {
 */
   }
 
-  def extractHelper (res : Option[SJVariableAccess], x : JExpression, fields : HashMap[String, String], locals : HashMap[String, String]) : (SJExpression, List[SJStatement], HashMap[String,String]) = x match {
+  def extractHelper (res : Option[SJVariableAccess], x : JExpression, fields : HashMap[String, String], ms : HashMap[String, String], locals : HashMap[String, String]) : (SJExpression, List[SJStatement], HashMap[String, String]) = x match {
       case JBinaryExpression(op, l, r) =>
-        val (le, lei, ls0) = extractHelper(None, l, fields, locals)
-        val (ri, rii, ls1) = extractHelper(None, r, fields, ls0)
+        val (ri, rii, ls0) = extractHelper(None, r, fields, ms, locals)
+        val (le, lei, ls1) = extractHelper(None, l, fields, ms, ls0)
         (SJBinaryExpression(op, le, ri), rii ++ lei, ls1)
 
       case JUnaryExpression(op, v) =>
-        val (va, vis, ls0) = extractHelper(None, v, fields, locals)
+        val (va, vis, ls0) = extractHelper(None, v, fields, ms, locals)
         (SJUnaryExpression(op, va), vis, ls0)
 
       case JPostfixExpression(op, v) =>
@@ -251,7 +254,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
         v match {
           case JFieldAccess(variable, field) =>
             val a = Gensym.newsym()
-            val (arg, ins, ls0) = extractHelper(Some(SJVariableAccess(a)), variable, fields, locals)
+            val (arg, ins, ls0) = extractHelper(Some(SJVariableAccess(a)), variable, fields, ms, locals)
             val rhs = SJBinaryExpression(oper, arg, SJLiteral("1"))
             val (t, ls1) = res match {
               case None =>
@@ -266,7 +269,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
         }
 
       case JFieldAccess(v, f) =>
-        val (a, i, ls0) = extractHelper(None, v, fields, locals)
+        val (a, i, ls0) = extractHelper(None, v, fields, ms, locals)
         assert(a.isInstanceOf[SJVariableAccess])
         val (r, l) = res match {
           case None =>
@@ -281,13 +284,13 @@ trait JavaToSimpleJava extends KopitiamLogger {
         (r, i ++ List(SJFieldRead(r, a.asInstanceOf[SJVariableAccess], f)), l)
 
       case JCall(receiver, name, args) =>
-        val (a, i, ls0) = extractHelper(None, receiver, fields, locals)
-        val (as, ins, ls1)  = exL(args, fields, ls0)
+        val (a, i, ls0) = extractHelper(None, receiver, fields, ms, locals)
+        val (as, ins, ls1)  = exL(args, fields, ms, ls0)
         val (r, ls2) = res match {
           case None =>
             val t = Gensym.newsym()
             val ty = a.asInstanceOf[SJVariableAccess].variable match {
-              case "this" => "BARF!" //well, what?
+              case "this" => ms(name)
               case y => SJTable.getMethodTypeOfClass(ls0(y), name)
             }
             (SJVariableAccess(t), ls1 + (t -> ty))
@@ -296,7 +299,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
         (r, i ++ ins ++ List(SJCall(Some(r), a, name, as)), ls2)
       
       case JNewExpression(name, args) =>
-        val (as, ins, ls0) = exL(args, fields, locals)
+        val (as, ins, ls0) = exL(args, fields, ms, locals)
         val (r, ls1) = res match {
           case None =>
             val t = Gensym.newsym()
@@ -307,12 +310,13 @@ trait JavaToSimpleJava extends KopitiamLogger {
 
       case JConditional(test, c, a) => Nil
         val (r, ls0) = res match {
-          case None => //shouldn't happen!
+          case None => 
+            log.warning("JConditional: shouldn't happen!, res is None in " + test)
             val t = Gensym.newsym()
             (SJVariableAccess(t), locals + (t -> "Object"))
           case Some(x) => (x, locals)
         }
-        val (ta, ti, ls1) = extractHelper(None, test, fields, ls0)
+        val (ta, ti, ls1) = extractHelper(None, test, fields, ms, ls0)
         val tb = (a : JBodyStatement) => {
           val ls =
             if (a.isInstanceOf[JBlock])
@@ -322,8 +326,8 @@ trait JavaToSimpleJava extends KopitiamLogger {
           assert(ls.takeRight(1)(0).isInstanceOf[JExpression])
           ls.dropRight(1) ++ List(JAssignment(r.variable, ls.takeRight(1)(0).asInstanceOf[JExpression]))
         }
-        val (ca, ls2) = translateBodyInner(tb(c), fields, ls1)
-        val (aa, ls3) = translateBodyInner(tb(a), fields, ls2)
+        val (ca, ls2) = translateBodyInner(tb(c), fields, ms, ls1)
+        val (aa, ls3) = translateBodyInner(tb(a), fields, ms, ls2)
         (r, ti ++ List(SJConditional(ta, ca, aa)), ls3)
 
 
@@ -332,13 +336,13 @@ trait JavaToSimpleJava extends KopitiamLogger {
     case JVariableAccess(x) => (SJVariableAccess(x), List[SJStatement](), locals)
   }
 
-  def exL (args : List[JExpression], fields : HashMap[String, String], locals : HashMap[String, String]) : (List[SJExpression], List[SJStatement], HashMap[String, String]) = {
+  def exL (args : List[JExpression], fields : HashMap[String, String], ms : HashMap[String, String], locals : HashMap[String, String]) : (List[SJExpression], List[SJStatement], HashMap[String, String]) = {
     var as : List[SJExpression] = List[SJExpression]()
     var ls : HashMap[String, String] = locals
     var is : List[SJStatement] = List[SJStatement]()
     var j : Integer = 0
     while (j < args.length) {
-      val (a, i, l) = extractHelper(None, args(0), fields, ls)
+      val (a, i, l) = extractHelper(None, args(0), fields, ms, ls)
       as ::= a
       is ++= i
       ls = l

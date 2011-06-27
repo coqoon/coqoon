@@ -28,7 +28,7 @@ class JavaTermsToJavaASTSPec extends ASTSpec {
   }
   
   "Parsing Postfix3.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo","",Nil,List(
+    val expected = List(JClassDefinition(Set(), "Foo", "", Nil, List(
       JFieldDefinition(Set(),"a","int",None), 
       JMethodDefinition(Set(),"bar","void",Nil,List(JBlock(None,List(
         JPostfixExpression("++",JFieldAccess(JVariableAccess("this"),"a"))))))),None))
@@ -36,7 +36,11 @@ class JavaTermsToJavaASTSPec extends ASTSpec {
   }
   
   "Parsing Conditional1.txt" should "produce the correct AST" in {
-    val expected = List(JClassDefinition(Set(),"Foo","",Nil,List(JMethodDefinition(Set(),"bar","void",List(JArgument("a","int")),List(JBlock(None,List(JBinding("b","int",Some(JConditional(JBinaryExpression("==",JVariableAccess("a"),JLiteral("10")),JBlock(None,List(JLiteral("20"))),JBlock(None,List(JLiteral("30"))))))))))),None))
+    val expected = List(JClassDefinition(Set(), "Foo", "", Nil, List(
+      JMethodDefinition(Set(),"bar","void", List(JArgument("a","int")), List(JBlock(None, List(
+        JBinding("b", "int", Some(JConditional(JBinaryExpression("==",JVariableAccess("a"),JLiteral("10")), 
+                                               JBlock(None,List(JLiteral("20"))), 
+                                               JBlock(None,List(JLiteral("30"))))))))))),None))
     getJavaASTbyParsingFileNamed("Conditional1.txt") should equal(expected)
   }
 
@@ -46,6 +50,15 @@ class JavaTermsToJavaASTSPec extends ASTSpec {
       JMethodDefinition(Set(),"bar","void",List(JArgument("a","int")),List(JBlock(None,List(
         JBinding("b","int",Some(JConditional(JBinaryExpression("==",JVariableAccess("a"),JFieldAccess(JVariableAccess("this"),"c")),JBlock(None,List(JLiteral("20"))),JBlock(None,List(JLiteral("30"))))))))))),None))
     getJavaASTbyParsingFileNamed("Conditional2.txt") should equal(expected)
+  }
+
+  "Parsing Conditional3.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo","",Nil,List(
+      JFieldDefinition(Set(),"c","int",None),
+      JFieldDefinition(Set(),"b","int",None),
+      JMethodDefinition(Set(),"bar","void",List(JArgument("a","int")),List(JBlock(None,List(
+        JFieldWrite(JVariableAccess("this"),"b",JConditional(JBinaryExpression("==",JVariableAccess("a"),JFieldAccess(JVariableAccess("this"),"c")),JBlock(None,List(JLiteral("20"))),JBlock(None,List(JLiteral("30")))))))))),None))
+    getJavaASTbyParsingFileNamed("Conditional3.txt") should equal(expected)
   }
 
   "Parsing NestedField1.txt" should "produce the correct AST" in {
