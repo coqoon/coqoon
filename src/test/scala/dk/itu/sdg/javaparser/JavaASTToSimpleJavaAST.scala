@@ -525,7 +525,7 @@ class ClassesSpec extends ASTSpec {
     val expected = List(
       SJClassDefinition(Set(), "Foo", "", Nil, List(
         SJMethodDefinition(Set(), "foo", "int", List(SJArgument("a", "int")),
-          List(SJReturn(SJVariableAccess("a"))), HashMap()),
+          List(SJReturn(SJVariableAccess("a"))), HashMap("a" -> "int")),
         SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
     getASTbyParsingFileNamed("SimpleClassMoreComplexMethod.txt") should equal(expected)
   }
@@ -536,7 +536,7 @@ class ClassesSpec extends ASTSpec {
         SJCall(Some(SJVariableAccess("tmp_1")), SJVariableAccess("this"), "foo", List(SJVariableAccess("a"))),
         SJCall(Some(SJVariableAccess("tmp_2")), SJVariableAccess("this"), "foo", List(SJVariableAccess("tmp_1"))),
         SJReturn(SJVariableAccess("tmp_2"))),
-                       HashMap("tmp_1" -> "int", "tmp_2" -> "int")),
+                       HashMap("a" -> "int", "tmp_1" -> "int", "tmp_2" -> "int")),
       SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap()))
     getASTbyParsingFileNamed("SimpleClassMoreComplexMethod2.txt") should equal(expected)
   }
@@ -556,7 +556,7 @@ class ClassesSpec extends ASTSpec {
         SJCall(Some(SJVariableAccess("tmp_1")), SJVariableAccess("this"), "a", List()),
         SJFieldRead(SJVariableAccess("tmp_2"), SJVariableAccess("this"), "f"),
         SJReturn(SJBinaryExpression("+", SJBinaryExpression("+", SJVariableAccess("tmp_2"), SJVariableAccess("tmp_1")), SJVariableAccess("c")))),
-                       HashMap("tmp_1" -> "int", "tmp_2" -> "int")),
+                       HashMap("c" -> "int", "tmp_1" -> "int", "tmp_2" -> "int")),
       SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap())), None, HashMap("f" -> "int")))
     getASTbyParsingFileNamed("MethodWithNoFieldAccessOrCallInAnExpression.txt") should equal(expected)
   }
