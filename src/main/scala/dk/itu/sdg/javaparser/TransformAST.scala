@@ -226,6 +226,17 @@ object ClassTable extends KopitiamLogger {
     }
   }
 
+  def isLocalVar (id : String, method : String, name : String) : Boolean = {
+    if (name == "this")
+      true
+    else if (classtable(id)._4(method)._2.contains(name)) //local variable
+      true
+    else if (classtable(id)._4(method)._3.contains(name)) //argument
+      true
+    else
+      false
+  }
+
   def setPrecondition (id : String, method : String, precon : String) : Unit = {
     assert(spectable(id)._1(method)._1 == null)
     spectable(id)._1(method) = (precon, spectable(id)._1(method)._2)
@@ -623,7 +634,6 @@ object FinishAST extends JavaTerms
      *
      * /Mads
      */
-
     val x_ = transformExpression(x)
     val y_ = y.map(transformAnyExpr).flatten
     y_.reverse.foldRight(x_) { (cur,acc) =>
@@ -663,9 +673,9 @@ object FinishAST extends JavaTerms
   }
 
   /*
-   * Small helper method to check if a string is a varible or field access
+   * Small helper method to check if a string is a variable or field access
    */
-  def isFieldAccess (x : String) = ClassTable.getFields(classid).contains(x)
+  def isFieldAccess (x : String) = !ClassTable.isLocalVar(classid, methodid, x) &&  ClassTable.getFields(classid).contains(x)
 
   /*
    * Transforms a Call into a Either[Unit, JBodyStatement]. We're using a disjoint set here
@@ -715,7 +725,7 @@ object FinishAST extends JavaTerms
   }
 
   /*
-   * Transforms a QuailId to a JBodyStatement. This also takes care of making all calls to class varibles explicit
+   * Transforms a QuailId to a JBodyStatement. This also takes care of making all calls to fields explicit
    * by prepending 'this' if needed.
    */
   def transformQualId (qualid : QualId) : JBodyStatement = {

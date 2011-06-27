@@ -190,7 +190,7 @@ class JavaASTSpec extends ASTSpec {
           SJAssignment(SJVariableAccess("i"), SJLiteral("1")),
           SJFieldWrite(SJVariableAccess("this"), "b", SJLiteral("true")),
           SJFieldRead(SJVariableAccess("tmp_1"), SJVariableAccess("this"), "b"),
-          SJWhile(SJBinaryExpression("==", SJVariableAccess("tmp_1"), SJLiteral("true")),
+          SJWhile(SJVariableAccess("tmp_1"),
                  List(SJFieldWrite(SJVariableAccess("this"), "b", SJLiteral("false")),
                       SJAssignment(SJVariableAccess("i"), SJBinaryExpression("+", SJVariableAccess("i"), SJLiteral("1"))),
                       SJFieldRead(SJVariableAccess("tmp_1"), SJVariableAccess("this"), "b")))),
@@ -291,7 +291,7 @@ class JavaASTSpec extends ASTSpec {
         SJFieldDefinition(Set(), "name", "String"), 
         SJConstructorDefinition(Set(Public()), "Person", List(SJArgument("name","String")), List(
           SJFieldWrite(SJVariableAccess("this"), "name", SJVariableAccess("name"))),
-                              HashMap())), None, HashMap("name" -> "String")))
+                              HashMap("name" -> "String"))), None, HashMap("name" -> "String")))
      getASTbyParsingFileNamed("ClassWithConstructor.txt") should equal(expected)    
    }
 

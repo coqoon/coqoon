@@ -207,7 +207,13 @@ trait JavaToSimpleJava extends KopitiamLogger {
 
       case JPostfixExpression(op, v) =>
         val (a, i, l) = extractHelper(None, statement.asInstanceOf[JPostfixExpression], fields, ms, ls)
-        (i, l)
+        //log.warning("postfixhelper " + a + " returning is " + i)
+        if (i.takeRight(1)(0).isInstanceOf[SJFieldRead]) {
+          val lfr = i.takeRight(1)(0).asInstanceOf[SJFieldRead]
+          val l0 = l - (lfr.value.variable)
+          (i.dropRight(1), l0)
+        } else
+          (i, l)
 
       case JAssert(y) =>
         assert(y.isInstanceOf[JExpression])
@@ -260,15 +266,20 @@ trait JavaToSimpleJava extends KopitiamLogger {
           case JFieldAccess(variable, field) =>
             val a = Gensym.newsym()
             val (arg, ins, ls0) = extractHelper(Some(SJVariableAccess(a)), variable, fields, ms, locals)
-            val rhs = SJBinaryExpression(oper, arg, SJLiteral("1"))
+            val rhs = SJBinaryExpression(oper, SJVariableAccess(a), SJLiteral("1"))
             val (t, ls1) = res match {
               case None =>
                 val r = Gensym.newsym();
                 (SJVariableAccess(r), ls0 + (r -> "int"))
               case Some(x) => (x, ls0)
             }
+            assert(arg.isInstanceOf[SJVariableAccess])
+            val a2 = arg.asInstanceOf[SJVariableAccess]
             (t,
-             ins ++ List(SJFieldWrite(SJVariableAccess(a), field, rhs), SJFieldRead(t, SJVariableAccess(a), field)), ls1)
+             ins ++ List(SJFieldRead(SJVariableAccess(a), a2, field),
+                         SJFieldWrite(a2, field, rhs),
+                         SJFieldRead(t, SJVariableAccess(a), field)),
+             ls1 + (a -> "int"))
           case JVariableAccess(x) =>
             (SJVariableAccess(x), List(SJAssignment(SJVariableAccess(x), SJBinaryExpression(oper, SJVariableAccess(x), SJLiteral("1")))), locals)
         }
