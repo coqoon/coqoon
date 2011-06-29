@@ -217,7 +217,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     if (activeEditor != null)
       activeDocument.get
     else
-      ""
+      "  " //such that ctrl-n works initially...
   }
 
   import scala.collection.mutable.HashMap

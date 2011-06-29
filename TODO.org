@@ -9,6 +9,8 @@
 ** read scala style guide
 ** use mkString instead of reduceLeft at several places!
 ** use for instead of insane while i < foo.length!
+** remove occurences of "null". these are evil!
+** care more about initialization order!
 * Coq side
 ** CoqOutputter: find disjoint definition names (newR, newM,...)
 ** Use Set Cwd instead of Add LoadPath for project diretory
