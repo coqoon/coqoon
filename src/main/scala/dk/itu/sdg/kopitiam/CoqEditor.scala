@@ -314,9 +314,9 @@ class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor
 }
 
 
-import org.eclipse.jface.text.source.SourceViewerConfiguration
+import org.eclipse.ui.editors.text.TextSourceViewerConfiguration
 
-class CoqSourceViewerConfiguration(editor : CoqEditor) extends SourceViewerConfiguration {
+class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerConfiguration {
   import org.eclipse.jface.text.presentation.{IPresentationReconciler, PresentationReconciler}
   import org.eclipse.jface.text.rules.DefaultDamagerRepairer
   import org.eclipse.jface.text.{TextAttribute,IDocument}

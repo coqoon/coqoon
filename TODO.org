@@ -10,17 +10,13 @@
 ** use mkString instead of reduceLeft at several places!
 ** use for instead of insane while i < foo.length!
 * Coq side
-** CoqOutputter: cif with empty alternative -> insert (cskip)
-** CoqOutputter: string literal "foo" is printed as foo, while it should be "foo" (or ("foo":expr))
 ** CoqOutputter: find disjoint definition names (newR, newM,...)
-** CoqOutputter: constructor might have body, emit that!
 ** Use Set Cwd instead of Add LoadPath for project diretory
 ** Response/Message buffer (or below Goal Viewer?)
 ** clear Goal Buffer at right places
 ** Undo from just after End should jump to start of Section/Module/whatever
 ** after undo, do syntax highlighting again!
 ** unreliable with keyboard shortcuts -> look whether in action or not (otherwise risk error messages from coq)
-** Goal True.\n\n\nfoo. step, error reporting is above foo!
 ** if you close editor and delete file coq was working on, get a NullPointerException
 ** remove hack that searches for '. ' to send command
 ** retract proof/leave for later

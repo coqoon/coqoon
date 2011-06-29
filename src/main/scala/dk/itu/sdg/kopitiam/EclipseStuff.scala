@@ -165,10 +165,14 @@ object EclipseBoilerPlate {
 
   def mark (text : String) : Unit = {
     val file = DocumentState.resource
+    var spos = DocumentState.position + 1
+    val con = DocumentState.content
+    while ((con(spos) == '\n' || con(spos) == ' ' || con(spos) == '\t') && spos < con.length)
+      spos += 1
     val marker = file.createMarker(IMarker.PROBLEM)
     marker.setAttribute(IMarker.MESSAGE, text)
     marker.setAttribute(IMarker.LOCATION, file.getName)
-    marker.setAttribute(IMarker.CHAR_START, DocumentState.position + 1)
+    marker.setAttribute(IMarker.CHAR_START, spos)
     marker.setAttribute(IMarker.CHAR_END, DocumentState.position + DocumentState.oldsendlen - 1) //for tha whitespace
     marker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_ERROR)
     marker.setAttribute(IMarker.TRANSIENT, true)
@@ -236,7 +240,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       coqmarker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO)
     }
     coqmarker.setAttribute(IMarker.CHAR_START, x)
-    coqmarker.setAttribute(IMarker.CHAR_END, x)
+    coqmarker.setAttribute(IMarker.CHAR_END, x - 1) //at dot, not whitespace
     position_ = x
   }
 
