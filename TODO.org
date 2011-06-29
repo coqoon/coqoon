@@ -20,11 +20,7 @@
 * Coq side
 ** CoqOutputter: find disjoint definition names (newR, newM,...)
 ** Use Set Cwd instead of Add LoadPath for project diretory
-** Response/Message buffer (or below Goal Viewer?)
-** clear Goal Buffer at right places
 ** Undo from just after End should jump to start of Section/Module/whatever
-** unreliable with keyboard shortcuts -> look whether in action or not (otherwise risk error messages from coq)
-** if you close editor and delete file coq was working on, get a NullPointerException
 ** remove hack that searches for '. ' to send command
 ** retract proof/leave for later
 *** especially Admitted/Abort/Abort All/Suspend/Resume
@@ -48,10 +44,7 @@
 [Jesper] make this maybe optionally/as a preference?
 (according to Jesper shouldn't be done when stepping backwards)
 ** [Jesper] Using ctrl-Enter to parse lots of code works nicely, but would it be faster if it didn't print the output for all steps? If not then disregard this.
-** indentation and resizable GoalViewer
-*** syntax highlighting there
-*** indentation
- losing whitespaces in CoqResponseParser, therefore redo CoqResponse combinator parser with regular expressions
+** syntax highlighting in GoalViewer
 * Java side
 ** highlight verified/proven method in green or however
 ** add/remove whitespaces at end of class/file messes the coq synced output up (DeDefinition and emma instead of Definition and Lemma)
