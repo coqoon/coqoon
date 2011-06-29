@@ -165,28 +165,34 @@ object EclipseBoilerPlate {
 
   import org.eclipse.core.resources.{IMarker, IResource}
 
-  def mark (text : String) : Unit = {
+  def mark (text : String, severity : Int = IMarker.SEVERITY_ERROR, advance : Boolean = false) : Unit = {
     val file = DocumentState.resource
-    var spos = DocumentState.position + 1
+    var spos = if (advance) DocumentState.sendlen + DocumentState.position + 1 else DocumentState.position + 1
     val con = DocumentState.content
     while ((con(spos) == '\n' || con(spos) == ' ' || con(spos) == '\t') && spos < con.length)
       spos += 1
+    val epos = if (advance) spos + 1 else DocumentState.position + DocumentState.oldsendlen - 1
     val marker = file.createMarker(IMarker.PROBLEM)
     marker.setAttribute(IMarker.MESSAGE, text)
     marker.setAttribute(IMarker.LOCATION, file.getName)
     marker.setAttribute(IMarker.CHAR_START, spos)
     marker.setAttribute(IMarker.CHAR_END, DocumentState.position + DocumentState.oldsendlen - 1) //for tha whitespace
-    marker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_ERROR)
+    marker.setAttribute(IMarker.SEVERITY, severity)
     marker.setAttribute(IMarker.TRANSIENT, true)
   }
 
-  def unmark () : Unit = {
+  def unmarkReally () : Unit = {
     DocumentState.resource.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
+  }
+
+  def unmark () : Unit = {
+    val marks = DocumentState.resource.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
+    marks.foreach(x => if (x.getAttribute(IMarker.SEVERITY, 0) == IMarker.SEVERITY_ERROR) x.delete)
   }
 
   def maybeunmark (until : Int) : Unit = {
     val marks = DocumentState.resource.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
-    marks.foreach(x => if (x.getAttribute(IMarker.CHAR_START, 0) < until) x.delete)
+    marks.foreach(x => if (x.getAttribute(IMarker.CHAR_START, 0) < until && x.getAttribute(IMarker.SEVERITY, 0) == IMarker.SEVERITY_ERROR) x.delete)
   }
 }
 

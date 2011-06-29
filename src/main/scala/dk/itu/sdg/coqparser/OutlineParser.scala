@@ -262,6 +262,8 @@ trait SentenceParser extends Parsers with TokenParsers {
   def assertionKeyword : Parser[String] =
     ( "Theorem"
     | "Lemma"
+    | "Instance"
+    | "Add"
     | "Remark"
     | "Fact"
     | "Corollary"
@@ -329,7 +331,9 @@ object OutlineBuilder {
         }
         proof :: rest
       }
-      case s :: rest => findProof(rest, assertion, s :: soFar)
+      case s :: rest =>
+        //Console.println("findproof for s " + s + "\n\tsofar " + soFar + "\n\tand rest " + rest)
+        findProof(rest, assertion, s :: soFar)
     }
   }
   

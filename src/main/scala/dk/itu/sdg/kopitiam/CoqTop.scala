@@ -134,8 +134,10 @@ object ErrorOutputActor extends Actor with OutputChannel[String] {
               CoqState.setShell(tokens)
             }
             case None =>
-              if (msg.filterNot(_ == '\n').length > 0)
+              if (msg.filterNot(_ == '\n').length > 0) {
                 Console.println("couldn't parse on stderr: " + msg)
+                PrintActor.distribute(CoqUnknown(msg.trim)) //used CoqWarning here, but that doesn't work too well
+              }
         }
       }
     }

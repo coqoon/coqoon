@@ -10,7 +10,10 @@
 ** use mkString instead of reduceLeft at several places!
 ** use for instead of insane while i < foo.length!
 ** remove occurences of "null". these are evil!
-** care more about initialization order!
+** care more about initialization order!:
+   specifically: goalviewer might be null
+   also, activeeditor might be null
+    ~> should both not be the case if we're opening with a coq window
 * Coq side
 ** CoqOutputter: find disjoint definition names (newR, newM,...)
 ** Use Set Cwd instead of Add LoadPath for project diretory

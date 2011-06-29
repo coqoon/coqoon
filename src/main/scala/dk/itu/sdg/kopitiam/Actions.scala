@@ -57,7 +57,7 @@ abstract class KCoqAction extends KAction {
     val acted = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.getActiveEditor
     if (DocumentState.activeEditor != acted) {
       if (DocumentState.resource != null)
-        EclipseBoilerPlate.unmark
+        EclipseBoilerPlate.unmarkReally
       if (DocumentState.coqmarker != null)
         DocumentState.coqmarker.delete
       DocumentState.coqmarker = null
@@ -155,7 +155,7 @@ class CoqUndoAction extends KCoqAction {
     }
     val ctxdrop = curshell.context.length - prevshell.context.length
     DocumentState.realundo = true
-    EclipseBoilerPlate.unmark
+    EclipseBoilerPlate.unmarkReally
     DocumentState.sendlen = DocumentState.position - prevs(i)
     prevs.take(i).foreach(DocumentState.positionToShell.remove(_))
     assert(DocumentState.positionToShell.contains(0) == true)
@@ -174,7 +174,7 @@ class CoqRetractAction extends KCoqAction {
     PrintActor.register(CoqStartUp)
     val shell = CoqState.getShell
     DocumentState.undoAll
-    EclipseBoilerPlate.unmark
+    EclipseBoilerPlate.unmarkReally
     val initial =
       if (DocumentState.positionToShell.contains(0))
         DocumentState.positionToShell(0).globalStep
@@ -261,7 +261,7 @@ class RestartCoqAction extends KAction {
     DocumentState.sendlen = 0
     DocumentState.undoAll
     DocumentState.positionToShell.empty
-    EclipseBoilerPlate.unmark
+    EclipseBoilerPlate.unmarkReally
     PrintActor.deregister(CoqOutputDispatcher)
     CoqStartUp.start
   }
@@ -398,6 +398,7 @@ object CoqStepNotifier extends CoqCallback {
 
 object CoqOutputDispatcher extends CoqCallback {
   import org.eclipse.swt.widgets.Display
+  import org.eclipse.core.resources.IMarker
 
   var goalviewer : GoalViewer = null
 
@@ -431,6 +432,8 @@ object CoqOutputDispatcher extends CoqCallback {
         //TODO: what if Error not found, should come up with a sensible message anyways!
         val ps = msg.drop(msg.findIndexOf(_.startsWith("Error")))
         EclipseBoilerPlate.mark(ps.reduceLeft(_ + " " + _))
+      case CoqWarning(msg) =>
+        EclipseBoilerPlate.mark(msg, IMarker.SEVERITY_WARNING, true)
       case CoqUserInterrupt() => 
         EclipseConsole.out.println("Interrupted. Most likely in a sane state.")
       case CoqVariablesAssumed(v) =>

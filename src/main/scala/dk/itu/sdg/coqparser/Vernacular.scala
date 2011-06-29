@@ -262,7 +262,7 @@ trait VernacularReserved {
   // Not technically reserved words, but they work as such. Used to start top-level forms.
   val keyword = """Axiom Conjecture Parameter Parameters Variable Variables Hypothesis
                    Hypotheses Definition Example Inductive CoInductive Fixpoint CoFixpoint
-                   Program Goal Let Remark Fact Corollary Proposition Lemma Theorem Tactic
+                   Program Goal Let Remark Fact Corollary Proposition Lemma Instance Theorem Tactic
                    Ltac Notation Infix Add Record Section Module Require Import Export Open
                    Proof End Qed Admitted Save Defined Print Eval Check Hint""".split("""\s+""").toList
 
