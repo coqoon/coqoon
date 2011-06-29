@@ -30,7 +30,7 @@ public class Activator extends AbstractUIPlugin {
   public static Activator getDefault () { return single; }
 
   protected void initializeDefaultPreferences(IPreferenceStore store) {
-    PreferenceConverter.setDefault(store, "coqSentFg", new RGB(0, 0, 220));
+    PreferenceConverter.setDefault(store, "coqSentBg", new RGB(118, 255, 133));
     PreferenceConverter.setDefault(store, "coqKeywordFg", new RGB(127, 6, 101));
     PreferenceConverter.setDefault(store, "coqNumFg", new RGB(0, 0, 0));
   }

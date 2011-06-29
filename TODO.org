@@ -15,7 +15,6 @@
 ** Response/Message buffer (or below Goal Viewer?)
 ** clear Goal Buffer at right places
 ** Undo from just after End should jump to start of Section/Module/whatever
-** after undo, do syntax highlighting again!
 ** unreliable with keyboard shortcuts -> look whether in action or not (otherwise risk error messages from coq)
 ** if you close editor and delete file coq was working on, get a NullPointerException
 ** remove hack that searches for '. ' to send command

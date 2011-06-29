@@ -259,11 +259,9 @@ object DocumentState extends CoqCallback with KopitiamLogger {
 
   def uncolor (offset : Int) : Unit = {
     if (activeEditor != null) {
-      val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
-      val st = scala.math.min(offset, content.length - 1)
       Display.getDefault.syncExec(
         new Runnable() {
-          def run() = activeEditor.getSource.setTextColor(bl, st, content.length - st, true)
+          def run() = activeEditor.getSource.invalidateTextPresentation()
         });
     }
   }
@@ -271,6 +269,9 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   def undoAll () : Unit = { uncolor(0) }
 
   var oldsendlen : Int = 0
+  import org.eclipse.jface.text.{ Region, TextPresentation }
+  import org.eclipse.swt.custom.StyleRange
+
   private def undo () : Unit = {
     //Console.println("undo (@" + position + ", " + sendlen + ")")
     if (sendlen != 0) {
@@ -280,10 +281,15 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         val start = scala.math.max(position - sendlen, 0)
         val end = scala.math.min(sendlen + position, content.length)
         //Console.println("undo (start " + start + " send length " + sendlen + " content length " + content.length + " submitting length " + (end - start) + ")")
+        val txtp = new TextPresentation(new Region(0, start), 20)
+        txtp.setDefaultStyleRange(new StyleRange(0, start, null, sentColor))
         Display.getDefault.syncExec(
           new Runnable() {
-            def run() = activeEditor.getSource.setTextColor(bl, start, end - start, true)
-          });
+            def run() = {
+              activeEditor.getSource.invalidateTextPresentation()
+              activeEditor.getSource.changeTextPresentation(txtp, true)
+            }
+          })
         position = start
         sendlen = 0
       } else { //just an error
@@ -294,25 +300,26 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     }
   }
 
-  def sentColor : RGB = {
+  def sentColor : Color = {
     log.warning("Getting sent color")
     import org.eclipse.jface.preference.PreferenceConverter
     val store = Activator.getDefault.getPreferenceStore
-    PreferenceConverter.getColor(store, "coqSentFg")
+    new Color(Display.getDefault, PreferenceConverter.getColor(store, "coqSentBg"))
   }
 
   private def commit () : Unit = {
     //Console.println("commited (@" + position + ", " + sendlen + ")")
     if (sendlen != 0) {
       //Console.println("commited - and doing some work")
-      val bl = new Color(Display.getDefault, sentColor)
       val end = scala.math.min(sendlen, content.length - position)
       val len = scala.math.min(position + end, content.length)
       //Console.println("commiting, end is " + end + " (pos + len: " + (position + sendlen) + ")" + ", pos:" + position + ", submitted length " + (len - position))
+      val txtp = new TextPresentation(new Region(0, position + end), 20)
+      txtp.setDefaultStyleRange(new StyleRange(0, position + end, null, sentColor))
       Display.getDefault.syncExec(
         new Runnable() {
-          def run() = activeEditor.getSource.setTextColor(bl, position, len - position, true)
-        });
+          def run() = activeEditor.getSource.changeTextPresentation(txtp, true)
+        })
       position += end
       sendlen = 0
     }
