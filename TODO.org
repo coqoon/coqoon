@@ -14,6 +14,9 @@
    specifically: goalviewer might be null
    also, activeeditor might be null
     ~> should both not be the case if we're opening with a coq window
+
+  also, track more precisely all internal state and be able to destroy
+   it (too much depends on activeeditor == null in DocumentMonitor and EclipseStuff)
 * Coq side
 ** CoqOutputter: find disjoint definition names (newR, newM,...)
 ** Use Set Cwd instead of Add LoadPath for project diretory

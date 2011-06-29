@@ -88,6 +88,28 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         EclipseTables.DocToString.remove(doc)
       if (EclipseTables.StringToDoc.contains(nam))
         EclipseTables.StringToDoc.remove(nam)
+      if (p == DocumentState.activeEditor) {
+        DocumentState.activeEditor = null
+        if (CoqOutputDispatcher.goalviewer != null)
+          CoqOutputDispatcher.goalviewer.clear
+        val initial =
+          if (DocumentState.positionToShell.contains(0))
+            DocumentState.positionToShell(0).globalStep
+          else {
+            Console.println("doitH: using 2 instead of registered position, since there is none")
+            2
+          }
+        DocumentState.positionToShell.empty
+        DocumentState.position = 0
+        DocumentState.sendlen = 0
+        if (DocumentState.coqmarker != null)
+          DocumentState.coqmarker.delete
+        DocumentState.coqmarker = null
+        PrintActor.deregister(CoqOutputDispatcher)
+        val shell = CoqState.getShell
+        CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
+        PrintActor.register(CoqOutputDispatcher)
+      }
     }
   }
   override def partBroughtToTop (part : IWorkbenchPartReference) : Unit = { }
