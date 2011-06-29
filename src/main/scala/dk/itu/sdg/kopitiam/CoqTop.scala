@@ -55,25 +55,14 @@ object PrintActor extends Actor with OutputChannel[String] {
     while (true) {
       receive {
         case msg : String => {
-          Console.println("received " + msg)
+          //Console.println("received " + msg)
           buf = buf + msg
-          if (msg.endsWith("\n")) {
-            stream.println("received message:" + msg)
-            val coqr = ParseCoqResponse.parse(buf)
+          if (msg.endsWith("\n") && !msg.endsWith("============================\n")) {
+            Console.println("received message:" + buf.trim)
+            val coqr = ParseCoqResponse.parse(buf.trim)
+            Console.println("parsed response is " + coqr)
             buf = ""
-/*            coqr.foreach(x => x match {
-              case CoqGoal(n, elements) =>
-                Console.println("checking sanity of " + n + " in elems: " + elements)
-                //sanity check: elements matching 'subgoal x is' should be equal to n
-                val subg = elements.filter(x => x.startsWith("subgoal ", 1) && x.endsWith(" is:")).length
-                val impls = elements.filter(x => x.endsWith("============================")).length //28 =, coq's break between assumptions and obligation
-                assert(n - 1 == subg)
-                assert(1 == impls)
-              case y =>
-            })
-            */
-            //stream.println("received (parsed):" + coqr)
-            coqr.foreach(x => callbacks.foreach(_.dispatch(x)))
+            callbacks.foreach(_.dispatch(coqr))
           } //else Console.println("filling buffer with " + msg)
         }
       }
@@ -138,10 +127,10 @@ object ErrorOutputActor extends Actor with OutputChannel[String] {
     while (true) {
       receive {
         case msg : String =>
-          Console.println("receiving shell " + msg)
+          //Console.println("receiving shell " + msg)
           ValidCoqShell.getTokens(msg) match {
             case Some(tokens : CoqShellTokens) => {
-              Console.println("set coq ready " + tokens)
+              //Console.println("set coq ready " + tokens)
               CoqState.setShell(tokens)
             }
             case None =>

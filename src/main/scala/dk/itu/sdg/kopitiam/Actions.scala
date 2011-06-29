@@ -427,7 +427,14 @@ object CoqOutputDispatcher extends CoqCallback {
         //TODO: what if Error not found, should come up with a sensible message anyways!
         val ps = msg.drop(msg.findIndexOf(_.startsWith("Error")))
         EclipseBoilerPlate.mark(ps.reduceLeft(_ + " " + _))
-      case x => EclipseConsole.out.println("received: " + x)
+      case CoqUserInterrupt() => 
+        EclipseConsole.out.println("Interrupted. Most likely in a sane state.")
+      case CoqVariablesAssumed(v) =>
+        EclipseConsole.out.println("Variable " + v + " assumed")
+      case CoqTheoremDefined(t) =>
+        EclipseConsole.out.println("Theorem " + t + " defined")
+      case CoqUnknown(x) =>
+        EclipseConsole.out.println(x)
     }
   }
 }

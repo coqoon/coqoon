@@ -245,7 +245,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       case CoqShellReady(monoton, token) =>
         if (monoton) {
           commit
-          Console.println("filling table (" + positionToShell.keys.toList.length + ") [" + position + "]: " + token)
+          //Console.println("filling table (" + positionToShell.keys.toList.length + ") [" + position + "]: " + token)
           positionToShell += position -> token
         } else
           undo
