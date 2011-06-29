@@ -45,9 +45,9 @@ object PrintActor extends Actor with OutputChannel[String] {
   def deregister (c : CoqCallback) : Unit = { callbacks = callbacks.filterNot(_ == c) }
 
   def distribute (c : CoqResponse) : Unit = {
-    Console.println("distributing response to all callbacks (" + callbacks.length + ")")
+    //Console.println("distributing response to all callbacks (" + callbacks.length + ")")
     callbacks.foreach(_.dispatch(c))
-    Console.println(" -> done distribution")
+    //Console.println(" -> done distribution")
   }
 
   def act() {

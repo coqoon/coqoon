@@ -409,6 +409,8 @@ object CoqOutputDispatcher extends CoqCallback {
         if (monoton)
           EclipseBoilerPlate.unmark
         ActionDisabler.enableMaybe
+        if (!monoton && token.context.length == 0 && goalviewer != null)
+          goalviewer.clear
       case CoqGoal(n, goals) =>
         //Console.println("outputdispatcher, n is " + n + ", goals:\n" + goals)
         val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
@@ -422,7 +424,9 @@ object CoqOutputDispatcher extends CoqCallback {
         } else ""
         if (goalviewer != null)
           goalviewer.writeGoal(ht, gt, ot)
-      case CoqProofCompleted() => goalviewer.writeGoal("Proof completed", "", "")
+      case CoqProofCompleted() =>
+        if (goalviewer != null)
+          goalviewer.writeGoal("Proof completed", "", "")
       case CoqError(msg) =>
         //TODO: what if Error not found, should come up with a sensible message anyways!
         val ps = msg.drop(msg.findIndexOf(_.startsWith("Error")))

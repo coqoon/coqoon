@@ -156,6 +156,8 @@ object EclipseBoilerPlate {
           def run() = {
             oldp.done
             oldpmd.close
+            //Clients should not call this method (the workbench calls this method at appropriate times). To have the workbench activate a part, use IWorkbenchPage.activate(IWorkbenchPart) instead.
+            DocumentState.activeEditor.setFocus
           }
         })
     }
@@ -301,7 +303,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   }
 
   def sentColor : Color = {
-    log.warning("Getting sent color")
+    //log.warning("Getting sent color")
     import org.eclipse.jface.preference.PreferenceConverter
     val store = Activator.getDefault.getPreferenceStore
     new Color(Display.getDefault, PreferenceConverter.getColor(store, "coqSentBg"))
