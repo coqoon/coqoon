@@ -103,7 +103,7 @@ class CoqEditor extends TextEditor with EclipseUtils {
   var oldAnnotations : Array[Annotation] = Array.empty
 
   def updateFolding (root : VernacularRegion, document : IDocument) : Unit = {
-    val annotations = foldingAnnotations(root, document)
+    val annotations = foldingAnnotations(root, document, false)
     var newAnnotations = new java.util.HashMap[Any, Any]
 
     for ((pos, annot) <- annotations) newAnnotations.put(annot, pos)
@@ -112,12 +112,31 @@ class CoqEditor extends TextEditor with EclipseUtils {
     Console.println("Updated folding " + annotations.toList)
   }
 
-  private def foldingAnnotations(region : VernacularRegion, document : IDocument) : Stream[(Position, ProjectionAnnotation)] = {
+  private def foldingAnnotations(region : VernacularRegion, document : IDocument, inproof : Boolean) : Stream[(Position, ProjectionAnnotation)] = {
+    import dk.itu.sdg.coqparser.OutlineVernacular
+    import dk.itu.sdg.parsing.RegionPosition
     //println("Collapsable " + region.outlineName + region.outlineNameExtra)
-    if (region.pos.hasPosition && document.get(region.pos.offset, region.pos.length).count(_=='\n') >= 2)
-      (pos2eclipsePos(region.pos), new ProjectionAnnotation) #:: region.getOutline.flatMap(foldingAnnotations(_, document))
-    else
-     region.getOutline.flatMap(foldingAnnotations(_, document))
+    if (region.pos.hasPosition && document.get(region.pos.offset, region.pos.length).count(_=='\n') >= 2) {
+      var pr = inproof
+      var doit = false
+      val (firstr, lastr) =
+        region match {
+          case o@OutlineVernacular.Proof(a, s, con, end) =>
+            pr = true
+            doit = true
+            s match {
+              case Some(x) => (x, o)
+              case None => (a, o)
+            }
+          case y => (y, y)
+        }
+      if ((pr && doit) || !pr) {
+        val st = scala.math.max(0, firstr.pos.offset - 1)
+        (pos2eclipsePos(RegionPosition(st, lastr.pos.offset + lastr.pos.length - st)), new ProjectionAnnotation) #:: region.getOutline.flatMap(foldingAnnotations(_, document, pr))
+      } else
+        region.getOutline.flatMap(foldingAnnotations(_, document, pr))
+    } else
+     region.getOutline.flatMap(foldingAnnotations(_, document, inproof))
   }
 }
 

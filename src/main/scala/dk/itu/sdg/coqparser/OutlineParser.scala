@@ -70,7 +70,7 @@ object OutlineVernacular {
     override def outlineName = "Section " + name
   }
   
-  case class Proof (assertion : Assertion, override val contents : List[VernacularRegion], end : String) extends OutlineStructure {
+  case class Proof (assertion : Assertion, start : Option[ProofStart], override val contents : List[VernacularRegion], end : String) extends OutlineStructure {
     override def outlineName = assertion.outlineName + " ... " + end
   }
 
@@ -310,18 +310,18 @@ object OutlineBuilder {
       case Nil => Nil
       case ModuleStart(name) :: rest => buildOutline(findModule({(id, contents) => Module(id, contents)}, rest, name))
       case SectionStart(name) :: rest => println("  ---Section " + name);buildOutline(findModule({(id, contents) => Section(id, contents)}, rest, name))
-      case (a@Assertion(kwd, name, args, prop)) :: rest => buildOutline(findProof(rest, a))
+      case (a@Assertion(kwd, name, args, prop)) :: rest => buildOutline(findProof(rest, a, None))
       case s :: ss => s :: buildOutline(ss)
     }
   }
   
   @tailrec
-  private def findProof(sentences : List[VernacularRegion], assertion : Assertion, soFar : List[VernacularRegion] = Nil) : List[VernacularRegion] = {
+  private def findProof(sentences : List[VernacularRegion], assertion : Assertion, start : Option[ProofStart], soFar : List[VernacularRegion] = Nil) : List[VernacularRegion] = {
     sentences match {
       case Nil => Nil
-      case ProofStart() :: rest => findProof(rest, assertion, soFar)
+      case (s@ProofStart()) :: rest => findProof(rest, assertion, Some(s), soFar)
       case (pe@ProofEnd(end)) :: rest => {
-        val proof = Proof(assertion, buildOutline(soFar.reverse), end)
+        val proof = Proof(assertion, start, buildOutline(soFar.reverse), end)
         (assertion.pos, pe.pos) match {
           case (RegionPosition(offset, _), RegionPosition(endOffset, endLength)) => {
             val length = (endOffset + endLength) - offset
@@ -333,7 +333,7 @@ object OutlineBuilder {
       }
       case s :: rest =>
         //Console.println("findproof for s " + s + "\n\tsofar " + soFar + "\n\tand rest " + rest)
-        findProof(rest, assertion, s :: soFar)
+        findProof(rest, assertion, start, s :: soFar)
     }
   }
   
