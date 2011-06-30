@@ -70,8 +70,8 @@ object OutlineVernacular {
     override def outlineName = "Section " + name
   }
   
-  case class Proof (assertion : Assertion, start : Option[ProofStart], override val contents : List[VernacularRegion], end : String) extends OutlineStructure {
-    override def outlineName = assertion.outlineName + " ... " + end
+  case class Proof (start : Option[ProofStart], override val contents : List[VernacularRegion], end : String) extends OutlineStructure {
+    override def outlineName = "Proof ... " + end
   }
 
   case class Document (override val contents : List[VernacularRegion]) extends OutlineStructure
@@ -310,22 +310,25 @@ object OutlineBuilder {
       case Nil => Nil
       case ModuleStart(name) :: rest => buildOutline(findModule({(id, contents) => Module(id, contents)}, rest, name))
       case SectionStart(name) :: rest => println("  ---Section " + name);buildOutline(findModule({(id, contents) => Section(id, contents)}, rest, name))
-      case (a@Assertion(kwd, name, args, prop)) :: rest => buildOutline(findProof(rest, a, None))
+      case (a@Assertion(kwd, name, args, prop)) :: rest => a :: buildOutline(findProof(rest, None))
       case s :: ss => s :: buildOutline(ss)
     }
   }
   
   @tailrec
-  private def findProof(sentences : List[VernacularRegion], assertion : Assertion, start : Option[ProofStart], soFar : List[VernacularRegion] = Nil) : List[VernacularRegion] = {
+  private def findProof(sentences : List[VernacularRegion], start : Option[ProofStart], soFar : List[VernacularRegion] = Nil) : List[VernacularRegion] = {
     sentences match {
       case Nil => Nil
-      case (s@ProofStart()) :: rest => findProof(rest, assertion, Some(s), soFar)
+      case (s@ProofStart()) :: rest => findProof(rest, Some(s), soFar)
       case (pe@ProofEnd(end)) :: rest => {
-        val proof = Proof(assertion, start, buildOutline(soFar.reverse), end)
-        (assertion.pos, pe.pos) match {
-          case (RegionPosition(offset, _), RegionPosition(endOffset, endLength)) => {
-            val length = (endOffset + endLength) - offset
-            proof.setPos(offset, length)
+        val proof = Proof(start, buildOutline(soFar.reverse.tail), end)
+        start match {
+          case None => ()
+          case Some(x) => (x.pos, pe.pos) match {
+            case (RegionPosition(offset, _), RegionPosition(endOffset, endLength)) => {
+              val length = (endOffset + endLength) - offset
+              proof.setPos(offset, length)
+            }
           }
           case _ => ()
         }
@@ -333,7 +336,7 @@ object OutlineBuilder {
       }
       case s :: rest =>
         //Console.println("findproof for s " + s + "\n\tsofar " + soFar + "\n\tand rest " + rest)
-        findProof(rest, assertion, start, s :: soFar)
+        findProof(rest, start, s :: soFar)
     }
   }
   
