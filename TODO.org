@@ -18,6 +18,14 @@
   also, track more precisely all internal state and be able to destroy
    it (too much depends on activeeditor == null in DocumentMonitor and EclipseStuff)
 * Coq side
+** Annotation/Folding:
+Lemma foo : .
+Proof
+  foo bar baz
+Qed.
+should have the +/- on the "Lemma" line and fold only the Proof..,
+displaying the Qed solely
+  support for that could be achieved http://www.eclipse.org/articles/Article-Folding-in-Eclipse-Text-Editors/folding.html
 ** CoqOutputter: find disjoint definition names (newR, newM,...)
 ** Use Set Cwd instead of Add LoadPath for project diretory
 ** Undo from just after End should jump to start of Section/Module/whatever
