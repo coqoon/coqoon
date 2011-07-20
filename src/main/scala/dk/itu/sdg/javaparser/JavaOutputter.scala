@@ -36,12 +36,13 @@ trait JavaOutputter {
         indent(ind) + modifiers.mkString(" ") +  " interface " + id + ints + "{\n" + mr(mapi(b, ind + 2)) + "\n" + indent(ind) + "}"
       case JClassDefinition(modifiers, id, s, i, b, o) =>
         myclass = id
-        val specp = ClassTable.getCoq("PRELUDE").reverse.map(x => coqout("PRELUDE", x, 4))
+        /* val specp = ClassTable.getCoq("PRELUDE").reverse.map(x => coqout("PRELUDE", x, 4))
         val specpr = ClassTable.getCoq(id, "PROGRAM").reverse.map(x => coqout("PROGRAM", x, 4))
         val specb = ClassTable.getCoq(id, "BEFORESPEC").reverse.map(x => coqout("BEFORESPEC", x, 4))
         val speca = ClassTable.getCoq(id, "AFTERSPEC").reverse.map(x => coqout("AFTERSPEC", x, 4))
         val spect = ClassTable.getCoq("TOP").reverse.map(x => coqout("TOP", x, 4))
-        val stacon = mr(specp) + mr(spect) + mr(specpr) + mr(specb) + mr(speca)
+        val stacon = mr(specp) + mr(spect) + mr(specpr) + mr(specb) + mr(speca) */
+        val stacon = ""
         val st =
           if (stacon.length > 0)
             indent(ind + 2) + "static {\n" + stacon + "\n" + indent(ind + 2) + "}\n"
@@ -51,13 +52,13 @@ trait JavaOutputter {
         indent(ind) + modifiers.mkString(" ") + " class " + id + is + "{\n" + st + mr(mapi(b, ind + 2)) + "\n" + indent(ind) + "}"
       case JFieldDefinition(modifiers, id, t, initializer) => indent(ind) + modifiers.mkString(" ") + " " + t + " " + id + ";"
       case JMethodDefinition(modifiers, id, typ, ar, b) =>
-        val sp = ClassTable.getSpecs(myclass)
+        //val sp = ClassTable.getSpecs(myclass)
         val (pre, pos) =
-          if (sp.contains(id) && sp(id)._1 != null && sp(id)._2 != null) {
+        /*  if (sp.contains(id) && sp(id)._1 != null && sp(id)._2 != null) {
             //Console.println("sp contains id (" + id + "): " + sp)
             (indent(ind + 2) + "Coq.requires(\"" + sp(id)._1.replace("\"", "\\\"") + "\");\n",
              indent(ind + 2) + "Coq.ensures(\"" + sp(id)._2.replace("\"", "\\\"") + "\");\n")
-          } else
+          } else */
             ("", "")
         val bo = if (b.length == 1 && b(0).isInstanceOf[JBlock])
                    b(0).asInstanceOf[JBlock].body

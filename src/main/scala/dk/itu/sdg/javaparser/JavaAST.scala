@@ -35,7 +35,6 @@ case class JLiteral (value : String) extends JExpression
 case class JVariableAccess (variable : String) extends JExpression
 case class JFieldAccess (variable : JExpression, field : String) extends JExpression
 
-
 trait JavaAST extends JavaParser { // with CoqOutputter {
   import scala.util.parsing.input._
 
@@ -48,7 +47,7 @@ trait JavaAST extends JavaParser { // with CoqOutputter {
   }
 
   def parseH(r: Reader[Char]) : Any = {
-    ClassTable.empty
+    //ClassTable.empty
     //Console.println("scanning " + r)
     val p = phrase(compilationUnit)(new lexical.Scanner(r))
     //Console.println("scanned " + p)

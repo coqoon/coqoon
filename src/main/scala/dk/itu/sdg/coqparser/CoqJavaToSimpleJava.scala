@@ -1,5 +1,5 @@
 /* (c) 2010-2011 Hannes Mehnert */
-
+/*
 package dk.itu.sdg.coqparser
 
 trait SExpression { }
@@ -170,3 +170,4 @@ trait TransformCoqJavaToSimpleJava extends StdTokenParsers {
   }
 
 }
+*/

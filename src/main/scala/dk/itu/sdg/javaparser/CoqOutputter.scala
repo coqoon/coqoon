@@ -46,22 +46,22 @@ trait CoqOutputter extends JavaToSimpleJava {
       case _ => None
     }
     //thus we need to save _1 in ClassTable, don't we?
-    val funs = results.map(_._1)
-    ClassTable.registerInterfaceFunctions(interface, ms, funs)
+    //val funs = results.map(_._1)
+    //ClassTable.registerInterfaceFunctions(interface, ms, funs)
     (results.map(_._1), results.map(_._2))
   }
 
   def interfaceSpec (supers : List[String]) : (List[String], List[String]) = {
     //input: List("ICell")
     //output: (List("get : T -> val", "set : T -> val -> T"), List("ICell C T _ get set")
-    val results = supers.map({ x =>
-      val (ps, pas) = ClassTable.interfaceFunctions(x)
-      (ps, x + " C T R " + pas.reduceLeft(_ + " " + _))
-    })
-    if (results.length == 0)
+    //val results = supers.map({ x =>
+    //  val (ps, pas) = ClassTable.interfaceFunctions(x)
+    //  (ps, x + " C T R " + pas.reduceLeft(_ + " " + _))
+    //})
+    //if (results.length == 0)
       (List[String](), List[String]())
-    else
-      (results.map(_._1).reduceLeft(_ ++ _), results.map(_._2))
+    //else
+    //  (results.map(_._1).reduceLeft(_ ++ _), results.map(_._2))
   }
 
   //TODO: that's wrong, since operations depend on argument types...
@@ -232,8 +232,8 @@ Qed."""
 
   def coqoutput (xs : List[SJDefinition], spec : Boolean, name : String) : List[String] = {
     outp = List[String]()
-    if (spec)
-      outp = List("\n") ++ ClassTable.getCoq("PRELUDE") ++ outp
+    //if (spec)
+    //  outp = List("\n") ++ ClassTable.getCoq("PRELUDE") ++ outp
     var interfs : List[String] = List[String]()
     xs.foreach(x => x match {
       case SJInterfaceDefinition(modifiers, id, inters, body) =>
@@ -256,7 +256,8 @@ Definition """ + id + """ :=
   Build_Class """ + printFiniteSet(fields) + """
               """ + printFiniteMap(methods) + "."
     })
-    val cs = printFiniteMap(ClassTable.getClasses.map(x => ("\"" + x + "\"", x)))
+    //val cs = printFiniteMap(ClassTable.getClasses.map(x => ("\"" + x + "\"", x)))
+    val cs = ""
     outp ::= "\nDefinition Prog := Build_Program " + cs + "."
 /*    if (ClassTable.getCoq(myclass, "PROGRAM").length == 0)
       outp ::= unique_names
