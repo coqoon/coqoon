@@ -109,7 +109,6 @@ object FinishAST extends JavaTerms
                   with CoqOutputter
                   with KopitiamLogger {
 
-  private var classid  : String = ""
   private var lvars : Set[String] = Set[String]()
 
   /*
@@ -122,10 +121,9 @@ object FinishAST extends JavaTerms
     Given an AST in JavaTerms it will convert it to an AST in JavaAST
   */
   def javaTermsToJavaAST (ast : Any) : List[JStatement] = {
-    classid  = ""
     lvars = Set[String]()
     
-    transform(ast)
+    transform(ast, None)
   }
 
   def doitHelper (a : Any) : List[SJDefinition] = {
@@ -183,19 +181,19 @@ object FinishAST extends JavaTerms
   /*
    * Main entry point for transforming the AST.
    */
-  def transform (x : Any) : List[JStatement] = {
+  def transform (x : Any, outer : Option[String]) : List[JStatement] = {
     x match {
       case Nil     => Nil
-      case x ~ y   => transform(x) ++ transform(y)
-      case x :: xs => transform(x) ++ transform(xs)
+      case x ~ y   => transform(x, outer) ++ transform(y, outer)
+      case x :: xs => transform(x, outer) ++ transform(xs, outer)
       case x       => {
         x match {
           case i : Import => Nil // we don't care about imports for now.
           case SomethingWithModifiers(modifiers, classOrInterface) => 
             val jmodifiers = modifiers.flatMap { case Modifier(Key(mod)) => JModifier(mod) }.toSet
-            List(transformClassOrInterface(classOrInterface, jmodifiers))
+            List(transformClassOrInterface(classOrInterface, outer, jmodifiers))
           case other => 
-            List(transformClassOrInterface(other))
+            List(transformClassOrInterface(other, outer))
         }
       }
     }
@@ -205,26 +203,20 @@ object FinishAST extends JavaTerms
    * Transform a JClass or JInterface to a JClassDefinition or JInterfaceDefinition
    * respectively. Anything else will throw an exception
    */
-  def transformClassOrInterface (x : Any, modifiers : Set[JModifier] = Set()) : JStatement = {
+  def transformClassOrInterface (x : Any, outer : Option[String], modifiers : Set[JModifier] = Set()) : JStatement = {
     x match {
       case JClass(id, jtype, superclass, interfaces, bodyp) => {
         log.info("transforming a JClass, ranging (pos) " + x.asInstanceOf[JClass].pos)
-        val is        = transformOLF(interfaces)
-        val cs        = unpackR(superclass)
+        val is = transformOLF(interfaces)
+        val cs = unpackR(superclass)
         val myclassid = unpackR(id)
-        val outer     = if (classid == "") None else Some(classid)
-        classid       = myclassid
-        val mybody    = transformClassOrInterfaceBody(bodyp)
-        classid       = outer match { case None => ""; case Some(x) => x }
+        val mybody = transformClassOrInterfaceBody(bodyp, Some(myclassid))
         JClassDefinition(modifiers, myclassid, cs, is, mybody, outer)
       }
       case JInterface(id, jtype, interfaces, body) => {
-        val is      = transformOLF(interfaces)
+        val is = transformOLF(interfaces)
         val myclass = unpackR(id)
-        val outer   = if (classid == "") None else Some(classid)
-        classid     = myclass
-        val mybody  = transformClassOrInterfaceBody(body)
-        classid     = outer match { case None => ""; case Some(x) => x }
+        val mybody = transformClassOrInterfaceBody(body, Some(myclass))
         JInterfaceDefinition(modifiers, myclass, is, mybody)
       }
       case x => throw new Exception("Expected JInterface or JClass but got: " + x)
@@ -245,28 +237,24 @@ object FinishAST extends JavaTerms
    * NOTE: This method can't return InnterStatement because class & interfaces
    *       doesn't inherit from InnerStatement.
    */
-  def transformClassOrInterfaceBody (body : List[Any], modifiers : Set[JModifier] = Set()) : List[JStatement] = {
+  def transformClassOrInterfaceBody (body : List[Any], outer : Option[String], modifiers : Set[JModifier] = Set()) : List[JStatement] = {
     val transformModifiers : List[Modifier] => Set[JModifier] = (mods) => mods.flatMap { 
       case Modifier(Key(str)) => JModifier(str)
     }.toSet
-        
-    body flatMap { 
-      case BodyDeclaration(mods, x)               =>      
-        val jmods = transformModifiers(mods)
-        val transformed = transformClassOrInterfaceBody(List(x), jmods)
-        //setModifier(mods,transformed);
-        transformed
-      case jclass       : JClass                   => transformClassOrInterface(jclass, modifiers)     :: Nil
-      case jinterface   : JInterface               => transformClassOrInterface(jinterface, modifiers) :: Nil
-      case jmethod      : MethodDeclaration        => transformMethodDeclaration(jmethod, modifiers)   :: Nil
-      case jconstructor : ConstructorDeclaration   => transformConstructor(jconstructor, modifiers)    :: Nil
-      case jfield       : FieldDeclaration         => transformFieldDeclaration(jfield, modifiers)     :: Nil
+
+    body.flatMap {
+      case BodyDeclaration(mods, x) => transformClassOrInterfaceBody(List(x), outer, transformModifiers(mods))
+      case jclass : JClass => transformClassOrInterface(jclass, outer, modifiers) :: Nil
+      case jinterface : JInterface => transformClassOrInterface(jinterface, outer, modifiers) :: Nil
+      case jmethod : MethodDeclaration => transformMethodDeclaration(jmethod, modifiers) :: Nil
+      case jconstructor : ConstructorDeclaration => transformConstructor(jconstructor, modifiers) :: Nil
+      case jfield : FieldDeclaration => transformFieldDeclaration(jfield, modifiers) :: Nil
       // TODO: It should be possible to remove these by improving the parser so they're turned into BodyDeclaration's
-      case (ys: List[Modifier]) ~ (i : JInterface) => transformClassOrInterface(i, transformModifiers(ys)) :: Nil
-      case Some("static") ~ (x : Block)            => transformBlock(x, Some(Static()))                :: Nil
-      case y ~ (x: MethodDeclaration)              => transformMethodDeclaration(x, modifiers)         :: Nil
-      case ";"                                     => Nil
-      case x                                       => throw new Exception("Can't have the following in a class/interface body"+x)
+      case (ys: List[Modifier]) ~ (i : JInterface) => transformClassOrInterface(i, outer, transformModifiers(ys)) :: Nil
+      case Some("static") ~ (x : Block) => transformBlock(x, Some(Static())) :: Nil
+      case y ~ (x: MethodDeclaration) => transformMethodDeclaration(x, modifiers) :: Nil
+      case ";" => Nil
+      case x => throw new Exception("Can't have the following in a class/interface body"+x)
     }
   }
 
@@ -278,7 +266,7 @@ object FinishAST extends JavaTerms
    * Transforms a MethodDeclaration into a JMethodDefinition
    */
   def transformMethodDeclaration (method : MethodDeclaration, modifiers : Set[JModifier]) : JMethodDefinition = {
-    val (mid, cid, args, body) = extractMethodOrConstructorInfo(method)
+    val (mid, args, body) = extractMethodOrConstructorInfo(method)
     JMethodDefinition(modifiers, mid, unpackR(method.jtype), args, body)
   }
 
@@ -286,20 +274,19 @@ object FinishAST extends JavaTerms
    * Transforms a ConstructorDeclaration into a JConstructorDefinition
    */
   def transformConstructor (constructor : ConstructorDeclaration, modifiers : Set[JModifier] = Set()) : JConstructorDefinition = {
-    val (_, cid, args, body) = extractMethodOrConstructorInfo(constructor)
-    JConstructorDefinition(modifiers, cid, args, body)
+    val (mid, args, body) = extractMethodOrConstructorInfo(constructor)
+    JConstructorDefinition(modifiers, mid, args, body)
   }
 
   /*
    * Given a ConstructorDeclaration or MethodDeclaration it will extract the information needed
-   * to be transformd into a JMethodDefinition. This will also add the methods and locals to the
-   * global ClassTable.
+   * to be transformd into a JMethodDefinition.
    */
-  def extractMethodOrConstructorInfo (term : Term) : (String, String, List[JArgument], List[JBodyStatement]) = {
+  def extractMethodOrConstructorInfo (term : Term) : (String, List[JArgument], List[JBodyStatement]) = {
 
-    val (id, mid, parameters, throws, body) = term match {
-      case ConstructorDeclaration(id, parameters, throws, bdy)   => (unpackR(id), "new", parameters, throws, bdy)
-      case MethodDeclaration(id, jtype, parameters, throws, bdy) => (unpackR(jtype), unpackR(id), parameters, throws, bdy)
+    val (mid, parameters, throws, body) = term match {
+      case ConstructorDeclaration(id, parameters, throws, bdy)   => (unpackR(id), parameters, throws, bdy)
+      case MethodDeclaration(id, jtype, parameters, throws, bdy) => (unpackR(id), parameters, throws, bdy)
     }
 
     val args = parameters.getOrElse(Nil).asInstanceOf[List[Any]].flatMap {
@@ -316,7 +303,7 @@ object FinishAST extends JavaTerms
       case b  : Block     => JBlock(None, transformMethodBody(b.xs)) :: Nil
       case None           => Nil
     }
-    (mid, classid, args, transformedBody)
+    (mid, args, transformedBody)
   }
 
   /*
