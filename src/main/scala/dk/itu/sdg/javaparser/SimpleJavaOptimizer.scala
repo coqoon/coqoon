@@ -9,54 +9,115 @@ import scala.collection.immutable.{ HashSet }
 
 object SimpleJavaOptimizer {
 
-  case class Read(name: String)
-  case class Write(name: String)
-  case class ReadsAndWrites(reads:  HashSet[Read]  = new HashSet(), 
-                            writes: HashSet[Write] = new HashSet()) 
-  case class State(processing:  SJStatement, 
-                   inState:     Set[String] = new HashSet(), 
-                   oldOutState: Set[String] = new HashSet(), 
-                   newOutState: Set[String] = new HashSet(), 
-                   workList:    List[SJStatement])
+  type Variables = Set[String]
+  type Block = List[SJStatement]
+
+  case class ReadsAndWrites(reads: Variables = new HashSet(), writes: Variables = new HashSet()) 
   
-  // Given a SJStatement it will return Some(ReadsAndWrites) with the varible being read/written. None is 
-  // no variable are read. 
+  /** 
+   * Perform a Live Variable Analysis on the method body. 
+   *
+   * TODO: Currently it just prints to the console whenever it finds a dead variable. 
+   */
+  def liveVariables(method: SJMethodDefinition): Unit = {
+    
+    /** 
+     * Find the variables that are live at the end of the block. 
+     *  
+     * Any variable that is written but isn't read by the following blocks (represented by the 'in' 
+     * parameter) is considered a dead variable   
+     * 
+     * @param block The block to analyze
+     * @param in the variables that are live after the block 
+     * @return the variables that are live at the end of the block. 
+     */
+    def analyse(block: Block, in: Variables): Variables = {
+      val rw = block.foldLeft(ReadsAndWrites()){ (acc, current) => merge(rwOfStatement(current), Some(acc)).getOrElse(ReadsAndWrites()) }
+      val dead = rw.writes.filterNot( in.contains(_) )
+      if (!dead.isEmpty) println("Found dead variable: " + dead + " in " + block) //TODO: Do something proper. 
+      (rw.reads ++ in).filterNot( rw.writes.contains(_) ) // TODO: Is it correct to also remove elements from 'in'?
+    } 
+    
+    /** 
+    * traverse the AST and partition the statement into blocks. 
+    *   - body of if/else are considered a single block 
+    *   - conditions are considered part of the block before it. 
+    */
+    def extractBlocks(in: List[SJStatement], out: List[Block] = Nil): List[Block] = in match {
+      case Nil => out.reverse 
+      case x :: xs => { x match {
+        case SJConditional(cond,consequent, alternative) => extractBlocks(xs, List(cond) :: (consequent ::: alternative) :: out)
+        case SJWhile(cond, body) => extractBlocks(xs, List(cond) :: body :: out)
+        // not a new block. Add the statement to the block at the top of the stack. 
+        case stm => extractBlocks(xs, (stm :: out.headOption.getOrElse(Nil)) :: (if (out.isEmpty) Nil else out.tail))
+      }}
+    }
+    
+    /** 
+     * Run a live variable analysis on each block. The variables that are a alive at the end of each block are
+     * used when analyzing the blocks before it. 
+     *
+     * @param block The current block to analyze 
+     * @param in the variables that are live after the block 
+     * @param workList The blocks still to be processed 
+     */
+    def process(block: Block, in: Variables, workList: List[Block]): Variables = workList match {
+      case Nil     => analyse(block, in) 
+      case x :: xs => process(x,analyse(block, in),xs)
+    }
+
+    val blocks = extractBlocks(method.body.reverse) // Backward Analysis
+    println(process(blocks.head, HashSet(), blocks.tail))
+  }
+  
+  /** 
+   * Given a SJStatement it will return Some(ReadsAndWrites) with the variable being read/written. None if
+   * no variable are read/written
+   */
   def rwOfStatement(statement: SJStatement): Option[ReadsAndWrites] = {
+    
     def recursive(stm: SJStatement, before: Option[ReadsAndWrites]): Option[ReadsAndWrites] = {
       val after = (stm match {
-        case SJVariableAccess(read)                                        => Some(ReadsAndWrites( reads = HashSet(Read(read))))
-        case SJFieldRead(SJVariableAccess(write),SJVariableAccess(read),_) => Some(ReadsAndWrites(HashSet(Read(read)), HashSet(Write(write))))
-        case SJNewExpression(SJVariableAccess(write),_,_)                  => Some(ReadsAndWrites( writes = HashSet(Write(write))))
-        case SJFieldWrite(SJVariableAccess(write),_,expr)                  => recursive(expr, merge(Some(ReadsAndWrites( writes = HashSet((Write(write))))), before))
-        case SJAssignment(SJVariableAccess(store),expr)                    => recursive(expr, merge(Some(ReadsAndWrites( writes = HashSet((Write(store))))), before))
-        case SJBinaryExpression(_,l,r)                                     => merge(merge(before, recursive(l,None)),recursive(r,None))
-        case s: SJCall                                                     => s match {
-          // once SJCall.receiver is a JVariableAccess this can be simplified. 
-          case SJCall(None, a:SJVariableAccess,_,_)         => Some(ReadsAndWrites( reads = HashSet(Read(a.variable))))
-          case SJCall(Some(access), a:SJVariableAccess,_,_) => Some(ReadsAndWrites(HashSet(Read(a.variable)), HashSet(Write(access.variable))))
-          case _                                            => throw new Exception("Receiver should be a JVariableAccess")
-        }
+        case SJVariableAccess(r)                                    => Some(ReadsAndWrites( reads = HashSet(r)))
+        case SJReturn(SJVariableAccess(r))                          => Some(ReadsAndWrites( reads = HashSet(r)))
+        case SJFieldRead(SJVariableAccess(w),SJVariableAccess(r),_) => Some(ReadsAndWrites(HashSet(r), HashSet(w)))
+        case SJNewExpression(SJVariableAccess(w),_,_)               => Some(ReadsAndWrites( writes = HashSet(w)))
+        case SJFieldWrite(SJVariableAccess(w),_,expr)               => recursive(expr, merge(Some(ReadsAndWrites( writes = HashSet((w)))), before))
+        case SJAssignment(SJVariableAccess(w),expr)                 => recursive(expr, merge(Some(ReadsAndWrites( writes = HashSet((w)))), before))
+        case SJBinaryExpression(_,l,r)                              => merge(merge(before, recursive(l,None)),recursive(r,None))
+        case SJCall(None, a:SJVariableAccess,_,_)                   => Some(ReadsAndWrites( reads = HashSet(a.variable)))
+        case SJCall(Some(w), a:SJVariableAccess,_,_)                => Some(ReadsAndWrites(HashSet(a.variable), HashSet(w.variable)))
+        case _                                                      => None // don't care about the SJStatements that doesn't read/write variables 
       })
       merge(before,after)
-    }
+    }  
     recursive(statement, None)
   }
   
-  // TODO: Implement 
-  def livenessAnalysis(method: SJMethodDefinition): Unit = {
-    def process(state: State): State = state match {
-      case s@State(stm, in, out, newOut, Nil)     => s
-      case s@State(stm, in, out, newOut, x :: xs) => s
-    }
-      
-    val statements = method.body.reverse // post-order
-    process(State(processing = statements.head, workList = statements.tail))
-  }
-  
+  /** 
+   * Merges two option wrapped instances of ReadsAndWrites. 
+   */
   private def merge(x: Option[ReadsAndWrites], y: Option[ReadsAndWrites]) = (x,y) match {
     case (None, Some(q))   => Some(q)
     case (Some(q), None)   => Some(q)
     case (None, None)      => None 
     case (Some(p),Some(q)) => Some(ReadsAndWrites(p.reads ++ q.reads, p.writes ++ q.writes))
+  }
+  
+  /** 
+   * Just for testing small example while the analysis is still under development. 
+   */
+  def main(args: Array[String]): Unit = {
+    import scala.collection.immutable.{ HashMap }
+    val prog = SJMethodDefinition(Set(Static()), "fac", "int",
+     List(SJArgument("n", "int")), List(
+       SJConditional(SJBinaryExpression(">=", SJVariableAccess("n"), SJLiteral("0")),
+          List(SJCall(Some(SJVariableAccess("tmp_1")), SJVariableAccess("this"), "fac",
+                                List(SJBinaryExpression("-", SJVariableAccess("n"), SJLiteral("1")))),
+               SJAssignment(SJVariableAccess("x"), SJBinaryExpression("*", SJVariableAccess("n"), SJVariableAccess("tmp_1")))),
+          List(SJAssignment(SJVariableAccess("x"), SJLiteral("1")))),
+       SJReturn(SJVariableAccess("x"))),
+         HashMap("x" -> "int", "tmp_1" -> "int", "n" -> "int", "this" -> "Fac"))
+    liveVariables(prog)
   }
 }
