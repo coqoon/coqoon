@@ -3,22 +3,7 @@
 package dk.itu.sdg.javaparser
 
 trait JavaOutputter {
-  private var myclass : String = ""
-
-  def coqout (loc : String, msg : String, ind : Int) : String = {
-    val spaces = indent(ind) + indent(8)
-    val replace = "\" +\n" + spaces + "\""
-    indent(ind) + "Coq.def(Coq.M." + loc + ",\n" + spaces + "\"" + msg.replace("\"", "\\\"").replace("\n", replace) + "\");\n"
-  }
-
-  def red (x : List[String], sep : String) : String = {
-    if (x.length == 0)
-      ""
-    else
-      x.reduceLeft(_ + sep + _)
-  }
-
-  def mr (x : List[String]) : String = { red(x, "\n") }
+  def mr (x : List[String]) : String = { x.mkString("\n") }
 
   def indent (i : Int) : String = {
     if (i > 16)
@@ -27,94 +12,83 @@ trait JavaOutputter {
       "                ".take(i)
   }
 
-  def mapi (l : List[JStatement], i : Int) : List[String] = { l.map(x => out(x, i)) }
+  def mapi (l : List[SJStatement], i : Int) : List[String] = { l.map(x => outputStatement(x, i)) }
+  def mapb (l : List[SJBodyDefinition], i : Int) : List[String] = { l.map(x => outputBodyDef(x, i)) }
 
-  def out (x : JStatement, ind : Int) : String = {
+  def outputDefinition (x : SJDefinition, ind : Int) : String = {
     x match {
-      case JInterfaceDefinition(modifiers, id, is, b) =>
-        val ints = if (is.length > 0) " extends " + is.mkString(", ") else ""
-        indent(ind) + modifiers.mkString(" ") +  " interface " + id + ints + "{\n" + mr(mapi(b, ind + 2)) + "\n" + indent(ind) + "}"
-      case JClassDefinition(modifiers, id, s, i, b, o) =>
-        myclass = id
-        /* val specp = ClassTable.getCoq("PRELUDE").reverse.map(x => coqout("PRELUDE", x, 4))
-        val specpr = ClassTable.getCoq(id, "PROGRAM").reverse.map(x => coqout("PROGRAM", x, 4))
-        val specb = ClassTable.getCoq(id, "BEFORESPEC").reverse.map(x => coqout("BEFORESPEC", x, 4))
-        val speca = ClassTable.getCoq(id, "AFTERSPEC").reverse.map(x => coqout("AFTERSPEC", x, 4))
-        val spect = ClassTable.getCoq("TOP").reverse.map(x => coqout("TOP", x, 4))
-        val stacon = mr(specp) + mr(spect) + mr(specpr) + mr(specb) + mr(speca) */
-        val stacon = ""
-        val st =
-          if (stacon.length > 0)
-            indent(ind + 2) + "static {\n" + stacon + "\n" + indent(ind + 2) + "}\n"
-          else
-            ""
+      case SJClassDefinition(modifiers, id, s, i, b, o, f) =>
         val is = if (i.length > 0) " implements " + i.reduceLeft(_ + ", " + _) else " "
-        indent(ind) + modifiers.mkString(" ") + " class " + id + is + "{\n" + st + mr(mapi(b, ind + 2)) + "\n" + indent(ind) + "}"
-      case JFieldDefinition(modifiers, id, t, initializer) => indent(ind) + modifiers.mkString(" ") + " " + t + " " + id + ";"
-      case JMethodDefinition(modifiers, id, typ, ar, b) =>
-        //val sp = ClassTable.getSpecs(myclass)
-        val (pre, pos) =
-        /*  if (sp.contains(id) && sp(id)._1 != null && sp(id)._2 != null) {
-            //Console.println("sp contains id (" + id + "): " + sp)
-            (indent(ind + 2) + "Coq.requires(\"" + sp(id)._1.replace("\"", "\\\"") + "\");\n",
-             indent(ind + 2) + "Coq.ensures(\"" + sp(id)._2.replace("\"", "\\\"") + "\");\n")
-          } else */
-            ("", "")
-        val bo = if (b.length == 1 && b(0).isInstanceOf[JBlock])
-                   b(0).asInstanceOf[JBlock].body
-                 else
-                   b
-        val body = red(mapi(bo, ind + 2), ";\n")
-        val completebody = pre + pos + body
-        val entirebody = if (completebody.length == 0) " " else "\n" + completebody + ";\n" + indent(ind)
-        indent(ind) + modifiers.mkString(" ") +  " " + typ + " " + id + " (" + red(mapi(ar, 0), ", ") + ") {" + entirebody + "}\n"
-      case JArgument(id, t) => indent(ind) + t + " " + id
-      case JBlock(modifier, xs) => {           
-        if (xs.length > 1 || !modifier.isEmpty) {
-          val JModifier(mod) = modifier
-          mod + " {\n" + red(mapi(xs, ind + 2), ";\n") + ";\n" + indent(ind) + "} "
-        } else if (xs.length == 1) {
-          "\n" + out(xs(0), ind + 2)
-        } else  ""
-      }  
-      case JAssignment(l, r) => indent(ind) + l + " = " + out(r, 0)
-      case JFieldWrite(va, f, v) => indent(ind) + out(va, 0) + "." + f + " = " + out(v, 0)
-      case JReturn(r) => indent(ind) + "return " + out(r, 0)
-      case JBinding(n, t, in) =>
-        val init =
-          in match {
+        indent(ind) + modifiers.mkString(" ") + " class " + id + is + "{\n" + mr(mapb(b, ind + 2)) + "\n" + indent(ind) + "}"
+      case SJInterfaceDefinition(modifiers, id, is, b) =>
+        val ints = if (is.length > 0) " extends " + is.mkString(", ") else ""
+        indent(ind) + modifiers.mkString(" ") +  " interface " + id + ints + "{\n" + mr(mapb(b, ind + 2)) + "\n" + indent(ind) + "}"
+    }
+  }
+
+  def outputBodyDef (x : SJBodyDefinition, ind : Int) : String = {
+    x match {
+      case SJFieldDefinition(modifiers, id, t) => indent(ind) + modifiers.mkString(" ") + " " + t + " " + id + ";"
+      case SJMethodDefinition(modifiers, id, typ, ar, bo, ls) =>
+        val body = mapi(bo, ind + 2).mkString(";\n")
+        val entirebody = if (body.length == 0) " " else "{\n" + body + ";\n" + indent(ind) + "}\n"
+        indent(ind) + modifiers.mkString(" ") +  " " + typ + " " + id + " (" + outputArguments(ar) + ") " + entirebody
+      case SJConstructorDefinition(modifiers, typ, ar, bo, ls) =>
+        val body = mapi(bo, ind + 2).mkString(";\n")
+        val entirebody = if (body.length == 0) " " else "{\n" + body + ";\n" + indent(ind) + "}\n"
+        indent(ind) + modifiers.mkString(" ") +  " " + typ + " (" + outputArguments(ar) + ") " + entirebody
+      case SJBodyBlock(modifier, xs) => {           
+        if (xs.length > 1) {
+          val mod = modifier match {
             case None => ""
-            case Some(x) => " = " + out(x, 0)
+            case Some(x) => "static"
           }
-        indent(ind) + t + " " + n + init
-      case JWhile(t,b) => indent(ind) + "while (" + out(t, 0) + ")" + out(b, ind)
-      case JConditional(t, c, a) =>
-        val alt = out(a, ind)
-        val altb = if (alt.length == 0) "" else ";\n" + indent(ind) + "else" + alt
-        indent(ind) + "if (" + out(t, 0) + ")" + out(c, ind) + altb
-      case JBinaryExpression(op, l, r) => indent(ind) + out(l, 0) + " " + op + " " + out(r, 0)
-      case JUnaryExpression(op, e) => indent(ind) + op + out(e, 0)
-      case JPostfixExpression(op, e) => indent(ind) + out(e, 0) + op
-      case JCall(JVariableAccess(v), f, as) =>
-        val va = v + "."
-        indent(ind) + va + f + "(" + red(mapi(as, 0), ", ") + ")"
-      case JNewExpression(t, a) =>
-        indent(ind) + "new " + t + "(" + red(mapi(a, 0), ", ") + ")"
-      case JLiteral(x) =>
-        try {
-          indent(ind) + x.toInt.toString
-        } catch {
-          case e : Exception =>
-            //todo: handle literal char -- are there more reserved words?
-            val res =
-              if (x == "null" || x == "true" || x == "false")
-                x
-              else
-                "\"" + x + "\""
-            indent(ind) + res
+          mod + " {\n" + mapi(xs, ind + 2).mkString(";\n") + ";\n" + indent(ind) + "} "
+        } else if (xs.length == 1)
+          "\n" + outputStatement(xs(0), ind + 2)
+        else
+          ""
+      }
+    }
+  }
+
+  def outputArguments (x : List[SJArgument]) : String = {
+    x.map(y => y.jtype + " " + y.id).mkString(", ")
+  }
+
+  def outputStatement (x : SJStatement, ind : Int) : String = {
+    x match {
+      case SJAssert(ass) => indent(ind) + "assert(" + outputExpression(ass) + ")"
+      case SJWhile(test, body) => indent(ind) + "while (" + outputExpression(test) + ") {\n" + body.map(outputStatement(_, ind + 2)) + "\n" + indent(ind) + "}"
+      case SJConditional(test, c, a) => indent(ind) + "if (" + outputExpression(test) + ") {\n" + c.map(outputStatement(_, ind + 2)) + "\n} else {\n" + a.map(outputStatement(_, ind + 2)) + "}"
+      case SJAssignment(SJVariableAccess(l), r) => l + " = " + outputExpression(r)
+      case SJFieldWrite(SJVariableAccess(l), f, v) => l + "." + f + " = " + outputExpression(v)
+      case SJFieldRead(SJVariableAccess(v), SJVariableAccess(l), f) => v + " = " + l + "." + f
+      case SJReturn(x) => "return " + outputExpression(x)
+      case SJCall(v, r, f, a) =>
+        val lhs = v match {
+          case None => ""
+          case Some(SJVariableAccess(x)) => x + " = "
         }
-      case JVariableAccess(x) => indent(ind) + x
-      case JFieldAccess(v, f) => indent(ind) + out(v, 0) + "." + f
+        lhs + outputExpression(r) + "." + f + "(" + a.map(outputExpression).mkString(", ") + ")"
+      case SJNewExpression(SJVariableAccess(v), ty, ar) =>
+        v + " = " + "new " + ty + "(" + ar.map(outputExpression).mkString(", ") + ")"
+      case x : SJExpression => indent(ind) + outputExpression(x)
+    }
+  }
+
+  def outputExpression (x : SJExpression) : String = {
+    x match {
+      case SJBinaryExpression(op, l, r) => outputExpression(l) + " " + op + " " + outputExpression(r)
+      case SJUnaryExpression(op, e) => op + outputExpression(e)
+      case SJVariableAccess(v) => v
+      case SJLiteral(x) =>
+        x match {
+          case "true" => "true"
+          case "false" => "false"
+          case "null" => "null"
+          case y => try { y.toInt.toString } catch { case e : Exception => "\"" + y + "\"" }
+        }
     }
   }
 }
@@ -124,7 +98,6 @@ object JavaOutput extends JavaOutputter with JavaAST {
 
   def parseandoutput (s : String) : String = {
     val intermediate = FinishAST.doitHelper(parseH(new CharArrayReader(s.toArray)))
-    //intermediate.map(out(_, 0)).reduceLeft(_ + "\n\n" + _)
-    "BARF!"
+    intermediate.map(outputDefinition(_, 0)).reduceLeft(_ + "\n\n" + _)
   }
 }
