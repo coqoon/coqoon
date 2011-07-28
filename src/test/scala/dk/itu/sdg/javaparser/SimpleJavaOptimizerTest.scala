@@ -14,7 +14,7 @@ class ReadWriteVariablesOfStatement extends FlatSpec with ShouldMatchers {
     
     "SJCall" should "add variables to both the read and write sets" in {
       val readAndWrite = rwOfStatement(SJCall(Some(SJVariableAccess("tmp_1")), SJVariableAccess("this"), "fac",List(SJBinaryExpression("-", SJVariableAccess("n"), SJLiteral("1")))))
-      readAndWrite should equal (Some(ReadsAndWrites(HashSet(Read("this")),HashSet(Write("tmp_1")))))
+      readAndWrite should equal (Some(ReadsAndWrites(HashSet(Read("this"), Read("n")), HashSet(Write("tmp_1")))))
     }
     
     "SJAssignment" should "add variables to possible both read and write sets" in {
@@ -22,6 +22,4 @@ class ReadWriteVariablesOfStatement extends FlatSpec with ShouldMatchers {
         SJBinaryExpression("*", SJVariableAccess("n"), SJVariableAccess("tmp_1"))))
       readAndWrite should equal (Some(ReadsAndWrites(HashSet(Read("tmp_1"), Read("n")),HashSet(Write("x")))))
     }
-    
-  
 }
