@@ -1,6 +1,5 @@
 /* 
   Author: Mads Hartmann Jensen
-  Notes: When calling a function: this.method we're registering 'this' as read. is this right?  
 */
 
 package dk.itu.sdg.javaparser
@@ -39,12 +38,17 @@ object SimpleJavaOptimizer {
     } 
     
     /** 
-    * traverse the AST and partition the statement into blocks. 
+    * traverse the AST and partition the statement into blocks using the following rules: 
+    * 
     *   - body of if/else are considered a single block 
-    *   - conditions are considered part of the block before it. 
+    *   - conditions are considered part of the block before it.
+    * 
+    * @param in   The list of statements still to process
+    * @param out  The list of blocks. The new blocks are prepended during the processing so this will result in a reversed 
+    *             order of the blocks. This is handy as we're doing a Backward Analysis. 
     */
     def extractBlocks(in: List[SJStatement], out: List[Block] = Nil): List[Block] = in match {
-      case Nil => out.reverse 
+      case Nil => out
       case x :: xs => { x match {
         case SJConditional(cond,consequent, alternative) => extractBlocks(xs, List(cond) :: (consequent ::: alternative) :: out)
         case SJWhile(cond, body) => extractBlocks(xs, List(cond) :: body :: out)
@@ -66,7 +70,7 @@ object SimpleJavaOptimizer {
       case x :: xs => process(x,analyse(block, in),xs)
     }
 
-    val blocks = extractBlocks(method.body.reverse) // Backward Analysis
+    val blocks = extractBlocks(method.body) 
     println(process(blocks.head, HashSet(), blocks.tail))
   }
   
@@ -81,12 +85,18 @@ object SimpleJavaOptimizer {
         case SJVariableAccess(r)                                    => Some(ReadsAndWrites( reads = HashSet(r)))
         case SJReturn(SJVariableAccess(r))                          => Some(ReadsAndWrites( reads = HashSet(r)))
         case SJFieldRead(SJVariableAccess(w),SJVariableAccess(r),_) => Some(ReadsAndWrites(HashSet(r), HashSet(w)))
-        case SJNewExpression(SJVariableAccess(w),_,_)               => Some(ReadsAndWrites( writes = HashSet(w)))
+        case SJNewExpression(SJVariableAccess(w),_,args)            => 
+          val writes = ReadsAndWrites( writes = HashSet(w))
+          val rws = args.map(rwOfStatement(_)).foldLeft(Option(writes)){ (acc, current) => merge(current, acc) }
+          merge(rws, before)
         case SJFieldWrite(SJVariableAccess(w),_,expr)               => recursive(expr, merge(Some(ReadsAndWrites( writes = HashSet((w)))), before))
         case SJAssignment(SJVariableAccess(w),expr)                 => recursive(expr, merge(Some(ReadsAndWrites( writes = HashSet((w)))), before))
         case SJBinaryExpression(_,l,r)                              => merge(merge(before, recursive(l,None)),recursive(r,None))
-        case SJCall(None, a:SJVariableAccess,_,_)                   => Some(ReadsAndWrites( reads = HashSet(a.variable)))
-        case SJCall(Some(w), a:SJVariableAccess,_,_)                => Some(ReadsAndWrites(HashSet(a.variable), HashSet(w.variable)))
+        case SJCall(value, a:SJVariableAccess,_,args)               => 
+          val reads = HashSet(a.variable)
+          val rw = value.map( w => ReadsAndWrites( reads = reads, writes = HashSet(w.variable)) ).getOrElse(ReadsAndWrites(reads = reads))
+          val rws = args.map(rwOfStatement(_)).foldLeft(Option(rw)){ (acc, current) => merge(current, acc) }
+          merge(rws, before)
         case _                                                      => None // don't care about the SJStatements that doesn't read/write variables 
       })
       merge(before,after)
