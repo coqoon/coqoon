@@ -12,8 +12,6 @@ object SimpleJavaOptimizer {
   
   def noVars() = HashSet[String]() 
   
-  type Block = List[SJStatement]
-  
   sealed trait SJStatementMetaData 
   trait RW extends SJStatementMetaData { 
     val rw: ReadsAndWrites 
@@ -41,100 +39,82 @@ object SimpleJavaOptimizer {
   case class ReadsAndWrites(reads: Variables = new HashSet(), writes: Variables = new HashSet()) 
   
   /** 
-   * Perform a Live Variable Analysis on the method body. 
-   *
-   * TODO: Currently it just prints to the console whenever it finds a dead variable. 
+   * TODO: DO the actual rewrite.  
    */
-  def liveVariables(method: SJMethodDefinition): Unit = {
-    
-    /** 
-     * Find the variables that are live at the end of the block. 
-     *  
-     * Any variable that is written but isn't read by the following blocks (represented by the 'in' 
-     * parameter) is considered a dead variable   
-     * 
-     * @param block The block to analyze
-     * @param in the variables that are live after the block 
-     * @return the variables that are live at the end of the block. 
-     */
-    def analyse(block: Block, in: Variables): Variables = {
-      val rw = block.foldLeft(ReadsAndWrites()){ (acc, current) => merge(rwOfStatement(current), Some(acc)).getOrElse(ReadsAndWrites()) }
-      val dead = rw.writes.filterNot( in.contains(_) )
-      if (!dead.isEmpty) println("Found dead variable: " + dead + " in " + block) //TODO: Do something proper. 
-      (rw.reads ++ in).filterNot( rw.writes.contains(_) ) // TODO: Is it correct to also remove elements from 'in'?
-    } 
-    
-    /** 
-    * traverse the AST and partition the statement into blocks using the following rules: 
-    * 
-    *   - body of if/else are considered a single block 
-    *   - conditions are considered part of the block before it.
-    * 
-    * @param in   The list of statements still to process
-    * @param out  The list of blocks. The new blocks are prepended during the processing so this will result in a reversed 
-    *             order of the blocks. This is handy as we're doing a Backward Analysis. 
-    */
-    def extractBlocks(in: List[SJStatement], out: List[Block] = Nil): List[Block] = in match {
-      case Nil => out
-      case x :: xs => { x match {
-        case SJConditional(cond,consequent, alternative) => extractBlocks(xs, List(cond) :: (consequent ::: alternative) :: out)
-        case SJWhile(cond, body) => extractBlocks(xs, List(cond) :: body :: out)
-        // not a new block. Add the statement to the block at the top of the stack. 
-        case stm => extractBlocks(xs, (stm :: out.headOption.getOrElse(Nil)) :: (if (out.isEmpty) Nil else out.tail))
-      }}
-    }
-    
-    /** 
-     * Run a live variable analysis on each block. The variables that are a alive at the end of each block are
-     * used when analyzing the blocks before it. 
-     *
-     * @param block The current block to analyze 
-     * @param in the variables that are live after the block 
-     * @param workList The blocks still to be processed 
-     */
-    def process(block: Block, in: Variables, workList: List[Block]): Variables = workList match {
-      case Nil     => analyse(block, in) 
-      case x :: xs => process(x,analyse(block, in),xs)
-    }
+  def liveVariableRewrite(statements: List[SJStatement with RW]): List[SJStatement] = {
 
-    val blocks = extractBlocks(method.body) 
-    println(process(blocks.head, HashSet(), blocks.tail))
+    val blocks = extractBlocks(statements).asInstanceOf[List[List[SJStatement with RW]]]
+    
+    val l = blocks.foldLeft((Nil: List[List[SJStatement with RW]],HashSet(): Variables)){ (result: (List[List[SJStatement with RW]], Variables), current: List[SJStatement with RW]) => 
+      
+      val (xs, in) = result
+      
+      val rw = current.foldLeft(ReadsAndWrites()){ (acc, current) => merge(Some(current.rw), Some(acc)).get }
+      val dead = rw.writes.filterNot( in.contains(_) )
+      if (!dead.isEmpty) println("Found dead variable: " + dead + " in " + current) //TODO: Do something proper. 
+      var out = (rw.reads ++ in).filterNot( rw.writes.contains(_) )
+      (current :: xs, out)
+    }
+    
+    statements
+  }
+      
+  /** 
+  * traverse the AST and partition the statement into blocks using the following rules: 
+  * 
+  *   - body of if/else are considered a single block 
+  *   - conditions are considered part of the block before it.
+  * 
+  * @param in   The list of statements still to process
+  * @param out  The list of blocks. The new blocks are prepended during the processing so this will result in a reversed 
+  *             order of the blocks. This is handy as we're doing a Backward Analysis. 
+  */
+  def extractBlocks(in: List[SJStatement], out: List[List[SJStatement]] = Nil): List[List[SJStatement]] = in match {
+    case Nil => out
+    case x :: xs => { x match {
+      case SJConditional(cond,consequent, alternative) => extractBlocks(xs, List(cond) :: (consequent ::: alternative) :: out)
+      case SJWhile(cond, body) => extractBlocks(xs, List(cond) :: body :: out)
+      // not a new block. Add the statement to the block at the top of the stack. 
+      case stm => extractBlocks(xs, (stm :: out.headOption.getOrElse(Nil)) :: (if (out.isEmpty) Nil else out.tail))
+    }}
   }
   
   /** 
-   * Attach Meta Data to the AST. 
+   * Traverse the AST while enriching it with additional meta-data. 
+   *
+   * @param stm The statement to enrich with meta-data
+   * @param f A unary function that enriches the SJStatement with meta-data.  
    */
-  def transformList[A <: SJStatementMetaData, Bin <: SJStatement, Bout <: SJStatement](statements: List[SJStatement], f:  (Bin) => Bout with A ): List[SJStatement with A] = {
-    statements map { transform(_, f)}
-  }
-  
-  def transform[A <: SJStatementMetaData, Bin <: SJStatement, Bout <: SJStatement](stm: SJStatement, f:  (Bin) => Bout with A ): SJStatement with A = {
+  def enrich[A <: SJStatementMetaData, Bin <: SJStatement, Bout <: SJStatement](stm: SJStatement, f:  (Bin) => Bout with A ): SJStatement with A = {
     
     val fExpr: SJExpression => SJExpression with A = f.asInstanceOf[Function1[SJExpression, SJExpression with A]]
     val fStm: SJStatement => SJStatement with A = f.asInstanceOf[Function1[SJStatement, SJStatement with A]]
     val fVar: SJVariableAccess => SJVariableAccess with A = f.asInstanceOf[Function1[SJVariableAccess, SJVariableAccess with A]]
-    val transformExpr: SJExpression => SJExpression with A = x => transform(fExpr(x), f).asInstanceOf[SJExpression with A]
-    val transformExprList: List[SJExpression] => List[SJExpression with A] = xs => transformList(xs, fExpr).asInstanceOf[List[SJExpression with A]]
+    val enrichExpr: SJExpression => SJExpression with A = x => enrich(fExpr(x), f).asInstanceOf[SJExpression with A]
+    val enrichExprList: List[SJExpression] => List[SJExpression with A] = xs => enrichList(xs, fExpr).asInstanceOf[List[SJExpression with A]]
     
     stm match {
-      case SJConditional(test, consequent, alternative) => fStm(SJConditional(transformExpr(test), transformList(consequent, f), transformList(alternative, f)))
-      case SJNewExpression(x,y,args)                    => fStm(SJNewExpression(fVar(x),y,transformExprList(args))) 
-      case SJFieldWrite(x,y,expr)                       => fStm(SJFieldWrite(fVar(x),y,transformExpr(expr)))
-      case SJAssignment(x,expr)                         => fStm(SJAssignment(fVar(x),transformExpr(expr)))
-      case SJBinaryExpression(x,l,r)                    => fStm(SJBinaryExpression(x, transformExpr(l), transformExpr(r)))
-      case SJCall(Some(x),y,z,args)                     => fStm(SJCall(Some(fVar(x)),transformExpr(y),z,transformExprList(args)))
-      case SJCall(None,y,z,args)                        => fStm(SJCall(None, transformExpr(y), z, transformExprList(args)))
+      case SJConditional(test, consequent, alternative) => fStm(SJConditional(enrichExpr(test), enrichList(consequent, f), enrichList(alternative, f)))
+      case SJNewExpression(x,y,args)                    => fStm(SJNewExpression(fVar(x),y,enrichExprList(args))) 
+      case SJFieldWrite(x,y,expr)                       => fStm(SJFieldWrite(fVar(x),y,enrichExpr(expr)))
+      case SJAssignment(x,expr)                         => fStm(SJAssignment(fVar(x),enrichExpr(expr)))
+      case SJBinaryExpression(x,l,r)                    => fStm(SJBinaryExpression(x, enrichExpr(l), enrichExpr(r)))
+      case SJCall(Some(x),y,z,args)                     => fStm(SJCall(Some(fVar(x)),enrichExpr(y),z,enrichExprList(args)))
+      case SJCall(None,y,z,args)                        => fStm(SJCall(None, enrichExpr(y), z, enrichExprList(args)))
       case stm                                          => fStm(stm)
     }
   }
-    
-  def rwTransform(m: SJMethodDefinition): SJMethodDefinition with RW = {    
-    def f[B <: SJStatement](stm: B) = withRWMeta(stm, rwOfStatement(stm).getOrElse( ReadsAndWrites() ))
-    new SJMethodDefinition(m.modifiers, m.id, m.jtype, m.parameters, transformList(m.body, (x: SJStatement) => f(x)), m.localvariables) with RW { val rw = ReadsAndWrites() }
-  }
   
-  def rwOfStatements(statements: List[SJStatement], initial: Option[ReadsAndWrites] = Some(ReadsAndWrites())): Option[ReadsAndWrites] = {
-    statements.map(rwOfStatement(_)).foldLeft(initial){ (acc, current) => merge(current, acc) }
+  /** 
+   * @see enrich. Works the same way but on a list. 
+   */
+  def enrichList[A <: SJStatementMetaData, Bin <: SJStatement, Bout <: SJStatement](statements: List[SJStatement], f:  (Bin) => Bout with A ): List[SJStatement with A] = {
+    statements map { enrich(_, f)}
+  }
+    
+  def rwEnrich(m: SJMethodDefinition): SJMethodDefinition with RW = {    
+    def f[B <: SJStatement](stm: B) = withRWMeta(stm, rwOfStatement(stm).getOrElse( ReadsAndWrites() ))
+    new SJMethodDefinition(m.modifiers, m.id, m.jtype, m.parameters, enrichList(m.body, (x: SJStatement) => f(x)), m.localvariables) with RW { val rw = ReadsAndWrites() }
   }
   
   /** 
@@ -170,6 +150,10 @@ object SimpleJavaOptimizer {
     recursive(statement, None)
   }
   
+  def rwOfStatements(statements: List[SJStatement], initial: Option[ReadsAndWrites] = Some(ReadsAndWrites())): Option[ReadsAndWrites] = {
+    statements.map(rwOfStatement(_)).foldLeft(initial){ (acc, current) => merge(current, acc) }
+  }
+  
   /** 
    * Merges two option wrapped instances of ReadsAndWrites. 
    */
@@ -194,6 +178,6 @@ object SimpleJavaOptimizer {
           List(SJAssignment(SJVariableAccess("x"), SJLiteral("1")))),
        SJReturn(SJVariableAccess("x"))),
          HashMap("x" -> "int", "tmp_1" -> "int", "n" -> "int", "this" -> "Fac"))
-    println(rwTransform(prog))
+    liveVariableRewrite(rwEnrich(prog).body.asInstanceOf[List[SJStatement with RW]])
   }
 }
