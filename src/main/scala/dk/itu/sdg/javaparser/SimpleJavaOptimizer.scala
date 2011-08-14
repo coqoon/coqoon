@@ -65,6 +65,10 @@ object AST {
   
   // Convenince methods on ASTs
   
+  def isUsed(variable: String, in: List[SJStatement]) = {
+    in exists { stm => isWriting(variable,stm) || isReading(variable,stm) }
+  }
+  
   def isWriting(dead: String, statement: SJStatement): Boolean = foldRight(List(statement), false, { (stm: SJStatement, acc: Boolean) =>  
     stm match {
       case SJNewExpression(SJVariableAccess(`dead`),_,_) => true
@@ -135,6 +139,7 @@ object SimpleJavaOptimizer {
    */
   def liveVariableRewrite(method: SJMethodDefinition): SJMethodDefinition = {
     
+    // the rewrite algorithm 
     def rewrite(deads: HashSet[String], statements: List[SJStatement]): List[SJStatement] = rwOfStatements(statements).map { rw => 
       deads.foldLeft(statements){ (rewritten, dead) =>  // for each dead variable: rewrite the AST. 
         if ( rw.reads.contains(dead) )  {               // it's read & written
@@ -177,7 +182,10 @@ object SimpleJavaOptimizer {
       }
     }}.reverse
     
-    method.copy( body = newBody )
+    // remove any local variables from the methods 'localvariables' that are no longer used. 
+    val variables = for { (k,v) <- method.localvariables if isUsed(variable = k, in = newBody) } yield (k,v)
+    
+    method.copy( body = newBody, localvariables = variables )
   }
   
   /** 

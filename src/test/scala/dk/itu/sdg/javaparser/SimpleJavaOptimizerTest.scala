@@ -62,7 +62,7 @@ class RemoveDeadVariables extends FlatSpec with ShouldMatchers {
             )
           ),
           SJReturn(SJVariableAccess("x"))),
-        HashMap("x" -> "int", "tmp_1" -> "int", "n" -> "int", "this" -> "Fac"))
+        HashMap("x" -> "int", "n" -> "int", "this" -> "Fac"))
         
     liveVariableRewrite(before) should equal (after)
   }
