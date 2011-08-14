@@ -93,6 +93,10 @@ object AST {
     case x => x
   })
   
+  def removeWritesOf(variable: String, in: List[SJStatement]) = {
+    for { stm <- in if !isWriting(variable,stm) } yield stm 
+  }
+  
   /** 
    * Find all the SJStatements in a List of SJStatement where the given variable is 
    * written. 
@@ -140,48 +144,78 @@ object SimpleJavaOptimizer {
   def liveVariableRewrite(method: SJMethodDefinition): SJMethodDefinition = {
     
     // the rewrite algorithm 
-    def rewrite(deads: HashSet[String], statements: List[SJStatement]): List[SJStatement] = rwOfStatements(statements).map { rw => 
-      deads.foldLeft(statements){ (rewritten, dead) =>  // for each dead variable: rewrite the AST. 
-        if ( rw.reads.contains(dead) )  {               // it's read & written
-          findWriteVarsWhereVarIsRead( variable = dead, in = rewritten).foldRight(rewritten){ (write,stms) => 
-                                                        // replace all writes to 'dead' to writes of 'write' if
-                                                        // the previous value of 'dead' isn't used in the calculation. 
-            if (findStmsWithWritesOf( variable = dead, in = stms ) forall ( !isReading(dead,_)))
-              transform(writesOf = dead, toWritesOf = write, in = stms)
-            else 
-              stms
+    def rewrite(deads: HashSet[String], statements: List[SJStatement]): List[SJStatement] = {
+      rwOfStatements(statements).map { rw => 
+        deads.foldLeft(statements){ (rewritten, dead) =>  // for each dead variable: rewrite the AST. 
+          if ( rw.reads.contains(dead) ) {                // it's read & written
+            // it's dead but still read in the block. If it's truely a temporary value that is simply used in _one_
+            // other assignment we can replace the assignment to the tmp variable with a assignment to the variable
+            // that's using the tmp variable.
+            // Also, the variable shouldn't have a previous value. (TODO: Not currently checked)
+            val usingDeadVar = findWriteVarsWhereVarIsRead( variable = dead, in = rewritten)
+            if (usingDeadVar.size == 1) {
+              transform(writesOf = dead, toWritesOf = usingDeadVar.head, in = rewritten)
+            } else {
+              rewritten
+            }
+          }
+          else {                                            // it's written and not read in the block we can just remove it.
+            removeWritesOf(variable = dead, in = rewritten) 
           }
         }
-        else                                            // it's written and not read in the block we can just remove it.
-          rewritten                                     // TODO: Implement 
-      }
-    } getOrElse(statements)
+      } getOrElse(statements)
+    }
     
-    /* TODO: Remove variable with a recursive method? */
-    var in = HashSet[String]()
+    // the traversal of the AST by block.     
+    def rec(remaining:    List[SJStatement], 
+            currentBlock: List[SJStatement] = Nil,
+            processed:    List[SJStatement] = Nil, 
+            in:           HashSet[String]   = HashSet[String]()): List[SJStatement] = remaining match {
+      case Nil => 
+        val cBlockProcced = findDeadVariables(in, currentBlock).map(rewrite(_, currentBlock)).getOrElse(currentBlock)
+        cBlockProcced ::: processed
+      case x :: xs => 
+        x match {
+          case SJConditional(cond, consequent, alternative) =>
+          {
+            // Process the block after the current SJConditional (i.e. the current block)
+            val rwOfBlock = rwOfStatements(currentBlock).getOrElse(ReadsAndWrites())
+            val cBlockProcced = findDeadVariables(in, currentBlock).map(rewrite(_, currentBlock)).getOrElse(currentBlock)
+            val newIn = (rwOfBlock.reads ++ in).filterNot( rwOfBlock.writes.contains(_))
+            
+            // now process the SJConditional. 
+            val newConsequent  = findDeadVariables(newIn, consequent).map(rewrite(_, consequent)).getOrElse(consequent)
+            val newAlternative = findDeadVariables(newIn, alternative).map(rewrite(_, alternative)).getOrElse(alternative)
+            val rwConsequent   = rwOfStatements(consequent).getOrElse(ReadsAndWrites())
+            val rwAlternative  = rwOfStatements(alternative).getOrElse(ReadsAndWrites())
+            val rwOfCond       = rwOfStatement(cond).getOrElse(ReadsAndWrites())
+            
+            
+            val nextIn = newIn.filterNot( x => rwConsequent.writes.contains(x) || rwAlternative.writes.contains(x) ) ++ 
+              (rwOfCond.reads ++ rwConsequent.reads ++ rwAlternative.reads)
+            rec(xs,Nil, SJConditional(cond, newConsequent, newAlternative) :: cBlockProcced ::: processed,nextIn)
+          }
+          case SJWhile(cond, body) => 
+          {
+            // Process the block after the current SJWhile (i.e. the current block)
+            val rwOfBlock = rwOfStatements(currentBlock).getOrElse(ReadsAndWrites())
+            val cBlockProcced = findDeadVariables(in, currentBlock).map(rewrite(_, currentBlock)).getOrElse(currentBlock)
+            
+            // The RW of the condition will always be read after the loop, hence it should be added to the 'in' variables 
+            val rwOfCond = rwOfStatement(cond).getOrElse(ReadsAndWrites()) 
+            val newIn = in.filterNot( rwOfBlock.writes.contains(_)) ++ (rwOfCond.reads ++ rwOfBlock.reads)
+            
+            val rw = rwOfStatements(body).getOrElse(ReadsAndWrites())
+            val newBody = findDeadVariables(newIn, body).map(rewrite(_, body)).getOrElse(body)
+
+            val nextIn = newIn.filterNot( rw.writes.contains(_)) ++ (rw.reads ++ rwOfCond.reads)
+            rec(xs,Nil,SJWhile(cond, newBody) :: cBlockProcced ::: processed, nextIn)
+          }
+          case stm => rec(xs, x :: currentBlock, processed, in)
+        }
+    }
     
-    val newBody = method.body.reverse.map { _ match {
-      case SJConditional(cond, consequent, alternative) => {
-        val newConsequent  = findDeadVariables(in, consequent).map { deads => rewrite(deads, consequent) }.getOrElse(consequent)
-        val newAlternative = findDeadVariables(in, alternative).map { deads => rewrite(deads, alternative) }.getOrElse(alternative)
-        val rwConsequent   = rwOfStatements(consequent).getOrElse(ReadsAndWrites())
-        val rwAlternative  = rwOfStatements(alternative).getOrElse(ReadsAndWrites())
-        in = (rwConsequent.reads ++ rwAlternative.reads ++ in).filterNot( x => rwConsequent.writes.contains(x) || rwAlternative.writes.contains(x) )
-        SJConditional(cond, newConsequent, newAlternative)
-      }
-      case SJWhile(cond, body) => {
-        val rw = rwOfStatements(body).getOrElse(ReadsAndWrites())
-        val newBody = findDeadVariables(in, body).map( deads => rewrite(deads, body)).getOrElse(body)
-        in = (rw.reads ++ in).filterNot( rw.writes.contains(_) )
-        SJWhile(cond, newBody)
-      }
-      case stm => {
-        val rw = rwOfStatement(stm).getOrElse(ReadsAndWrites())
-        in = (rw.reads ++ in).filterNot( rw.writes.contains(_) )
-        stm
-      }
-    }}.reverse
-    
+    val newBody = rec(method.body.reverse) 
     // remove any local variables from the methods 'localvariables' that are no longer used. 
     val variables = for { (k,v) <- method.localvariables if isUsed(variable = k, in = newBody) } yield (k,v)
     

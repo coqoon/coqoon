@@ -25,7 +25,38 @@ class ReadWriteVariablesOfStatement extends FlatSpec with ShouldMatchers {
 
 class RemoveDeadVariables extends FlatSpec with ShouldMatchers {
   
-  "Removing dead variables in fac" should "replace tmp_1 with x" in {
+  "Removing dead variables" should "remove obviouslyDead in the example" in  {
+    val before = SJMethodDefinition(Set(Static()), "m","int",Nil,List(
+      SJAssignment(SJVariableAccess("obviouslyDead"),SJLiteral("42")),
+      SJReturn(SJLiteral("42"))
+    ),HashMap("obviouslyDead" -> "int"))
+    
+    val after = SJMethodDefinition(Set(Static()), "m","int",Nil,List(
+      SJReturn(SJLiteral("42"))
+    ),HashMap[String,String]())
+    
+    liveVariableRewrite(before) should equal (after)
+  }
+  
+  it should "not remove a dead variable in a while loop if it's read in the condition" in {
+    val before = SJMethodDefinition(Set(Static()), "sum", "int", Nil, List(
+      SJAssignment(SJVariableAccess("keepGoing"),SJLiteral("true")),
+      SJAssignment(SJVariableAccess("sum"),SJLiteral("0")),
+      SJWhile(SJBinaryExpression("==",SJVariableAccess("keepGoing"),SJLiteral("true")), List(
+        SJAssignment(SJVariableAccess("sum"),SJBinaryExpression("+",SJVariableAccess("sum"),SJLiteral("1"))),
+        SJConditional(SJBinaryExpression(">",SJVariableAccess("sum"),SJLiteral("42")),List(
+          SJAssignment(SJVariableAccess("keepGoing"),SJLiteral("false"))
+        ), Nil)
+      )),
+      SJReturn(SJVariableAccess("sum"))
+    ), HashMap("keepGoing" -> "boolean", "sum" -> "int"))
+    
+    val after = before 
+    
+    liveVariableRewrite(before) should equal (after)
+  }
+  
+  "Replacing dead variables" should "replace tmp_1 with x in fac" in {
     val before = SJMethodDefinition(Set(Static()), "fac", "int",
       List(SJArgument("n", "int")), List(
         SJConditional(SJBinaryExpression(">=", SJVariableAccess("n"), SJLiteral("0")),
@@ -67,7 +98,7 @@ class RemoveDeadVariables extends FlatSpec with ShouldMatchers {
     liveVariableRewrite(before) should equal (after)
   }
   
-  "Removing dead variables" should "should not replace dead variable if the previous value is used" in {
+  it should "should not replace dead variable if it's used in more than one assignment inside the block" in {
     val before = SJMethodDefinition(Set(Static()), "fac", "int",
       List(SJArgument("n", "int")), List(
         SJAssignment(SJVariableAccess("tmp_1"), SJLiteral("42")),
@@ -92,8 +123,5 @@ class RemoveDeadVariables extends FlatSpec with ShouldMatchers {
     val after = before
         
     liveVariableRewrite(before) should equal (after)
-  }
-  
-  
-  
+  }  
 }
