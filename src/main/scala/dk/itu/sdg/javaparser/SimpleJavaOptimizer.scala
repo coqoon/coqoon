@@ -4,8 +4,12 @@
 
 package dk.itu.sdg.javaparser
 
-import scala.collection.immutable.{ HashSet }
+import scala.collection.immutable.{ HashSet };
 
+/** 
+ * Object that contains generic methods related to traversal and transformation of 
+ * the Simple Java AST.
+ */
 object AST {
   
   /** 
@@ -32,13 +36,12 @@ object AST {
 
   /** 
    * Returns the result of applying f to each node in the tree 
-   * 
-   * Note: It's very important that f only returns the same type as it's input. 
+   * NOTE: It's very important that f only returns the same type as it's input. 
    */
   def trans(statements: List[SJStatement],f: SJStatement => SJStatement): List[SJStatement] = {
 
     val fexpr = f.asInstanceOf[Function1[SJExpression, SJExpression]]
-    val facc = f.asInstanceOf[Function1[SJVariableAccess,SJVariableAccess]]
+    val facc  = f.asInstanceOf[Function1[SJVariableAccess,SJVariableAccess]]
 
     def transExpr(expression: SJExpression): SJExpression = expression match {
       case SJBinaryExpression(op,l,r)  => fexpr(SJBinaryExpression(op, fexpr(l),fexpr(r)))
@@ -67,7 +70,6 @@ object AST {
       case SJNewExpression(SJVariableAccess(`dead`),_,_) => true
       case SJFieldWrite(SJVariableAccess(`dead`),_,_)    => true
       case SJAssignment(SJVariableAccess(`dead`),_)      => true
-      case SJBinaryExpression(x,l,r)                     => true 
       case SJCall(_, SJVariableAccess(`dead`),_,_)       => true
       case x                                             => acc || false 
     }
@@ -87,8 +89,38 @@ object AST {
     case x => x
   })
   
+  /** 
+   * Find all the SJStatements in a List of SJStatement where the given variable is 
+   * written. 
+   */
+  def findStmsWithWritesOf(variable: String, in: List[SJStatement]): List[SJStatement] = {
+    foldRight(in, Nil: List[SJStatement], (stm:SJStatement, acc: List[SJStatement]) => {
+      if (isWriting(variable,stm)) stm :: acc else acc 
+    })
+  }
+  
+  /** 
+   * Traverse the AST and find the name of all the variables that are written where the value 
+   * of 'variable' is read to produce the written value.
+   */
+  def findWriteVarsWhereVarIsRead(variable: String, in: List[SJStatement]): List[String] = {
+   
+    val isReadingVariable = isReading(variable,_: SJStatement)
+    
+    def rec(stm: SJStatement): List[String] = stm match {
+      case SJCall(List(SJVariableAccess(w)), SJVariableAccess(`variable`),_,args) => List(w)
+      case SJCall(List(SJVariableAccess(w)), SJVariableAccess(r),_,args)          => if (args.map(isReadingVariable).contains(true)) List(w) else Nil
+      case SJNewExpression(SJVariableAccess(w),_,args)                            => if (args.map(isReadingVariable).contains(true)) List(w) else Nil
+      case SJFieldWrite(SJVariableAccess(w),_,expr)                               => if (isReadingVariable(expr)) List(w) else Nil
+      case SJAssignment(SJVariableAccess(w),expr)                                 => if (isReadingVariable(expr)) List(w) else Nil 
+      case SJBinaryExpression(_,l,r) => 
+        val (x,y) = (rec(l),rec(r)) 
+        if (x.isEmpty) { if (y.isEmpty) Nil else y } else x
+      case x => Nil
+    }
+    foldRight(in, Nil: List[String], (stm: SJStatement,acc: List[String]) => rec(stm) ::: acc )
+  }
 }
-
 
 object SimpleJavaOptimizer {
 
@@ -99,48 +131,28 @@ object SimpleJavaOptimizer {
   case class ReadsAndWrites(reads: Variables = new HashSet(), writes: Variables = new HashSet()) 
   
   /** 
-   * Rewrite the method to remove any dead variables. 
+   * Rewrites the SJMethodDefinition to remove any dead variables. 
    */
   def liveVariableRewrite(method: SJMethodDefinition): SJMethodDefinition = {
     
-    def findWriteWhereVariableIsRead(variable: String, in: List[SJStatement]): List[String] = {
-     
-      val isReadingVariable = isReading(variable,_: SJStatement)
-      
-      def rec(stm: SJStatement): List[String] = stm match {
-        case SJCall(List(SJVariableAccess(w)), SJVariableAccess(`variable`),_,args) => List(w)
-        case SJCall(List(SJVariableAccess(w)), SJVariableAccess(r),_,args)          => if (args.map(isReadingVariable).contains(true)) List(w) else Nil
-        case SJNewExpression(SJVariableAccess(w),_,args)                            => if (args.map(isReadingVariable).contains(true)) List(w) else Nil
-        case SJFieldWrite(SJVariableAccess(w),_,expr)                               => if (isReadingVariable(expr)) List(w) else Nil
-        case SJAssignment(SJVariableAccess(w),expr)                                 => if (isReadingVariable(expr)) List(w) else Nil 
-        case SJBinaryExpression(_,l,r) => 
-          val (x,y) = (rec(l),rec(r)) 
-          if (x.isEmpty) { if (y.isEmpty) Nil else y } else x
-        case x => Nil
-
-      }
-      foldRight(in, Nil: List[String], (stm: SJStatement,acc: List[String]) => rec(stm) ::: acc )
-    }
-    
-    def rewrite(deads: HashSet[String], statements: List[SJStatement]): List[SJStatement] = {
-      val rw = rwOfStatements(statements).getOrElse(ReadsAndWrites())
-      deads.foldLeft(statements){ (rewritten, dead) => // for each dead variable: rewrite the AST. 
-        if ( rw.reads.contains(dead) )  { // it's read & written
-          // - x is the dead variable
-          // - start at the bottom (foldRight)
-          // - when x is read, record what variable (y) the result of the expression is stored in
-          // - when x is written, write the variable y instead (only if y is not written earlier in the program)
-          findWriteWhereVariableIsRead( variable = dead, in = rewritten).foldRight(rewritten){ (write,stms) => 
-            transform(writesOf = dead, toWritesOf = write, in = stms)
+    def rewrite(deads: HashSet[String], statements: List[SJStatement]): List[SJStatement] = rwOfStatements(statements).map { rw => 
+      deads.foldLeft(statements){ (rewritten, dead) =>  // for each dead variable: rewrite the AST. 
+        if ( rw.reads.contains(dead) )  {               // it's read & written
+          findWriteVarsWhereVarIsRead( variable = dead, in = rewritten).foldRight(rewritten){ (write,stms) => 
+                                                        // replace all writes to 'dead' to writes of 'write' if
+                                                        // the previous value of 'dead' isn't used in the calculation. 
+            if (findStmsWithWritesOf( variable = dead, in = stms ) forall ( !isReading(dead,_)))
+              transform(writesOf = dead, toWritesOf = write, in = stms)
+            else 
+              stms
           }
         }
-        else // it's written and not read in the block we can just remove it.
-          // TODO: Implement 
-          rewritten
-          // rewritten.foldRight(Nil: List[Option[SJStatement]])((stm,acc) => removeWrites(dead, stm) :: acc).flatten   
+        else                                            // it's written and not read in the block we can just remove it.
+          rewritten                                     // TODO: Implement 
       }
-    }
+    } getOrElse(statements)
     
+    /* TODO: Remove variable with a recursive method? */
     var in = HashSet[String]()
     
     val newBody = method.body.reverse.map { _ match {
@@ -170,8 +182,8 @@ object SimpleJavaOptimizer {
   
   /** 
    * Given a list of variable that are read after the list of SJStatement (in) find
-   * any dead variables. A variable is dead if it's written but not in the in set. I.e.
-   * the following blocks doesn't read it. 
+   * any dead variables. A variable is dead if it's written but not in the 'in' set. I.e.
+   * the following blocks don't read it. 
    */
   def findDeadVariables(in: Set[String], statements: List[SJStatement]) = {
     val rw = rwOfStatements(statements).getOrElse(ReadsAndWrites())
@@ -183,8 +195,7 @@ object SimpleJavaOptimizer {
    * Given a SJStatement it will return Some(ReadsAndWrites) with the variable being 
    * read/written. None if no variable are read/written
    */
-  def rwOfStatement(statement: SJStatement): Option[ReadsAndWrites] = {
-    
+  def rwOfStatement(statement: SJStatement): Option[ReadsAndWrites] = {    
     def recursive(stm: SJStatement, before: Option[ReadsAndWrites]): Option[ReadsAndWrites] = {
       val after = (stm match {
         case SJVariableAccess(r) => Some(ReadsAndWrites( reads = HashSet(r)))

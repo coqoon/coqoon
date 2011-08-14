@@ -64,7 +64,34 @@ class RemoveDeadVariables extends FlatSpec with ShouldMatchers {
           SJReturn(SJVariableAccess("x"))),
         HashMap("x" -> "int", "tmp_1" -> "int", "n" -> "int", "this" -> "Fac"))
         
-      liveVariableRewrite(before) should equal (after)
+    liveVariableRewrite(before) should equal (after)
+  }
+  
+  "Removing dead variables" should "should not replace dead variable if the previous value is used" in {
+    val before = SJMethodDefinition(Set(Static()), "fac", "int",
+      List(SJArgument("n", "int")), List(
+        SJAssignment(SJVariableAccess("tmp_1"), SJLiteral("42")),
+        SJConditional(SJBinaryExpression(">=", SJVariableAccess("n"), SJLiteral("0")),
+          List(
+            SJAssignment(SJVariableAccess("tmp_1"),SJBinaryExpression("-",SJVariableAccess("tmp_1"),SJLiteral("1"))),
+            SJCall(
+              Some(SJVariableAccess("tmp_1")), 
+              SJVariableAccess("this"), 
+              "fac",
+              List(SJBinaryExpression("-", SJVariableAccess("n"), SJLiteral("1")))
+            ),
+            SJAssignment(SJVariableAccess("x"), SJBinaryExpression("*", SJVariableAccess("n"), SJVariableAccess("tmp_1")))
+          ),
+          List(
+            SJAssignment(SJVariableAccess("x"), SJLiteral("1"))
+          )
+        ),
+        SJReturn(SJVariableAccess("x"))),
+      HashMap("x" -> "int", "tmp_1" -> "int", "n" -> "int", "this" -> "Fac"))
+    
+    val after = before
+        
+    liveVariableRewrite(before) should equal (after)
   }
   
   
