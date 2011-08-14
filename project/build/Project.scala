@@ -14,7 +14,7 @@ class Project(info: ProjectInfo) extends DefaultProject(info) with ScctProject {
     "org.scalatest" %% "scalatest" % "1.4.1" % "test->default"
   ) ++ super.libraryDependencies
   
-  override def compileOptions = super.compileOptions ++ compileOptions("-explaintypes")
+  // override def compileOptions = super.compileOptions ++ compileOptions("-explaintypes")
   
   /*
     Read the version from the MANIFEST.MF file.
