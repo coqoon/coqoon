@@ -124,4 +124,21 @@ class RemoveDeadVariables extends FlatSpec with ShouldMatchers {
         
     liveVariableRewrite(before) should equal (after)
   }  
+  
+  it should "only replace a dead variable if it's of the same type." in {
+    
+    val before = SJMethodDefinition(Set(Static()), "test", "string", Nil, 
+      List(
+        SJAssignment(SJVariableAccess("tmp_1"),SJLiteral("42")),
+        SJAssignment(SJVariableAccess("x"),SJBinaryExpression("+", SJVariableAccess("test"),SJVariableAccess("tmp_1"))),
+        SJReturn(SJVariableAccess("x"))
+      ),
+      HashMap("tmp_1" -> "int", "x" -> "string"))
+      
+    val after = before 
+    
+    liveVariableRewrite(before) should equal (after)
+    
+  }
+  
 }

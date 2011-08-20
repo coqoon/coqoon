@@ -150,10 +150,9 @@ object SimpleJavaOptimizer {
           if ( rw.reads.contains(dead) ) {                // it's read & written
             // it's dead but still read in the block. If it's truely a temporary value that is simply used in _one_
             // other assignment we can replace the assignment to the tmp variable with a assignment to the variable
-            // that's using the tmp variable.
-            // Also, the variable shouldn't have a previous value. (TODO: Not currently checked)
+            // that's using the tmp variable. Also They have to be of the same type. 
             val usingDeadVar = findWriteVarsWhereVarIsRead( variable = dead, in = rewritten)
-            if (usingDeadVar.size == 1) {
+            if (usingDeadVar.size == 1 && hasSameType(dead, usingDeadVar.head)) {
               transform(writesOf = dead, toWritesOf = usingDeadVar.head, in = rewritten)
             } else {
               rewritten
@@ -165,6 +164,10 @@ object SimpleJavaOptimizer {
         }
       } getOrElse(statements)
     }
+    
+    def hasSameType(x: String, y: String) = 
+      method.localvariables(x) == method.localvariables(y)
+    
     
     // the traversal of the AST by block.     
     def rec(remaining:    List[SJStatement], 
