@@ -94,7 +94,8 @@ object AST {
   })
   
   def removeWritesOf(variable: String, in: List[SJStatement]) = {
-    for { stm <- in if !isWriting(variable,stm) } yield stm 
+    // It's only safe to remove writes of a variables if it might produce side-effects
+    in filterNot { stm => isWriting(variable,stm) && !(stm.isInstanceOf[SJCall] || stm.isInstanceOf[SJNewExpression]) }
   }
   
   /** 
@@ -167,8 +168,7 @@ object SimpleJavaOptimizer {
     
     def hasSameType(x: String, y: String) = 
       method.localvariables(x) == method.localvariables(y)
-    
-    
+        
     // the traversal of the AST by block.     
     def rec(remaining:    List[SJStatement], 
             currentBlock: List[SJStatement] = Nil,

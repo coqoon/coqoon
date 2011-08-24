@@ -56,6 +56,34 @@ class RemoveDeadVariables extends FlatSpec with ShouldMatchers {
     liveVariableRewrite(before) should equal (after)
   }
   
+  it should """not remove a dead variable if it's using SJNewExpression in the 
+               assignment of the variable as it might have side-effects""" in {
+    
+    val before = SJMethodDefinition(Set(Static()), "m","int",Nil,List(
+                   SJNewExpression(SJVariableAccess("obviouslyDead"),"Number",List(SJLiteral("42"))),
+                   SJReturn(SJLiteral("42"))
+                 ),HashMap("obviouslyDead" -> "int"))
+    
+    val after = before 
+    
+    liveVariableRewrite(before) should equal (after)
+    
+  }
+  
+  it should """not remove a dead variable if it's using SJCall in the 
+               assignment of the variable as it might have side-effects""" in {
+    
+    val before = SJMethodDefinition(Set(Static()), "m","int",Nil,List(
+                   SJCall(Some(SJVariableAccess("obviouslyDead")),SJVariableAccess("obj"),"randomInt",Nil),
+                   SJReturn(SJLiteral("42"))
+                 ),HashMap("obviouslyDead" -> "int"))
+    
+    val after = before 
+    
+    liveVariableRewrite(before) should equal (after)
+    
+  }
+  
   "Replacing dead variables" should "replace tmp_1 with x in fac" in {
     val before = SJMethodDefinition(Set(Static()), "fac", "int",
       List(SJArgument("n", "int")), List(
