@@ -215,6 +215,13 @@ class JavaTermsToJavaASTBindingsSpec extends ASTSpec {
     val expected = List(JClassDefinition(Set(),"Foo","",Nil,List(JFieldDefinition(Set(),"a","int",None), JMethodDefinition(Set(),"bar","int",Nil,List(JBlock(None,List(JReturn(JBinaryExpression("+",JFieldAccess(JVariableAccess("this"),"a"),JFieldAccess(JVariableAccess("this"),"a"))))))), JMethodDefinition(Set(),"foo","void",Nil,List(JBlock(None,List(JBinding("b","int",Some(JFieldAccess(JVariableAccess("this"),"a"))), JBinding("c","int",Some(JBinaryExpression("+",JFieldAccess(JVariableAccess("this"),"a"),JCall(JVariableAccess("this"),"bar",Nil))))))))),None))
     getJavaASTbyParsingFileNamed("Binding4.txt") should equal(expected)
   }
+  
+  "Parsing FieldDeclaration1.txt" should "produce the correct AST" in {
+    val expected = List(JClassDefinition(Set(),"Foo","",Nil,List(
+      JFieldDefinition(Set(),"a","int",None),
+      JFieldDefinition(Set(),"b","int",None)),None))
+    getJavaASTbyParsingFileNamed("FieldDeclaration1.txt") should equal(expected)
+  }
 }
 
 class JavaTermsToJavaASTAssignmentsSpec extends ASTSpec {
