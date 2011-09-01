@@ -249,12 +249,13 @@ object FinishAST extends JavaTerms
       case jmethod : MethodDeclaration => transformMethodDeclaration(jmethod, modifiers) :: Nil
       case jconstructor : ConstructorDeclaration => transformConstructor(jconstructor, modifiers) :: Nil
       case jfield : FieldDeclaration => transformFieldDeclaration(jfield, modifiers) :: Nil
+      case xs: List[Any] => xs.flatMap( (x: Any) => transformClassOrInterfaceBody(List(x), outer, modifiers) )
       // TODO: It should be possible to remove these by improving the parser so they're turned into BodyDeclaration's
       case (ys: List[Modifier]) ~ (i : JInterface) => transformClassOrInterface(i, outer, transformModifiers(ys)) :: Nil
       case Some("static") ~ (x : Block) => transformBlock(x, Some(Static())) :: Nil
       case y ~ (x: MethodDeclaration) => transformMethodDeclaration(x, modifiers) :: Nil
       case ";" => Nil
-      case x => throw new Exception("Can't have the following in a class/interface body"+x)
+      case x => throw new Exception("Can't have the following in a class/interface body "+x)
     }
   }
 
