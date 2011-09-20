@@ -40,6 +40,9 @@ trait JavaTerms
   // expressions
   trait AnyExpr extends Term
   case class Expr (e : Any) extends AnyExpr //{ override def toString = "EXPR" }
+
+  case class SpecStmt (e : String) extends AnyExpr
+
   case class ParExpr (e : AnyExpr) extends AnyExpr
   case class PrimaryExpr (e : Any) extends AnyExpr
   case class PostFixExpression (e : Any) extends AnyExpr

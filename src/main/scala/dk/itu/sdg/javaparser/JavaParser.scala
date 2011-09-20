@@ -82,6 +82,21 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
   def JString: Parser[Term] = stringLit ^^ Str
   def JChar: Parser[Term] = charLit ^^ Str
 
+  //some hack I need for integration of specifications - hannes
+  def anything () : Parser[String] = new Parser[String] {
+    def apply(in: Input) = {
+      val pos = in.offset
+      val src = in.source
+      var myin = in
+      while (myin.first.chars != "%" && myin.rest.first.chars != "}")
+    	myin = myin.drop(1)
+      Success(src.subSequence(pos, myin.offset - pos).toString, myin)
+    }
+  }
+
+  def specStmt : Parser[SpecStmt] = ("{" ~ "%") ~> anything <~ ("%" ~ "}") ^^ SpecStmt
+
+
   //
   // paulp added productions of uncertain rightness
   //
@@ -126,7 +141,8 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
     )
 
   def statement: Parser[AnyExpr] =
-    ( block
+    (specStmt
+     | block
      | "assert" ~ expression ~ opt(":" ~ expression) <~ ";" ^^ AnyStatement
      | "if" ~> parExpression ~ statement ~ opt("else" ~> statement) ^^ flatten3(Conditional)
      | "for" <~ "(" ~> forControl <~ ")" ~> statement ^^ For
