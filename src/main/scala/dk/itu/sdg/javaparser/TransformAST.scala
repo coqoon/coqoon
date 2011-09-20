@@ -122,7 +122,6 @@ object FinishAST extends JavaTerms
   */
   def javaTermsToJavaAST (ast : Any) : List[JStatement] = {
     lvars = Set[String]()
-    
     transform(ast, None)
   }
 

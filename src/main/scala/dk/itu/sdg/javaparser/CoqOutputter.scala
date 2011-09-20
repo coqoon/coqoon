@@ -241,6 +241,7 @@ Open Scope list_scope.
 
   def coqoutput (xs : List[SJDefinition], spec : Boolean, name : String) : List[String] = {
     outp = List[String]()
+    var cs : List[String] = List[String]()
     if (spec)
       outp ::= prelude
     var interfs : List[String] = List[String]()
@@ -257,6 +258,7 @@ Open Scope list_scope.
       case SJClassDefinition(modifiers, "Coq", supers, inters, body, par, fs) =>
       case SJClassDefinition(modifiers, id, supers, inters, body, par, fs) =>
         //let's hope only a single class and interfaces before that!
+        cs ::= id
         outp ::= "Module " + name + " <: PROGRAM."
         val fields = fs.keys.toList
         val methods = classMethods(body)
@@ -265,11 +267,12 @@ Definition """ + id + """ :=
   Build_Class """ + printFiniteSet(fields) + """
               """ + printFiniteMap(methods) + "."
     })
-    val cs = printFiniteMap(SJTable.ct.keys.toList.map(x => ("\"" + x + "\"", x)))
-    outp ::= "\nDefinition Prog := Build_Program " + cs + "."
-    if (spec) {
+    val classes = printFiniteMap(cs.map(x => ("\"" + x + "\"", x)))
+    outp ::= "\nDefinition Prog := Build_Program " + classes + "."
+    if (spec)
       outp ::= unique_names
-      outp ::= "End " + name + "."
+    outp ::= "End " + name + "."
+    if (spec) {
       outp ::= "\nImport " + name + "."
       outp ::= "\nSection " + name + "_spec."
     }
