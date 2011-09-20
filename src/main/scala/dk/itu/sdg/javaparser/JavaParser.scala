@@ -5,7 +5,6 @@ import scala.util.parsing.combinator.lexical.StdLexical
 import scala.util.parsing.combinator.syntactical.StdTokenParsers
 import scala.util.parsing.combinator.ImplicitConversions
 import scala.util.parsing.input.Positional
-import scala.util.parsing.combinator.RegexParsers
 
 // put all the AST generation code in a subclass, where the grammar production accessors are overridden
 
@@ -98,8 +97,6 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
      | annotation
     )
   // XXX 14.11
-  def switchStatement = "switch" ~> "(" ~> expression <~ ")" ~ switchBlock
-  def switchBlock = "{" ~> opt(switchBlockStatementGroups) ~ opt(switchLabels) <~ "}"
   def switchBlockStatementGroups = rep1(switchBlockStatementGroup)
   def switchBlockStatementGroup = switchLabels ~ rep(blockStatement)
   def switchLabels = rep1(switchLabel)
@@ -120,7 +117,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
 
   // p586-589 are in the expression trait
 
-  // p590         
+  // p590
   def block = "{" ~> rep(blockStatement) <~ "}" ^^ Block
   def blockStatement =
     ( localVariableDeclaration <~ ";" ^^ LocalVar
@@ -318,24 +315,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
   def constructorDeclaratorRest = formalParameterList ~ throwsClause ~ methodBody ^^ MethodDeclarator
   def methodBody = block
 
-  //
-  // INTERFACE
-  //
-  def program = rep(id|JNum|JString|keyword|operator|separator) ^^ Program
-
-  //
-  // DEBUGGING
-  //
-
-  // option parser that results in 0-or-1 length list
-  //def optl[T](p: => Parser[T]): Parser[List[T]] =
-  //  p ^^ (x => List(x)) | success(List())
-
   // option parser that results in boolean
   def optb[T](p: => Parser[T]): Parser[Boolean] =
     p ^^ (x => true) | success(false)
-
-
-  // always suceed and consume a token
-  def eatMe = elem("eatMe", { x => true })
 }

@@ -87,7 +87,5 @@ trait JavaTerms
 
   case class Import (static : Boolean, id : QualId, wildcard : Boolean) extends Term
 
-  case class Program (terms : List[Any]) extends Term { override def toString = "PROGRAM: " + terms.toString }
-
   case class Name (name : String) extends Term
 }
