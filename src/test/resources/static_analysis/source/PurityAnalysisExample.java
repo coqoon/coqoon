@@ -1,41 +1,3 @@
-class List {
-    Cell head = null;
-    void add(Object e) {
-        head = new Cell(e, head);
-    }
-    Iterator iterator() {
-        return new ListItr(head);
-    }
-}
-
-class Cell {
-    Object data;
-    Cell next;
-    Cell(Object d, Cell n) {
-        data = d; next = n;
-    }
-}
-
-interface Iterator {
-    boolean hasNext();
-    Object next();
-}
-
-class ListItr implements Iterator {
-    ListItr(Cell head) {
-        cell = head;
-    }
-    Cell cell; 
-    public boolean hasNext() {
-        return cell != null;
-    }
-    public Object next() {
-        Object result = cell.data;
-        cell = cell.next;
-        return result;
-    }
-}
-
 class Point {
     Point(float x, float y) {
         this.x = x ; 
@@ -49,25 +11,54 @@ class Point {
     }
 }
 
+class Cell {
+    Point data;
+    Cell next;
+    Cell(Point d, Cell n) {
+        data = d; next = n;
+    }
+}
+
+interface Iterator {
+    boolean hasNext();
+    Point next();
+}
+
+class ListItr implements Iterator {
+    ListItr(Cell head) {
+        cell = head;
+    }
+    Cell cell; 
+    public boolean hasNext() {
+        return cell != null;
+    }
+    public Point next() {
+        Point result = cell.data;
+        cell = cell.next;
+        return result;
+    }
+}
+
 class PurityAnalysisExample {
+    
     static float sumX(List list) {
         float s = 0;
         Iterator it = list.iterator();
         while(it.hasNext()) {
-            Point p = (Point) it.next();
+            Point p = it.next();
             s += p.x;
         }
         return s;
     }
-    
+
     static void flipAll(List list) {
         Iterator it = list.iterator();
         while(it.hasNext()) {
-            Point p = (Point) it.next();
+            Point p = it.next();
             p.flip();
         }
     }
-    
+
     public static void main(String[] args) {
         List list = new List();
         list.add(new Point(1,2));

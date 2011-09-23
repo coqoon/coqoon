@@ -10,15 +10,15 @@ import PurityAnalysis._
 */
 class IntraproceduralTests extends FlatSpec with ShouldMatchers with ASTSpec {
   
+  val ast = getASTbyParsingFileNamed("PurityAnalysisExample.java", List("src", "test", "resources", "static_analysis", "source"))
+  
   "....." should "....." in  {
   
-    val ast = getASTbyParsingFileNamed("PurityAnalysisExample.java",
-                                       List("src", "test", "resources", "static_analysis", "source"))
-    println(ast)
+    // println(ast)
   
     true should equal (true)
   
-  } 
+  }
       
   
     
