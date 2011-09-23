@@ -40,6 +40,9 @@ trait JavaTerms
   // expressions
   trait AnyExpr extends Term
   case class Expr (e : Any) extends AnyExpr //{ override def toString = "EXPR" }
+
+  case class SpecStmt (e : String) extends AnyExpr
+
   case class ParExpr (e : AnyExpr) extends AnyExpr
   case class PrimaryExpr (e : Any) extends AnyExpr
   case class PostFixExpression (e : Any) extends AnyExpr
@@ -86,8 +89,6 @@ trait JavaTerms
   // case class expression (x : Term) extends Term { override def toString = x }
 
   case class Import (static : Boolean, id : QualId, wildcard : Boolean) extends Term
-
-  case class Program (terms : List[Any]) extends Term { override def toString = "PROGRAM: " + terms.toString }
 
   case class Name (name : String) extends Term
 }

@@ -1,4 +1,15 @@
 /* (c) 2011 Hannes Mehnert */
+/* based on http://svn.polarion.org/repos/community/Teamweaver/Teamweaver/trunk/org.teamweaver.context.sensing.eclipse/src/main/java/org/teamweaver/context/sensing/eclipse/document/DocumentMonitor.java , which includes:
+* Copyright (c) 2006 - 2009 Technische Universität München (TUM)
+* All rights reserved. This program and the accompanying materials
+* are made available under the terms of the Eclipse Public License v1.0
+* which accompanies this distribution, and is available at
+* http://www.eclipse.org/legal/epl-v10.html
+*
+* A Monitor to sense manipulation of Documents in Eclispe. 
+* An object of this type is able to sense all opened documents as well as the new opened documents
+* @author Walid Maalej
+*/
 
 package dk.itu.sdg.kopitiam
 

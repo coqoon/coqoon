@@ -5,11 +5,28 @@ import dk.itu.sdg.util.KopitiamLogger
 
 import org.eclipse.ui.editors.text.TextEditor
 
-//this should go away soon (rather use JDT editor)
-class SimpleJavaEditor extends TextEditor {
+import org.eclipse.jdt.internal.ui.javaeditor.CompilationUnitEditor
+
+class SimpleJavaEditor extends CompilationUnitEditor {
+  //setEditorContextMenuId("#CompilationUnitEditorContext"); //$NON-NLS-1$
+  //setRulerContextMenuId("#CompilationUnitRulerContext"); //$NON-NLS-1$
+  //setOutlinerContextMenuId("#CompilationUnitOutlinerContext"); //$NON-NLS-1$
+  // don't set help contextId, we install our own help context
+  //fSavePolicy= null;
+
+  //fJavaEditorErrorTickUpdater= new JavaEditorErrorTickUpdater(this);
+  //fCorrectionCommands= null;
+  setDocumentProvider(SimpleJavaDocumentProvider);
+
+
   override def initializeEditor () : Unit = {
+    Console.println("initializing SimpleJavaEditor!")
     setDocumentProvider(SimpleJavaDocumentProvider)
+    Console.println("set document provider")
     super.initializeEditor()
+    Console.println("called super")
+    setDocumentProvider(SimpleJavaDocumentProvider)
+    Console.println("initialized SimpleJavaEditor!")
   }
 }
 
@@ -26,6 +43,7 @@ object SimpleJavaDocumentProvider extends FileDocumentProvider {
   override def getDefaultEncoding () : String = "UTF-8"
 
   override def getDocument (ele : Object) : IDocument = {
+    Console.println("get document called on SimpleJavaDocumentProvider")
     assert(ele.isInstanceOf[FileEditorInput])
     val elem = ele.asInstanceOf[FileEditorInput]
     val nam = elem.getName

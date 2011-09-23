@@ -5,12 +5,9 @@
 
 package dk.itu.sdg.javaparser
 
-import scala.util.parsing.input.Reader
 import scala.util.parsing.combinator.lexical.StdLexical
 import scala.util.parsing.combinator.syntactical.StdTokenParsers
 import scala.util.parsing.combinator.ImplicitConversions
-
-import scala.util.parsing.combinator.RegexParsers
 
 // expression
 // innerNewExpression
@@ -24,26 +21,7 @@ trait Expression extends ImplicitConversions
   this: JavaParser =>
 
   def assignmentOp = "= += -= *= /= &= |= ^= %= <<= >>= >>>=".split("""\s+""").toList
-  def infixOp = "|| && | ^ & == != < > <= >= << >> >>> + - * / %".split("""\s+""").toList
-  def prefixOp = "++ -- ! ~ + -".split("""\s+""").toList
-  def postfixOp = "++ --".split("""\s+""").toList
 
-  def precedence = Array(
-    Set(assignmentOp),
-    Set("?"),
-    Set("||"),
-    Set("&&"),
-    Set("|"),
-    Set("^"),
-    Set("&"),
-    Set("==", "!="),
-    Set("instanceof"),
-    Set("<", "<=", ">", ">="),
-    Set("<<", ">>", ">>>"),
-    Set("+", "-"),
-    Set("*", "/", "%")
-  )
-  
   //
   // expressions require extensive refactoring from the spec grammar
   // to capture precedence and  eliminate left-recursion

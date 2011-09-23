@@ -126,7 +126,7 @@ trait CoqOutputter extends JavaToSimpleJava {
       case SJFieldWrite(v, fi, va) =>
         "(cwrite " + printE(v) + " " + fi + " " + printE(va) + ")"
       case SJFieldRead(va, v, fi) =>
-        "(cread " + printE(va) + " " + printE(va) + " " + fi + " )"
+        "(cread " + printE(va) + " " + printE(v) + " " + fi + " )"
       case SJReturn(SJVariableAccess(x)) =>
         ret = "var_expr \"" + x + "\""; ""
       case SJReturn(y : SJLiteral) =>
@@ -229,11 +229,21 @@ Proof.
   search (search_unique_names Prog).
 Qed."""
 
+  private val prelude : String = """
+Require Import Tactics.
+Require Import LiftOp.
+Require Import Frame.
+
+Open Scope string_scope.
+Open Scope list_scope.
+"""
+
 
   def coqoutput (xs : List[SJDefinition], spec : Boolean, name : String) : List[String] = {
     outp = List[String]()
-    //if (spec)
-    //  outp = List("\n") ++ ClassTable.getCoq("PRELUDE") ++ outp
+    var cs : List[String] = List[String]()
+    if (spec)
+      outp ::= prelude
     var interfs : List[String] = List[String]()
     xs.foreach(x => x match {
       case SJInterfaceDefinition(modifiers, id, inters, body) =>
@@ -248,6 +258,7 @@ Qed."""
       case SJClassDefinition(modifiers, "Coq", supers, inters, body, par, fs) =>
       case SJClassDefinition(modifiers, id, supers, inters, body, par, fs) =>
         //let's hope only a single class and interfaces before that!
+        cs ::= id
         outp ::= "Module " + name + " <: PROGRAM."
         val fields = fs.keys.toList
         val methods = classMethods(body)
@@ -256,14 +267,16 @@ Definition """ + id + """ :=
   Build_Class """ + printFiniteSet(fields) + """
               """ + printFiniteMap(methods) + "."
     })
-    //val cs = printFiniteMap(ClassTable.getClasses.map(x => ("\"" + x + "\"", x)))
-    val cs = ""
-    outp ::= "\nDefinition Prog := Build_Program " + cs + "."
-/*    if (ClassTable.getCoq(myclass, "PROGRAM").length == 0)
+    val classes = printFiniteMap(cs.map(x => ("\"" + x + "\"", x)))
+    outp ::= "\nDefinition Prog := Build_Program " + classes + "."
+    if (spec)
       outp ::= unique_names
-    else
-      outp = ClassTable.getCoq(myclass, "PROGRAM") ++ outp
+    outp ::= "End " + name + "."
     if (spec) {
+      outp ::= "\nImport " + name + "."
+      outp ::= "\nSection " + name + "_spec."
+    }
+/* if (spec) {
       outp ::= "End " + name + "."
       outp ::= "\nImport " + name + "."
       outp = ClassTable.getCoq(myclass, "BEFORESPEC") ++ List("\n") ++ outp

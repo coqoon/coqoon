@@ -104,7 +104,7 @@ class JavaLexer extends StdLexical
       }
     else
       offset
-  
+
   /** A parser that matches a regex string */
   implicit def regex(r: Regex): Parser[String] = new Parser[String] {
     def apply(in: Input) = {
@@ -113,7 +113,7 @@ class JavaLexer extends StdLexical
       val start = handleWhiteSpace(source, offset)
       (r findPrefixMatchOf (source.subSequence(start, source.length))) match {
         case Some(matched) =>
-          Success(source.subSequence(start, start + matched.end).toString, 
+          Success(source.subSequence(start, start + matched.end).toString,
                   in.drop(start + matched.end - offset))
         case None =>
           Failure("string matching regex `"+r+"' expected but `"+in.first+"' found", in.drop(start - offset))

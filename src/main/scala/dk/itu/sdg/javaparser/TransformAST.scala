@@ -122,7 +122,6 @@ object FinishAST extends JavaTerms
   */
   def javaTermsToJavaAST (ast : Any) : List[JStatement] = {
     lvars = Set[String]()
-    
     transform(ast, None)
   }
 
@@ -331,6 +330,8 @@ object FinishAST extends JavaTerms
   def transformMethodBody (body : List[Any]) : List[JBodyStatement] = {
     body.map {
       case vars : LocalVar => transformLocalVariable(vars)
+      case AnyStatement(";") => Nil
+      case SpecStmt(content) => Nil
       case expr : AnyExpr => transformAnyExpr(expr) :: Nil
     }.flatten
   }
