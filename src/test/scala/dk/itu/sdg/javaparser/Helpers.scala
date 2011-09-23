@@ -15,17 +15,19 @@ trait ASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     Returns the JavaAST produced by parsing the file named "name" inside of the
     folder src/test/resources/javaparser/source.
   */
-  def getJavaASTbyParsingFileNamed(name : String) : List[JStatement] = {
-    val in = StreamReader(new InputStreamReader(new FileInputStream(getSourceFileNamed(name))))
+  def getJavaASTbyParsingFileNamed(name : String,
+                                   path: List[String] = List("src", "test", "resources", "javaparser", "source")) : List[JStatement] = {
+    val in = StreamReader(new InputStreamReader(new FileInputStream(getSourceFileNamed(name,path))))
     FinishAST.javaTermsToJavaAST(parseH(in))
   }
   
-  def getASTbyParsingFileNamed(name : String) : List[SJDefinition] = {
-    val in = StreamReader(new InputStreamReader(new FileInputStream(getSourceFileNamed(name))))
+  def getASTbyParsingFileNamed(name : String,
+                               path: List[String] = List("src", "test", "resources", "javaparser", "source")) : List[SJDefinition] = {
+    val in = StreamReader(new InputStreamReader(new FileInputStream(getSourceFileNamed(name,path))))
     FinishAST.doitHelper(parseH(in))
   }
 
-  def getSourceFileNamed(name : String) : File = {
-    new File(List("src", "test", "resources", "javaparser", "source", name).mkString(File.separator))
+  def getSourceFileNamed(name : String, path: List[String]): File = {
+    new File((path :+ name).mkString(File.separator))
   }
 }

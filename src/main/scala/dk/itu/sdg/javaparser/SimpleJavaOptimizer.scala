@@ -11,27 +11,33 @@ import scala.collection.immutable.{ HashSet };
  * the Simple Java AST.
  */
 object AST {
+
+  def foldLeft[B](statements: List[SJStatement], z: B, f: (SJStatement,B) => B): B = 
+    statements.foldLeft(z) { (acc,stm) => foldFunc(stm,acc,f,foldLeft[B]) }
   
-  /** 
-   * Fold over the AST 
-   */
-  def foldRight[B](statements: List[SJStatement], z: B, f: (SJStatement,B) => B): B = statements.foldRight(z){ 
-    (stm,acc) => {
+  def foldRight[B](statements: List[SJStatement], z: B, f: (SJStatement,B) => B): B = 
+    statements.foldRight(z) { (stm,acc) => foldFunc(stm,acc,f,foldRight[B]) }
+  
+  private def foldFunc[B](
+    stm: SJStatement, 
+    acc: B, 
+    f: (SJStatement,B) => B,
+    direction: (List[SJStatement], B, (SJStatement,B) => B) => B): B = { 
       stm match {
-      case a@SJAssert(b)               => f(a,foldRight(List(b),acc,f))
-      case a@SJWhile(b,c)              => f(a,foldRight(List(b),foldRight(c,acc,f),f))
-      case a@SJConditional(b,c,d)      => f(a,foldRight(List(b),foldRight(c,foldRight(d,acc,f),f),f))
-      case a@SJAssignment(b,c)         => f(a,f(b,foldRight(List(c),acc,f)))
-      case a@SJFieldWrite(b,_,c)       => f(a,foldRight(List(c),acc,f))
+      case a@SJAssert(b)               => f(a,direction(List(b),acc,f))
+      case a@SJWhile(b,c)              => f(a,direction(List(b),direction(c,acc,f),f))
+      case a@SJConditional(b,c,d)      => f(a,direction(List(b),direction(c,direction(d,acc,f),f),f))
+      case a@SJAssignment(b,c)         => f(a,f(b,direction(List(c),acc,f)))
+      case a@SJFieldWrite(b,_,c)       => f(a,direction(List(c),acc,f))
       case a@SJFieldRead(b,c,_)        => f(a,f(b,f(c,acc)))
-      case a@SJReturn(b)               => f(a,foldRight(List(b),acc,f))
-      case a@SJCall(Some(b),c,_,d)     => f(a,f(b,foldRight(List(c),foldRight(d,acc,f),f)))
-      case a@SJCall(None,b,_,c)        => f(a,foldRight(List(b),foldRight(c,acc,f),f))
-      case a@SJNewExpression(b,_,c)    => f(a,f(b,foldRight(c,acc,f)))
-      case a@SJBinaryExpression(_,b,c) => f(a,foldRight(List(b),foldRight(List(c),acc,f),f))
-      case a@SJUnaryExpression(_,b)    => f(a,foldRight(List(b),acc,f))
+      case a@SJReturn(b)               => f(a,direction(List(b),acc,f))
+      case a@SJCall(Some(b),c,_,d)     => f(a,f(b,direction(List(c),direction(d,acc,f),f)))
+      case a@SJCall(None,b,_,c)        => f(a,direction(List(b),direction(c,acc,f),f))
+      case a@SJNewExpression(b,_,c)    => f(a,f(b,direction(c,acc,f)))
+      case a@SJBinaryExpression(_,b,c) => f(a,direction(List(b),direction(List(c),acc,f),f))
+      case a@SJUnaryExpression(_,b)    => f(a,direction(List(b),acc,f))
       case x                           => f(x,acc)
-    }}
+    }
   }
 
   /** 
