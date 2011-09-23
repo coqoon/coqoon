@@ -4,9 +4,9 @@ package dk.itu.sdg.javaparser
 
 import scala.collection.immutable.HashMap
 
-sealed abstract class SJDefinition () { val id : String }
-case class SJClassDefinition (modifiers : Set[JModifier], override val id : String, superclass : String, interfaces : List[String], body : List[SJBodyDefinition], outerclass : Option[String], fields : HashMap[String, String]) extends SJDefinition
-case class SJInterfaceDefinition (modifiers : Set[JModifier], override val id : String, interfaces : List[String], body : List[SJBodyDefinition]) extends SJDefinition
+sealed abstract class SJDefinition () { val id : String ; val body: List[SJBodyDefinition] }
+case class SJClassDefinition (modifiers : Set[JModifier], override val id : String, superclass : String, interfaces : List[String], override val body : List[SJBodyDefinition], outerclass : Option[String], fields : HashMap[String, String]) extends SJDefinition
+case class SJInterfaceDefinition (modifiers : Set[JModifier], override val id : String, interfaces : List[String], override val body : List[SJBodyDefinition]) extends SJDefinition
 
 sealed abstract class SJBodyDefinition () { }
 //not sure whether we really need this here

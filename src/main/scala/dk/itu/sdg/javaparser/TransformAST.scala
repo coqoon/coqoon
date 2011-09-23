@@ -21,8 +21,8 @@ object SJTable {
   def findMethodInClass (clazz : String, method : String) : Option[SJMethodDefinition] = {
     //TODO: multiple methods with different arguments (types/amount)
     val c = getClass(clazz)
-    assert(c.isInstanceOf[SJClassDefinition])
-    val cl = c.asInstanceOf[SJClassDefinition]
+    assert(c.isInstanceOf[SJDefinition])
+    val cl = c.asInstanceOf[SJDefinition]
     var res : Option[SJMethodDefinition] = None
     var i : Integer = 0
     while (res == "" && i < cl.body.length) {
