@@ -126,6 +126,7 @@ object FinishAST extends JavaTerms
   }
 
   def doitHelper (a : Any) : List[SJDefinition] = {
+    SJTable.reset
     javaTermsToJavaAST(a).map(translate).flatten
   }
 

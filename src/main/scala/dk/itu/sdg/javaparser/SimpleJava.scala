@@ -24,7 +24,6 @@ trait JavaToSimpleJava extends KopitiamLogger {
   import scala.collection.mutable.Stack
   def translate (s : JStatement) : List[SJDefinition] = {
     //defer real work
-    SJTable.reset
     val w = new Stack[Pair[JStatement, Option[String]]]
     w.push((s, None))
     var res : List[SJDefinition] = List[SJDefinition]()
