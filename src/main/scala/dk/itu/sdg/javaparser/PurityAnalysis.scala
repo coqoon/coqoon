@@ -62,7 +62,11 @@ object PurityAnalysis {
    * TODO: Still need to write the the "main" flow of the algorithm. 
    */
   
-  def intraProcedural(method: SJMethodDefinition): State = {
+  def intraProceduralOnMethod(method: SJMethodDefinition): State = intraProcedural(method.body, method.parameters)
+    
+  def intraProceduralOnConstructor(constructor: SJConstructorDefinition): State = intraProcedural(constructor.body, constructor.parameters)
+  
+  def intraProcedural(body: List[SJStatement], parameters: List[SJArgument]): State = {
     
     /*
       Traverse the body from top to bottom transforming the Points-to-Graph on every 
@@ -176,16 +180,16 @@ object PurityAnalysis {
       }
     }
     
-    foldLeft(method.body, initialStateOfMethod(method), transferFunction)
+    foldLeft(body, initialStateOfMethod(parameters), transferFunction)
   }
   
   // TODO: Need to add 'this' as the first parameter page 5 section 4
-  def initialStateOfMethod(method: SJMethodDefinition) = 
+  def initialStateOfMethod(parameters: List[SJArgument]) = 
     // page 7, section 5.21
     State( 
       pointsToGraph  = Graph(insideEdges          = Ø, 
                              outsideEdges         = Ø, 
-                             stateOflocalVars     = (method.parameters.map( arg => (arg.id -> HashSet(LoadNode(arg.id))) )
+                             stateOflocalVars     = (parameters.map( arg => (arg.id -> HashSet(LoadNode(arg.id))) )
                                                     :+ ( "this" -> HashSet(LoadNode("this")))).toMap,
                              globallyEscapedNodes = Ø),
       modifiedFields = Ø
