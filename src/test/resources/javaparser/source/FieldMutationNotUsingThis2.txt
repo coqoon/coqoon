@@ -1,0 +1,14 @@
+class A {
+    Object a; 
+    A(Object b) {
+        a = b;
+    }
+}
+
+class B {
+    Object b;
+    
+    void add(Object e) {
+        b = new A();
+    }
+}
