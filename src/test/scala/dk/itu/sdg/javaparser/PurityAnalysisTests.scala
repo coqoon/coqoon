@@ -22,11 +22,9 @@ class IntraproceduralTests extends FlatSpec with ShouldMatchers with ASTSpec {
        .head
   }
   
-  "....." should "....." in  {
-  
-    println(intraProcedural(listAddMethod))
-  
-    true should equal (true)
+  "Purity analysis on List.add" should "record a mutation on this.head" in  {
+    
+    intraProcedural(listAddMethod).modifiedFields should equal (HashSet(AbstractField(LoadNode("this"),"head")))
   
   }
 }

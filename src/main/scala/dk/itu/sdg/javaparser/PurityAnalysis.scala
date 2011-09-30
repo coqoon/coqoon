@@ -55,6 +55,7 @@ object PurityAnalysis {
     modifiedFields: Set[AbstractField]
   )
   
+  
   def isPure(method: SJMethodDefinition): Boolean = false 
   
   /*
@@ -122,7 +123,7 @@ object PurityAnalysis {
           val mods = (for {
               v1s <- localVars.get(v1)
             } yield for {
-              node <- v1s if node.isInstanceOf[InsideNode]
+              node <- v1s if !node.isInstanceOf[InsideNode]
             } yield AbstractField(node,f)).getOrElse( Ø )
           
           before.copy( pointsToGraph  = graph.copy( insideEdges = graph.insideEdges & insideEdges ),
@@ -175,16 +176,19 @@ object PurityAnalysis {
       }
     }
     
-    // TODO: Need to add 'this' as the first parameter page 5 section 4
-    val initialState = State( // page 7, section 5.21
+    foldLeft(method.body, initialStateOfMethod(method), transferFunction)
+  }
+  
+  // TODO: Need to add 'this' as the first parameter page 5 section 4
+  def initialStateOfMethod(method: SJMethodDefinition) = 
+    // page 7, section 5.21
+    State( 
       pointsToGraph  = Graph(insideEdges          = Ø, 
                              outsideEdges         = Ø, 
-                             stateOflocalVars     = method.parameters.map( arg => (arg.id -> HashSet(LoadNode(arg.id))) ).toMap,
+                             stateOflocalVars     = (method.parameters.map( arg => (arg.id -> HashSet(LoadNode(arg.id))) )
+                                                    :+ ( "this" -> HashSet(LoadNode("this")))).toMap,
                              globallyEscapedNodes = Ø),
       modifiedFields = Ø
     )
-
-    foldLeft(method.body, initialState, transferFunction)
-  }
   
 }
