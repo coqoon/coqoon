@@ -649,3 +649,11 @@ class ModifiersSpec extends ASTSpec {
     */
   }
 }
+
+class FieldAssignment extends ASTSpec {
+  
+  "Parsing FieldMutationUsingThis and FieldMutationNotUsingThis" should "produce the same AST" in {
+    getASTbyParsingFileNamed("FieldMutationUsingThis.txt") should equal (getASTbyParsingFileNamed("FieldMutationNotUsingThis.txt"))
+  }
+  
+}
