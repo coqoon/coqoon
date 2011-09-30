@@ -14,8 +14,10 @@ class Point {
 class Cell {
     Point data;
     Cell next;
+    
     Cell(Point d, Cell n) {
-        data = d; next = n;
+        data = d; 
+        next = n;
     }
 }
 
@@ -36,6 +38,18 @@ class ListItr implements Iterator {
         Point result = cell.data;
         cell = cell.next;
         return result;
+    }
+}
+
+class List {
+    Cell head = null;
+    
+    void add(Object e) {
+        head = new Cell(e, head);
+    }
+
+    Iterator iterator() {
+        return new ListItr(head);
     }
 }
 
