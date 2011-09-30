@@ -1,0 +1,54 @@
+class Point {
+    Point(float x, float y) {
+        this.x = x ; 
+        this.y = y;
+    }
+    float x, y;
+    void flip() {
+        float t = x; 
+        x = y; 
+        y = t;
+    }
+}
+
+class Cell {
+    Point data;
+    Cell next;
+    
+    Cell(Point d, Cell n) {
+        data = d; 
+        next = n;
+    }
+}
+
+interface Iterator {
+    boolean hasNext();
+    Point next();
+}
+
+class ListItr implements Iterator {
+    ListItr(Cell head) {
+        cell = head;
+    }
+    Cell cell; 
+    public boolean hasNext() {
+        return cell != null;
+    }
+    public Point next() {
+        Point result = cell.data;
+        cell = cell.next;
+        return result;
+    }
+}
+
+class List {
+    Cell head = null;
+    
+    void add(Object e) {
+        this.head = new Cell(e, head);
+    }
+
+    Iterator iterator() {
+        return new ListItr(head);
+    }
+}

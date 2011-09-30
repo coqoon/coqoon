@@ -656,4 +656,8 @@ class FieldAssignment extends ASTSpec {
     getASTbyParsingFileNamed("FieldMutationUsingThis.txt") should equal (getASTbyParsingFileNamed("FieldMutationNotUsingThis.txt"))
   }
   
+  "Parsing FieldMutationUsingThis2 and FieldMutationNotUsingThis2" should "produce the same AST" in {
+    getASTbyParsingFileNamed("FieldMutationUsingThis2.txt") should equal (getASTbyParsingFileNamed("FieldMutationNotUsingThis2.txt"))
+  }
+  
 }
