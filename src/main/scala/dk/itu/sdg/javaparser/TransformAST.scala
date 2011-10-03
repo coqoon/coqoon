@@ -25,7 +25,7 @@ object SJTable {
     val cl = c.asInstanceOf[SJDefinition]
     var res : Option[SJMethodDefinition] = None
     var i : Integer = 0
-    while (res == "" && i < cl.body.length) {
+    while (res == None && i < cl.body.length) {
       val sjb = cl.body(i)
       if (sjb.isInstanceOf[SJMethodDefinition]) {
         val sjm = sjb.asInstanceOf[SJMethodDefinition]
@@ -40,7 +40,7 @@ object SJTable {
   def getMethodTypeOfClass (name : String, method : String) : String = {
     findMethodInClass(name, method) match {
       case None => ""
-      case Some(x) => x.id
+      case Some(x) => x.jtype
     }
   }
 

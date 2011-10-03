@@ -73,7 +73,9 @@ trait JavaToSimpleJava extends KopitiamLogger {
   }
 
   def translateIBody (body : List[JStatement]) : (List[SJBodyDefinition], List[JStatement]) = {
+    var rest = List[JStatement]()
     (body.flatMap(x => x match {
+      case (x : JInterfaceDefinition) => rest ::= x; None
       case JMethodDefinition (m, n, t, a, b) =>
         assert(b.length == 0)
         val (x, l) = tArgs(a, HashMap[String, String]())
@@ -82,7 +84,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
         assert(m.contains(Final()))
         //we should remember initializer somewhere
         Some(SJFieldDefinition(m, n, t))
-    }), List())
+    }), rest)
   }
 
   /*
@@ -307,7 +309,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
         val (r, ls2) = res match {
           case None =>
             val t = Gensym.newsym()
-            //log.warning("a is " + a) 
+            //log.warning("a is " + a)
             val ty = a.asInstanceOf[SJVariableAccess].variable match {
               case y => if (ls0(y) == ls0("this"))
                           ms(name)
@@ -318,7 +320,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
           case Some(x) => (x, ls1)
         }
         (r, i ++ ins ++ List(SJCall(Some(r), a, name, as)), ls2)
-      
+
       case JNewExpression(name, args) =>
         val (as, ins, ls0) = exL(args, fields, ms, locals)
         val (r, ls1) = res match {

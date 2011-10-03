@@ -1,5 +1,4 @@
 public class A {
     private class B {
-        
     }
 }

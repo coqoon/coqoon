@@ -1,8 +1,8 @@
 /*
-  This tests the conversion from JavaAST to SimpleJavaAST (well, not yet but in the future 
-  it will) It parses each file in src/test/resources/javaparser/source and tests that the 
-  expected SimpleJavaAST AST is generated.
-  
+  This tests the conversion from JavaAST to SimpleJavaAST. It parses each file
+  in src/test/resources/javaparser/source and tests that the expected
+  SimpleJavaAST AST is generated.
+
   @author Mads Hartman Jensen
 */
 
@@ -226,65 +226,70 @@ class JavaASTSpec extends ASTSpec {
     getASTbyParsingFileNamed("assert.txt") should equal(expected)
   }
 
-/* TODO: do it!
   "Parsing Tree_client.txt" should "produce the correct AST" in {
     val expected = List(
-      JInterfaceDefinition(Set(), "ITreeIterator", List[String](), List(
-        JMethodDefinition(Set(), "hasNext", "boolean", List[JArgument](), List[JBodyStatement]()),
-        JMethodDefinition(Set(), "next", "int", List[JArgument](), List[JBodyStatement]()))),
-      JInterfaceDefinition(Set(), "ITree", List[String](), List(
-        JMethodDefinition(Set(), "contains", "boolean", List(JArgument("item", "int")), List[JBodyStatement]()),
-        JMethodDefinition(Set(), "add", "int", List(JArgument("item", "int")), List[JBodyStatement]()),
-        JMethodDefinition(Set(), "snapshot", "ITree", List[JArgument](), List[JBodyStatement]()),
-        JMethodDefinition(Set(), "iterator", "ITreeIterator", List[JArgument](), List[JBodyStatement]()))),
-      JClassDefinition(Set(),"A1B1Tree", "", List("ITree"), List[JStatement](), None),
-      JClassDefinition(Set(),"World", "", List[String](), List(
-        JMethodDefinition(Set(), "main", "void", List[JArgument](), List(JBlock(None, List(
-          JBinding("t", "ITree", Some(JNewExpression("A1B1Tree", List[JExpression]()))),
-          JCall(JVariableAccess("t"), "add", List(JLiteral("1"))),
-          JCall(JVariableAccess("t"), "add", List(JLiteral("2"))),
-          JCall(JVariableAccess("t"), "add", List(JLiteral("3"))),
-          JBinding("s", "ITree", Some(JCall(JVariableAccess("t"), "snapshot", List[JExpression]()))),
-          JBinding("lc", "boolean", Some(JCall(JVariableAccess("it"), "hasNext", List[JExpression]()))),
-          JWhile(JBinaryExpression("==", JVariableAccess("lc"), JLiteral("true")),
-            JBlock(None, List(
-              JBinding("x", "int", Some(JCall(JVariableAccess("it"), "next", List[JExpression]()))),
-              JCall(JVariableAccess("t"), "add", List(JBinaryExpression("*", JVariableAccess("x"), JLiteral("3")))),
-              JAssignment("lc", JCall(JVariableAccess("it"), "hasNext", List[JExpression]()))))),
-          JBinding("tmp_1", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("1"))))),
-          JAssert(JBinaryExpression("==", JVariableAccess("tmp_1"), JLiteral("true"))),
-          JBinding("tmp_2", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("2"))))),
-          JAssert(JBinaryExpression("==", JVariableAccess("tmp_2"), JLiteral("true"))),
-          JBinding("tmp_3", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("3"))))),
-          JAssert(JBinaryExpression("==", JVariableAccess("tmp_3"), JLiteral("true"))),
-          JBinding("tmp_4", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("4"))))),
-          JAssert(JBinaryExpression("==", JVariableAccess("tmp_4"), JLiteral("false"))),
-          JBinding("tmp_5", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("5"))))),
-          JAssert(JBinaryExpression("==", JVariableAccess("tmp_5"), JLiteral("false"))),
-          JBinding("tmp_6", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("6"))))),
-          JAssert(JBinaryExpression("==", JVariableAccess("tmp_6"), JLiteral("true"))),
-          JBinding("tmp_7", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("7"))))),
-          JAssert(JBinaryExpression("==", JVariableAccess("tmp_7"), JLiteral("false"))),
-          JBinding("tmp_8", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("8"))))),
-          JAssert(JBinaryExpression("==", JVariableAccess("tmp_8"), JLiteral("false"))),
-          JBinding("tmp_9", "boolean", Some(JCall(JVariableAccess("t"), "contains", List(JLiteral("9"))))),
-          JAssert(JBinaryExpression("==", JVariableAccess("tmp_9"), JLiteral("true")))))))), None))
+      SJInterfaceDefinition(Set(), "ITreeIterator", List(), List(
+        SJMethodDefinition(Set(), "hasNext", "boolean", List(), List(), HashMap[String,String]()),
+        SJMethodDefinition(Set(), "next", "int", List(), List(), HashMap[String,String]()))),
+      SJInterfaceDefinition(Set(), "ITree", List(), List(
+        SJMethodDefinition(Set(), "contains", "boolean", List(SJArgument("item", "int")), List(), HashMap("item" -> "int")),
+        SJMethodDefinition(Set(), "add", "boolean", List(SJArgument("item", "int")), List(), HashMap("item" -> "int")),
+        SJMethodDefinition(Set(), "snapshot", "ITree", List(), List(), HashMap[String,String]()),
+        SJMethodDefinition(Set(), "iterator", "ITreeIterator", List(), List(), HashMap[String,String]()))),
+      SJClassDefinition(Set(), "A1B1Tree", "", List("ITree"), List(
+        SJConstructorDefinition(Set(Public()), "A1B1Tree", List(), List(), HashMap("this" -> "A1B1Tree"))), None, HashMap[String,String]()),
+      SJClassDefinition(Set(), "World", "", List(), List(
+        SJMethodDefinition(Set(), "main", "void", List(), List(
+          SJNewExpression(SJVariableAccess("t"), "A1B1Tree", List()),
+          SJCall(None, SJVariableAccess("t"), "add", List(SJLiteral("1"))),
+          SJCall(None, SJVariableAccess("t"), "add", List(SJLiteral("2"))),
+          SJCall(None, SJVariableAccess("t"), "add", List(SJLiteral("3"))),
+          SJCall(Some(SJVariableAccess("s")), SJVariableAccess("t"), "snapshot", List()),
+          SJCall(Some(SJVariableAccess("it")), SJVariableAccess("s"), "iterator", List()),
+          SJCall(Some(SJVariableAccess("lc")), SJVariableAccess("it"), "hasNext", List()),
+          SJWhile(SJVariableAccess("lc"), List(
+            SJCall(Some(SJVariableAccess("x")), SJVariableAccess("it"), "next", List()),
+            SJCall(None, SJVariableAccess("t"), "add", List(SJBinaryExpression("*", SJVariableAccess("x"), SJLiteral("3")))),
+            SJCall(Some(SJVariableAccess("lc")), SJVariableAccess("it"), "hasNext", List()))),
+          SJCall(Some(SJVariableAccess("tmp_1")), SJVariableAccess("t"), "contains", List(SJLiteral("1"))),
+          SJAssert(SJBinaryExpression("==", SJVariableAccess("tmp_1"), SJLiteral("true"))),
+          SJCall(Some(SJVariableAccess("tmp_2")), SJVariableAccess("t"), "contains", List(SJLiteral("2"))),
+          SJAssert(SJBinaryExpression("==", SJVariableAccess("tmp_2"), SJLiteral("true"))),
+          SJCall(Some(SJVariableAccess("tmp_3")), SJVariableAccess("t"), "contains", List(SJLiteral("3"))),
+          SJAssert(SJBinaryExpression("==", SJVariableAccess("tmp_3"), SJLiteral("true"))),
+          SJCall(Some(SJVariableAccess("tmp_4")), SJVariableAccess("t"), "contains", List(SJLiteral("4"))),
+          SJAssert(SJBinaryExpression("==", SJVariableAccess("tmp_4"), SJLiteral("false"))),
+          SJCall(Some(SJVariableAccess("tmp_5")), SJVariableAccess("t"), "contains", List(SJLiteral("5"))),
+          SJAssert(SJBinaryExpression("==", SJVariableAccess("tmp_5"), SJLiteral("false"))),
+          SJCall(Some(SJVariableAccess("tmp_6")), SJVariableAccess("t"), "contains", List(SJLiteral("6"))),
+          SJAssert(SJBinaryExpression("==", SJVariableAccess("tmp_6"), SJLiteral("true"))),
+          SJCall(Some(SJVariableAccess("tmp_7")), SJVariableAccess("t"), "contains", List(SJLiteral("7"))),
+          SJAssert(SJBinaryExpression("==", SJVariableAccess("tmp_7"), SJLiteral("false"))),
+          SJCall(Some(SJVariableAccess("tmp_8")), SJVariableAccess("t"), "contains", List(SJLiteral("8"))),
+          SJAssert(SJBinaryExpression("==", SJVariableAccess("tmp_8"), SJLiteral("false"))),
+          SJCall(Some(SJVariableAccess("tmp_9")), SJVariableAccess("t"), "contains", List(SJLiteral("9"))),
+          SJAssert(SJBinaryExpression("==", SJVariableAccess("tmp_9"), SJLiteral("true")))),
+                       HashMap("s" -> "ITree", "x" -> "int", "this" -> "World", "t" -> "ITree",
+                               "lc" -> "boolean", "it" -> "TreeIterator",
+                               "tmp_1" -> "boolean", "tmp_2" -> "boolean", "tmp_3" -> "boolean",
+                               "tmp_4" -> "boolean", "tmp_5" -> "boolean", "tmp_6" -> "boolean",
+                               "tmp_7" -> "boolean", "tmp_8" -> "boolean", "tmp_9" -> "boolean")),
+        SJConstructorDefinition(Set(Public()), "World", List(), List(), HashMap("this" -> "World"))), None, HashMap[String,String]()))
     getASTbyParsingFileNamed("Tree_client.txt") should equal(expected)
   }
-*/
 
   "Parsing ClassWithConstructor.txt" should "produce the correct AST" in {
     val expected = List(
       SJClassDefinition(Set(),"Person", "", Nil, List(
-        SJFieldDefinition(Set(), "name", "String"), 
+        SJFieldDefinition(Set(), "name", "String"),
         SJConstructorDefinition(Set(Public()), "Person", List(SJArgument("name","String")), List(
           SJFieldWrite(SJVariableAccess("this"), "name", SJVariableAccess("name"))),
                               HashMap("name" -> "String", "this" -> "Person"))), None, HashMap("name" -> "String")))
-     getASTbyParsingFileNamed("ClassWithConstructor.txt") should equal(expected)    
+     getASTbyParsingFileNamed("ClassWithConstructor.txt") should equal(expected)
    }
 
   "Parsing OperatorTranslation.txt" should "produce the correct AST" in {
-    val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(SJFieldDefinition(Set(), "number", "int"),   
+    val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(SJFieldDefinition(Set(), "number", "int"),
          SJMethodDefinition(Set(), "bar", "void", Nil, List(
            SJAssignment(SJVariableAccess("a"), SJLiteral("1")),
            SJAssignment(SJVariableAccess("a"), SJBinaryExpression("+", SJVariableAccess("a"), SJLiteral("1"))),
@@ -326,7 +331,7 @@ class JavaASTSpec extends ASTSpec {
                      "this" -> "Foo")),
         SJConstructorDefinition(Set(Public()), "Foo", List(), List(SJFieldWrite(SJVariableAccess("this"), "number", SJLiteral("0"))),
                               HashMap("this" -> "Foo"))), None, HashMap("number" -> "int")))
-    getASTbyParsingFileNamed("OperatorTranslation.txt") should equal(expected)    
+    getASTbyParsingFileNamed("OperatorTranslation.txt") should equal(expected)
   }
 }
 
@@ -355,7 +360,7 @@ class BindingsSpec extends ASTSpec {
   "Parsing Binding3.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(
       SJMethodDefinition(Set(), "bar", "int", Nil, List(SJReturn(SJLiteral("10"))), HashMap("this" -> "Foo")),
-      SJMethodDefinition(Set(), "foo", "void", Nil, List(SJCall(Some(SJVariableAccess("a")), SJVariableAccess("this"), "bar", Nil)), HashMap("a" -> "int", "this" -> "Foo")), 
+      SJMethodDefinition(Set(), "foo", "void", Nil, List(SJCall(Some(SJVariableAccess("a")), SJVariableAccess("this"), "bar", Nil)), HashMap("a" -> "int", "this" -> "Foo")),
       SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("Binding3.txt") should equal(expected)
   }
@@ -373,7 +378,7 @@ class BindingsSpec extends ASTSpec {
         SJCall(Some(SJVariableAccess("tmp_1")), SJVariableAccess("this"), "bar", Nil),
         SJFieldRead(SJVariableAccess("tmp_2"), SJVariableAccess("this"), "a"),
         SJAssignment(SJVariableAccess("c"), SJBinaryExpression("+", SJVariableAccess("tmp_2"), SJVariableAccess("tmp_1")))),
-                       HashMap("b" -> "int", "c" -> "int", "tmp_1" -> "int", "tmp_2" -> "int", "this" -> "Foo")), 
+                       HashMap("b" -> "int", "c" -> "int", "tmp_1" -> "int", "tmp_2" -> "int", "this" -> "Foo")),
       SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap("a" -> "int")))
     getASTbyParsingFileNamed("Binding4.txt") should equal(expected)
   }
@@ -415,7 +420,7 @@ class AssignmentsSpec extends ASTSpec {
       SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap("b" -> "int")))
     getASTbyParsingFileNamed("FieldAssignment1.txt") should equal(expected)
   }
-  
+
   "Parsing Assignment1.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(
       SJMethodDefinition(Set(), "bar", "void", Nil, List(
@@ -452,7 +457,7 @@ class AssignmentsSpec extends ASTSpec {
         SJAssignment(SJVariableAccess("a"), SJLiteral("10")),
         SJCall(Some(SJVariableAccess("a")), SJVariableAccess("this"), "foobar", List())),
                        HashMap("a" -> "int", "this" -> "Foo")),
-      SJMethodDefinition(Set(), "foobar", "int", Nil, List(SJReturn(SJLiteral("10"))), HashMap("this" -> "Foo")), 
+      SJMethodDefinition(Set(), "foobar", "int", Nil, List(SJReturn(SJLiteral("10"))), HashMap("this" -> "Foo")),
       SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("Assignment4.txt") should equal(expected)
   }
@@ -540,7 +545,7 @@ class ClassesSpec extends ASTSpec {
 
   "Parsing MethodWithNoFieldAccessOrCallInAnExpression.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(),"Foo", "", List(), List(
-      SJFieldDefinition(Set(), "f", "int"), 
+      SJFieldDefinition(Set(), "f", "int"),
       SJMethodDefinition(Set(), "a", "int", List(), List(SJReturn(SJLiteral("10"))), HashMap("this" -> "Foo")),
       SJMethodDefinition(Set(), "b", "int", List(SJArgument("c", "int")), List(
         SJCall(Some(SJVariableAccess("tmp_1")), SJVariableAccess("this"), "a", List()),
@@ -556,23 +561,23 @@ class ClassesSpec extends ASTSpec {
   Tests related to field initializers
 */
 class InitializersSpec extends ASTSpec {
-  
+
   "Parsing fieldWithInitializer.txt" should "produce the correct AST" in {
      val expected = List(SJClassDefinition(Set(), "A", "", Nil, List(
-        SJFieldDefinition(Set(), "i", "int"), 
+        SJFieldDefinition(Set(), "i", "int"),
         SJConstructorDefinition(Set(Public()), "A", Nil, List(
           SJFieldWrite(SJVariableAccess("this"), "i", SJLiteral("0"))), HashMap("this" -> "A"))), None, HashMap("i" -> "int")))
      getASTbyParsingFileNamed("fieldWithInitializer.txt") should equal(expected)
    }
-  
+
   "Parsing fieldWithInitializerNoPreviousConstructor.txt" should "produce the correct AST" in {
      val expected = List(SJClassDefinition(Set(), "A", "", Nil, List(
-       SJFieldDefinition(Set(), "i", "int"), 
+       SJFieldDefinition(Set(), "i", "int"),
        SJConstructorDefinition(Set(Public()), "A", Nil, List(
          SJFieldWrite(SJVariableAccess("this"), "i", SJLiteral("0"))), HashMap("this" -> "A"))), None, HashMap("i" -> "int")))
      getASTbyParsingFileNamed("fieldWithInitializerNoPreviousConstructor.txt") should equal(expected)
    }
- 
+
 }
 
 /*
@@ -584,32 +589,32 @@ class ModifiersSpec extends ASTSpec {
       SJConstructorDefinition(Set(Public()), "A", List(), List(), HashMap("this" -> "A"))), None, HashMap()))
     getASTbyParsingFileNamed("ClassModifiers.txt") should equal(expected)
   }
-  
+
   "Parsing InterfaceModifiers.txt" should "produce the correct AST" in {
     val expected = List(SJInterfaceDefinition(Set(Private()), "A", Nil, Nil))
     getASTbyParsingFileNamed("InterfaceModifiers.txt") should equal(expected)
   }
-  
+
   "Parsing MethodModifiers.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "Foo", "", List(),List(
       SJMethodDefinition(Set(Private()), "bar", "void", List(), List(), HashMap("this" -> "Foo")),
       SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap()))
     getASTbyParsingFileNamed("MethodModifiers.txt") should equal(expected)
   }
-  
+
   "Parsing FieldModifiers.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(
       SJFieldDefinition(Set(Private()), "a", "int"),
       SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap("a" -> "int")))
     getASTbyParsingFileNamed("FieldModifiers.txt") should equal(expected)
   }
-  
+
   "Parsing ConstructorModifiers.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "A", "", Nil, List(
       SJConstructorDefinition(Set(Private()), "A", Nil, List(), HashMap("this" -> "A"))), None, HashMap()))
     getASTbyParsingFileNamed("ConstructorModifiers.txt") should equal(expected)
   }
-  
+
   "Parsing NestedClassModifiers.txt" should "produce the correct AST" in {
     val expected = List(
       SJClassDefinition(Set(Private()), "B", "", List(), List(
@@ -618,31 +623,29 @@ class ModifiersSpec extends ASTSpec {
         SJConstructorDefinition(Set(Public()), "A", List(), List(), HashMap("this" -> "A"))), None, HashMap()))
     getASTbyParsingFileNamed("NestedClassModifiers.txt") should equal(expected)
   }
-  
+
   "Parsing BlockModifiers.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "A", "", List(), List(SJBodyBlock(Some(Static()),List()), SJConstructorDefinition(Set(Public()), "A", List(), List(), HashMap("this" -> "A"))), None, HashMap()))
     getASTbyParsingFileNamed("BlockModifiers.txt") should equal(expected)
   }
-  
+
   "Parsing NestedInterfaceModifiers.txt" should "produce the correct AST" in {
-    /*
-      TODO: The JInterfaces are not *pulled* out in the outer scope yet. 
+    //this fails at the moment
     val expected = List(
-      SJInterfaceDefinition(Set(Public()), "A", List(), List(
-        SJInterfaceDefinition(Set(Private()), "B", List(), List()))))
+      SJInterfaceDefinition(Set(Private()), "B", List(), List()),
+      SJInterfaceDefinition(Set(Public()), "A", List(), List()))
     getASTbyParsingFileNamed("NestedInterfaceModifiers.txt") should equal(expected)
-    */
   }
 }
 
 class FieldAssignment extends ASTSpec {
-  
+
   "Parsing FieldMutationUsingThis and FieldMutationNotUsingThis" should "produce the same AST" in {
     getASTbyParsingFileNamed("FieldMutationUsingThis.txt") should equal (getASTbyParsingFileNamed("FieldMutationNotUsingThis.txt"))
   }
-  
+
   "Parsing FieldMutationUsingThis2 and FieldMutationNotUsingThis2" should "produce the same AST" in {
     getASTbyParsingFileNamed("FieldMutationUsingThis2.txt") should equal (getASTbyParsingFileNamed("FieldMutationNotUsingThis2.txt"))
   }
-  
+
 }
