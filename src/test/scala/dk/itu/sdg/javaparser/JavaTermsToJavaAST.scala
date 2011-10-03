@@ -57,7 +57,10 @@ class JavaTermsToJavaASTSPec extends ASTSpec {
       JFieldDefinition(Set(),"c","int",None),
       JFieldDefinition(Set(),"b","int",None),
       JMethodDefinition(Set(),"bar","void",List(JArgument("a","int")),List(JBlock(None,List(
-        JFieldWrite(JVariableAccess("this"),"b",JConditional(JBinaryExpression("==",JVariableAccess("a"),JFieldAccess(JVariableAccess("this"),"c")),JBlock(None,List(JLiteral("20"))),JBlock(None,List(JLiteral("30")))))))))),None))
+        JFieldWrite(JVariableAccess("this"),"b",
+          JConditional(JBinaryExpression("==",JVariableAccess("a"),JFieldAccess(JVariableAccess("this"),"c")),
+          JBlock(None,List(JLiteral("20"))),
+          JBlock(None,List(JLiteral("30")))))))))),None))
     getJavaASTbyParsingFileNamed("Conditional3.txt") should equal(expected)
   }
 
@@ -91,6 +94,11 @@ class JavaTermsToJavaASTSPec extends ASTSpec {
     getJavaASTbyParsingFileNamed("While1.txt") should equal(expected)
   }
 
+  /*
+    TODO: 
+    This produces a wrong program... It doesn't update tmp_1 that it uses for the loop condition which 
+    is bad.
+  */
   "Parsing While2.txt" should "produce the correct AST" in {
     val expected = List(JClassDefinition(Set(),"Foo","",Nil,List(
       JFieldDefinition(Set(), "b", "boolean", None),

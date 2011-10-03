@@ -76,21 +76,6 @@ class JavaASTSpec extends ASTSpec {
     getASTbyParsingFileNamed("Conditional2.txt") should equal(expected)
   }
 
-  "Parsing Conditional3.txt" should "produce the correct AST" in {
-    val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(
-      SJFieldDefinition(Set(), "c", "int"),
-      SJFieldDefinition(Set(), "b", "int"),
-      SJMethodDefinition(Set(), "bar", "void", List(SJArgument("a", "int")), List(
-        SJFieldRead(SJVariableAccess("tmp_1"), SJVariableAccess("this"), "c"),
-        SJConditional(SJBinaryExpression("==", SJVariableAccess("a"), SJVariableAccess("tmp_1")),
-                      List(SJFieldWrite(SJVariableAccess("this"), "b", SJLiteral("20"))),
-                      List(SJFieldWrite(SJVariableAccess("this"), "b", SJLiteral("30"))))),
-                       HashMap("tmp_1" -> "int", "a" -> "int", "this" -> "Foo")),
-      SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))),
-                                          None, HashMap("c" -> "int", "b" -> "int")))
-    getASTbyParsingFileNamed("Conditional3.txt") should equal(expected)
-  }
-
   "Parsing NestedField1.txt" should "produce the correct AST" in {
     val expected =
       List(

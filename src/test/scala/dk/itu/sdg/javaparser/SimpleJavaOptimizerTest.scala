@@ -173,8 +173,37 @@ class RemoveDeadVariables extends FlatSpec with ShouldMatchers {
 }
 
 class OptimizeVariables extends FlatSpec with ShouldMatchers {
-
-  it should "replace a variable used at more places" in {
+  
+  /*
+    This fails. It's not able to optimize the code yet.
+  */
+  "Parsing Conditional3.txt" should "produce the correct AST" in {
+    
+    val before = SJMethodDefinition(Set(),"bar","void",List(SJArgument("a","int")),
+        List(
+          SJFieldRead(SJVariableAccess("tmp_2"),SJVariableAccess("this"),"c"), 
+          SJConditional(SJBinaryExpression("==",SJVariableAccess("a"),SJVariableAccess("tmp_2")),
+              List(SJAssignment(SJVariableAccess("tmp_1"),SJLiteral("20"))),
+              List(SJAssignment(SJVariableAccess("tmp_1"),SJLiteral("30")))),
+          SJFieldWrite(SJVariableAccess("this"),"b",SJVariableAccess("tmp_1"))),
+        HashMap("this" -> "Foo", "a" -> "int", "tmp_2" -> "int", "tmp_1" -> "Object"))
+    
+    val after = SJMethodDefinition(Set(),"bar","void",List(SJArgument("a","int")),
+        List(
+          SJFieldRead(SJVariableAccess("tmp_1"),SJVariableAccess("this"),"c"), 
+          SJConditional(SJBinaryExpression("==",SJVariableAccess("a"),SJVariableAccess("tmp_1")),
+              List(SJFieldWrite(SJVariableAccess("this"),"b",SJLiteral("20"))),
+              List(SJFieldWrite(SJVariableAccess("this"),"b",SJLiteral("30"))))),
+        HashMap("this" -> "Foo", "a" -> "int", "tmp_1" -> "int"))
+    
+    liveVariableRewrite(before) should equal (after)
+  }
+  
+  /*
+    This fails. It shows that the dead variable rewrite currently isn't mature enough to deal with 
+    multiple variables even though they could be optimized 
+  */
+  "replacing multiple variables" should "replace a variable used at more places" in {
     val before = SJMethodDefinition(Set(Static()), "test", "int",
        List(SJArgument("n", "int")),
        List(
