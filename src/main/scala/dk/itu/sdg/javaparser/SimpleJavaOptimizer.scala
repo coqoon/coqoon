@@ -155,7 +155,7 @@ object SimpleJavaOptimizer {
       rwOfStatements(statements).map { rw => 
         deads.foldLeft(statements){ (rewritten, dead) =>  // for each dead variable: rewrite the AST. 
           if ( rw.reads.contains(dead) ) {                // it's read & written
-            // it's dead but still read in the block. If it's truely a temporary value that is simply used in _one_
+            // it's dead but still read in the block. If it's truly a temporary value that is simply used in _one_
             // other assignment we can replace the assignment to the tmp variable with a assignment to the variable
             // that's using the tmp variable. Also They have to be of the same type. 
             val usingDeadVar = findWriteVarsWhereVarIsRead( variable = dead, in = rewritten)
