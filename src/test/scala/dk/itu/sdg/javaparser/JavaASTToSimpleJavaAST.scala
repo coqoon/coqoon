@@ -555,6 +555,31 @@ class ClassesSpec extends ASTSpec {
       SJConstructorDefinition(Set(Public()), "Foo", List(), List(), HashMap("this" -> "Foo"))), None, HashMap("f" -> "int")))
     getASTbyParsingFileNamed("MethodWithNoFieldAccessOrCallInAnExpression.txt") should equal(expected)
   }
+
+  //this fails as of now...
+  "Parsing NestedClass.txt" should "produce the correct AST" in {
+    val expected = List(
+      SJClassDefinition(Set(), "B", "", List(), List(
+        SJFieldDefinition(Set(), "a", "A"),
+        SJMethodDefinition(Set(), "foo", "int", List(), List(
+          SJFieldRead(SJVariableAccess("tmp_1"), SJVariableAccess("this"), "a"),
+          SJFieldRead(SJVariableAccess("tmp_2"), SJVariableAccess("tmp_1"), "x"),
+          SJReturn(SJVariableAccess("tmp_2"))),
+                         HashMap("this" -> "B", "tmp_1" -> "A", "tmp_2" -> "int")),
+        SJConstructorDefinition(Set(Public()), "B", List(SJArgument("a", "A")), List(
+          SJFieldWrite(SJVariableAccess("this"), "a", SJVariableAccess("a"))),
+                                HashMap("this" -> "B", "a" -> "A"))),
+        Some("A"), HashMap("a" -> "A")),
+      SJClassDefinition(Set(), "A", "", List(), List(
+        SJFieldDefinition(Set(Public()), "x", "int"),
+        SJMethodDefinition(Set(), "fancy", "int", List(), List(
+          SJNewExpression(SJVariableAccess("tmp_1"), "B", List(SJVariableAccess("this"))),
+          SJCall(Some(SJVariableAccess("tmp_2")), SJVariableAccess("tmp_1"), "foo", List()),
+          SJReturn(SJVariableAccess("tmp_2"))), HashMap("this" -> "A", "tmp_1" -> "B", "tmp_2" -> "int")),
+        SJConstructorDefinition(Set(Public()), "A", List(), List(), HashMap("this" -> "A"))),
+      None, HashMap("x" -> "int")))
+    getASTbyParsingFileNamed("NestedClass.txt") should equal(expected)
+  }
 }
 
 /*
