@@ -177,7 +177,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
       case JWhile(test, body) =>
         val (at, ti, ls0) = extractHelper(None, test, fields, ms, ls)
         val (newbody, ls1) = translateStatement(body, fields, ms, ls0)
-        (ti ++ List(SJWhile(at, newbody)), ls1)
+        (ti ++ List(SJWhile(at, newbody ++ ti)), ls1)
 
       case JReturn(e : JVariableAccess) =>
         (List(SJReturn(SJVariableAccess(e.variable))), ls)
