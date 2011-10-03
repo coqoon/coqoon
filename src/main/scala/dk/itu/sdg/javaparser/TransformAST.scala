@@ -182,6 +182,7 @@ object FinishAST extends JavaTerms
    * Main entry point for transforming the AST.
    */
   def transform (x : Any, outer : Option[String]) : List[JStatement] = {
+    lvars = Set[String]() // Resetting local variables because we're now converting a new class.
     x match {
       case Nil     => Nil
       case x ~ y   => transform(x, outer) ++ transform(y, outer)
@@ -204,7 +205,6 @@ object FinishAST extends JavaTerms
    * respectively. Anything else will throw an exception
    */
   def transformClassOrInterface (x : Any, outer : Option[String], modifiers : Set[JModifier] = Set()) : JStatement = {
-    lvars = Set[String]() // Resetting local variables because we're now converting a new class.
     x match {
       case JClass(id, jtype, superclass, interfaces, bodyp) => {
         log.info("transforming a JClass, ranging (pos) " + x.asInstanceOf[JClass].pos)
