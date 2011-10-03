@@ -170,30 +170,3 @@ class RemoveDeadVariables extends FlatSpec with ShouldMatchers {
   }
   
 }
-
-class OptimizeVariables extends FlatSpec with ShouldMatchers {
-  it should "replace a variable used at more places" in {
-    val before = SJMethodDefinition(Set(Static()), "test", "int",
-       List(SJArgument("n", "int")),
-       List(
-         SJAssignment(SJVariableAccess("tmp_1"), SJLiteral("42")),
-         SJConditional(SJBinaryExpression(">=", SJVariableAccess("n"), SJLiteral("0")),
-                       List(SJAssignment(SJVariableAccess("tmp_1"), SJBinaryExpression("+", SJVariableAccess("tmp_1"), SJLiteral("1")))),
-                       List(SJAssignment(SJVariableAccess("tmp_1"), SJBinaryExpression("-", SJVariableAccess("tmp_1"), SJLiteral("1"))))),
-         SJAssignment(SJVariableAccess("x"), SJVariableAccess("tmp_1")),
-         SJReturn(SJVariableAccess("x"))),
-       HashMap("tmp_1" -> "int", "x" -> "int"))
-
-    val after = SJMethodDefinition(Set(Static()), "test", "int",
-       List(SJArgument("n", "int")),
-       List(
-         SJAssignment(SJVariableAccess("x"), SJLiteral("42")),
-         SJConditional(SJBinaryExpression(">=", SJVariableAccess("n"), SJLiteral("0")),
-                       List(SJAssignment(SJVariableAccess("x"), SJBinaryExpression("+", SJVariableAccess("x"), SJLiteral("1")))),
-                       List(SJAssignment(SJVariableAccess("x"), SJBinaryExpression("-", SJVariableAccess("x"), SJLiteral("1"))))),
-         SJReturn(SJVariableAccess("x"))),
-       HashMap("x" -> "int"))
-
-    liveVariableRewrite(before) should equal (after)
-  }
-}

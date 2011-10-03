@@ -69,7 +69,7 @@ object AST {
     }}
   }
   
-  // Convenince methods on ASTs
+  // Convenience methods on ASTs
   
   def isUsed(variable: String, in: List[SJStatement]) = {
     in exists { stm => isWriting(variable,stm) || isReading(variable,stm) }
