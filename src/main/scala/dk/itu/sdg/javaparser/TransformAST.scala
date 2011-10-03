@@ -314,12 +314,12 @@ object FinishAST extends JavaTerms
   def transformFieldDeclaration (field : FieldDeclaration, modifiers : Set[JModifier] = Set()) : JFieldDefinition = {
     val FieldDeclaration(id, jtype, rest) = field
     log.info("field pos info " + field.pos)
-    
-    val initializer = rest match { 
+
+    val initializer = rest match {
       case x ~ Some("=" ~ y) => Some(transformAnyExpr(y).asInstanceOf[JExpression])
       case _ => None
     }
-    
+
     val name = unpackR(id)
     val typ = unpackR(jtype)
     JFieldDefinition(modifiers, name, typ, initializer)
@@ -362,13 +362,13 @@ object FinishAST extends JavaTerms
       case NewExpression(ntype, args) => JNewExpression(unpackR(ntype), args.map(transformExpression))
       case Name(x) => JVariableAccess(x)
       case Expr(x) => transformAnyExpr(x)
-      case PostFixExpression(x) => transformAnyExpr(x)                                                             
+      case PostFixExpression(x) => transformAnyExpr(x)
       case Lit(x) => JLiteral(unpackR(x))
-      case Some(x) => transformAnyExpr(x)                                                             
+      case Some(x) => transformAnyExpr(x)
       case c : Call => transformCall(c)
       case qualid : QualId => transformQualId(qualid)
       case (x : PrimaryExpr) ~ (y : List[Any]) => transformPrimaryExprFollowedByList(x,y)
-      case ("." ~ expr) => transformAnyExpr(expr)                                                          
+      case ("." ~ expr) => transformAnyExpr(expr)
       case (("assert" ~ x) ~ None) => JAssert(transformAnyExpr(x))
     }
   }
@@ -417,11 +417,11 @@ object FinishAST extends JavaTerms
    * Transforms a BinaryExpr to a JBodyStatement
    */
   def transformBinaryExpr (expr : BinaryExpr) : JBodyStatement = {
-    
-    // Checks an operator as an assignemnt operator. 
+
+    // Checks an operator as an assignemnt operator.
     val isAssignmentOperator: String => Boolean = (operator: String) =>
       List("+=", "-=", "*=", "/=", "%=", "&=", "^=", "|=", "<<=", ">>=", ">>>=").contains(operator)
-    
+
     val BinaryExpr(op, le, ri) = expr
     val oper = unpackR(op)
     oper match {
