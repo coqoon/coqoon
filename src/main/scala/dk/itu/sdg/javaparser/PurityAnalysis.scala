@@ -103,7 +103,7 @@ object PurityAnalysis {
             v = new C 
             Makes v point to the newly created InsideNode 
           */
-          val insideNode = InsideNode("some label") 
+          val insideNode = InsideNode("some label")
           val newGraph   = graph.copy( stateOflocalVars = localVars.updated(v, HashSet(insideNode)))
           before.copy( pointsToGraph = newGraph )
         }
@@ -156,7 +156,7 @@ object PurityAnalysis {
               fLabeledOEdge <- graph.outsideEdges if fLabeledOEdge == f && fLabeledOEdge.n1 == v2
             } yield fLabeledOEdge.n2 ).getOrElse(Ø)
           
-          if (!escapedNodes.isEmpty ) {
+          if (escapedNodes.isEmpty ) { 
             before.copy( pointsToGraph = graph.copy( stateOflocalVars = localVars.updated(v1, nodes) ))
           } else {
             val outsideNode  = LoadNode("some label")
