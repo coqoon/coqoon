@@ -17,24 +17,19 @@ object SJTable {
     assert(ct.contains(name))
     ct(name)
   }
+  
+  def getConstructor(clazz: String): Option[SJConstructorDefinition] = {
+    //TODO: multiple constructors with different arguments (types/amount)
+    getClass(clazz).body.filter(_.isInstanceOf[SJConstructorDefinition])
+                        .map(_.asInstanceOf[SJConstructorDefinition])
+                        .headOption    
+  }
 
   def findMethodInClass (clazz : String, method : String) : Option[SJMethodDefinition] = {
     //TODO: multiple methods with different arguments (types/amount)
-    val c = getClass(clazz)
-    assert(c.isInstanceOf[SJDefinition])
-    val cl = c.asInstanceOf[SJDefinition]
-    var res : Option[SJMethodDefinition] = None
-    var i : Integer = 0
-    while (res == None && i < cl.body.length) {
-      val sjb = cl.body(i)
-      if (sjb.isInstanceOf[SJMethodDefinition]) {
-        val sjm = sjb.asInstanceOf[SJMethodDefinition]
-        if (sjm.id == method)
-          res = Some(sjm)
-      }
-      i += 1
-    }
-    res
+    getClass(clazz).body.filter(_.isInstanceOf[SJMethodDefinition])
+                        .map(_.asInstanceOf[SJMethodDefinition])
+                        .headOption
   }
 
   def getMethodTypeOfClass (name : String, method : String) : String = {
