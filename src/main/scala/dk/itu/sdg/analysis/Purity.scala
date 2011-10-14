@@ -13,11 +13,12 @@
   
 */
 
-package dk.itu.sdg.javaparser
+package dk.itu.sdg.analysis
+import dk.itu.sdg.javaparser._
 
 import scala.collection.immutable.{HashSet, HashMap}
 
-object PurityAnalysis {
+object Purity {
 
   private def Ø[B] = HashSet[B]()
 

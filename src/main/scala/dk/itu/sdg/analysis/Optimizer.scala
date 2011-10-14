@@ -2,9 +2,10 @@
   Author: Mads Hartmann Jensen
 */
 
-package dk.itu.sdg.javaparser
+package dk.itu.sdg.analysis
 
 import scala.collection.immutable.{ HashSet };
+import dk.itu.sdg.javaparser._
 
 /** 
  * Object that contains generic methods related to traversal and transformation of 
@@ -137,7 +138,7 @@ object AST {
   }
 }
 
-object SimpleJavaOptimizer {
+object Optimizer {
 
   import AST._
 

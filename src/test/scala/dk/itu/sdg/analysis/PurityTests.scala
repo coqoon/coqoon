@@ -1,9 +1,10 @@
-package dk.itu.sdg.javaparser
+package dk.itu.sdg.analysis
 
 import scala.collection.immutable.{ HashSet, HashMap }
 import org.scalatest.{ FlatSpec }
 import org.scalatest.matchers.{ ShouldMatchers }
-import PurityAnalysis._
+import dk.itu.sdg.javaparser._
+import Purity._
 
 /*
   Intra-procedural tests. 

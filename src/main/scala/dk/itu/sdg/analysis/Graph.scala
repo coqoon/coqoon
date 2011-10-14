@@ -27,7 +27,7 @@
    @author Mads Hartmann Jensen.
 */
 
-package dk.itu.sdg.javaparser
+package dk.itu.sdg.analysis
 
 import scala.collection.immutable.{ HashMap }
 
