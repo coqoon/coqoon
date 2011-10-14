@@ -9,10 +9,19 @@ case class SJClassDefinition (modifiers : Set[JModifier], override val id : Stri
 case class SJInterfaceDefinition (modifiers : Set[JModifier], override val id : String, interfaces : List[String], override val body : List[SJBodyDefinition]) extends SJDefinition
 
 sealed abstract class SJBodyDefinition () { }
+
+// common interface for methods and constructors
+sealed abstract class SJInvokable() extends SJBodyDefinition {
+  val jtype: String
+  val parameters: List[SJArgument]
+  val body: List[SJStatement]
+  val localvariables: HashMap[String, String]
+}
+
 //not sure whether we really need this here
 case class SJFieldDefinition (modifiers : Set[JModifier], id : String, jtype : String) extends SJBodyDefinition
-case class SJMethodDefinition (modifiers : Set[JModifier], id : String, jtype : String, parameters : List[SJArgument], body : List[SJStatement], localvariables : HashMap[String, String]) extends SJBodyDefinition
-case class SJConstructorDefinition (modifiers : Set[JModifier], jtype : String, parameters : List[SJArgument], body : List[SJStatement], localvariables : HashMap[String, String]) extends SJBodyDefinition
+case class SJMethodDefinition (modifiers : Set[JModifier], id : String, override val jtype : String, override val parameters : List[SJArgument], override val  body : List[SJStatement], override val localvariables : HashMap[String, String]) extends SJInvokable
+case class SJConstructorDefinition (modifiers : Set[JModifier], override val jtype : String, override val parameters : List[SJArgument], override val body : List[SJStatement], override val localvariables : HashMap[String, String]) extends SJInvokable
 case class SJBodyBlock (modifier : Option[Static], body : List[SJStatement]) extends SJBodyDefinition
 
 sealed case class SJArgument (id : String, jtype : String)
