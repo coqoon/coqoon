@@ -5,6 +5,7 @@ import org.scalatest.{ FlatSpec }
 import org.scalatest.matchers.{ ShouldMatchers }
 import dk.itu.sdg.javaparser._
 import Purity._
+import AnalysisTestHelpers._
 
 /*
   Intra-procedural tests. 
@@ -32,28 +33,8 @@ class IntraproceduralTests extends FlatSpec with ShouldMatchers with ASTSpec {
   */
   
   val ast = getASTbyParsingFileNamed("PurityAnalysisExample.java", List("src", "test", "resources", "static_analysis", "source"))
-  
-  def methodsOf(id: String) = 
-    ast.filter(_.id == id)
-       .head.body
-       .filter(_.isInstanceOf[SJMethodDefinition])
-       .map(_.asInstanceOf[SJMethodDefinition])
-  
-  def constructorOf(id: String) = 
-    ast.filter(_.id == id)
-       .head.body
-       .filter(_.isInstanceOf[SJConstructorDefinition])
-       .map(_.asInstanceOf[SJConstructorDefinition])
-       .head
-  
-  val listAddMethod = methodsOf("List").filter(_.id == "add").head
-  
-  val listItrNextMethod = methodsOf("ListItr").filter(_.id == "next").head
-  
-  val listIteratorMethod = methodsOf("List").filter(_.id == "iterator").head
-  
-  val listConstructor = constructorOf("ListItr")
- 
- 
-  
+  val listAddMethod = methodsOf("List",ast).filter(_.id == "add").head
+  val listItrNextMethod = methodsOf("ListItr",ast).filter(_.id == "next").head
+  val listIteratorMethod = methodsOf("List",ast).filter(_.id == "iterator").head
+  val listConstructor = constructorOf("ListItr",ast)  
 }
