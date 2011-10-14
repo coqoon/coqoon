@@ -158,7 +158,7 @@ object AST {
                      vertices = g.vertices :+ v,
                      edges    = g.edges    :+ e
                    )
-          recurse(v, SJTable.findMethodInClass(recieverType,methodName).get, g2)
+          recurse(v, SJTable.getMethodInClass(recieverType,methodName).get, g2)
         }
         case SJNewExpression(_,typ,_) => {
           val v  = Vertex(typ+".constructor") // todo: 

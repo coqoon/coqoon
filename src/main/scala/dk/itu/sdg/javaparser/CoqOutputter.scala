@@ -144,7 +144,7 @@ trait CoqOutputter extends JavaToSimpleJava {
           if (static)
             true
           else {
-            SJTable.findMethodInClass(cl, f) match {
+            SJTable.getMethodInClass(cl, f) match {
               case None => log.warning("dunno, can't find " + cl + " method " + f); false
               case Some(x) => x.modifiers.contains(Static())
             }

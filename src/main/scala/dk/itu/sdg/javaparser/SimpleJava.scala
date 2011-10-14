@@ -63,7 +63,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
         working ++= rt
         SJInterfaceDefinition(mods, name, interf, nbody)
     }
-    SJTable.addClass(res.id, res)
+    SJTable.addClass(res)
     (res, working.map(x => (x, Some(res.id))))
   }
 

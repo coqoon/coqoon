@@ -8,7 +8,8 @@ object SJTable {
   import scala.collection.immutable.HashMap
   var ct : HashMap[String, SJDefinition] = HashMap[String, SJDefinition]()
 
-  def addClass (name : String, clazz : SJDefinition) = {
+  def addClass (clazz : SJDefinition) = {
+    val name = clazz.id
     assert(! ct.contains(name))
     ct = ct + (name -> clazz)
   }
@@ -18,22 +19,23 @@ object SJTable {
     ct(name)
   }
 
-  def getConstructor(clazz: String): Option[SJConstructorDefinition] = {
+  def getConstructor(clazz: String) : Option[SJConstructorDefinition] = {
     //TODO: multiple constructors with different arguments (types/amount)
     getClass(clazz).body.filter(_.isInstanceOf[SJConstructorDefinition])
                         .map(_.asInstanceOf[SJConstructorDefinition])
                         .headOption
   }
 
-  def findMethodInClass (clazz : String, method : String) : Option[SJMethodDefinition] = {
+  def getMethodInClass (clazz : String, method : String) : Option[SJMethodDefinition] = {
     //TODO: multiple methods with different arguments (types/amount)
     getClass(clazz).body.filter(_.isInstanceOf[SJMethodDefinition])
                         .map(_.asInstanceOf[SJMethodDefinition])
+                        .filter(_.id == method)
                         .headOption
   }
 
   def getMethodTypeOfClass (name : String, method : String) : String = {
-    findMethodInClass(name, method) match {
+    getMethodInClass(name, method) match {
       case None => ""
       case Some(x) => x.jtype
     }
