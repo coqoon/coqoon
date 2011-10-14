@@ -17,12 +17,12 @@ object SJTable {
     assert(ct.contains(name))
     ct(name)
   }
-  
+
   def getConstructor(clazz: String): Option[SJConstructorDefinition] = {
     //TODO: multiple constructors with different arguments (types/amount)
     getClass(clazz).body.filter(_.isInstanceOf[SJConstructorDefinition])
                         .map(_.asInstanceOf[SJConstructorDefinition])
-                        .headOption    
+                        .headOption
   }
 
   def findMethodInClass (clazz : String, method : String) : Option[SJMethodDefinition] = {
