@@ -12,7 +12,7 @@ class ASTTest extends FlatSpec with ShouldMatchers with ASTSpec {
   
   "Finding the CG of method in PurityAnalysisExample.java" should "find the right CG" in {
     
-    val graph = AST.extractCalLGraph("PurityAnalysisExample",sumX)
+    val graph = AST.extractCallGraph("PurityAnalysisExample",sumX)
     
     val vertex1 = Vertex(("PurityAnalysisExample","sumX"))
     val vertex2 = Vertex(("List","iterator"))

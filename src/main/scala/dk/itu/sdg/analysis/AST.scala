@@ -140,7 +140,7 @@ object AST {
   /*
    *  Construct a Call Graph from a given method. 
    */
-  def extractCalLGraph(cls: String, method: SJMethodDefinition): G[Invocation] = {
+  def extractCallGraph(cls: String, method: SJMethodDefinition): G[Invocation] = {
     
     var visited = Map[Invocation,Boolean]()       // Keeps track which methods have been visited before.
     val main = Vertex((cls,method.id))            // The root of the CG
