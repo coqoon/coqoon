@@ -5,10 +5,15 @@ import org.scalatest.{ FlatSpec }
 import org.scalatest.matchers.{ ShouldMatchers }
 import org.scalatest.Ignore
 import dk.itu.sdg.javaparser._ 
-import dk.itu.sdg.analysis.Graph.{ Vertex, Edge, G}
+import dk.itu.sdg.analysis._
+
+// Handy when testing. The vertices are simply carrying strings. 
+object TestGraph extends Graph {
+  type ItemType = String 
+}
 
 class GraphTest extends FlatSpec with ShouldMatchers {
-  
+    
   "Finding the SCC of example graph" should "find the right components" in {
     
     // Example taken from page 187, figure 5.13
@@ -41,7 +46,7 @@ class GraphTest extends FlatSpec with ShouldMatchers {
 
     val g = G(v1, vertices, edges)
         
-    Graph.components(g) should equal (
+    TestGraph.components(g) should equal (
       List(List(Vertex("V5"), Vertex("V4"), Vertex("V3"), Vertex("V2"), Vertex("V1")), 
          List(Vertex("V7")), 
          List(Vertex("V8"), Vertex("V6"))))

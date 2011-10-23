@@ -1,17 +1,16 @@
 /*
-  Object that contains generic methods related to traversal and transformation of 
-  the Simple Java AST.                                                              
-
-  Author: Mads Hartmann Jensen 
+  Object that contains generic methods related to traversal and transformation of
+  the Simple Java AST.
+  
+  Author: Mads Hartmann Jensen
 */
 
 package dk.itu.sdg.analysis
 
 import dk.itu.sdg.javaparser._
-import dk.itu.sdg.analysis.Graph.{ G, Vertex, Edge }
 
 object AST {
-
+  
   def foldLeft[B](statements: List[SJStatement], z: B, f: (SJStatement,B) => B): B = 
     statements.foldLeft(z) { (acc,stm) => foldFunc(stm,acc,f,foldLeft[B]) }
   
@@ -135,52 +134,50 @@ object AST {
     }
     foldRight(in, Nil: List[String], (stm: SJStatement,acc: List[String]) => rec(stm) ::: acc )
   }
+    
+  import CallGraph.{ Invocation }
   
   /*
-    Construct a Call Graph from 
-  */
-  def extractCalLGraph(cls: String, method: SJMethodDefinition): G = {
-
-    /*
-      TODO: Shouldn't process a method/constructor if it has been processed before. 
-    */
-
-    val main = Vertex(cls+"."+method.id)
-    val initialGraph = G(main, main :: Nil, Nil)
+   *  Construct a Call Graph from a given method. 
+   */
+  def extractCalLGraph(cls: String, method: SJMethodDefinition): G[Invocation] = {
     
-    def recurse(vertex: Vertex, invokable: SJInvokable, graph: G): G = {
-      foldLeft(invokable.body, graph, (stm, g: G) => stm match {
-        case SJCall(_,SJVariableAccess(reciever),methodName,_) => {
-          val recieverType = invokable.localvariables.get(reciever).get
-          val v  = Vertex(recieverType+"."+methodName)
-          val e  = Edge(vertex, v)
-          val g2 = g.copy ( 
-                     vertices = g.vertices :+ v,
-                     edges    = g.edges    :+ e
-                   )
-          recurse(v, SJTable.getMethodInClass(recieverType,methodName).get, g2)
-        }
-        case SJNewExpression(_,typ,_) => {
-          val v  = Vertex(typ+".constructor") // todo: 
+    var visited = Map[Invocation,Boolean]()       // Keeps track which methods have been visited before.
+    val main = Vertex((cls,method.id))            // The root of the CG
+    val initialGraph = G(main, main :: Nil, Nil)  // initial graph. Only contains the root vertex, no edges.
+    
+    // Method that recurses through the AST in a depth first fashion. 
+    def recurse(vertex: Vertex[Invocation], invokable: SJInvokable, graph: G[Invocation]): G[Invocation] = {
+      
+      def wasSJCall(g: G[Invocation], reciever: String, methodName: String) = {
+        val recieverType = invokable.localvariables.get(reciever).get
+        val invocation   = (recieverType, methodName)
+        wasInvocation(g, invocation, SJTable.getMethodInClass(recieverType,methodName).get)
+      }
+      
+      def wasNexExpression(g: G[Invocation], typ: String) = {
+        val invocation = (typ,"constructor") // TODO: Find a better name than constructor.
+        wasInvocation(g, invocation, SJTable.getConstructor(typ).get)
+      }
+      
+      def wasInvocation(g: G[Invocation], invocation: Invocation, after: SJInvokable) = {
+        if (!visited.contains(invocation)) {
+          val v  = Vertex(invocation) 
           val e  = Edge(vertex, v)
           val g2 = g.copy (vertices = g.vertices :+ v,
                            edges    = g.edges    :+ e )
-          recurse(v, SJTable.getConstructor(typ).get, g2)
-        }
-        case _ => g
-        
+          visited = visited.updated(invocation, true)
+          recurse(v, after, g2)
+        } else recurse(vertex, after, g)
+      }
+      
+      foldLeft(invokable.body, graph, (stm, g: G[Invocation]) => stm match {
+        case SJCall(_,SJVariableAccess(reciever),methodName,_) => wasSJCall(g, reciever, methodName)
+        case SJNewExpression(_,typ,_) => wasNexExpression(g,typ)
+        case _ => g // Don't care about the rest of the nodes. 
       })
     }
-        
-    val graph = recurse(main,method,initialGraph)
     
-    println("--- vertices ---")
-    println(graph.vertices.mkString("\n"))
-    println("--- edges ---")
-    println(graph.edges.mkString("\n"))
-    
-    G(Vertex("t"),Nil,Nil)
-    
+    recurse(main,method,initialGraph)
   }
-  
 }

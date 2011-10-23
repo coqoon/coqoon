@@ -31,37 +31,47 @@ package dk.itu.sdg.analysis
 
 import scala.collection.immutable.{ HashMap }
 
-object Graph {
+// Graph data structures.
+case class Vertex[ItemType](item: ItemType)
+case class Edge[ItemType](from: Vertex[ItemType], to: Vertex[ItemType])
+case class G[ItemType](start: Vertex[ItemType], vertices: List[Vertex[ItemType]], edges: List[Edge[ItemType]])
+
+trait Graph {
     
-  type Component = List[Vertex]
+  // ItemType is abstract. Specified by Graph implementations.
+  type ItemType
   
-  // Simple data structure for now. 
-  case class Vertex(label: String)
-  case class Edge(from: Vertex, to: Vertex)
-  case class G(start: Vertex, vertices: List[Vertex], edges: List[Edge])
-  
-  case class State(graph: G,
-                   count: Int, 
-                   visited: Map[Vertex, Boolean], 
-                   dfNumber: Map[Vertex, Int],
-                   lowlinks: Map[Vertex,Int],
-                   stack: List[Vertex],
+  // Simplifying the types a bit.  
+  type GVertex   = Vertex[ItemType]
+  type GEdge     = Edge[ItemType]
+  type GG        = G[ItemType]
+  type Component = List[GVertex]
+    
+  // State used when implementing the SCC algorithm.
+  case class State(graph: GG,
+                   count: Int,
+                   visited: Map[GVertex, Boolean],
+                   dfNumber: Map[GVertex, Int],
+                   lowlinks: Map[GVertex,Int],
+                   stack: List[GVertex],
                    components: List[Component])
   
-  def initial(g: G) = State (
+  // Initial state for the SCC algorithm.
+  def initial(g: GG) = State (
     graph      = g,
     count      = 1,
     visited    = g.vertices.map { (_,false) } toMap,
     dfNumber   = Map(),
     lowlinks   = Map(),
-    stack      = Nil, 
+    stack      = Nil,
     components = Nil
   )
   
-  def components(graph: G): List[Component] = {
-            
+  // Calculate the SCC of a Graph.
+  def components(graph: GG): List[Component] = {
+    
     var state = search(graph.start, initial(graph))
-        
+    
     while(state.visited.exists( _._2 == false)) {
       state.visited.find(_._2 == false).foreach { tuple => 
         val (vertex, _) = tuple
@@ -72,7 +82,8 @@ object Graph {
     state.components
   }
   
-  def search(vertex: Vertex, state: State): State = {
+  // Search for SCC.
+  private def search(vertex: GVertex, state: State): State = {
     
     val newState = state.copy( visited  = state.visited.updated(vertex, true),
                                dfNumber = state.dfNumber.updated(vertex,state.count),
@@ -80,15 +91,15 @@ object Graph {
                                lowlinks = state.lowlinks.updated(vertex, state.count),
                                stack    = vertex :: state.stack)
     
-    def processVertex(st: State, w: Vertex): State = {
+    def processVertex(st: State, w: GVertex): State = {
       if (!st.visited(w)) {
         val st1 = search(w, st)
         val min = smallest(st1.lowlinks(w),st1.lowlinks(vertex))
         st1.copy( lowlinks = st1.lowlinks.updated(vertex, min) )
       } else {
-        if ( (st.dfNumber(w) < st.dfNumber(vertex)) && st.stack.contains(w) ) { 
+        if ( (st.dfNumber(w) < st.dfNumber(vertex)) && st.stack.contains(w) ) {
           val min = smallest( st.dfNumber(w), st.lowlinks(vertex) )
-          st.copy( lowlinks = st.lowlinks.updated(vertex, min)) 
+          st.copy( lowlinks = st.lowlinks.updated(vertex, min))
         } else st
       }
     }
@@ -104,8 +115,20 @@ object Graph {
     } else strslt
   }
   
-  def smallest(x: Int, y: Int): Int = if (x < y) x else y  
+  // get the smallest of two numbers.
+  private def smallest(x: Int, y: Int): Int = if (x < y) x else y  
   
-  def adjacent(vertex: Vertex, state: State): List[Vertex] = 
+  // Get the adjacent vertices of a given vertex.
+  private def adjacent(vertex: GVertex, state: State): List[GVertex] = 
     for { edge <- state.graph.edges if edge.from == vertex } yield edge.to 
+}
+
+// Call-graph. The vertices carry Invocations 
+object CallGraph extends Graph {
+  
+  // Invocation is a pair of strings. _1 is the name of the type and 
+  // _2 is the name of the method invoked on an instance of the type.
+  type Invocation = (String, String)
+  
+  type ItemType = Invocation 
 }
