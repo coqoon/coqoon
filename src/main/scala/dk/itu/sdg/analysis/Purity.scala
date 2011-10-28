@@ -9,8 +9,12 @@
 /*
   Random notes and things I still have to consider:
 
-    v1.f = 10 would currently just be ignored as 10 isn't a var.
-
+  - v1.f = 10 would currently just be ignored as 10 isn't a var.
+  - each node needs to get a proper label
+  - node mapping
+  - combining points-to-graphs
+  - points-to-graph simplifications
+  - merging the set of modified abstract fields
 */
 
 package dk.itu.sdg.analysis
@@ -24,8 +28,6 @@ object Purity {
 
   private def Ø[B] = HashSet[B]()
 
-  import AST._
-
   val vRet = "RETURN" // name of special variable that points to the nodes returned
                       // form a method. See page page 9 before section 5.3
 
@@ -34,6 +36,7 @@ object Purity {
   case class InsideNode(lb: String) extends Node
   case class LoadNode(lb: String) extends Node
   case class EscapedNode(lb: String) extends Node
+  case class ParameterNode(lb: String) extends Node
 
   trait Edge {
     val n1: Node
@@ -61,14 +64,14 @@ object Purity {
   def isPure(method: SJMethodDefinition): Boolean = false
 
   def interProcedural(method: SJMethodDefinition): State = {
-    // This is explained on page 10-11. 
+    // This is explained on page 10-11.
 
-    // Extract the call graph from the AST and find the strongly 
-    // connected components of the CG. 
+    // Extract the call graph from the AST and find the strongly
+    // connected components of the CG.
     val callGraph  = AST.extractCallGraph("TODO", method)                       // TODO: Use proper class name or find a way to avoid it.
     val components = CallGraph.components(callGraph)
 
-    // Iterate though the work-list till a fixed point is found. 
+    // Iterate though the work-list till a fixed point is found.
     def iter(workList: List[Vertex[Invocation]], st: State): State = {
 
       if (workList.isEmpty) st else {
@@ -79,7 +82,7 @@ object Purity {
         }).get // TODO: For now, assuming that the methods are always present.
 
         val st2 = intraProcedural(invokale)
-        
+
         if (st2.pointsToGraph != st.pointsToGraph) {
           val callers = for { e <- callGraph.edges if e.to == workList.head } yield e.to
           iter(workList.tail ::: callers,st2)
@@ -89,8 +92,83 @@ object Purity {
       }
     }
 
-    iter(components.head, initialStateOfMethod(method.parameters))              // TODO: Only analyzing the FIRST SCC for now. 
+    iter(components.head, initialStateOfMethod(method.parameters))              // TODO: Only analyzing the FIRST SCC for now.
   }
+
+  // Constructs the node mapping. Explained on page 9
+  private def mapping(g: Graph,
+                      gCallee: Graph,
+                      parameters: List[SJArgument],
+                      arguments: List[String]): Node => Set[Node] = {
+
+    type Mapping = Node => Set[Node]
+
+    val refine: (Mapping => Mapping, Mapping) => Mapping = (f,g) => f(g)
+
+    // Mapping 1
+    // The parameter nodes of gCallee should map to the nodes pointed to by the
+    // arguments used to invoke callee.
+    val mapping1: Mapping = {
+      val parameterNodes = for {
+        parameter           <- parameters.map( _.id )
+        OutsideEdge(_,_,n2) <- gCallee.outsideEdges if n2.lb == parameter
+      } yield n2
+
+      val args: List[Set[Node]] = (for { id <- arguments } yield g.stateOflocalVars(id)).asInstanceOf[List[Set[Node]]]
+
+      val map = parameterNodes.zip(args).toMap
+
+      (n: Node) => map(n)
+    }
+
+    // Mapping 2
+    // All outside nodes of gCallee that point to inside nodes of G should be
+    // mapped to those nodes.
+    val mapping2: Mapping => Mapping = { (mapping: Mapping) =>
+
+      val map = (for {
+        OutsideEdge(n1, f, n2) <- gCallee.outsideEdges
+        InsideEdge(n3, f, n4)  <- g.insideEdges if mapping(n1).contains(n3)
+      } yield (n2 -> n4)).groupBy( _._1 )
+                         .map { case (key,value) => (key -> value.map( _._2 ).toSet ) }
+
+      (n: Node) => map(n)
+    }
+
+    // Mapping 3
+    // This constraint deals with the aliasing present in the calling context
+    val mapping3: Mapping => Mapping = { (mapping: Mapping) =>
+
+      val loadNodes = for { OutsideEdge(n1, f, n2) <- g.outsideEdges if n2.isInstanceOf[LoadNode]} yield n2
+
+      val map = (for {
+        OutsideEdge(n1, f, n2) <- gCallee.outsideEdges
+        InsideEdge(n3, f, n4)  <- gCallee.insideEdges if n1 != n3 &&
+                                                         n1.isInstanceOf[LoadNode] &&
+                                                         (mapping(n1) + n1).intersect( (mapping(n3) + n3)).nonEmpty
+        extra = if (n4.isInstanceOf[ParameterNode]) Ø else HashSet(n4)
+      } yield (n2 -> (mapping(n4) ++ extra) )).groupBy( _._1 )
+                                        .map { case (key, value) => (key -> value.map( _._2 ).toSet.flatten) }
+
+      (n: Node) => map(n)
+    }
+
+    // Mapping 4
+    // Each non-parameter node should map to itself
+    val mapping4: Mapping => Mapping = { (mapping: Mapping) =>
+      val nonParameterNodes =
+        (gCallee.insideEdges ++ gCallee.outsideEdges).map( _.n2 ).filter( !_.isInstanceOf[ParameterNode])
+
+      val map = nonParameterNodes.zip(nonParameterNodes.map( HashSet(_) )).toMap
+
+      (n: Node) => mapping(n) ++ map(n)
+    }
+
+    refine(mapping4, refine(mapping3, refine( mapping2, mapping1)))
+  }
+
+  // TODO: Combines two points-to-graphs. Explained on page 10.
+  def combinePointsToGraph(g: Graph, gCallee: Graph): Graph = g
 
   def intraProcedural(invokable: SJInvokable): State = {
 
@@ -203,23 +281,23 @@ object Purity {
         }
 
         // TODO: SJCall. Difference between an analyzable and non analyzable call
-
         case _ => before
       }
     }
 
-    foldLeft(body, initialStateOfMethod(parameters), transferFunction)
+    AST.foldLeft(body, initialStateOfMethod(parameters), transferFunction)
   }
 
-  def initialStateOfMethod(parameters: List[SJArgument]) =
+  def initialStateOfMethod(parameters: List[SJArgument]) = {
     // page 7, section 5.21
     State(
       pointsToGraph  = Graph(insideEdges          = Ø,
                              outsideEdges         = Ø,
-                             stateOflocalVars     = (parameters.map( arg => (arg.id -> HashSet(LoadNode(arg.id))) )
-                                                    :+ ( "this" -> HashSet(LoadNode("this")))).toMap,
+                             stateOflocalVars     = (parameters.map( arg => (arg.id -> HashSet(ParameterNode(arg.id))) )
+                                                    :+ ( "this" -> HashSet(ParameterNode("this")))).toMap,
                              globallyEscapedNodes = Ø),
       modifiedFields = Ø
     )
+  }
 
 }
