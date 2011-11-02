@@ -13,20 +13,24 @@ import AnalysisTestHelpers._
 class IntraproceduralTests extends FlatSpec with ShouldMatchers with ASTSpec {
     
   "Purity analysis on List.add" should "record a mutation on this.head" in  {
-    intraProcedural(listAddMethod).modifiedFields should equal (HashSet(AbstractField(ParameterNode("this"),"head")))
+    modifiedAbstractFields("List",listAddMethod) should equal (HashSet(AbstractField(ParameterNode("this"),"head")))
   }
   
   "Purity analysis on ListItr.next" should "record a mutation on this.cell" in {
-    intraProcedural(listItrNextMethod).modifiedFields should equal (HashSet(AbstractField(ParameterNode("this"),"cell")))
+    modifiedAbstractFields("ListItr", listItrNextMethod) should equal (HashSet(AbstractField(ParameterNode("this"),"cell")))
   }
   
   "Purity analysis on List.iterator" should "not record any mutations" in {
-    intraProcedural(listIteratorMethod).modifiedFields should equal (HashSet[String]())
+    modifiedAbstractFields("List", listIteratorMethod) should equal (HashSet[String]())
+  }
+  
+  "Purity analysis on List.iterator" should "state that it is pure" in {
+    isPure("List", listIteratorMethod) should equal (true)
   }
  
-  "Purity analysis on ListItr constructor" should "record a mutation on this.cell" in {
-    intraProcedural(listConstructor).modifiedFields should equal (HashSet(AbstractField(ParameterNode("this"),"cell")))
-  }
+  // "Purity analysis on ListItr constructor" should "record a mutation on this.cell" in {
+  //   modifiedAbstractFields(listConstructor) should equal (HashSet(AbstractField(ParameterNode("this"),"cell")))
+  // }
   
   /*
     Data. 
