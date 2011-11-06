@@ -236,7 +236,7 @@ class CoqStepUntilAction extends KCoqAction {
     if (DocumentState.position == togo) { } else
     if (DocumentState.position < togo) {
       EclipseBoilerPlate.multistep = true
-      CoqStepNotifier.test = Some((x : Int) => x >= togo)
+      CoqStepNotifier.test = Some((x : Int, y : Int) => y >= togo)
       PrintActor.register(CoqStepNotifier)
       CoqStepAction.doit()
     } else { //Backtrack
@@ -361,7 +361,7 @@ object CoqStartUp extends CoqCallback {
 
 object CoqStepNotifier extends CoqCallback {
   var err : Boolean = false
-  var test : Option[(Int) => Boolean] = None
+  var test : Option[(Int, Int) => Boolean] = None
 
   import org.eclipse.swt.widgets.Display
 
@@ -373,7 +373,8 @@ object CoqStepNotifier extends CoqCallback {
         if (err)
           fini
         else
-          if (test.isDefined && test.get(DocumentState.position))
+          if (test.isDefined && test.get(DocumentState.position,
+                                         DocumentState.position + CoqTop.findNextCommand(DocumentState.content.drop(DocumentState.position))))
             fini
           else if (monoton) {
             CoqStepAction.doit
