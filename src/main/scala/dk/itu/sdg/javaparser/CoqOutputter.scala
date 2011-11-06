@@ -6,10 +6,7 @@ trait CoqOutputter extends JavaToSimpleJava {
   import scala.collection.immutable.HashMap
 
   def getArgs (x : List[SJArgument]) : List[String] = {
-    x.flatMap {
-      case SJArgument(id, jtype) => Some(id)
-      case y => log.warning("in getArgs, unexpected " + y); None
-    }
+    x.map(_.id)
   }
 
   def interfaceMethods (interface : String, body : List[SJBodyDefinition]) : (List[String], List[String]) = {
@@ -28,6 +25,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         val ps = if (paras.length == 0) "" else paras.map("(\"" + _ + "\":expr)").reduceLeft(_ + _)
         val postm = "sm_bin R (\"this\":expr) (sm_bin " + name + " (sm_const t) " + ps + ")"
         //XXX: fixme! only valid if no side effects
+        //and sm_un / sm_bin / sm_tern / sm_quad depends on arity of representation predicate
         val postns = "sm_bin R (\"this\":expr) (sm_const t)"
         val post =
           if (typ == "void")
@@ -184,7 +182,7 @@ trait CoqOutputter extends JavaToSimpleJava {
     ret = "myreturnvaluedummy"
     val body = xs.map(x => printStatement(x, locals))
     val b = printBody(body)
-    val defi = "\nDefinition " + myname + " := " + b + "."
+    val defi = "Definition " + myname + " := " + b + "."
     val res =
       if (ret == "myreturnvaluedummy")
         "0"
@@ -206,7 +204,7 @@ trait CoqOutputter extends JavaToSimpleJava {
             args
           else
             "this" :: args
-        outp ::= "\nDefinition " + name + "M := Build_Method (" + printArgList(t) + ") " + bodyref + " (" + returnvar + ")."
+        outp ::= "Definition " + name + "M := Build_Method (" + printArgList(t) + ") " + bodyref + " (" + returnvar + ")."
         Some(("\"" + name + "\"", name + "M"))
       case SJConstructorDefinition(modifiers, typ, params, body, lvars) =>
         val args = getArgs(params)
@@ -262,13 +260,10 @@ Open Scope list_scope.
         outp ::= "Module " + name + " <: PROGRAM."
         val fields = fs.keys.toList
         val methods = classMethods(body)
-        outp ::= """
-Definition """ + id + """ :=
-  Build_Class """ + printFiniteSet(fields) + """
-              """ + printFiniteMap(methods) + "."
+        outp ::= "Definition " + id + " := Build_Class " + printFiniteSet(fields) + " " + printFiniteMap(methods) + "."
     })
     val classes = printFiniteMap(cs.map(x => ("\"" + x + "\"", x)))
-    outp ::= "\nDefinition Prog := Build_Program " + classes + "."
+    outp ::= "Definition Prog := Build_Program " + classes + "."
     if (spec)
       outp ::= unique_names
     outp ::= "End " + name + "."
