@@ -230,7 +230,7 @@ class CoqStepUntilAction extends KCoqAction {
   import org.eclipse.swt.widgets.Display
 
   override def doit () : Unit = {
-    val togo = CoqTop.findPreviousCommand(DocumentState.content, EclipseBoilerPlate.getCaretPosition + 2)
+    val togo = CoqTop.findNextCommand(DocumentState.content.drop(EclipseBoilerPlate.getCaretPosition)) + EclipseBoilerPlate.getCaretPosition
     //doesn't work reliable when inside a comment
     Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition + ", docpos is " + DocumentState.position)
     if (DocumentState.position == togo) { } else
@@ -241,7 +241,7 @@ class CoqStepUntilAction extends KCoqAction {
       CoqStepAction.doit()
     } else { //Backtrack
       //go forward till cursor afterwards
-      PrintActor.register(CoqLater(() => 
+      PrintActor.register(CoqLater(() =>
         Display.getDefault.syncExec(
           new Runnable() {
             def run() = CoqStepUntilAction.doit

@@ -256,32 +256,8 @@ object CoqTop {
     new Thread(coqerr).start
     true
   }
-  
-  def isStarted () : Boolean = { started }
 
-  def findPreviousCommand (s : String, pos : Int) : Int = {
-    if (pos == 0) -1
-    else {
-      Console.println("find previous with " + pos + " and length " + s.length)
-      var cdepth : Int = 0
-      var i : Int = scala.math.min(pos - 2, s.length - 1)
-      var found : Boolean = false
-      while (i > 0 && ! found && i < s.length) {
-        val c = s(i)
-        if (c == ')' && s(i - 1) == '*')
-          cdepth += 1
-        else if (c == '*' && s(i - 1) == '(')
-          cdepth -= 1
-        else if (cdepth == 0 && (c == ' ' || c == '\n' || c == '\r') && s(i - 1) == '.')
-          found = true
-        i -= 1
-      }
-      if (found)
-        i + 1
-      else
-        0
-    }
-  }
+  def isStarted () : Boolean = { started }
 
   def findNextCommand (s : String) : Int = {
     if (s == "") -1
@@ -293,7 +269,7 @@ object CoqTop {
         val c = s(i)
         if (c == '(' && s(i + 1) == '*')
           cdepth += 1
-        else if (c == '*' && s(i + 1) == ')')
+        else if (c == '*' && s(i + 1) == ')' && cdepth > 0)
           cdepth -= 1
         else if (cdepth == 0 && c == '.' && (i + 1 == s.length || s(i + 1) == '\n' || s(i + 1) == ' ' || (s(i + 1) == '\r' && s(i + 2) == '\n')) && (i == 0 || s(i - 1) != '.'))
           found = true
