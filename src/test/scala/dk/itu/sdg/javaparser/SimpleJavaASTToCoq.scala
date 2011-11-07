@@ -37,7 +37,7 @@ class CoqOutputterSpec extends ASTSpec {
   "simple class definition with a method" should "produce some coq definition" in {
     val tst = List(SJClassDefinition(Set(), "Foo", "", Nil, List(SJMethodDefinition(Set(), "foo", "int", List(), List(SJAssignment(SJVariableAccess("x"), SJLiteral("20")), SJReturn(SJVariableAccess("x"))), HashMap("this" -> "Foo", "x" -> "int"))), None, HashMap()))
     val expected = List("Module Foo <: PROGRAM.",
-"""Definition foo_body := (cassign (var_expr "x") (20:expr)).""",
+"""Definition foo_body := (cassign "x" (20:expr)).""",
 """Definition fooM := Build_Method ("this" :: nil) foo_body (var_expr "x").""",
 """Definition Foo := Build_Class (SS.empty) (SM.add "foo" fooM (SM.empty _)).""",
 """Definition Prog := Build_Program (SM.add "Foo" Foo (SM.empty _)).""",
@@ -48,7 +48,7 @@ class CoqOutputterSpec extends ASTSpec {
   "simple class definition with a conditional" should "produce some coq definition" in {
     val tst = List(SJClassDefinition(Set(), "Foo", "", Nil, List(SJMethodDefinition(Set(), "foo", "int", List(), List(SJConditional(SJBinaryExpression("<", SJLiteral("10"), SJLiteral("20")), List(SJAssignment(SJVariableAccess("x"), SJLiteral("100"))), List(SJAssignment(SJVariableAccess("x"), SJLiteral("200")))), SJReturn(SJVariableAccess("x"))), HashMap("x" -> "int", "this" -> "Foo"))), None, HashMap()))
     val expected = List("Module Foo <: PROGRAM.",
-"""Definition foo_body := (cif (elt (10:expr) (20:expr)) (cassign (var_expr "x") (100:expr)) (cassign (var_expr "x") (200:expr))).""",
+"""Definition foo_body := (cif (elt (10:expr) (20:expr)) (cassign "x" (100:expr)) (cassign "x" (200:expr))).""",
 """Definition fooM := Build_Method ("this" :: nil) foo_body (var_expr "x").""",
 """Definition Foo := Build_Class (SS.empty) (SM.add "foo" fooM (SM.empty _)).""",
 """Definition Prog := Build_Program (SM.add "Foo" Foo (SM.empty _)).""",
@@ -70,9 +70,9 @@ class CoqOutputterSpec extends ASTSpec {
     val tst = List(SJClassDefinition(Set(), "Cell", "", Nil, List(SJFieldDefinition(Set(), "value", "Object"), SJConstructorDefinition(Set(), "Cell", List(), List(), HashMap("this" -> "Cell")), SJMethodDefinition(Set(), "get", "Object", List(), List(SJFieldRead(SJVariableAccess("x"), SJVariableAccess("this"), "value"), SJReturn(SJVariableAccess("x"))), HashMap("this" -> "Cell", "x" -> "Object")), SJMethodDefinition(Set(), "set", "Object", List(SJArgument("x", "Object")), List(SJFieldWrite(SJVariableAccess("this"), "value", SJVariableAccess("x"))), HashMap("this" -> "Cell", "x" -> "Object"))), None, HashMap("value" -> "Object")))
     val expected = List("Module Cell <: PROGRAM.",
 """Definition Cell_new := Build_Method (nil) (calloc "this" "Cell") (var_expr "this").""",
-"""Definition get_body := (cread (var_expr "x") (var_expr "this") "value").""",
+"""Definition get_body := (cread "x" "this" "value").""",
 """Definition getM := Build_Method ("this" :: nil) get_body (var_expr "x").""",
-"""Definition set_body := (cwrite (var_expr "this") "value" (var_expr "x")).""",
+"""Definition set_body := (cwrite "this" "value" "x").""",
 """Definition setM := Build_Method ("this" :: "x" :: nil) set_body 0.""",
 """Definition Cell := Build_Class (SS.add "value" (SS.empty)) (SM.add "new" Cell_new (SM.add "get" getM (SM.add "set" setM (SM.empty _)))).""",
 """Definition Prog := Build_Program (SM.add "Cell" Cell (SM.empty _)).""",
@@ -87,16 +87,16 @@ class CoqOutputterSpec extends ASTSpec {
     SJTable.addClass(recell)
     val tst = List(cell, recell)
     val expected = List("Module Cell <: PROGRAM.",
-"""Definition Cell_new := Build_Method (nil) (calloc "this" "Cell") (var_expr "this").""", """Definition get_body := (cread (var_expr "x") (var_expr "this") "value").""",
+"""Definition Cell_new := Build_Method (nil) (calloc "this" "Cell") (var_expr "this").""", """Definition get_body := (cread "x" "this" "value").""",
 """Definition getM := Build_Method ("this" :: nil) get_body (var_expr "x").""",
-"""Definition set_body := (cwrite (var_expr "this") "value" (var_expr "x")).""",
+"""Definition set_body := (cwrite "this" "value" "x").""",
 """Definition setM := Build_Method ("this" :: "x" :: nil) set_body 0.""",
 """Definition Cell := Build_Class (SS.add "value" (SS.empty)) (SM.add "new" Cell_new (SM.add "get" getM (SM.add "set" setM (SM.empty _)))).""",
 """Module Cell <: PROGRAM.""",
-"""Definition Recell_new := Build_Method (nil) (cseq (calloc "this" "Recell") (cseq (cscall (var_expr "tmp_1") Cell "new" nil) (cwrite (var_expr "this") "cell" (var_expr "tmp_1")))) (var_expr "this").""",
-"""Definition get_body := (cseq (cread (var_expr "cell") (var_expr "this") "cell") (cdcall (var_expr "x") (var_expr "cell") "get" nil)).""",
+"""Definition Recell_new := Build_Method (nil) (cseq (calloc "this" "Recell") (cseq (cscall "tmp_1" Cell "new" (nil)) (cwrite "this" "cell" "tmp_1"))) (var_expr "this").""",
+"""Definition get_body := (cseq (cread "cell" "this" "cell") (cdcall "x" "cell" "get" (nil))).""",
 """Definition getM := Build_Method ("this" :: nil) get_body (var_expr "x").""",
-"""Definition set_body := (cseq (cread (var_expr "cell") (var_expr "this") "cell") (cseq (cdcall (var_expr "tmp_1") (var_expr "cell") "get" nil) (cseq (cwrite (var_expr "this") "cell" (var_expr "tmp_1")) (cdcall  (var_expr "cell") "set" (var_expr "x") :: nil)))).""",
+"""Definition set_body := (cseq (cread "cell" "this" "cell") (cseq (cdcall "tmp_1" "cell" "get" (nil)) (cseq (cwrite "this" "cell" "tmp_1") (cdcall "" "cell" "set" ("x" :: nil))))).""",
 """Definition setM := Build_Method ("this" :: "x" :: nil) set_body 0.""",
 """Definition Recell := Build_Class (SS.add "backup" (SS.add "cell" (SS.empty))) (SM.add "new" Recell_new (SM.add "get" getM (SM.add "set" setM (SM.empty _)))).""",
 """Definition Prog := Build_Program (SM.add "Recell" Recell (SM.add "Cell" Cell (SM.empty _))).""", "End Cell.", "")

@@ -98,7 +98,7 @@ trait CoqOutputter extends JavaToSimpleJava {
 
   def printE (ex : SJExpression) : String = {
     ex match {
-      case SJVariableAccess(x) => "(var_expr \"" + x + "\")"
+      case SJVariableAccess(x) => "\"" + x + "\""
       case SJUnaryExpression(op, e) => "(" + translateOp(op) + " " + printE(e) + ")"
       case SJBinaryExpression(op, l, r) => "(" + translateOp(op) + " " + printE(l) + " " + printE(r) + ")"
       case SJLiteral(v) =>
@@ -125,11 +125,13 @@ trait CoqOutputter extends JavaToSimpleJava {
         Some("(cwrite " + printE(v) + " \"" + fi + "\" " + printE(va) + ")")
       case SJFieldRead(va, v, fi) =>
         Some("(cread " + printE(va) + " " + printE(v) + " \"" + fi + "\")")
-      case SJReturn(x) =>
+      case SJReturn(SJVariableAccess(x)) =>
+        ret = "(var_expr \"" + x +"\")"; None
+      case SJReturn(x : SJLiteral) =>
         ret = printE(x); None
       case SJCall(v, r, f, a) =>
         val value = v match {
-          case None => ""
+          case None => "\"\""
           case Some(x) => printE(x)
         }
         val (cl, static : Boolean) = r match {
@@ -146,7 +148,7 @@ trait CoqOutputter extends JavaToSimpleJava {
             }
           }
         val (cw, cp) = if (isstatic) ("cscall", cl) else ("cdcall", printE(r))
-        Some("(" + cw + " " + value + " " + cp + " \"" + f + "\" " +  argstring(a) + ")")
+        Some("(" + cw + " " + value + " " + cp + " \"" + f + "\" (" +  argstring(a) + "))")
       case SJNewExpression(v, t, a) =>
         Some("(cscall " + printE(v) + " " + t + " " + argstring(a) + ")")
       case SJConditional(test, consequence, alternative) =>
