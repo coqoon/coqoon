@@ -142,7 +142,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         val coq = EclipseTables.StringToDoc(docstring + ".v")
         val java = doc.get
         Console.println("found coq buffer for same file!")
-        CoqJavaDocumentProvider.updateCoqCode(coq, java, docstring.substring(0, docstring.indexOf(".java")))
+        //CoqJavaDocumentProvider.updateCoqCode(coq, java, docstring.substring(0, docstring.indexOf(".java")))
       }
     }
     if (DocumentState.activeDocument == doc) {

@@ -36,6 +36,5 @@
 	<classpathentry kind="lib" path="lib/compile/org.eclipse.ui.workbench_3.6.0.I20100603-1100.jar"/>
 	<classpathentry kind="lib" path="lib/compile/org.eclipse.ui.workbench.texteditor_3.6.0.v20100520-0800.jar"/>
 	<classpathentry kind="lib" path="lib_managed/scala_2.9.0/test/scalatest-1.4.1.jar"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/KopitiamAspects"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
