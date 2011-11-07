@@ -99,8 +99,8 @@ trait CoqOutputter extends JavaToSimpleJava {
   def printE (ex : SJExpression) : String = {
     ex match {
       case SJVariableAccess(x) => "(var_expr \"" + x + "\")"
-      case SJUnaryExpression(op, e) => translateOp(op) + " " + printE(e)
-      case SJBinaryExpression(op, l, r) => translateOp(op) + " " + printE(l) + " " + printE(r)
+      case SJUnaryExpression(op, e) => "(" + translateOp(op) + " " + printE(e) + ")"
+      case SJBinaryExpression(op, l, r) => "(" + translateOp(op) + " " + printE(l) + " " + printE(r) + ")"
       case SJLiteral(v) =>
         if (v == "null" || v == "true" || v == "false")
           v
@@ -152,7 +152,7 @@ trait CoqOutputter extends JavaToSimpleJava {
       case SJNewExpression(v, t, a) =>
         Some("(cscall " + printE(v) + " " + t + " " + argstring(a) + ")")
       case SJConditional(test, consequence, alternative) =>
-        val te = printStatement(test, locals)
+        val te = printE(test)
         val tr = optPrintBody(consequence.flatMap(x => printStatement(x, locals)))
         val fa = optPrintBody(alternative.flatMap(x => printStatement(x, locals)))
         Some("(cif " + te + " " + tr + " " + fa + ")")
