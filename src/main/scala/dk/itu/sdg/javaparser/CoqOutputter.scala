@@ -122,13 +122,11 @@ trait CoqOutputter extends JavaToSimpleJava {
       case SJAssignment(l, r) =>
         Some("(cassign " + printE(l) + " " + printE(r) + ")")
       case SJFieldWrite(v, fi, va) =>
-        Some("(cwrite " + printE(v) + " " + fi + " " + printE(va) + ")")
+        Some("(cwrite " + printE(v) + " \"" + fi + "\" " + printE(va) + ")")
       case SJFieldRead(va, v, fi) =>
-        Some("(cread " + printE(va) + " " + printE(v) + " " + fi + " )")
-      case SJReturn(SJVariableAccess(x)) =>
-        ret = "var_expr \"" + x + "\""; None
-      case SJReturn(y : SJLiteral) =>
-        ret = printE(y); None
+        Some("(cread " + printE(va) + " " + printE(v) + " \"" + fi + "\")")
+      case SJReturn(x) =>
+        ret = printE(x); None
       case SJCall(v, r, f, a) =>
         val value = v match {
           case None => ""
@@ -204,7 +202,7 @@ trait CoqOutputter extends JavaToSimpleJava {
             args
           else
             "this" :: args
-        outp ::= "Definition " + name + "M := Build_Method (" + printArgList(t) + ") " + bodyref + " (" + returnvar + ")."
+        outp ::= "Definition " + name + "M := Build_Method (" + printArgList(t) + ") " + bodyref + " " + returnvar + "."
         Some(("\"" + name + "\"", name + "M"))
       case SJConstructorDefinition(modifiers, typ, params, body, lvars) =>
         val args = getArgs(params)
@@ -212,7 +210,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         val bodip = printBody("(calloc \"this\" \"" + typ + "\")" :: bodi)
         val nam = typ + "_new"
         outp ::= "Definition " + nam + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\")."
-        Some(("\"" + nam + "\"" , nam))
+        Some(("\"new\"" , nam))
       case _ => None
     }
   }
