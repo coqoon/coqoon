@@ -44,7 +44,7 @@ object Purity {
 
   type Mapping = Node => Set[Node]
 
-  private def Ø[B] = HashSet[B]()
+  private def empty[B] = HashSet[B]()
 
   // TODO: Fix when I generate unique labels for each statement.
   // name of special variable that points to the nodes returned
@@ -188,7 +188,7 @@ object Purity {
         InsideEdge(n3, f, n4)  <- gCallee.insideEdges if n1 != n3 &&
                                                          n1.isInstanceOf[LoadNode] &&
                                                          (mapping(n1) + n1).intersect( (mapping(n3) + n3)).nonEmpty
-        extra = if (n4.isInstanceOf[ParameterNode]) Ø else HashSet(n4)
+        extra = if (n4.isInstanceOf[ParameterNode]) empty else HashSet(n4)
       } yield (n2 -> (mapping(n4) ++ extra) )).groupBy( _._1 )
                                         .map { case (key, value) => (key -> value.map( _._2 ).toSet.flatten) }
 
@@ -324,7 +324,7 @@ object Purity {
            * v1 = v2
            * Make v1 point to all of the nodes that v2 pointed to
            */
-          val newStateOfLocalVars = localVars.updated(v1, localVars.getOrElse(v2,Ø))
+          val newStateOfLocalVars = localVars.updated(v1, localVars.getOrElse(v2,empty))
           before.copy( pointsToGraph = graph.copy( stateOflocalVars = newStateOfLocalVars ))
         }
 
@@ -352,13 +352,13 @@ object Purity {
             } yield for {
               v1 <- v1s
               v2 <- v2s
-            } yield InsideEdge(v1,f,v2)).getOrElse( Ø )
+            } yield InsideEdge(v1,f,v2)).getOrElse( empty )
 
           val mods = (for {
               v1s <- localVars.get(v1)
             } yield for {
               node <- v1s if !node.isInstanceOf[InsideNode]
-            } yield AbstractField(node,f)).getOrElse( Ø )
+            } yield AbstractField(node,f)).getOrElse( empty )
 
           before.copy( pointsToGraph  = graph.copy( insideEdges = graph.insideEdges & insideEdges ),
                        modifiedFields = before.modifiedFields ++ mods)
@@ -377,14 +377,14 @@ object Purity {
             } yield for {
               v2 <- v2s
               fLabeledIEdge <- graph.insideEdges if fLabeledIEdge.field == f && fLabeledIEdge.n1 == v2
-            } yield fLabeledIEdge.n2 ).getOrElse( Ø )
+            } yield fLabeledIEdge.n2 ).getOrElse( empty )
 
           val escapedNodes = (for {
               v2s <- localVars.get(v2)
             } yield for {
               v2 <- v2s
               fLabeledOEdge <- graph.outsideEdges if fLabeledOEdge == f && fLabeledOEdge.n1 == v2
-            } yield fLabeledOEdge.n2 ).getOrElse(Ø)
+            } yield fLabeledOEdge.n2 ).getOrElse(empty)
 
           if (escapedNodes.isEmpty ) {
             before.copy( pointsToGraph = graph.copy( stateOflocalVars = localVars.updated(v1, nodes) ))
@@ -400,7 +400,7 @@ object Purity {
           /*
            * return v
            */
-          val newStateOfLocalVars = localVars.updated(RETURN_LABEL, localVars.getOrElse(v, Ø))
+          val newStateOfLocalVars = localVars.updated(RETURN_LABEL, localVars.getOrElse(v, empty))
           before.copy( pointsToGraph = graph.copy( stateOflocalVars = newStateOfLocalVars ))
         }
 
@@ -465,12 +465,12 @@ object Purity {
   private def initialStateOfMethod(parameters: List[SJArgument]) = {
     // page 7, section 5.21
     State(
-      pointsToGraph  = Graph(insideEdges          = Ø,
-                             outsideEdges         = Ø,
+      pointsToGraph  = Graph(insideEdges          = empty,
+                             outsideEdges         = empty,
                              stateOflocalVars     = (parameters.map( arg => (arg.id -> HashSet(ParameterNode(arg.id))) )
                                                     :+ ( "this" -> HashSet(ParameterNode("this")))).toMap,
-                             globallyEscapedNodes = Ø),
-      modifiedFields = Ø
+                             globallyEscapedNodes = empty),
+      modifiedFields = empty
     )
   }
 }
