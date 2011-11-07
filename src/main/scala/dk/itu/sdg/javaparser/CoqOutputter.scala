@@ -210,8 +210,9 @@ trait CoqOutputter extends JavaToSimpleJava {
         val args = getArgs(params)
         val bodi = body.flatMap(x => printStatement(x, lvars))
         val bodip = printBody("(calloc \"this\" \"" + typ + "\")" :: bodi)
-        outp ::= "Definition " + typ + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\")."
-        Some(("\"" + typ + "\"" , typ))
+        val nam = typ + "_new"
+        outp ::= "Definition " + nam + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\")."
+        Some(("\"" + nam + "\"" , nam))
       case _ => None
     }
   }
