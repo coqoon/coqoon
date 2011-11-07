@@ -20,7 +20,7 @@ sealed abstract class SJInvokable() extends SJBodyDefinition {
 
 //not sure whether we really need this here
 case class SJFieldDefinition (modifiers : Set[JModifier], id : String, jtype : String) extends SJBodyDefinition
-case class SJMethodDefinition (modifiers : Set[JModifier], id : String, override val jtype : String, override val parameters : List[SJArgument], override val  body : List[SJStatement], override val localvariables : HashMap[String, String]) extends SJInvokable
+case class SJMethodDefinition (modifiers : Set[JModifier], id : String, override val jtype : String, override val parameters : List[SJArgument], override val body : List[SJStatement], override val localvariables : HashMap[String, String]) extends SJInvokable
 case class SJConstructorDefinition (modifiers : Set[JModifier], override val jtype : String, override val parameters : List[SJArgument], override val body : List[SJStatement], override val localvariables : HashMap[String, String]) extends SJInvokable
 case class SJBodyBlock (modifier : Option[Static], body : List[SJStatement]) extends SJBodyDefinition
 

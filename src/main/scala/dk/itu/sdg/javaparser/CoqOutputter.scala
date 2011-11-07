@@ -114,21 +114,21 @@ trait CoqOutputter extends JavaToSimpleJava {
     as.map(printE).foldRight("nil")(_ + " :: " + _)
   }
 
-  def printStatement (something : SJStatement, locals : HashMap[String, String]) : String = {
+  def printStatement (something : SJStatement, locals : HashMap[String, String]) : Option[String] = {
     //Console.println("getexpr called with " + something + " class " + something.asInstanceOf[AnyRef].getClass.getName)
     something match {
       case SJAssert(x) =>
-        "(cassert " + printEOpt(x) + ")"
+        Some("(cassert " + printEOpt(x) + ")")
       case SJAssignment(l, r) =>
-        "(cassign " + printE(l) + " " + printE(r) + ")"
+        Some("(cassign " + printE(l) + " " + printE(r) + ")")
       case SJFieldWrite(v, fi, va) =>
-        "(cwrite " + printE(v) + " " + fi + " " + printE(va) + ")"
+        Some("(cwrite " + printE(v) + " " + fi + " " + printE(va) + ")")
       case SJFieldRead(va, v, fi) =>
-        "(cread " + printE(va) + " " + printE(v) + " " + fi + " )"
+        Some("(cread " + printE(va) + " " + printE(v) + " " + fi + " )")
       case SJReturn(SJVariableAccess(x)) =>
-        ret = "var_expr \"" + x + "\""; ""
+        ret = "var_expr \"" + x + "\""; None
       case SJReturn(y : SJLiteral) =>
-        ret = printE(y); ""
+        ret = printE(y); None
       case SJCall(v, r, f, a) =>
         val value = v match {
           case None => ""
@@ -148,16 +148,16 @@ trait CoqOutputter extends JavaToSimpleJava {
             }
           }
         val (cw, cp) = if (isstatic) ("cscall", cl) else ("cdcall", printE(r))
-        "(" + cw + " " + value + " " + cp + " \"" + f + "\" " +  argstring(a) + ")"
+        Some("(" + cw + " " + value + " " + cp + " \"" + f + "\" " +  argstring(a) + ")")
       case SJNewExpression(v, t, a) =>
-        "(cscall " + printE(v) + " " + t + " " + argstring(a) + ")"
+        Some("(cscall " + printE(v) + " " + t + " " + argstring(a) + ")")
       case SJConditional(test, consequence, alternative) =>
         val te = printStatement(test, locals)
-        val tr = optPrintBody(consequence.map(x => printStatement(x, locals)))
-        val fa = optPrintBody(alternative.map(x => printStatement(x, locals)))
-        "(cif " + te + " " + tr + " " + fa + ")"
+        val tr = optPrintBody(consequence.flatMap(x => printStatement(x, locals)))
+        val fa = optPrintBody(alternative.flatMap(x => printStatement(x, locals)))
+        Some("(cif " + te + " " + tr + " " + fa + ")")
       case SJWhile(test, body) =>
-        "(cwhile " + printStatement(test, locals) + " " + optPrintBody(body.map(x => printStatement(x, locals))) + ")"
+        Some("(cwhile " + printE(test) + " " + optPrintBody(body.flatMap(x => printStatement(x, locals))) + ")")
     }
   }
 
@@ -180,7 +180,7 @@ trait CoqOutputter extends JavaToSimpleJava {
 
   def getBody (xs : List[SJStatement], myname : String, locals : HashMap[String, String]) : (String, String) = {
     ret = "myreturnvaluedummy"
-    val body = xs.map(x => printStatement(x, locals))
+    val body = xs.flatMap(x => printStatement(x, locals))
     val b = printBody(body)
     val defi = "Definition " + myname + " := " + b + "."
     val res =
@@ -208,7 +208,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         Some(("\"" + name + "\"", name + "M"))
       case SJConstructorDefinition(modifiers, typ, params, body, lvars) =>
         val args = getArgs(params)
-        val bodi = body.map(x => printStatement(x, lvars))
+        val bodi = body.flatMap(x => printStatement(x, lvars))
         val bodip = printBody("(calloc \"this\" \"" + typ + "\")" :: bodi)
         outp ::= "Definition " + typ + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\")."
         Some(("\"" + typ + "\"" , typ))
