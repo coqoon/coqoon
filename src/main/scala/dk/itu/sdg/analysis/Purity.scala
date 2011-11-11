@@ -223,7 +223,7 @@ object Purity {
   private def combine(g: Graph,
                       gCallee: Graph,
                       mapping: Mapping,
-                      varName: String ): Graph = {
+                      varName: Option[SJVariableAccess] ): Graph = {
 
     val insideEdges = for {
       InsideEdge(n1,f,n2) <- gCallee.insideEdges
@@ -235,12 +235,16 @@ object Purity {
       OutsideEdge(n1, f, n2) <- gCallee.outsideEdges
       mappedN1               <- mapping(n1)
     } yield OutsideEdge(mappedN1, f, n2)
-
-    val returnedNodes = for {
-      node   <- gCallee.stateOflocalVars(RETURN_LABEL)
-      mapped <- mapping(node)
-    } yield mapped
-
+        
+    val newStateOfLocalVars = (for {
+      SJVariableAccess(name) <- varName
+    } yield {
+      g.stateOflocalVars.updated(name, for {
+        node   <- gCallee.stateOflocalVars(RETURN_LABEL)
+        mapped <- mapping(node)
+      } yield mapped)
+    }).getOrElse(g.stateOflocalVars)
+    
     val globallyEscapedNodes = (for {
       node   <- gCallee.globallyEscapedNodes
       mapped <- mapping(node)
@@ -249,7 +253,7 @@ object Purity {
     Graph(
       insideEdges          = insideEdges ++ g.insideEdges,
       outsideEdges         = outsideEdges ++ g.outsideEdges,
-      stateOflocalVars     = g.stateOflocalVars.updated(varName, returnedNodes),
+      stateOflocalVars     = newStateOfLocalVars,
       globallyEscapedNodes = g.globallyEscapedNodes ++ globallyEscapedNodes
     )
   }
@@ -418,7 +422,7 @@ object Purity {
           val stateOfCall = analyzed.getOrElse(invocation, initialStateOfMethod(invokedMethod.parameters))
           val args = for { SJVariableAccess(arg) <- arguments } yield arg // TODO: Have to support other args then SJVariableAccess
           val mappingFunc = mapping(before.pointsToGraph, stateOfCall.pointsToGraph, invokedMethod.parameters, args)
-          val combined = combine(before.pointsToGraph, stateOfCall.pointsToGraph, mappingFunc, receiver)
+          val combined = combine(before.pointsToGraph, stateOfCall.pointsToGraph, mappingFunc, value)
           val simplified = simplify(combined)
 
           val nodesInSimplifiedGraph = (
