@@ -150,7 +150,7 @@ object Purity {
     // Mapping 1
     // The parameter nodes of gCallee should map to the nodes pointed to by the
     // arguments used to invoke callee.
-    val mapping1: Mapping = {
+    val parameterToArgument: Mapping = {
       val parameterNodes = for {
         parameter           <- parameters.map( _.id )
         OutsideEdge(_,_,n2) <- gCallee.outsideEdges if n2.lb == parameter
@@ -166,7 +166,7 @@ object Purity {
     // Mapping 2
     // All outside nodes of gCallee that point to inside nodes of G should be
     // mapped to those nodes.
-    val mapping2: Mapping => Mapping = { (mapping: Mapping) =>
+    val outsideToInside: Mapping => Mapping = { (mapping: Mapping) =>
 
       val map = (for {
         OutsideEdge(n1, f, n2) <- gCallee.outsideEdges
@@ -179,7 +179,7 @@ object Purity {
 
     // Mapping 3
     // This constraint deals with the aliasing present in the calling context
-    val mapping3: Mapping => Mapping = { (mapping: Mapping) =>
+    val aliasInCallingContext: Mapping => Mapping = { (mapping: Mapping) =>
 
       val loadNodes = for { OutsideEdge(n1, f, n2) <- g.outsideEdges if n2.isInstanceOf[LoadNode]} yield n2
 
@@ -197,7 +197,7 @@ object Purity {
 
     // Mapping 4
     // Each non-parameter node should map to itself
-    val mapping4: Mapping => Mapping = { (mapping: Mapping) =>
+    val nonParameterToSelf: Mapping => Mapping = { (mapping: Mapping) =>
       val nonParameterNodes =
         (gCallee.insideEdges ++ gCallee.outsideEdges).map( _.n2 ).filter( !_.isInstanceOf[ParameterNode])
 
@@ -206,7 +206,7 @@ object Purity {
       (n: Node) => mapping(n) ++ map(n)
     }
 
-    refine(mapping4, refine(mapping3, refine( mapping2, mapping1)))
+    refine(nonParameterToSelf, refine(aliasInCallingContext, refine( outsideToInside, parameterToArgument)))
   }
 
   /**
