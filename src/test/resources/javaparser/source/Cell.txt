@@ -1,0 +1,5 @@
+class Cell {
+  int value;
+  public void set (int x) { value = x; }
+  public int get () { return value; }
+}

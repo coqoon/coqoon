@@ -2,7 +2,7 @@
 
 package dk.itu.sdg.kopitiam
 
-import java.io.InputStream
+import java.io.{ InputStream, IOException }
 import scala.actors._
 
 class BusyStreamReader (input : InputStream) extends Runnable {
@@ -14,16 +14,20 @@ class BusyStreamReader (input : InputStream) extends Runnable {
   def removeActor (c : Actor) : Unit = { callbacks = callbacks.filterNot(_ == c) }
 
   override def run () : Unit = {
-    while (input.available >= 0) {
-      val avail = input.available
-      val bytesread = input.read(inbuf, 0, if (avail == 0 | avail > bufsize) bufsize else avail)
-      //Console.println("read " + bytesread + " (actors: " + callbacks.length + ")")
-      if (bytesread < avail && bytesread < bufsize)
-        Console.println("bytesread " + bytesread + " < avail " + avail)
-      if (bytesread > 0) {
-        val res = new String(inbuf, 0, bytesread, "UTF-8")
-        callbacks.foreach((_ : Actor) ! res)
+    try {
+      while (input.available >= 0) {
+        val avail = input.available
+        val bytesread = input.read(inbuf, 0, if (avail == 0 | avail > bufsize) bufsize else avail)
+        //Console.println("read " + bytesread + " (actors: " + callbacks.length + ")")
+        if (bytesread < avail && bytesread < bufsize)
+          Console.println("bytesread " + bytesread + " < avail " + avail)
+        if (bytesread > 0) {
+          val res = new String(inbuf, 0, bytesread, "UTF-8")
+          callbacks.foreach((_ : Actor) ! res)
+        }
       }
+    } catch {
+      case e : IOException => //nothing to do if coq dies
     }
   }
 }
@@ -176,7 +180,7 @@ object CoqTop {
           coqin.write("\n".getBytes("UTF-8"))
         coqin.flush
         CoqState.sendCommand
-      } else if (waiting > 100) {
+      } else if (waiting > 400) {
         Console.println("initiating self-destruct mechanism")
         killCoq
       } else {
@@ -217,9 +221,15 @@ object CoqTop {
 
 
   import java.io.File
+
+  def checkForCoqBinary () : Boolean = {
+    val end = if (isWin) ".exe" else ""
+    return (new File(coqpath + coqtopbinary + end).exists)
+  }
+
   def startCoq () : Boolean = {
     val end = if (isWin) ".exe" else ""
-    if (! new File(coqpath + coqtopbinary + end).exists) {
+    if (!checkForCoqBinary) {
       Console.println("can't find coqtop binary (in: " + coqpath + coqtopbinary + end + ")")
       return false
     }

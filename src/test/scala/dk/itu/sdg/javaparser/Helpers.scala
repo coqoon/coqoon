@@ -1,5 +1,5 @@
 /*
-  Contains things to make testing more convenient. 
+  Contains things to make testing more convenient.
 */
 
 package dk.itu.sdg.javaparser
@@ -20,7 +20,7 @@ trait ASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
     val in = StreamReader(new InputStreamReader(new FileInputStream(getSourceFileNamed(name,path))))
     FinishAST.javaTermsToJavaAST(parseH(in))
   }
-  
+
   def getASTbyParsingFileNamed(name : String,
                                path: List[String] = List("src", "test", "resources", "javaparser", "source")) : List[SJDefinition] = {
     val in = StreamReader(new InputStreamReader(new FileInputStream(getSourceFileNamed(name,path))))

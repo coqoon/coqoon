@@ -219,7 +219,9 @@ trait CoqOutputter extends JavaToSimpleJava {
 
   private var outp : List[String] = null
 
-  private val unique_names : String = """
+  private val unique_names : String = """Definition unique_method_names := option_proof (search_unique_names Prog).
+Opaque unique_method_names."""
+/*
 Lemma unique_method_names :
       forall C m mrec,
       method_lookup Prog C m mrec ->
@@ -227,7 +229,7 @@ Lemma unique_method_names :
 Proof.
   search (search_unique_names Prog).
 Qed."""
-
+*/
   private val prelude : String = """
 Require Import Tactics.
 Require Import LiftOp.
@@ -265,8 +267,7 @@ Open Scope list_scope.
     })
     val classes = printFiniteMap(cs.map(x => ("\"" + x + "\"", x)))
     outp ::= "Definition Prog := Build_Program " + classes + "."
-    if (spec)
-      outp ::= unique_names
+    outp ::= unique_names
     outp ::= "End " + name + "."
     if (spec) {
       outp ::= "\nImport " + name + "."
