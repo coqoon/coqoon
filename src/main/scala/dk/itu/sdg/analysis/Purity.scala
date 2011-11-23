@@ -95,8 +95,8 @@ object Purity {
    * @param className The name of the class that contains the method to analyze. At
    *                  some points this should be moved into SJMethodDefinition
    * @param method    The method to analyze.
-   * @return A points-to graph and set of abstract fields that are modified by the
-   *         the method.
+   * @return          A points-to graph and set of abstract fields that are modified by the
+   *                  the method.
    */
   def analysis(className: String, method: SJMethodDefinition): State = {
 
@@ -119,13 +119,7 @@ object Purity {
         val newPTState = intraProcedural(invoked, analyzedMethods)
 
         if (oldPTState != newPTState) {
-
-          for {
-            Edge(from,`invocation`) <- callGraph.edges
-          } {
-            worklist = from :: worklist
-          }
-
+          for(Edge(from,`invocation`) <- callGraph.edges) { worklist = from :: worklist }
           analyzedMethods = analyzedMethods.updated(invocation, newPTState)
         }
 
@@ -297,194 +291,34 @@ object Purity {
   }
 
   /**
-   * Analyze a single method
+   * Analyze a single method.
    *
-   * @param invokable The method to analyze
-   * @param analyzed  A map of the currently analyzed methods
+   * Traverse the body from top to bottom transforming the Points-to-Graph on every
+   * statement on the way and (possibly) adding AbstractField to the writes set
+   *
+   * @param  invokable The method to analyze
+   * @param  analyzed  A map of the currently analyzed methods
    * @return The points-to graph and set of modified abstract fields at the
    *         end of the method.
    */
-   def intraProcedural(invokable: SJInvokable,
-                       analyzed: HashMap[Invocation, State]): State = {
+  def intraProcedural(invokable: SJInvokable, analyzed: HashMap[Invocation, State]): State = {
 
-    // TODO: - Move all transfer functions into an (private) object TransferFunctions and
-    //         import them here to make this method more readable.
-    //       - Finish the remaining TODO's in the isEscaped method
+    import TransferFunctions._
 
-    val body       = invokable.body
-    val parameters = invokable.parameters
-
-    /*
-     * Traverse the body from top to bottom transforming the Points-to-Graph on every
-     * statement on the way and (possibly) adding AbstractField to the writes set
-     */
     def transferFunction(stm: SJStatement, before: State): State = {
 
-      val graph     = before.pointsToGraph
-      val localVars = before.pointsToGraph.stateOflocalVars
-
       stm match {
-
-        /*
-         * Transfer functions for the different commands. Implemented as described on
-         * page 8.
-         *
-         * TODO: This doesn't cover Array assignments/reads, static assignments/reads, thread starts
-         */
-
-        case SJAssignment(SJVariableAccess(v1), SJVariableAccess(v2)) => {
-          /*
-           * v1 = v2
-           * Make v1 point to all of the nodes that v2 pointed to
-           */
-          val newStateOfLocalVars = localVars.updated(v1, localVars.getOrElse(v2,empty))
-          before.copy( pointsToGraph = graph.copy( stateOflocalVars = newStateOfLocalVars ))
-        }
-
-        case SJNewExpression(SJVariableAccess(v),tpy,args) => {
-          /*
-           * v = new C
-           * Makes v point to the newly created InsideNode
-           */
-          val insideNode = InsideNode("some label")
-          val newGraph   = graph.copy( stateOflocalVars = localVars.updated(v, HashSet(insideNode)))
-          before.copy( pointsToGraph = newGraph )
-        }
-
-        case SJFieldWrite(SJVariableAccess(v1), f, SJVariableAccess(v2)) => {
-          /*
-           * v1.f = v2
-           * Introduce an InsideEdge between each node pointed to by v1 and
-           * each node pointed to by v2.
-           * Also update the writes set to record the mutations on f of all
-           * of the non-inside nodes pointed to by v1.
-           */
-          val insideEdges = (for {
-              v1s <- localVars.get(v1)
-              v2s <- localVars.get(v2)
-            } yield for {
-              v1 <- v1s
-              v2 <- v2s
-            } yield InsideEdge(v1,f,v2)).getOrElse( empty )
-
-          val mods = (for {
-              v1s <- localVars.get(v1)
-            } yield for {
-              node <- v1s if !node.isInstanceOf[InsideNode]
-            } yield AbstractField(node,f)).getOrElse( empty )
-
-          before.copy( pointsToGraph  = graph.copy( insideEdges = graph.insideEdges & insideEdges ),
-                       modifiedFields = before.modifiedFields ++ mods)
-        }
-
-        case SJFieldRead(SJVariableAccess(v1), SJVariableAccess(v2), f) => {
-
-
-          def isEscaped(n: Node): Boolean = {
-            // As by definition 1 on page 7
-            val escapedNodes = parameters.flatMap{ p: SJArgument => localVars.getOrElse(p.id, empty).toList } ++
-                               localVars.getOrElse(RETURN_LABEL, empty) ++
-                               graph.globallyEscapedNodes // TODO: Need Ngbl
-
-            val edges = graph.insideEdges ++ graph.outsideEdges
-            // iff n is reachable from a node from 'escapedNodes' along a (possibly)
-            // path of edges from graph.insideEdges ++ graph.outsideEdges
-
-            // Using BFS for reachability. Has to check taking each of the nodes as the root
-            def isReachableFrom(node: Node): Boolean = {
-              var queue = Queue(node)
-              var visisted = node :: Nil
-              var v = node
-              while (!queue.isEmpty) {
-                if (v == n) return true
-                v = queue.dequeue
-                edges.collect {
-                  case InsideEdge(vertex1,_,vertex2) if vertex1 == v && !visisted.contains(vertex2) => vertex2
-                  case OutsideEdge(vertex1,_,vertex2) if vertex1 == v && !visisted.contains(vertex2) => vertex2
-                }.foreach { w => // for each edge e incident on v in Graph:
-                  visisted = w :: visisted
-                  queue.enqueue(w)
-                }
-              }
-              return false
-            }
-
-            escapedNodes.exists(isReachableFrom)
-
-          }
-
-          /*
-           * v1 = v2.f
-           * makes v1 point to all nodes pointed to by f-labeled inside edges starting from v2
-           * In the case that any of the nodes pointed to by v2 were LoadNodes we:
-           *   Introduce a new load node
-           *   Introduce f-labeled outside edges for every escaped node we read from to the new load node
-           */
-          val nodes = (for {
-              v2s <- localVars.get(v2)
-            } yield for {
-              v2 <- v2s
-              InsideEdge(`v2`,`f`,n2) <- graph.insideEdges
-            } yield n2 ).getOrElse( empty )
-
-
-          val b = for { n <- localVars.getOrElse(v2, empty) if isEscaped(n) } yield n
-
-          if (b.isEmpty ) {
-            before.copy( pointsToGraph = graph.copy( stateOflocalVars = localVars.updated(v1, nodes) ))
-          } else {
-            val outsideNode  = LoadNode("some label")
-            val outsideEdges = for { n <- b } yield OutsideEdge(n,f,outsideNode)
-            before.copy(pointsToGraph = graph.copy( stateOflocalVars = localVars.updated(v1, nodes ++ HashSet(outsideNode)),
-                                                    outsideEdges     = graph.outsideEdges ++ outsideEdges ))
-          }
-        }
-
-        case SJReturn(SJVariableAccess(v)) => {
-          /*
-           * return v
-           */
-          val newStateOfLocalVars = localVars.updated(RETURN_LABEL, localVars.getOrElse(v, empty))
-          before.copy( pointsToGraph = graph.copy( stateOflocalVars = newStateOfLocalVars ))
-        }
-
-        case SJCall(value, SJVariableAccess(receiver), fun, arguments) => {
-          /*
-           * v = f(...)
-           * Get the points-to graph of the called method. Merge the points-to graph before the invocation
-           * with the points-to graph at the end of the called function. The merging id done using a specific
-           * mapping from nodes in the called PTGraph to nodes in the calling PTGraph. Once the graphs have
-           * been merged it is simplified.
-           */
-          val invocation = (invokable.localvariables(receiver), fun)
-          val invokedMethod = getInvokable(invocation)
-
-          val stateOfCall = analyzed.getOrElse(invocation, initialStateOfMethod(invokedMethod.parameters))
-          val args = for { SJVariableAccess(arg) <- arguments } yield arg // TODO: Have to support other args then SJVariableAccess
-          val mappingFunc = mapping(before.pointsToGraph, stateOfCall.pointsToGraph, invokedMethod.parameters, args)
-          val combined = combine(before.pointsToGraph, stateOfCall.pointsToGraph, mappingFunc, value)
-          val simplified = simplify(combined)
-
-          val nodesInSimplifiedGraph = (
-            (for {
-              InsideEdge(n1,_,n2) <- simplified.insideEdges
-            } yield HashSet(n1,n2)).flatten ++
-            (for {
-              OutsideEdge(n1,_,n2) <- simplified.outsideEdges
-            } yield HashSet(n1,n2)).flatten
-          ).toSet
-
-          State(
-            pointsToGraph = simplified,
-            modifiedFields = modifiedAbstractFields(stateOfCall.modifiedFields, nodesInSimplifiedGraph, mappingFunc)
-          )
-        }
-
-        case _ => before
+        case SJAssignment(SJVariableAccess(v1), SJVariableAccess(v2))    => assignmentTF(stm, before, v1, v2)
+        case SJNewExpression(SJVariableAccess(v),_,_)                    => newInstanceTF(stm, before, v)
+        case SJFieldWrite(SJVariableAccess(v1), f, SJVariableAccess(v2)) => fieldWriteTF(stm, before, v1, f, v2)
+        case SJReturn(SJVariableAccess(v))                               => returnTF(stm, before, v)
+        case SJFieldRead(SJVariableAccess(v1), SJVariableAccess(v2), f)  => fieldReadTF(stm, before, v1,v2,f, invokable.parameters) 
+        case SJCall(value, SJVariableAccess(receiver), fun, arguments)   => callTF(stm, before, value, receiver, fun, arguments, invokable, analyzed)
+        case _                                                           => before
       }
     }
-
-    AST.foldLeft(body, initialStateOfMethod(parameters), transferFunction)
+    
+    AST.foldLeft(invokable.body, initialStateOfMethod(invokable.parameters), transferFunction)
   }
 
   /**
@@ -516,5 +350,173 @@ object Purity {
                              globallyEscapedNodes = empty),
       modifiedFields = empty
     )
+  }
+
+  /*
+   * Transfer functions for the different commands. Implemented as described on
+   * page 8.
+   *
+   * TODO: This doesn't cover Array assignments/reads, static assignments/reads, thread starts
+   */
+  private object TransferFunctions {
+
+    private def localVars(before: State) = before.pointsToGraph.stateOflocalVars
+    private def ptGraph(before: State) = before.pointsToGraph
+    
+    /*
+     * v = f(...)
+     * Get the points-to graph of the called method. Merge the points-to graph before the invocation
+     * with the points-to graph at the end of the called function. The merging id done using a specific
+     * mapping from nodes in the called PTGraph to nodes in the calling PTGraph. Once the graphs have
+     * been merged it is simplified.
+     */
+    def callTF(stm: SJStatement, 
+               before: State, 
+               value: Option[SJVariableAccess], 
+               receiver: String, 
+               fun: String, 
+               arguments: List[SJExpression], 
+               invokable: SJInvokable, 
+               analyzed: HashMap[Invocation, State]) = {
+      
+      val invocation = (invokable.localvariables(receiver), fun)
+      val invokedMethod = getInvokable(invocation)
+
+      val stateOfCall = analyzed.getOrElse(invocation, initialStateOfMethod(invokedMethod.parameters))
+      val args = for { SJVariableAccess(arg) <- arguments } yield arg // TODO: Have to support other args then SJVariableAccess
+      val mappingFunc = mapping(before.pointsToGraph, stateOfCall.pointsToGraph, invokedMethod.parameters, args)
+      val combined = combine(before.pointsToGraph, stateOfCall.pointsToGraph, mappingFunc, value)
+      val simplified = simplify(combined)
+
+      val nodesInSimplifiedGraph = (
+        (for {
+          InsideEdge(n1,_,n2) <- simplified.insideEdges
+        } yield HashSet(n1,n2)).flatten ++
+        (for {
+          OutsideEdge(n1,_,n2) <- simplified.outsideEdges
+        } yield HashSet(n1,n2)).flatten
+      ).toSet
+
+      State(
+        pointsToGraph = simplified,
+        modifiedFields = modifiedAbstractFields(stateOfCall.modifiedFields, nodesInSimplifiedGraph, mappingFunc)
+      )
+    }
+ 
+    /*
+     * v1 = v2.f
+     * makes v1 point to all nodes pointed to by f-labeled inside edges starting from v2
+     * In the case that any of the nodes pointed to by v2 were LoadNodes we:
+     *   Introduce a new load node
+     *   Introduce f-labeled outside edges for every escaped node we read from to the new load node
+     */
+    def fieldReadTF(stm: SJStatement, before: State, v1: String, v2: String, f: String, parameters: List[SJArgument]) = {
+      def isEscaped(n: Node): Boolean = {
+        // As by definition 1 on page 7
+        val escapedNodes = parameters.flatMap{ p: SJArgument => localVars(before).getOrElse(p.id, empty).toList } ++
+                           localVars(before).getOrElse(RETURN_LABEL, empty) ++
+                           ptGraph(before).globallyEscapedNodes // TODO: Need Ngbl
+
+        val edges = ptGraph(before).insideEdges ++ ptGraph(before).outsideEdges
+        // iff n is reachable from a node from 'escapedNodes' along a (possibly)
+        // path of edges from graph.insideEdges ++ graph.outsideEdges
+
+        // Using BFS for reachability. Has to check taking each of the nodes as the root
+        def isReachableFrom(node: Node): Boolean = {
+          var queue = Queue(node)
+          var visisted = node :: Nil
+          var v = node
+          while (!queue.isEmpty) {
+            if (v == n) return true
+            v = queue.dequeue
+            edges.collect {
+              case InsideEdge(vertex1,_,vertex2) if vertex1 == v && !visisted.contains(vertex2) => vertex2
+              case OutsideEdge(vertex1,_,vertex2) if vertex1 == v && !visisted.contains(vertex2) => vertex2
+            }.foreach { w => // for each edge e incident on v in Graph:
+              visisted = w :: visisted
+              queue.enqueue(w)
+            }
+          }
+          return false
+        }
+
+        escapedNodes.exists(isReachableFrom)
+
+      }
+
+
+      val nodes = (for {
+          v2s <- localVars(before).get(v2)
+        } yield for {
+          v2 <- v2s
+          InsideEdge(`v2`,`f`,n2) <- ptGraph(before).insideEdges
+        } yield n2 ).getOrElse( empty )
+
+
+      val b = for { n <- localVars(before).getOrElse(v2, empty) if isEscaped(n) } yield n
+
+      if (b.isEmpty ) {
+        before.copy( pointsToGraph = ptGraph(before).copy( stateOflocalVars = localVars(before).updated(v1, nodes) ))
+      } else {
+        val outsideNode  = LoadNode("some label")
+        val outsideEdges = for { n <- b } yield OutsideEdge(n,f,outsideNode)
+        before.copy(pointsToGraph = ptGraph(before).copy( stateOflocalVars = localVars(before).updated(v1, nodes ++ HashSet(outsideNode)),
+                                                          outsideEdges     = ptGraph(before).outsideEdges ++ outsideEdges ))
+      }
+    }
+
+    /*
+     * v1 = v2
+     * Make v1 point to all of the nodes that v2 pointed to
+     */
+    def assignmentTF(stm: SJStatement, before: State, v1: String, v2: String) = {
+      val newStateOfLocalVars = localVars(before).updated(v1, localVars(before).getOrElse(v2,empty))
+      before.copy( pointsToGraph = ptGraph(before).copy( stateOflocalVars = newStateOfLocalVars ))
+    }
+    
+    /*
+     * v = new C
+     * Makes v point to the newly created InsideNode
+     */
+    def newInstanceTF(stm: SJStatement, before: State, v: String) = {
+      val insideNode = InsideNode("some label")
+      val newGraph   = ptGraph(before).copy( stateOflocalVars = localVars(before).updated(v, HashSet(insideNode)))
+      before.copy( pointsToGraph = newGraph )
+    }
+    /*
+     * v1.f = v2
+     * Introduce an InsideEdge between each node pointed to by v1 and
+     * each node pointed to by v2.
+     * Also update the writes set to record the mutations on f of all
+     * of the non-inside nodes pointed to by v1.
+     */
+    def fieldWriteTF(stm: SJStatement, before: State, v1: String, f: String, v2: String) = {
+      
+      val insideEdges = (for {
+          v1s <- localVars(before).get(v1)
+          v2s <- localVars(before).get(v2)
+        } yield for {
+          v1 <- v1s
+          v2 <- v2s
+        } yield InsideEdge(v1,f,v2)).getOrElse( empty )
+
+      val mods = (for {
+          v1s <- localVars(before).get(v1)
+        } yield for {
+          node <- v1s if !node.isInstanceOf[InsideNode]
+        } yield AbstractField(node,f)).getOrElse( empty )
+
+      before.copy( pointsToGraph  = ptGraph(before).copy( insideEdges = ptGraph(before).insideEdges & insideEdges ),
+                   modifiedFields = before.modifiedFields ++ mods)
+    }
+    
+    /*
+     * return v
+     */
+    def returnTF(stm: SJStatement, before: State, v: String): State = { 
+      val newStateOfLocalVars = localVars(before).updated(RETURN_LABEL, localVars(before).getOrElse(v, empty))
+      before.copy( pointsToGraph = ptGraph(before).copy( stateOflocalVars = newStateOfLocalVars ))
+    }
+    
   }
 }
