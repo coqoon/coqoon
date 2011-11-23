@@ -19,6 +19,7 @@ import dk.itu.sdg.analysis.CallGraph.{ Invocation }
 import dk.itu.sdg.javaparser._
 
 import scala.collection.immutable.{HashSet, HashMap}
+import scala.collection.mutable.{Queue}
 
 object Purity {
 
@@ -32,6 +33,10 @@ object Purity {
 
   def modifiedAbstractFields(className: String, method: SJMethodDefinition): Set[AbstractField] =
     analysis(className, method).modifiedFields
+
+  // for testing and debug purposes
+  def getState(className: String, method: SJMethodDefinition): State =
+    analysis(className, method)
 
   /*
    *  implementation details
@@ -235,7 +240,7 @@ object Purity {
       OutsideEdge(n1, f, n2) <- gCallee.outsideEdges
       mappedN1               <- mapping(n1)
     } yield OutsideEdge(mappedN1, f, n2)
-        
+
     val newStateOfLocalVars = (for {
       SJVariableAccess(name) <- varName
     } yield {
@@ -244,7 +249,7 @@ object Purity {
         mapped <- mapping(node)
       } yield mapped)
     }).getOrElse(g.stateOflocalVars)
-    
+
     val globallyEscapedNodes = (for {
       node   <- gCallee.globallyEscapedNodes
       mapped <- mapping(node)
@@ -299,8 +304,12 @@ object Purity {
    * @return The points-to graph and set of modified abstract fields at the
    *         end of the method.
    */
-  def intraProcedural(invokable: SJInvokable,
-                      analyzed: HashMap[Invocation, State]): State = {
+   def intraProcedural(invokable: SJInvokable,
+                       analyzed: HashMap[Invocation, State]): State = {
+
+    // TODO: - Move all transfer functions into an (private) object TransferFunctions and
+    //         import them here to make this method more readable.
+    //       - Finish the remaining TODO's in the isEscaped method
 
     val body       = invokable.body
     val parameters = invokable.parameters
@@ -369,6 +378,41 @@ object Purity {
         }
 
         case SJFieldRead(SJVariableAccess(v1), SJVariableAccess(v2), f) => {
+
+
+          def isEscaped(n: Node): Boolean = {
+            // As by definition 1 on page 7
+            val escapedNodes = parameters.flatMap{ p: SJArgument => localVars.getOrElse(p.id, empty).toList } ++
+                               localVars.getOrElse(RETURN_LABEL, empty) ++
+                               graph.globallyEscapedNodes // TODO: Need Ngbl
+
+            val edges = graph.insideEdges ++ graph.outsideEdges
+            // iff n is reachable from a node from 'escapedNodes' along a (possibly)
+            // path of edges from graph.insideEdges ++ graph.outsideEdges
+
+            // Using BFS for reachability. Has to check taking each of the nodes as the root
+            def isReachableFrom(node: Node): Boolean = {
+              var queue = Queue(node)
+              var visisted = node :: Nil
+              var v = node
+              while (!queue.isEmpty) {
+                if (v == n) return true
+                v = queue.dequeue
+                edges.collect {
+                  case InsideEdge(vertex1,_,vertex2) if vertex1 == v && !visisted.contains(vertex2) => vertex2
+                  case OutsideEdge(vertex1,_,vertex2) if vertex1 == v && !visisted.contains(vertex2) => vertex2
+                }.foreach { w => // for each edge e incident on v in Graph:
+                  visisted = w :: visisted
+                  queue.enqueue(w)
+                }
+              }
+              return false
+            }
+
+            escapedNodes.exists(isReachableFrom)
+
+          }
+
           /*
            * v1 = v2.f
            * makes v1 point to all nodes pointed to by f-labeled inside edges starting from v2
@@ -380,21 +424,17 @@ object Purity {
               v2s <- localVars.get(v2)
             } yield for {
               v2 <- v2s
-              fLabeledIEdge <- graph.insideEdges if fLabeledIEdge.field == f && fLabeledIEdge.n1 == v2
-            } yield fLabeledIEdge.n2 ).getOrElse( empty )
+              InsideEdge(`v2`,`f`,n2) <- graph.insideEdges
+            } yield n2 ).getOrElse( empty )
 
-          val escapedNodes = (for {
-              v2s <- localVars.get(v2)
-            } yield for {
-              v2 <- v2s
-              fLabeledOEdge <- graph.outsideEdges if fLabeledOEdge == f && fLabeledOEdge.n1 == v2
-            } yield fLabeledOEdge.n2 ).getOrElse(empty)
 
-          if (escapedNodes.isEmpty ) {
+          val b = for { n <- localVars.getOrElse(v2, empty) if isEscaped(n) } yield n
+
+          if (b.isEmpty ) {
             before.copy( pointsToGraph = graph.copy( stateOflocalVars = localVars.updated(v1, nodes) ))
           } else {
             val outsideNode  = LoadNode("some label")
-            val outsideEdges = for { n <- escapedNodes } yield OutsideEdge(n,f,outsideNode)
+            val outsideEdges = for { n <- b } yield OutsideEdge(n,f,outsideNode)
             before.copy(pointsToGraph = graph.copy( stateOflocalVars = localVars.updated(v1, nodes ++ HashSet(outsideNode)),
                                                     outsideEdges     = graph.outsideEdges ++ outsideEdges ))
           }

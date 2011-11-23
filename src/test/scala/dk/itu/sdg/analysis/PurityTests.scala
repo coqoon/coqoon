@@ -49,9 +49,11 @@ class PurityTestsByMads extends FlatSpec with ShouldMatchers with ASTSpec {
   */
   
   "ParameterToArgument.pta" should "be pure" in {
+    println(getState("PersonModifier", swapNames))
     isPure("ParameterToArgument", pta) should equal (true)
   }
   
   val ast2 = getASTbyParsingFileNamed("PurityAnalysisExample2.java", List("src", "test", "resources", "static_analysis", "source"))
   val pta = methodsOf("ParameterToArgument",ast2).filter(_.id == "pta").head
+  val swapNames = methodsOf("PersonModifier",ast2).filter(_.id == "swapNames").head
 }
