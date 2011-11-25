@@ -79,12 +79,21 @@ class PurityTestsByMads extends FlatSpec with ShouldMatchers with ASTSpec {
     Tests and results by Mads
   */
   
-  "ParameterToArgument.pta" should "be pure" in {
-    println(getState("PersonModifier", swapNames))
-    isPure("ParameterToArgument", pta) should equal (true)
+  "PersonModifier.swapNames" should "modify p1.name and p2.name" in {
+    modifiedAbstractFields("PersonModifier",swapNames) should equal(HashSet(AbstractField(ParameterNode("p1"),"name"),
+                                                                            AbstractField(ParameterNode("p2"),"name")))
+  }
+  
+  "PersonModifier.setName" should "modify p.name" in {
+    modifiedAbstractFields("PersonModifier", setName) should equal(HashSet(AbstractField(ParameterNode("p"),"name")))
+  }
+  
+  "ParameterToArgument.existingAndModify" should "modify person.name" in {
+    modifiedAbstractFields("ParameterToArgument",existingAndModify) should equal (HashSet(AbstractField(ParameterNode("person"),"name")))
   }
   
   val ast2 = getASTbyParsingFileNamed("PurityAnalysisExample2.java", List("src", "test", "resources", "static_analysis", "source"))
-  val pta = methodsOf("ParameterToArgument",ast2).filter(_.id == "pta").head
   val swapNames = methodsOf("PersonModifier",ast2).filter(_.id == "swapNames").head
+  val setName = methodsOf("PersonModifier",ast2).filter(_.id == "setName").head
+  val existingAndModify = methodsOf("ParameterToArgument",ast2).filter(_.id == "existingAndModify").head
 }

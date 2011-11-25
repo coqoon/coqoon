@@ -127,7 +127,7 @@ object Purity {
     // Keep track of the result of analyzing the method
     var analyzedMethods = HashMap[Invocation, Result]()
 
-    components.reverse.foreach { component =>
+    components.foreach { component =>
       // Keep track of the methods that still needs to be analyzed
       var worklist: List[Vertex[Invocation]] = component
 
@@ -164,69 +164,64 @@ object Purity {
                       gCallee: PTGraph,
                       parameters: List[SJArgument],
                       arguments: List[String]): Node => Set[Node] = {
+    
+    import scala.collection.mutable.{ HashMap => MHashMap }
+    
+    val map: MHashMap[Node, Set[Node]] = MHashMap()
 
-    val refine: (Mapping => Mapping, Mapping) => Mapping = (f,g) => f(g)
-
+    
     // Mapping 1
     // The parameter nodes of gCallee should map to the nodes pointed to by the
     // arguments used to invoke callee.
-    val parameterToArgument: Mapping = {
-      val parameterNodes = for {
-        parameter           <- parameters.map( _.id )
-        OutsideEdge(_,_,n2) <- gCallee.outsideEdges if n2.lb == parameter
-      } yield n2
 
-      val args: List[Set[Node]] = (for { id <- arguments } yield g.stateOflocalVars(id)).asInstanceOf[List[Set[Node]]]
+    // the set of nodes each each parameter points to
+    val parameterNodes: List[Set[Node]] =
+      (for { SJArgument(id, _) <- parameters } yield gCallee.stateOflocalVars(id)).asInstanceOf[List[Set[Node]]]
 
-      val map = parameterNodes.zip(args).toMap
-
-      (n: Node) => map(n)
-    }
+    // the set of nodes that each argument points to
+    val args: List[Set[Node]] =
+      (for { id <- arguments } yield g.stateOflocalVars(id)).asInstanceOf[List[Set[Node]]]
+    
+    for {
+      (keys,values) <- parameterNodes.zip(args)
+      key <- keys
+    } {
+      map += (key -> values)
+    } 
 
     // Mapping 2
     // All outside nodes of gCallee that point to inside nodes of G should be
     // mapped to those nodes.
-    val outsideToInside: Mapping => Mapping = { (mapping: Mapping) =>
-
-      val map = (for {
+    (for {
         OutsideEdge(n1, f, n2) <- gCallee.outsideEdges
-        InsideEdge(n3, f, n4)  <- g.insideEdges if mapping(n1).contains(n3)
-      } yield (n2 -> n4)).groupBy( _._1 )
-                         .map { case (key,value) => (key -> value.map( _._2 ).toSet ) }
-
-      (n: Node) => map(n)
+        InsideEdge(n3, f, n4)  <- g.insideEdges if map.getOrElse(n1, empty).contains(n3)
+    } yield (n2 -> n4)).groupBy( _._1 ).foreach { 
+        case (key,value) => 
+          map += (key -> value.map( _._2 ).toSet ) 
     }
-
+    
     // Mapping 3
     // This constraint deals with the aliasing present in the calling context
-    val aliasInCallingContext: Mapping => Mapping = { (mapping: Mapping) =>
-
-      val loadNodes = for { OutsideEdge(n1, f, n2) <- g.outsideEdges if n2.isInstanceOf[LoadNode]} yield n2
-
-      val map = (for {
-        OutsideEdge(n1, f, n2) <- gCallee.outsideEdges
-        InsideEdge(n3, f, n4)  <- gCallee.insideEdges if n1 != n3 &&
-                                                         n1.isInstanceOf[LoadNode] &&
-                                                         (mapping(n1) + n1).intersect( (mapping(n3) + n3)).nonEmpty
-        extra = if (n4.isInstanceOf[ParameterNode]) empty else HashSet(n4)
-      } yield (n2 -> (mapping(n4) ++ extra) )).groupBy( _._1 )
-                                        .map { case (key, value) => (key -> value.map( _._2 ).toSet.flatten) }
-
-      (n: Node) => map(n)
+    val loadNodes = for { OutsideEdge(n1, f, n2) <- g.outsideEdges if n2.isInstanceOf[LoadNode]} yield n2
+    
+    (for {
+      OutsideEdge(n1, f, n2) <- gCallee.outsideEdges
+      InsideEdge(n3, f, n4)  <- gCallee.insideEdges if n1 != n3 &&
+                                                       n1.isInstanceOf[LoadNode] &&
+                                                       (map.getOrElse(n1,empty) + n1).intersect( (map.getOrElse(n3,empty) + n3)).nonEmpty
+      extra = if (n4.isInstanceOf[ParameterNode]) empty else HashSet(n4)
+    } yield (n2 -> (map.getOrElse(n4,empty) ++ extra))).groupBy( _._1 ).foreach { case (key, value) => 
+        map += (key -> value.map( _._2 ).toSet.flatten)
     }
 
     // Mapping 4
     // Each non-parameter node should map to itself
-    val nonParameterToSelf: Mapping => Mapping = { (mapping: Mapping) =>
-      val nonParameterNodes =
-        (gCallee.insideEdges ++ gCallee.outsideEdges).map( _.n2 ).filter( !_.isInstanceOf[ParameterNode])
+    val nonParameterNodes =
+      (gCallee.insideEdges ++ gCallee.outsideEdges).map( _.n2 ).filter( !_.isInstanceOf[ParameterNode])
 
-      val map = nonParameterNodes.zip(nonParameterNodes.map( HashSet(_) )).toMap
-
-      (n: Node) => mapping(n) ++ map(n)
-    }
-
-    refine(nonParameterToSelf, refine(aliasInCallingContext, refine( outsideToInside, parameterToArgument)))
+    nonParameterNodes.zip(nonParameterNodes.map( HashSet(_) )).foreach { map += _ }
+    
+    (n: Node) => map.getOrElse(n, empty)
   }
 
   /**
@@ -260,7 +255,7 @@ object Purity {
       SJVariableAccess(name) <- varName
     } yield {
       g.stateOflocalVars.updated(name, for {
-        node   <- gCallee.stateOflocalVars(RETURN_LABEL)
+        node   <- gCallee.stateOflocalVars.getOrElse(RETURN_LABEL, empty)
         mapped <- mapping(node)
       } yield mapped)
     }).getOrElse(g.stateOflocalVars)
@@ -302,9 +297,9 @@ object Purity {
    *                                to the callers nodes.
    * @return                        The modified abstract fields mapped to the correct nodes.
    */
-  private def modifiedAbstractFields(calleeModified: Set[AbstractField],
-                                     nodesInSimplifiedGraph: Set[Node],
-                                     mapping: Mapping): Set[AbstractField] = {
+  private def mapModifiedAbstractFields(calleeModified: Set[AbstractField],
+                                        nodesInSimplifiedGraph: Set[Node],
+                                        mapping: Mapping): Set[AbstractField] = {
     for {
       AbstractField(n, f) <- calleeModified
       node <- mapping(n) if !node.isInstanceOf[InsideNode] && nodesInSimplifiedGraph.contains(node)
@@ -325,6 +320,7 @@ object Purity {
   def intraProcedural(invokable: SJInvokable, analyzed: HashMap[Invocation, Result]): Result = {
 
     import TransferFunctions._
+    import AST.{ foldLeft }
 
     def transferFunction(stm: SJStatement, before: Result): Result = {
 
@@ -339,7 +335,7 @@ object Purity {
       }
     }
 
-    AST.foldLeft(invokable.body, initialStateOfMethod(invokable.parameters), transferFunction)
+    foldLeft(invokable.body, initialStateOfMethod(invokable.parameters), transferFunction)
   }
 
   /**
@@ -364,11 +360,11 @@ object Purity {
   private def initialStateOfMethod(parameters: List[SJArgument]) = {
     // page 7, section 5.21
     Result(
-      pointsToGraph  = PTGraph(insideEdges        = empty,
-                             outsideEdges         = empty,
-                             stateOflocalVars     = (parameters.map( arg => (arg.id -> HashSet(ParameterNode(arg.id))) )
-                                                    :+ ( "this" -> HashSet(ParameterNode("this")))).toMap,
-                             globallyEscapedNodes = empty),
+      pointsToGraph  = PTGraph(insideEdges          = empty,
+                               outsideEdges         = empty,
+                               stateOflocalVars     = (parameters.map( arg => (arg.id -> HashSet(ParameterNode(arg.id))) )
+                                                      :+ ( "this" -> HashSet(ParameterNode("this")))).toMap,
+                               globallyEscapedNodes = empty),
       modifiedFields = empty
     )
   }
@@ -402,25 +398,24 @@ object Purity {
 
       val invocation = (invokable.localvariables(receiver), fun)
       val invokedMethod = getInvokable(invocation)
-
       val stateOfCall = analyzed.getOrElse(invocation, initialStateOfMethod(invokedMethod.parameters))
+
       val args = for { SJVariableAccess(arg) <- arguments } yield arg // TODO: Have to support other args then SJVariableAccess
       val mappingFunc = mapping(before.pointsToGraph, stateOfCall.pointsToGraph, invokedMethod.parameters, args)
       val combined = combine(before.pointsToGraph, stateOfCall.pointsToGraph, mappingFunc, value)
       val simplified = simplify(combined)
 
-      val nodesInSimplifiedGraph = (
-        (for {
-          InsideEdge(n1,_,n2) <- simplified.insideEdges
-        } yield HashSet(n1,n2)).flatten ++
-        (for {
-          OutsideEdge(n1,_,n2) <- simplified.outsideEdges
-        } yield HashSet(n1,n2)).flatten
-      ).toSet
+      val inEdges: Set[Node] =
+        (for { InsideEdge(n1,_,n2)  <- simplified.insideEdges  } yield HashSet(n1,n2)).flatten ++
+        (for { OutsideEdge(n1,_,n2) <- simplified.outsideEdges } yield HashSet(n1,n2)).flatten
+
+      val variables: Set[Node] = localVars(before).map{ case (k,v) => v }.foldLeft(HashSet[Node]()){ _ ++ _ }
+
+      val nodesInSimplifiedGraph: Set[Node] = variables ++ inEdges
 
       Result(
         pointsToGraph = simplified,
-        modifiedFields = modifiedAbstractFields(stateOfCall.modifiedFields, nodesInSimplifiedGraph, mappingFunc)
+        modifiedFields = mapModifiedAbstractFields(stateOfCall.modifiedFields, nodesInSimplifiedGraph, mappingFunc) ++ before.modifiedFields
       )
     }
 
