@@ -1,0 +1,12 @@
+class Point {
+    Point(float x, float y) {
+        this.x = x ; 
+        this.y = y;
+    }
+    float x, y;
+    void flip() {
+        float t = x; 
+        x = y; 
+        y = t;
+    }
+}
