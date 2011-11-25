@@ -140,10 +140,15 @@ object AST {
   /*
    *  Construct a Call Graph from a given method. 
    */
-  def extractCallGraph(cls: String, method: SJMethodDefinition): G[Invocation] = {
+  def extractCallGraph(cls: String, invokable: SJInvokable): G[Invocation] = {
     
+    
+    val main = invokable match {
+      case SJMethodDefinition(_,id,_,_,_,_) => Vertex((cls,id)) // The root of the CG
+      case x: SJConstructorDefinition => Vertex((cls, "constructor"))
+    }
+                  
     var visited = Map[Invocation,Boolean]()       // Keeps track which methods have been visited before.
-    val main = Vertex((cls,method.id))            // The root of the CG
     val initialGraph = G(main, main :: Nil, Nil)  // initial graph. Only contains the root vertex, no edges.
     
     // Method that recurses through the AST in a depth first fashion. 
@@ -178,6 +183,6 @@ object AST {
       })
     }
     
-    recurse(main,method,initialGraph)
+    recurse(main,invokable,initialGraph)
   }
 }

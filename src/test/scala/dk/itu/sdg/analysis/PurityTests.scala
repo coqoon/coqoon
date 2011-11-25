@@ -14,33 +14,64 @@ class PurityTestsFromPaper extends FlatSpec with ShouldMatchers with ASTSpec {
     Test results expected from the paper 
   */
     
-  "Purity analysis on List.add" should "record a mutation on this.head" in  {
-    modifiedAbstractFields("List",listAddMethod) should equal (HashSet(AbstractField(ParameterNode("this"),"head")))
+  // ListItr
+  
+  "Purity analysis on ListItr constructor" should "record a mutation on this.cell" in {
+    modifiedAbstractFields("ListItr", listConstructor) should equal (HashSet(AbstractField(ParameterNode("this"),"cell")))
   }
   
   "Purity analysis on ListItr.next" should "record a mutation on this.cell" in {
     modifiedAbstractFields("ListItr", listItrNextMethod) should equal (HashSet(AbstractField(ParameterNode("this"),"cell")))
   }
   
+  "Purity analysis on ListItr.hasNext" should "not record any mutations" in {
+    isPure("ListItr", listItrHasNext) should equal (true)
+  }
+  
+  // List
+  
+  "Purity analysis on List.add" should "record a mutation on this.head" in  {
+    modifiedAbstractFields("List",listAddMethod) should equal (HashSet(AbstractField(ParameterNode("this"),"head")))
+  }
+  
   "Purity analysis on List.iterator" should "not record any mutations" in {
     modifiedAbstractFields("List", listIteratorMethod) should equal (HashSet[String]())
   }
   
-  "Purity analysis on List.iterator" should "state that it is pure" in {
-    isPure("List", listIteratorMethod) should equal (true)
+  // Point
+  
+  "Purity analysis on Point constructor" should "record mutations on this.x and this.y" in {
+    modifiedAbstractFields("Point", pointConstructor) should equal (HashSet(AbstractField(ParameterNode("this"),"x"),
+                                                                            AbstractField(ParameterNode("this"),"y")))
   }
   
-  // Currently only works with methods not constructors 
-  // ---
-  // "Purity analysis on ListItr constructor" should "record a mutation on this.cell" in {
-  //   modifiedAbstractFields(listConstructor) should equal (HashSet(AbstractField(ParameterNode("this"),"cell")))
-  // }
-    
+  // Cell
+  
+  "Purity analysis on Cell constructor" should "record mutations on this.data and this.next" in {
+    modifiedAbstractFields("Cell", cellConstructor) should equal (HashSet(AbstractField(ParameterNode("this"),"data"),
+                                                                          AbstractField(ParameterNode("this"),"next")))
+  }
+  
+  // PurityAnalysisExample
+  
+  // "Purity analysis on PurityAnalysisExample.sumX" should "record mutations on ..." in {
+  //     println(modifiedAbstractFields("PurityAnalysisExample", sumx))
+  //     // modifiedAbstractFields("PurityAnalysisExample", sumx) should equal (HashSet[AbstractField]())
+  //     true should equal (true)
+  //   }
+  
   val ast = getASTbyParsingFileNamed("PurityAnalysisExample.java", List("src", "test", "resources", "static_analysis", "source"))
   val listAddMethod = methodsOf("List",ast).filter(_.id == "add").head
   val listItrNextMethod = methodsOf("ListItr",ast).filter(_.id == "next").head
+  val listItrHasNext = methodsOf("ListItr", ast).filter(_.id == "hasNext").head
   val listIteratorMethod = methodsOf("List",ast).filter(_.id == "iterator").head
+  
   val listConstructor = constructorOf("ListItr",ast)  
+  val pointConstructor = constructorOf("Point", ast)
+  val cellConstructor = constructorOf("Cell", ast)
+  
+  val sumx = methodsOf("PurityAnalysisExample",ast).filter(_.id == "sumX").head
+  val flipAll = methodsOf("PurityAnalysisExample",ast).filter(_.id == "flipAll").head
 }
 
 class PurityTestsByMads extends FlatSpec with ShouldMatchers with ASTSpec {

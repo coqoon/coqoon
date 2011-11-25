@@ -28,15 +28,15 @@ object Purity {
    *  ====================================
    */
 
-  def isPure(className: String, method: SJMethodDefinition): Boolean =
-    modifiedAbstractFields(className, method).isEmpty
+  def isPure(className: String, invokable: SJInvokable): Boolean =
+    modifiedAbstractFields(className, invokable).isEmpty
 
-  def modifiedAbstractFields(className: String, method: SJMethodDefinition): Set[AbstractField] =
-    analysis(className, method).modifiedFields
+  def modifiedAbstractFields(className: String, invokable: SJInvokable): Set[AbstractField] =
+    analysis(className, invokable).modifiedFields
 
   // for testing and debug purposes
-  def getState(className: String, method: SJMethodDefinition): Result =
-    analysis(className, method)
+  def getState(className: String, invokable: SJInvokable): Result =
+    analysis(className, invokable)
 
   /*
    *  implementation details
@@ -78,7 +78,7 @@ object Purity {
     outsideEdges        : Set[OutsideEdge],
     stateOflocalVars    : Map[String, Set[_ <: Node]],
     globallyEscapedNodes: Set[EscapedNode]) {
-    
+
     // Using BFS for reachability. Has to check taking each of the nodes as the root
     def isReachable(node: Node, from: Node): Boolean = {
       val edges = this.insideEdges ++ this.outsideEdges
@@ -98,7 +98,7 @@ object Purity {
       }
       return false
     }
-    
+
   }
 
   case class Result(
@@ -119,9 +119,9 @@ object Purity {
    * @return          A points-to graph and set of abstract fields that are modified by the
    *                  the method.
    */
-  def analysis(className: String, method: SJMethodDefinition): Result = {
+  def analysis(className: String, invokable: SJInvokable): Result = {
 
-    val callGraph  = AST.extractCallGraph(className, method)
+    val callGraph  = AST.extractCallGraph(className, invokable)
     val components = CallGraph.components(callGraph)
 
     // Keep track of the result of analyzing the method
@@ -432,11 +432,11 @@ object Purity {
      *   Introduce f-labeled outside edges for every escaped node we read from to the new load node
      */
     def fieldReadTF(stm: SJStatement, before: Result, v1: String, v2: String, f: String, parameters: List[SJArgument]) = {
-      
+
       // n is escaped iff n is reachable from a node from 'escapedNodes' along a (possibly empty)
       // path of edges from graph.insideEdges ++ graph.outsideEdges.. As by definition 1 on page 7
       def isEscaped(n: Node): Boolean = {
-        
+
         val escapedNodes = parameters.flatMap{ p: SJArgument => localVars(before).getOrElse(p.id, empty).toList } ++
                            localVars(before).getOrElse(RETURN_LABEL, empty) ++
                            ptGraph(before).globallyEscapedNodes // TODO: Need Ngbl
