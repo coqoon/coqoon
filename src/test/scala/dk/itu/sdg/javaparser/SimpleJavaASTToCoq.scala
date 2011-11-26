@@ -12,6 +12,8 @@ class CoqOutputterSpec extends ASTSpec {
     val expected = List("Module Foo <: PROGRAM.",
 "Definition Foo := Build_Class (SS.empty) (SM.empty _).",
 """Definition Prog := Build_Program (SM.add "Foo" Foo (SM.empty _)).""",
+"Definition unique_method_names := option_proof (search_unique_names Prog).",
+"Opaque unique_method_names.",
 "End Foo.", "")
     FinishAST.coqoutput(tst, false, "Foo") should equal(expected)
   }
@@ -21,6 +23,8 @@ class CoqOutputterSpec extends ASTSpec {
     val expected = List("Module Foo <: PROGRAM.",
 """Definition Foo := Build_Class (SS.add "a" (SS.empty)) (SM.empty _).""",
 """Definition Prog := Build_Program (SM.add "Foo" Foo (SM.empty _)).""",
+"Definition unique_method_names := option_proof (search_unique_names Prog).",
+"Opaque unique_method_names.",
 "End Foo.", "")
     FinishAST.coqoutput(tst, false, "Foo") should equal(expected)
   }
@@ -30,6 +34,8 @@ class CoqOutputterSpec extends ASTSpec {
     val expected = List("Module Foo <: PROGRAM.",
 """Definition Foo := Build_Class (SS.add "a" (SS.add "b" (SS.empty))) (SM.empty _).""",
 """Definition Prog := Build_Program (SM.add "Foo" Foo (SM.empty _)).""",
+"Definition unique_method_names := option_proof (search_unique_names Prog).",
+"Opaque unique_method_names.",
 "End Foo.", "")
     FinishAST.coqoutput(tst, false, "Foo") should equal(expected)
   }
@@ -41,6 +47,8 @@ class CoqOutputterSpec extends ASTSpec {
 """Definition fooM := Build_Method ("this" :: nil) foo_body (var_expr "x").""",
 """Definition Foo := Build_Class (SS.empty) (SM.add "foo" fooM (SM.empty _)).""",
 """Definition Prog := Build_Program (SM.add "Foo" Foo (SM.empty _)).""",
+"Definition unique_method_names := option_proof (search_unique_names Prog).",
+"Opaque unique_method_names.",
 "End Foo.", "")
     FinishAST.coqoutput(tst, false, "Foo") should equal(expected)
   }
@@ -52,6 +60,8 @@ class CoqOutputterSpec extends ASTSpec {
 """Definition fooM := Build_Method ("this" :: nil) foo_body (var_expr "x").""",
 """Definition Foo := Build_Class (SS.empty) (SM.add "foo" fooM (SM.empty _)).""",
 """Definition Prog := Build_Program (SM.add "Foo" Foo (SM.empty _)).""",
+"Definition unique_method_names := option_proof (search_unique_names Prog).",
+"Opaque unique_method_names.",
 "End Foo.", "")
     FinishAST.coqoutput(tst, false, "Foo") should equal(expected)
   }
@@ -62,6 +72,8 @@ class CoqOutputterSpec extends ASTSpec {
 """Definition Foo_new := Build_Method (nil) (calloc "this" "Foo") (var_expr "this").""",
 """Definition Foo := Build_Class (SS.empty) (SM.add "new" Foo_new (SM.empty _)).""",
 """Definition Prog := Build_Program (SM.add "Foo" Foo (SM.empty _)).""",
+"Definition unique_method_names := option_proof (search_unique_names Prog).",
+"Opaque unique_method_names.",
 "End Foo.", "")
     FinishAST.coqoutput(tst, false, "Foo") should equal(expected)
   }
@@ -76,6 +88,8 @@ class CoqOutputterSpec extends ASTSpec {
 """Definition setM := Build_Method ("this" :: "x" :: nil) set_body 0.""",
 """Definition Cell := Build_Class (SS.add "value" (SS.empty)) (SM.add "new" Cell_new (SM.add "get" getM (SM.add "set" setM (SM.empty _)))).""",
 """Definition Prog := Build_Program (SM.add "Cell" Cell (SM.empty _)).""",
+"Definition unique_method_names := option_proof (search_unique_names Prog).",
+"Opaque unique_method_names.",
 "End Cell.", "")
     FinishAST.coqoutput(tst, false, "Cell") should equal(expected)
   }
@@ -99,7 +113,10 @@ class CoqOutputterSpec extends ASTSpec {
 """Definition set_body := (cseq (cread "cell" "this" "cell") (cseq (cdcall "tmp_1" "cell" "get" (nil)) (cseq (cwrite "this" "cell" "tmp_1") (cdcall "" "cell" "set" ("x" :: nil))))).""",
 """Definition setM := Build_Method ("this" :: "x" :: nil) set_body 0.""",
 """Definition Recell := Build_Class (SS.add "backup" (SS.add "cell" (SS.empty))) (SM.add "new" Recell_new (SM.add "get" getM (SM.add "set" setM (SM.empty _)))).""",
-"""Definition Prog := Build_Program (SM.add "Recell" Recell (SM.add "Cell" Cell (SM.empty _))).""", "End Cell.", "")
+"""Definition Prog := Build_Program (SM.add "Recell" Recell (SM.add "Cell" Cell (SM.empty _))).""",
+"Definition unique_method_names := option_proof (search_unique_names Prog).",
+"Opaque unique_method_names.",
+"End Cell.", "")
     FinishAST.coqoutput(tst, false, "Cell") should equal(expected)
   }
 }
