@@ -228,22 +228,21 @@ class JavaTermsToJavaASTBindingsSpec extends ASTSpec {
 }
 
 class JavaTermsToJavaASTAssignmentsSpec extends ASTSpec {
-  // This DOESN'T pass yet because x and y aren't translated to JFieldAccess's 
+  // This DOESN'T pass yet because x and y aren't translated to JFieldAccess's
   "Parsing FieldAssignment4.txt" should "produce the correct AST" in {
     val expected = List(JClassDefinition(Set(),"Point","",List(),List(
       JConstructorDefinition(Set(),"Point",
         List(JArgument("x","float"), JArgument("y","float")),
-        List(JBlock(None,List(JFieldWrite(JVariableAccess("this"),"x",JVariableAccess("x")), JFieldWrite(JVariableAccess("this"),"y",JVariableAccess("y")))))), 
-      JFieldDefinition(Set(),"x","float",None), JFieldDefinition(Set(),"y","float",None), 
+        List(JBlock(None,List(JFieldWrite(JVariableAccess("this"),"x",JVariableAccess("x")), JFieldWrite(JVariableAccess("this"),"y",JVariableAccess("y")))))),
+      JFieldDefinition(Set(),"x","float",None), JFieldDefinition(Set(),"y","float",None),
       JMethodDefinition(Set(),"flip","void",List(),List(
         JBlock(None,List(
-          JBinding("t","float",Some(JFieldAccess(JVariableAccess("this"),"x"))), 
+          JBinding("t","float",Some(JFieldAccess(JVariableAccess("this"),"x"))),
           JFieldWrite(JVariableAccess("this"),"x",JFieldAccess(JVariableAccess("this"),"y")),
           JFieldWrite(JVariableAccess("this"),"y",JVariableAccess("t"))))))),None))
-          
     getJavaASTbyParsingFileNamed("FieldAssignment4.txt") should equal(expected)
   }
-  
+
   "Parsing FieldAssignment3.txt" should "produce the correct AST" in {
     val expected = List(JClassDefinition(Set(),"Foo","",Nil,List(JFieldDefinition(Set(),"b","int",None), JMethodDefinition(Set(),"a","int",Nil,List(JBlock(None,List(JReturn(JLiteral("10")))))), JMethodDefinition(Set(),"foo","void",Nil,List(JBlock(None,List(JFieldWrite(JVariableAccess("this"),"b",JCall(JVariableAccess("this"),"a",Nil))))))),None))
     getJavaASTbyParsingFileNamed("FieldAssignment3.txt") should equal(expected)
