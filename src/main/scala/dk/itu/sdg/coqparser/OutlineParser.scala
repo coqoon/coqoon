@@ -321,7 +321,11 @@ object OutlineBuilder {
       case Nil => Nil
       case (s@ProofStart()) :: rest => findProof(rest, Some(s), soFar)
       case (pe@ProofEnd(end)) :: rest => {
-        val proof = Proof(start, buildOutline(soFar.reverse.tail), end)
+        val outline = soFar match {
+          case Nil => Nil
+          case (y:List[VernacularRegion]) => buildOutline(soFar.reverse.tail)
+        }
+        val proof = Proof(start, outline, end)
         start match {
           case None => ()
           case Some(x) => (x.pos, pe.pos) match {
