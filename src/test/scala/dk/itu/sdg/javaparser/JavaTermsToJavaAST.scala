@@ -228,7 +228,6 @@ class JavaTermsToJavaASTBindingsSpec extends ASTSpec {
 }
 
 class JavaTermsToJavaASTAssignmentsSpec extends ASTSpec {
-  // This DOESN'T pass yet because x and y aren't translated to JFieldAccess's
   "Parsing FieldAssignment4.txt" should "produce the correct AST" in {
     val expected = List(JClassDefinition(Set(),"Point","",List(),List(
       JConstructorDefinition(Set(),"Point",

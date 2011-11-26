@@ -178,7 +178,7 @@ class OptimizeVariables extends FlatSpec with ShouldMatchers {
   /*
     This fails. It's not able to optimize the code yet.
   */
-  "Parsing Conditional3.txt" should "produce the correct AST" in {
+  "Parsing Conditional3.txt (fails at the moment)" should "produce the correct AST" in {
     val before = SJMethodDefinition(Set(),"bar","void",List(SJArgument("a","int")),
         List(
           SJFieldRead(SJVariableAccess("tmp_2"),SJVariableAccess("this"),"c"),
@@ -203,7 +203,7 @@ class OptimizeVariables extends FlatSpec with ShouldMatchers {
     This fails. It shows that the dead variable rewrite currently isn't mature enough to deal with
     multiple occurences of a variable even though they could be optimized
   */
-  "replacing multiple variables" should "replace a variable used at more places" in {
+  "replacing multiple variables (fails at the moment)" should "replace a variable used at more places" in {
     val before = SJMethodDefinition(Set(Static()), "test", "int",
        List(SJArgument("n", "int")),
        List(

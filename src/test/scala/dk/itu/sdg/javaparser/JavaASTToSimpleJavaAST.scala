@@ -574,7 +574,7 @@ class ClassesSpec extends ASTSpec {
   }
 
   //this fails as of now...
-  "Parsing NestedClass.txt" should "produce the correct AST" in {
+  "Parsing NestedClass.txt (fails at the moment)" should "produce the correct AST" in {
     val expected = List(
       SJClassDefinition(Set(), "B", "", List(), List(
         SJFieldDefinition(Set(), "a", "A"),
