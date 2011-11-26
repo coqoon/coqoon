@@ -388,6 +388,23 @@ class BindingsSpec extends ASTSpec {
   Tests related to assignments
 */
 class AssignmentsSpec extends ASTSpec {
+  "Parsing FieldAssignment4.txt" should "produce the correct AST" in {
+    val expected = List(SJClassDefinition(Set(),"Point","",List(),List(
+      SJConstructorDefinition(Set(),"Point",
+        List(SJArgument("x","float"), SJArgument("y","float")),
+        List(SJFieldWrite(SJVariableAccess("this"),"x",SJVariableAccess("x")), SJFieldWrite(SJVariableAccess("this"),"y",SJVariableAccess("y"))),
+                            HashMap("this" -> "Point", "x" -> "float", "y" -> "float")),
+      SJFieldDefinition(Set(),"x","float"), SJFieldDefinition(Set(),"y","float"),
+      SJMethodDefinition(Set(),"flip","void",List(),List(
+        SJFieldRead(SJVariableAccess("t"), SJVariableAccess("this"),"x"),
+        SJFieldRead(SJVariableAccess("tmp_1"), SJVariableAccess("this"), "y"),
+        SJFieldWrite(SJVariableAccess("this"),"x",SJVariableAccess("tmp_1")),
+        SJFieldWrite(SJVariableAccess("this"),"y",SJVariableAccess("t"))),
+                         HashMap("this" -> "Point", "t" -> "float", "tmp_1" -> "float"))),
+           None, HashMap("x" -> "float", "y" -> "float")))
+    getASTbyParsingFileNamed("FieldAssignment4.txt") should equal(expected)
+  }
+
   "Parsing FieldAssignment3.txt" should "produce the correct AST" in {
     val expected = List(SJClassDefinition(Set(), "Foo", "", Nil, List(
       SJFieldDefinition(Set(), "b", "int"),

@@ -27,7 +27,6 @@ object FinishAST extends JavaTerms
     Given an AST in JavaTerms it will convert it to an AST in JavaAST
   */
   def javaTermsToJavaAST (ast : Any) : List[JStatement] = {
-    lvars = Set[String]()
     transform(ast, None)
   }
 
@@ -141,7 +140,7 @@ object FinishAST extends JavaTerms
    *
    * If anything else is passed as an argument it will throw an exception
    *
-   * NOTE: This method can't return InnterStatement because class & interfaces
+   * NOTE: This method can't return InnerStatement because class & interfaces
    *       doesn't inherit from InnerStatement.
    */
   def transformClassOrInterfaceBody (body : List[Any], outer : Option[String], modifiers : Set[JModifier] = Set()) : List[JStatement] = {
@@ -191,6 +190,7 @@ object FinishAST extends JavaTerms
    * to be transformd into a JMethodDefinition.
    */
   def extractMethodOrConstructorInfo (term : Term) : (String, List[JArgument], List[JBodyStatement]) = {
+    lvars = Set[String]()
 
     val (mid, parameters, throws, body) = term match {
       case ConstructorDeclaration(id, parameters, throws, bdy)   => (unpackR(id), parameters, throws, bdy)
