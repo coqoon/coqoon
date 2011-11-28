@@ -45,6 +45,11 @@ class PurityTestsFromPaper extends FlatSpec with ShouldMatchers with ASTSpec {
                                                                             AbstractField(ParameterNode("this"),"y")))
   }
   
+  "Purity analysis on point.flip" should "mutate this.x & this.y" in {
+    modifiedAbstractFields("Point", pointFlip) should equal (HashSet(AbstractField(ParameterNode("this"),"x"),
+                                                                     AbstractField(ParameterNode("this"),"y")))
+  }
+  
   // Cell
   
   "Purity analysis on Cell constructor" should "record mutations on this.data and this.next" in {
@@ -54,22 +59,26 @@ class PurityTestsFromPaper extends FlatSpec with ShouldMatchers with ASTSpec {
   
   // PurityAnalysisExample
   
-  // "Purity analysis on PurityAnalysisExample.sumX" should "record mutations on ..." in {
-  //     println(modifiedAbstractFields("PurityAnalysisExample", sumx))
-  //     // modifiedAbstractFields("PurityAnalysisExample", sumx) should equal (HashSet[AbstractField]())
-  //     true should equal (true)
-  //   }
+  "Purity analysis on PurityAnalysisExample.sumX" should "record no mutations" in {
+    isPure("PurityAnalysisExample",sumx) should equal (true)
+  }
+  
+  // Should record mutations, currently it doesn't 
+  "Purity analysis on PurityAnalysisExample.flipAll" should "" in {
+    println(getState("PurityAnalysisExample",flipAll))
+    // modifiedAbstractFields("PurityAnalysisExample", flipAll) should equal (HashSet[AbstractField]())
+    true should equal (true)
+  }
   
   val ast = getASTbyParsingFileNamed("PurityAnalysisExample.java", List("src", "test", "resources", "static_analysis", "source"))
   val listAddMethod = methodsOf("List",ast).filter(_.id == "add").head
   val listItrNextMethod = methodsOf("ListItr",ast).filter(_.id == "next").head
   val listItrHasNext = methodsOf("ListItr", ast).filter(_.id == "hasNext").head
   val listIteratorMethod = methodsOf("List",ast).filter(_.id == "iterator").head
-  
   val listConstructor = constructorOf("ListItr",ast)  
   val pointConstructor = constructorOf("Point", ast)
+  val pointFlip = methodsOf("Point",ast).filter(_.id == "flip").head
   val cellConstructor = constructorOf("Cell", ast)
-  
   val sumx = methodsOf("PurityAnalysisExample",ast).filter(_.id == "sumX").head
   val flipAll = methodsOf("PurityAnalysisExample",ast).filter(_.id == "flipAll").head
 }
