@@ -99,6 +99,18 @@ object Purity {
       return false
     }
 
+    def nodes: Set[Node] = {
+
+      val inEdges: Set[Node] =
+        (for { InsideEdge(n1,_,n2)  <- insideEdges  } yield HashSet(n1,n2)).flatten ++
+        (for { OutsideEdge(n1,_,n2) <- outsideEdges } yield HashSet(n1,n2)).flatten
+
+      val variables: Set[Node] = stateOflocalVars.map{ case (k,v) => v }.foldLeft(HashSet[Node]()){ _ ++ _ }
+
+      variables ++ inEdges
+
+    }
+
   }
 
   case class Result(
@@ -195,33 +207,33 @@ object Purity {
     (for {
         OutsideEdge(n1, f, n2) <- gCallee.outsideEdges
         InsideEdge(n3, f, n4)  <- g.insideEdges if map.getOrElse(n1, empty).contains(n3)
-    } yield (n2 -> n4)).groupBy( _._1 ).foreach { 
-        case (key,value) => 
-          map += (key -> value.map( _._2 ).toSet ) 
+    } yield (n2 -> n4)).groupBy( _._1 ).foreach {
+        case (key,value) =>
+          map += (key -> value.map( _._2 ).toSet )
     }
-    
+
     // Mapping 3
     // This constraint deals with the aliasing present in the calling context
     val loadNodes = for { OutsideEdge(n1, f, n2) <- g.outsideEdges if n2.isInstanceOf[LoadNode]} yield n2
-    
+
     (for {
       OutsideEdge(n1, f, n2) <- gCallee.outsideEdges
       InsideEdge(n3, f, n4)  <- gCallee.insideEdges if n1 != n3 &&
                                                        n1.isInstanceOf[LoadNode] &&
                                                        (map.getOrElse(n1,empty) + n1).intersect( (map.getOrElse(n3,empty) + n3)).nonEmpty
       extra = if (n4.isInstanceOf[ParameterNode]) empty else HashSet(n4)
-    } yield (n2 -> (map.getOrElse(n4,empty) ++ extra))).groupBy( _._1 ).foreach { case (key, value) => 
+    } yield (n2 -> (map.getOrElse(n4,empty) ++ extra))).groupBy( _._1 ).foreach { case (key, value) =>
         map += (key -> value.map( _._2 ).toSet.flatten)
     }
 
     // Mapping 4
     // Each non-parameter node should map to itself
-    val nonParameterNodes =
-      (gCallee.insideEdges ++ gCallee.outsideEdges).map( _.n2 ).filter( !_.isInstanceOf[ParameterNode])
+    val nonParameterNodes = gCallee.nodes.filter( !_.isInstanceOf[ParameterNode])
 
     nonParameterNodes.zip(nonParameterNodes.map( HashSet(_) )).foreach { map += _ }
-    
+
     (n: Node) => map.getOrElse(n, empty)
+
   }
 
   /**
@@ -399,23 +411,14 @@ object Purity {
       val invocation = (invokable.localvariables(receiver), fun)
       val invokedMethod = getInvokable(invocation)
       val stateOfCall = analyzed.getOrElse(invocation, initialStateOfMethod(invokedMethod.parameters))
-
       val args = for { SJVariableAccess(arg) <- arguments } yield arg // TODO: Have to support other args then SJVariableAccess
       val mappingFunc = mapping(before.pointsToGraph, stateOfCall.pointsToGraph, invokedMethod.parameters, args)
       val combined = combine(before.pointsToGraph, stateOfCall.pointsToGraph, mappingFunc, value)
       val simplified = simplify(combined)
 
-      val inEdges: Set[Node] =
-        (for { InsideEdge(n1,_,n2)  <- simplified.insideEdges  } yield HashSet(n1,n2)).flatten ++
-        (for { OutsideEdge(n1,_,n2) <- simplified.outsideEdges } yield HashSet(n1,n2)).flatten
-
-      val variables: Set[Node] = localVars(before).map{ case (k,v) => v }.foldLeft(HashSet[Node]()){ _ ++ _ }
-
-      val nodesInSimplifiedGraph: Set[Node] = variables ++ inEdges
-
       Result(
         pointsToGraph = simplified,
-        modifiedFields = mapModifiedAbstractFields(stateOfCall.modifiedFields, nodesInSimplifiedGraph, mappingFunc) ++ before.modifiedFields
+        modifiedFields = mapModifiedAbstractFields(stateOfCall.modifiedFields, simplified.nodes, mappingFunc) ++ before.modifiedFields
       )
     }
 
