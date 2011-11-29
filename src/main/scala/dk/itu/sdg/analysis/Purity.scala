@@ -171,12 +171,14 @@ object Purity {
    * @param gCallee     The Points-to graph of the invoked method
    * @param parameters  The name of the parameters of the invoked method
    * @param arguments   The names of the variables passed as arguments to the method
+   * @param receiver    The name of the variable that the method was invoked on. 
    * @return A mapping from nodes in 'gCallee' to nodes in 'g'
    */
   private def mapping(g: PTGraph,
                       gCallee: PTGraph,
                       parameters: List[SJArgument],
-                      arguments: List[String]): Node => Set[Node] = {
+                      arguments: List[String],
+                      reciever: String): Node => Set[Node] = {
 
     import scala.collection.mutable.{ HashMap => MHashMap }
 
@@ -201,6 +203,8 @@ object Purity {
     } {
       map += (key -> values)
     }
+    
+    map += (ParameterNode("this") -> g.stateOflocalVars(reciever).asInstanceOf[Set[Node]])
 
     // TODO: How do I deal with 'this' here? I mean, I can't zip it with an argument because
     //       it is an implicit argument?
@@ -343,7 +347,7 @@ object Purity {
 
       stm match {
         case SJAssignment(SJVariableAccess(v1), SJVariableAccess(v2))    => assignmentTF(stm, before, v1, v2)
-        case SJNewExpression(SJVariableAccess(v),_,_)                    => newInstanceTF(stm, before, v)
+        case SJNewExpression(SJVariableAccess(v),typ,_)                  => newInstanceTF(stm, before, v, typ)
         case SJFieldWrite(SJVariableAccess(v1), f, SJVariableAccess(v2)) => fieldWriteTF(stm, before, v1, f, v2)
         case SJReturn(SJVariableAccess(v))                               => returnTF(stm, before, v)
         case SJFieldRead(SJVariableAccess(v1), SJVariableAccess(v2), f)  => fieldReadTF(stm, before, v1,v2,f, invokable.parameters)
@@ -417,7 +421,7 @@ object Purity {
       val invokedMethod = getInvokable(invocation)
       val stateOfCall = analyzed.getOrElse(invocation, initialStateOfMethod(invokedMethod.parameters))
       val args = for { SJVariableAccess(arg) <- arguments } yield arg // TODO: Have to support other args then SJVariableAccess
-      val mappingFunc = mapping(before.pointsToGraph, stateOfCall.pointsToGraph, invokedMethod.parameters, args)
+      val mappingFunc = mapping(before.pointsToGraph, stateOfCall.pointsToGraph, invokedMethod.parameters, args, receiver)
       val combined = combine(before.pointsToGraph, stateOfCall.pointsToGraph, mappingFunc, value)
       val simplified = simplify(combined)
 
@@ -454,13 +458,12 @@ object Purity {
           InsideEdge(`v2`,`f`,n2) <- ptGraph(before).insideEdges
         } yield n2 ).getOrElse( empty )
 
-
       val b = for { n <- localVars(before).getOrElse(v2, empty) if isEscaped(n) } yield n
 
       if (b.isEmpty ) {
         before.copy( pointsToGraph = ptGraph(before).copy( stateOflocalVars = localVars(before).updated(v1, nodes) ))
       } else {
-        val outsideNode  = LoadNode("some label")
+        val outsideNode  = LoadNode(v1 + " = " + v2 + "." + f) //TODO: Proper label
         val outsideEdges = for { n <- b } yield OutsideEdge(n,f,outsideNode)
         before.copy(pointsToGraph = ptGraph(before).copy( stateOflocalVars = localVars(before).updated(v1, nodes ++ HashSet(outsideNode)),
                                                           outsideEdges     = ptGraph(before).outsideEdges ++ outsideEdges ))
@@ -480,8 +483,8 @@ object Purity {
      * v = new C
      * Makes v point to the newly created InsideNode
      */
-    def newInstanceTF(stm: SJStatement, before: Result, v: String) = {
-      val insideNode = InsideNode("some label")
+    def newInstanceTF(stm: SJStatement, before: Result, v: String, typ: String) = {
+      val insideNode = InsideNode(v + " = new " + typ )
       val newGraph   = ptGraph(before).copy( stateOflocalVars = localVars(before).updated(v, HashSet(insideNode)))
       before.copy( pointsToGraph = newGraph )
     }
