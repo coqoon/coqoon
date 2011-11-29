@@ -62,13 +62,13 @@ class PurityTestsFromPaper extends FlatSpec with ShouldMatchers with ASTSpec {
   "Purity analysis on PurityAnalysisExample.sumX" should "record no mutations" in {
     isPure("PurityAnalysisExample",sumx) should equal (true)
   }
-  
-  // Should record mutations, currently it doesn't 
-  "Purity analysis on PurityAnalysisExample.flipAll" should "" in {
-    println(getState("PurityAnalysisExample",flipAll))
-    // modifiedAbstractFields("PurityAnalysisExample", flipAll) should equal (HashSet[AbstractField]())
-    true should equal (true)
+
+
+  "Purity analysis on PurityAnalysisExample.flipAll" should "record mutations on list.head.next*.data.(x|y)" in {
+    modifiedAbstractFields("PurityAnalysisExample", flipAll) should equal (Set(AbstractField(LoadNode("result = tmp_1.data"),"y"), 
+                                                                               AbstractField(LoadNode("result = tmp_1.data"),"x")))
   }
+  
   
   val ast = getASTbyParsingFileNamed("PurityAnalysisExample.java", List("src", "test", "resources", "static_analysis", "source"))
   val listAddMethod = methodsOf("List",ast).filter(_.id == "add").head

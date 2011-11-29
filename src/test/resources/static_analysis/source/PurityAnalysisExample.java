@@ -48,7 +48,7 @@ class List {
         head = new Cell(e, head);
     }
 
-    Iterator iterator() {
+    ListItr iterator() {
         return new ListItr(head);
     }
 }
@@ -57,7 +57,7 @@ class PurityAnalysisExample {
     
     static float sumX(List list) {
         float s = 0;
-        Iterator it = list.iterator();
+        ListItr it = list.iterator();
         while(it.hasNext()) {
             Point p = it.next();
             s += p.x;
@@ -66,7 +66,7 @@ class PurityAnalysisExample {
     }
 
     static void flipAll(List list) {
-        Iterator it = list.iterator();
+        ListItr it = list.iterator();
         while(it.hasNext()) {
             Point p = it.next();
             p.flip();

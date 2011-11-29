@@ -6,6 +6,11 @@ class Person {
         this.name = name; 
         this.age = age;
     }
+    
+    public String getName() {
+        String name = this.name;
+        return name;
+    }
 }
 
 class PersonModifier {
@@ -13,7 +18,7 @@ class PersonModifier {
     void setName(Person p, String newName) {
         p.name = newName;
     }
-    
+        
     void swapNames(Person p1, Person p2) {
         String name1 = p1.name; // I feel like this should produce an outside edge!
         String name2 = p2.name;
