@@ -140,6 +140,7 @@ object Purity {
     var analyzedMethods = HashMap[Invocation, Result]()
 
     components.foreach { component =>
+
       // Keep track of the methods that still needs to be analyzed
       var worklist: List[Vertex[Invocation]] = component
 
@@ -176,12 +177,12 @@ object Purity {
                       gCallee: PTGraph,
                       parameters: List[SJArgument],
                       arguments: List[String]): Node => Set[Node] = {
-    
+
     import scala.collection.mutable.{ HashMap => MHashMap }
-    
+
     val map: MHashMap[Node, Set[Node]] = MHashMap()
 
-    
+
     // Mapping 1
     // The parameter nodes of gCallee should map to the nodes pointed to by the
     // arguments used to invoke callee.
@@ -193,13 +194,16 @@ object Purity {
     // the set of nodes that each argument points to
     val args: List[Set[Node]] =
       (for { id <- arguments } yield g.stateOflocalVars(id)).asInstanceOf[List[Set[Node]]]
-    
+
     for {
       (keys,values) <- parameterNodes.zip(args)
       key <- keys
     } {
       map += (key -> values)
-    } 
+    }
+
+    // TODO: How do I deal with 'this' here? I mean, I can't zip it with an argument because
+    //       it is an implicit argument?
 
     // Mapping 2
     // All outside nodes of gCallee that point to inside nodes of G should be
@@ -262,6 +266,7 @@ object Purity {
       OutsideEdge(n1, f, n2) <- gCallee.outsideEdges
       mappedN1               <- mapping(n1)
     } yield OutsideEdge(mappedN1, f, n2)
+
 
     val newStateOfLocalVars = (for {
       SJVariableAccess(name) <- varName
@@ -435,7 +440,7 @@ object Purity {
       // path of edges from graph.insideEdges ++ graph.outsideEdges.. As by definition 1 on page 7
       def isEscaped(n: Node): Boolean = {
 
-        val escapedNodes = parameters.flatMap{ p: SJArgument => localVars(before).getOrElse(p.id, empty).toList } ++
+        val escapedNodes = ("this" :: parameters.map(_.id)).flatMap{ id => localVars(before).getOrElse(id, empty).toList } ++
                            localVars(before).getOrElse(RETURN_LABEL, empty) ++
                            ptGraph(before).globallyEscapedNodes // TODO: Need Ngbl
 
