@@ -17,8 +17,8 @@ class ASTTest extends FlatSpec with ShouldMatchers with ASTSpec {
     val vertex1 = Vertex(("PurityAnalysisExample","sumX"))
     val vertex2 = Vertex(("List","iterator"))
     val vertex3 = Vertex(("ListItr","constructor"))
-    val vertex4 = Vertex(("Iterator","hasNext"))
-    val vertex5 = Vertex(("Iterator","next"))
+    val vertex4 = Vertex(("ListItr","hasNext"))
+    val vertex5 = Vertex(("ListItr","next"))
     
     val edge1 = Edge(vertex1,vertex2)
     val edge2 = Edge(vertex2,vertex3)
