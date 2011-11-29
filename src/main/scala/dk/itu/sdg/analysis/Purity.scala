@@ -84,10 +84,10 @@ object Purity {
       val edges = this.insideEdges ++ this.outsideEdges
       var queue = Queue(from)
       var visisted = from :: Nil
-      var v = from
+      var v: Node = null
       while (!queue.isEmpty) {
-        if (v == node) return true
         v = queue.dequeue
+        if (v == node) return true
         edges.collect {
           case InsideEdge(vertex1,_,vertex2) if vertex1 == v && !visisted.contains(vertex2) => vertex2
           case OutsideEdge(vertex1,_,vertex2) if vertex1 == v && !visisted.contains(vertex2) => vertex2
