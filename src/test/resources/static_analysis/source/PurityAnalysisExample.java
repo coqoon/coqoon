@@ -1,12 +1,12 @@
 class Point {
     Point(float x, float y) {
-        this.x = x ; 
+        this.x = x ;
         this.y = y;
     }
     float x, y;
     void flip() {
-        float t = x; 
-        x = y; 
+        float t = x;
+        x = y;
         y = t;
     }
 }
@@ -14,9 +14,9 @@ class Point {
 class Cell {
     Point data;
     Cell next;
-    
+
     Cell(Point d, Cell n) {
-        data = d; 
+        data = d;
         next = n;
     }
 }
@@ -30,7 +30,7 @@ class ListItr implements Iterator {
     ListItr(Cell head) {
         cell = head;
     }
-    Cell cell; 
+    Cell cell;
     public boolean hasNext() {
         return cell != null;
     }
@@ -43,7 +43,7 @@ class ListItr implements Iterator {
 
 class List {
     Cell head = null;
-    
+
     void add(Object e) {
         head = new Cell(e, head);
     }
@@ -54,7 +54,7 @@ class List {
 }
 
 class PurityAnalysisExample {
-    
+
     static float sumX(List list) {
         float s = 0;
         ListItr it = list.iterator();

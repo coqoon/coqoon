@@ -6,13 +6,6 @@
  * @author Mads Hartmann Jensen
  */
 
-/*
-  Random notes and things I still have to consider:
-
-  - v1.f = 10 would currently just be ignored as 10 isn't a var.
-  - each node needs to get a proper label
-*/
-
 package dk.itu.sdg.analysis
 
 import dk.itu.sdg.analysis.CallGraph.{ Invocation }
@@ -37,6 +30,10 @@ object Purity {
   // for testing and debug purposes
   def getState(className: String, invokable: SJInvokable): Result =
     analysis(className, invokable)
+
+  // For testing and debug purposes. Analyzes a single method w/o analyzing called funcions.
+  def analyzePartial(className: String, invokable: SJInvokable): Result =
+    analysisPartial(className, invokable)
 
   /*
    *  implementation details
@@ -99,6 +96,7 @@ object Purity {
       return false
     }
 
+    // Returns a set with all of the nodes in the graph.
     def nodes: Set[Node] = {
 
       val inEdges: Set[Node] =
@@ -116,7 +114,19 @@ object Purity {
   case class Result(
     pointsToGraph : PTGraph,
     modifiedFields: Set[AbstractField]
-  )
+  ) {
+    def prettyPrint() = {
+      println("NODES")
+      println(this.pointsToGraph.nodes.mkString("\n"))
+      println("EDGES")
+      println(this.pointsToGraph.outsideEdges.mkString("\n"))
+      println(this.pointsToGraph.insideEdges.mkString("\n"))
+      println("VARIABLES")
+      println(this.pointsToGraph.stateOflocalVars)
+      println("MODIFIED")
+      println(modifiedFields)
+    }
+  }
 
   /*
    *  Methods
@@ -149,11 +159,11 @@ object Purity {
         val invocation = worklist.head.item
         val invoked = getInvokable(invocation)
 
-        val oldPTState = analyzedMethods.getOrElse(invocation, initialStateOfMethod(invoked.parameters))
+        val oldPTState = analyzedMethods.getOrElse(invocation, initialStateOfMethod(invoked))
         val newPTState = intraProcedural(invoked, analyzedMethods)
 
         if (oldPTState != newPTState) {
-          for(Edge(from,`invocation`) <- callGraph.edges) { worklist = from :: worklist }
+          for(Edge(from,`invocation`,_) <- callGraph.edges) { worklist = from :: worklist }
           analyzedMethods = analyzedMethods.updated(invocation, newPTState)
         }
 
@@ -164,6 +174,12 @@ object Purity {
     analyzedMethods(callGraph.start.item)
   }
 
+  def analysisPartial(className: String, invokable: SJInvokable): Result = {
+    val invocation = (className, invokable.id)
+    val analyzedMethods = HashMap( (invocation -> initialStateOfMethod(invokable)))
+    intraProcedural(invokable, analyzedMethods)
+  }
+
   /**
    * Constructs the node mapping. Explained on page 9
    *
@@ -171,77 +187,113 @@ object Purity {
    * @param gCallee     The Points-to graph of the invoked method
    * @param parameters  The name of the parameters of the invoked method
    * @param arguments   The names of the variables passed as arguments to the method
-   * @param receiver    The name of the variable that the method was invoked on. 
+   * @param recievers   The set of nodes that 'this' should map to.
    * @return A mapping from nodes in 'gCallee' to nodes in 'g'
    */
   private def mapping(g: PTGraph,
                       gCallee: PTGraph,
-                      parameters: List[SJArgument],
+                      invokable: SJInvokable,
                       arguments: List[String],
-                      reciever: String): Node => Set[Node] = {
+                      recievers: Set[Node]): Node => Set[Node] = {
 
-    import scala.collection.mutable.{ HashMap => MHashMap }
+    def mergeMap(m1: Map[Node, Set[Node]], m2: Map[Node, Set[Node]]): Map[Node, Set[Node]] = {
+      // For the keys where previous values exist we merge the values, for the keys
+      // where no previous values exist we simply add them to the map using '++'
+      val (oldMap,newMap) = m2.partition { case (k,v) => m1.contains(k) }
+      m1.map { case (k,v) => ( k -> (v ++ oldMap.getOrElse(k,empty)) ) } ++ newMap
+    }
 
-    val map: MHashMap[Node, Set[Node]] = MHashMap()
-
+    var map: Map[Node, Set[Node]] = HashMap()
 
     // Mapping 1
     // The parameter nodes of gCallee should map to the nodes pointed to by the
     // arguments used to invoke callee.
+    val mapping1Map: Map[Node, Set[Node]] = {
+      // the set of nodes each each parameter points to
+      val parameterNodes: List[Set[Node]] =
+        (for { SJArgument(id, _) <- invokable.parameters } yield gCallee.stateOflocalVars(id)).asInstanceOf[List[Set[Node]]]
+      // the set of nodes that each argument points to
+      val args: List[Set[Node]] =
+        (for { id <- arguments } yield g.stateOflocalVars(id)).asInstanceOf[List[Set[Node]]]
 
-    // the set of nodes each each parameter points to
-    val parameterNodes: List[Set[Node]] =
-      (for { SJArgument(id, _) <- parameters } yield gCallee.stateOflocalVars(id)).asInstanceOf[List[Set[Node]]]
+      val xxx: List[Pair[Node,Set[Node]]] = {
+        parameterNodes.flatMap { ps: Set[Node] =>
+          args.flatMap { ars: Set[Node] =>
+            ps.map { p: Node => (p -> ars) }
+          }
+        }
+      }
 
-    // the set of nodes that each argument points to
-    val args: List[Set[Node]] =
-      (for { id <- arguments } yield g.stateOflocalVars(id)).asInstanceOf[List[Set[Node]]]
-
-    for {
-      (keys,values) <- parameterNodes.zip(args)
-      key <- keys
-    } {
-      map += (key -> values)
+      val tuples = xxx ++ List((ParameterNode("%s:this".format(invokable.id)),recievers))
+      HashMap(tuples :_*)
     }
-    
-    map += (ParameterNode("this") -> g.stateOflocalVars(reciever).asInstanceOf[Set[Node]])
 
-    // TODO: How do I deal with 'this' here? I mean, I can't zip it with an argument because
-    //       it is an implicit argument?
+    map = mergeMap(map,mapping1Map)
 
     // Mapping 2
     // All outside nodes of gCallee that point to inside nodes of G should be
     // mapped to those nodes.
-    (for {
+    val mapping2Map: Map[Node, Set[Node]] = {
+      (for {
         OutsideEdge(n1, f, n2) <- gCallee.outsideEdges
-        InsideEdge(n3, f, n4)  <- g.insideEdges if map.getOrElse(n1, empty).contains(n3)
-    } yield (n2 -> n4)).groupBy( _._1 ).foreach {
-        case (key,value) =>
-          map += (key -> value.map( _._2 ).toSet )
+        InsideEdge(n3, `f`, n4)  <- g.insideEdges if map.getOrElse(n1, empty).contains(n3)
+      } yield (n2 -> n4)).groupBy( _._1 ).map {
+          case (key,value) => { (key -> value.map( _._2 ).toSet ) }
+      }
     }
+
+    map = mergeMap(map,mapping2Map)
 
     // Mapping 3
     // This constraint deals with the aliasing present in the calling context
-    val loadNodes = for { OutsideEdge(n1, f, n2) <- g.outsideEdges if n2.isInstanceOf[LoadNode]} yield n2
+    val mapping3Map: Map[Node, Set[Node]] = {
+      val loadNodes = for { OutsideEdge(n1, f, n2) <- g.outsideEdges if n2.isInstanceOf[LoadNode]} yield n2
 
-    (for {
-      OutsideEdge(n1, f, n2) <- gCallee.outsideEdges
-      InsideEdge(n3, f, n4)  <- gCallee.insideEdges if n1 != n3 &&
-                                                       n1.isInstanceOf[LoadNode] &&
-                                                       (map.getOrElse(n1,empty) + n1).intersect( (map.getOrElse(n3,empty) + n3)).nonEmpty
-      extra = if (n4.isInstanceOf[ParameterNode]) empty else HashSet(n4)
-    } yield (n2 -> (map.getOrElse(n4,empty) ++ extra))).groupBy( _._1 ).foreach { case (key, value) =>
-        map += (key -> value.map( _._2 ).toSet.flatten)
+      (for {
+        OutsideEdge(n1, f, n2) <- gCallee.outsideEdges
+        InsideEdge(n3, `f`, n4)  <- gCallee.insideEdges if n1 != n3 &&
+                                                         n1.isInstanceOf[LoadNode] &&
+                                                         (map.getOrElse(n1,empty) + n1).intersect( (map.getOrElse(n3,empty) + n3)).nonEmpty
+        extra = if (n4.isInstanceOf[ParameterNode]) empty else HashSet(n4)
+      } yield (n2 -> (map.getOrElse(n4,empty) ++ extra))).groupBy( _._1 ).map { case (key, value) =>
+          (key -> value.map( _._2 ).toSet.flatten)
+      }
     }
+
+    map = mergeMap(map, mapping3Map)
 
     // Mapping 4
     // Each non-parameter node should map to itself
-    val nonParameterNodes = gCallee.nodes.filter( !_.isInstanceOf[ParameterNode])
+    val mapping4Map: Map[Node,Set[Node]] = {
+      val nonParameterNodes = gCallee.nodes.filter( !_.isInstanceOf[ParameterNode])
+      HashMap( nonParameterNodes.zip(nonParameterNodes.map( HashSet(_) )).toList :_* )
+    }
 
-    nonParameterNodes.zip(nonParameterNodes.map( HashSet(_) )).foreach { map += _ }
+    map = mergeMap(map, mapping4Map)
 
-    (n: Node) => map.getOrElse(n, empty)
-
+    // continue mapping until a fixed-point has been reached
+    (n: Node) => {
+      var workList: List[Node] = n :: Nil
+      var result: List[Node] = Nil
+      while(!workList.isEmpty) {
+        val node = workList.head
+        val mapped = map.getOrElse(node, empty).toList
+        if (!mapped.isEmpty) {
+          if (result.contains(node)) {
+            workList = workList.tail
+          } else if (mapped == List(node)) { // Mapped to itself
+            workList = workList.tail
+            result = result ++ mapped
+          } else {
+            workList = workList.tail ++ mapped
+            result = (result.filterNot (_ == node)) ++ mapped // the node we just mapped  shouldn't be part of the result anymore
+          }
+        } else {
+          workList = workList.tail
+        }
+      }
+      result.toSet
+    }
   }
 
   /**
@@ -343,20 +395,18 @@ object Purity {
     import TransferFunctions._
     import AST.{ foldLeft }
 
-    def transferFunction(stm: SJStatement, before: Result): Result = {
-
+    def transferFunction(stm: SJStatement, state: TFState): TFState = {
       stm match {
-        case SJAssignment(SJVariableAccess(v1), SJVariableAccess(v2))    => assignmentTF(stm, before, v1, v2)
-        case SJNewExpression(SJVariableAccess(v),typ,_)                  => newInstanceTF(stm, before, v, typ)
-        case SJFieldWrite(SJVariableAccess(v1), f, SJVariableAccess(v2)) => fieldWriteTF(stm, before, v1, f, v2)
-        case SJReturn(SJVariableAccess(v))                               => returnTF(stm, before, v)
-        case SJFieldRead(SJVariableAccess(v1), SJVariableAccess(v2), f)  => fieldReadTF(stm, before, v1,v2,f, invokable.parameters)
-        case SJCall(value, SJVariableAccess(receiver), fun, arguments)   => callTF(stm, before, value, receiver, fun, arguments, invokable, analyzed)
-        case _                                                           => before
+        case SJAssignment(SJVariableAccess(v1), SJVariableAccess(v2))    => assignmentTF(stm, v1, v2, state)
+        case SJNewExpression(SJVariableAccess(v),typ,arguments)          => newInstanceTF(stm, v, typ, invokable, state, arguments, analyzed)
+        case SJFieldWrite(SJVariableAccess(v1), f, SJVariableAccess(v2)) => fieldWriteTF(stm, v1, f, v2, state)
+        case SJReturn(SJVariableAccess(v))                               => returnTF(stm, v, state)
+        case SJFieldRead(SJVariableAccess(v1), SJVariableAccess(v2), f)  => fieldReadTF(stm, v1,v2,f, invokable, state)
+        case SJCall(value, SJVariableAccess(receiver), fun, arguments)   => callTF(stm, value, receiver, fun, arguments, invokable, analyzed, state)
+        case _                                                           => state
       }
     }
-
-    foldLeft(invokable.body, initialStateOfMethod(invokable.parameters), transferFunction)
+    foldLeft(invokable.body, TFState(initialStateOfMethod(invokable),0,0), transferFunction).result
   }
 
   /**
@@ -378,13 +428,13 @@ object Purity {
    * @param parameters The parameters of the invoked method.
    * @return The initial state of the analysis of the method.
    */
-  private def initialStateOfMethod(parameters: List[SJArgument]) = {
+  private def initialStateOfMethod(invokable: SJInvokable) = {
     // page 7, section 5.21
     Result(
       pointsToGraph  = PTGraph(insideEdges          = empty,
                                outsideEdges         = empty,
-                               stateOflocalVars     = (parameters.map( arg => (arg.id -> HashSet(ParameterNode(arg.id))) )
-                                                      :+ ( "this" -> HashSet(ParameterNode("this")))).toMap,
+                               stateOflocalVars     = (invokable.parameters.map( arg => (arg.id -> HashSet(ParameterNode("%s:%s".format(invokable.id,arg.id)))))
+                                                      :+ ( "this" -> HashSet(ParameterNode("%s:this".format(invokable.id))))).toMap,
                                globallyEscapedNodes = empty),
       modifiedFields = empty
     )
@@ -398,8 +448,10 @@ object Purity {
    */
   private object TransferFunctions {
 
-    private def localVars(before: Result) = before.pointsToGraph.stateOflocalVars
-    private def ptGraph(before: Result) = before.pointsToGraph
+    private def localVars(state: TFState) = state.result.pointsToGraph.stateOflocalVars
+    private def ptGraph(state: TFState) = state.result.pointsToGraph
+
+    case class TFState(result: Result, insideNodeCount: Int, outsideNodeCount: Int)
 
     /*
      * v = f(...)
@@ -409,25 +461,31 @@ object Purity {
      * been merged it is simplified.
      */
     def callTF(stm: SJStatement,
-               before: Result,
                value: Option[SJVariableAccess],
                receiver: String,
                fun: String,
                arguments: List[SJExpression],
                invokable: SJInvokable,
-               analyzed: HashMap[Invocation, Result]) = {
+               analyzed: HashMap[Invocation, Result],
+               state: TFState): TFState = {
 
       val invocation = (invokable.localvariables(receiver), fun)
       val invokedMethod = getInvokable(invocation)
-      val stateOfCall = analyzed.getOrElse(invocation, initialStateOfMethod(invokedMethod.parameters))
+      val stateOfCall = analyzed.getOrElse(invocation, initialStateOfMethod(invokedMethod))
       val args = for { SJVariableAccess(arg) <- arguments } yield arg // TODO: Have to support other args then SJVariableAccess
-      val mappingFunc = mapping(before.pointsToGraph, stateOfCall.pointsToGraph, invokedMethod.parameters, args, receiver)
-      val combined = combine(before.pointsToGraph, stateOfCall.pointsToGraph, mappingFunc, value)
+      val mappingFunc = mapping(state.result.pointsToGraph,
+                                stateOfCall.pointsToGraph,
+                                invokedMethod,
+                                args,
+                                state.result.pointsToGraph.stateOflocalVars(receiver).asInstanceOf[Set[Node]])
+      val combined = combine(state.result.pointsToGraph, stateOfCall.pointsToGraph, mappingFunc, value)
       val simplified = simplify(combined)
 
-      Result(
-        pointsToGraph = simplified,
-        modifiedFields = mapModifiedAbstractFields(stateOfCall.modifiedFields, simplified.nodes, mappingFunc) ++ before.modifiedFields
+      state.copy(
+        result = Result(
+          pointsToGraph = simplified,
+          modifiedFields = mapModifiedAbstractFields(stateOfCall.modifiedFields, simplified.nodes, mappingFunc) ++ state.result.modifiedFields
+        )
       )
     }
 
@@ -438,35 +496,47 @@ object Purity {
      *   Introduce a new load node
      *   Introduce f-labeled outside edges for every escaped node we read from to the new load node
      */
-    def fieldReadTF(stm: SJStatement, before: Result, v1: String, v2: String, f: String, parameters: List[SJArgument]) = {
+    def fieldReadTF(stm: SJStatement, v1: String, v2: String, f: String, invokable: SJInvokable, state: TFState): TFState = {
 
       // n is escaped iff n is reachable from a node from 'escapedNodes' along a (possibly empty)
       // path of edges from graph.insideEdges ++ graph.outsideEdges.. As by definition 1 on page 7
       def isEscaped(n: Node): Boolean = {
 
-        val escapedNodes = ("this" :: parameters.map(_.id)).flatMap{ id => localVars(before).getOrElse(id, empty).toList } ++
-                           localVars(before).getOrElse(RETURN_LABEL, empty) ++
-                           ptGraph(before).globallyEscapedNodes // TODO: Need Ngbl
+        val escapedNodes = ("this" :: invokable.parameters.map(_.id)).flatMap{ id => localVars(state).getOrElse(id, empty).toList } ++
+                           localVars(state).getOrElse(RETURN_LABEL, empty) ++
+                           ptGraph(state).globallyEscapedNodes // TODO: Need Ngbl
 
-        escapedNodes.exists(ptGraph(before).isReachable(n, _))
+        escapedNodes.exists(ptGraph(state).isReachable(n, _))
       }
 
       val nodes = (for {
-          v2s <- localVars(before).get(v2)
+          v2s <- localVars(state).get(v2)
         } yield for {
           v2 <- v2s
-          InsideEdge(`v2`,`f`,n2) <- ptGraph(before).insideEdges
+          InsideEdge(`v2`,`f`,n2) <- ptGraph(state).insideEdges
         } yield n2 ).getOrElse( empty )
 
-      val b = for { n <- localVars(before).getOrElse(v2, empty) if isEscaped(n) } yield n
+      val b = for { n <- localVars(state).getOrElse(v2, empty) if isEscaped(n) } yield n
 
       if (b.isEmpty ) {
-        before.copy( pointsToGraph = ptGraph(before).copy( stateOflocalVars = localVars(before).updated(v1, nodes) ))
+        state.copy(
+          result = state.result.copy(
+            pointsToGraph = ptGraph(state).copy( stateOflocalVars = localVars(state).updated(v1, nodes))
+          )
+        )
       } else {
-        val outsideNode  = LoadNode(v1 + " = " + v2 + "." + f) //TODO: Proper label
+        val outsideNode  = LoadNode(invokable.id+":L"+state.outsideNodeCount + " variable: " + v1)
+
+
         val outsideEdges = for { n <- b } yield OutsideEdge(n,f,outsideNode)
-        before.copy(pointsToGraph = ptGraph(before).copy( stateOflocalVars = localVars(before).updated(v1, nodes ++ HashSet(outsideNode)),
-                                                          outsideEdges     = ptGraph(before).outsideEdges ++ outsideEdges ))
+
+        state.copy(
+          result = state.result.copy(
+            pointsToGraph = ptGraph(state).copy( stateOflocalVars = localVars(state).updated(v1, nodes ++ HashSet(outsideNode)),
+            outsideEdges  = ptGraph(state).outsideEdges ++ outsideEdges)
+          ),
+          outsideNodeCount = state.outsideNodeCount + 1
+        )
       }
     }
 
@@ -474,19 +544,42 @@ object Purity {
      * v1 = v2
      * Make v1 point to all of the nodes that v2 pointed to
      */
-    def assignmentTF(stm: SJStatement, before: Result, v1: String, v2: String) = {
-      val newStateOfLocalVars = localVars(before).updated(v1, localVars(before).getOrElse(v2,empty))
-      before.copy( pointsToGraph = ptGraph(before).copy( stateOflocalVars = newStateOfLocalVars ))
+    def assignmentTF(stm: SJStatement, v1: String, v2: String, state: TFState): TFState = {
+      val newStateOfLocalVars = localVars(state).updated(v1, localVars(state).getOrElse(v2,empty))
+      state.copy(
+        result = state.result.copy(pointsToGraph = ptGraph(state).copy( stateOflocalVars = newStateOfLocalVars ))
+      )
     }
 
     /*
      * v = new C
      * Makes v point to the newly created InsideNode
      */
-    def newInstanceTF(stm: SJStatement, before: Result, v: String, typ: String) = {
-      val insideNode = InsideNode(v + " = new " + typ )
-      val newGraph   = ptGraph(before).copy( stateOflocalVars = localVars(before).updated(v, HashSet(insideNode)))
-      before.copy( pointsToGraph = newGraph )
+    def newInstanceTF(stm: SJStatement,
+                      v: String,
+                      typ: String,
+                      invokable: SJInvokable,
+                      state: TFState,
+                      arguments: List[SJExpression],
+                      analyzed: HashMap[Invocation, Result]): TFState = {
+
+      val insideNode = InsideNode(invokable.id+":I"+state.insideNodeCount + " variable: " + v + " type: " + typ)
+
+      // A call to a constructor is still a call, so we need to merge the graphs.
+      val invocation = (typ, "constructor")
+      val invokedMethod = getInvokable(invocation)
+      val stateOfCall = analyzed.getOrElse(invocation, initialStateOfMethod(invokedMethod))
+      val args = for { SJVariableAccess(arg) <- arguments } yield arg // TODO: Have to support other args then SJVariableAccess
+      val mappingFunc = mapping(state.result.pointsToGraph, stateOfCall.pointsToGraph, invokedMethod, args, HashSet(insideNode))
+      val combined = combine(state.result.pointsToGraph, stateOfCall.pointsToGraph, mappingFunc, Some(SJVariableAccess(v)))
+      val simplified = simplify(combined)
+
+
+      val newGraph   = simplified.copy( stateOflocalVars = localVars(state).updated(v, HashSet(insideNode)))
+      state.copy(
+        result = state.result.copy( pointsToGraph = newGraph ),
+        insideNodeCount = state.insideNodeCount + 1
+      )
     }
     /*
      * v1.f = v2
@@ -495,32 +588,40 @@ object Purity {
      * Also update the writes set to record the mutations on f of all
      * of the non-inside nodes pointed to by v1.
      */
-    def fieldWriteTF(stm: SJStatement, before: Result, v1: String, f: String, v2: String) = {
+    def fieldWriteTF(stm: SJStatement, v1: String, f: String, v2: String, state: TFState): TFState = {
 
       val insideEdges = (for {
-          v1s <- localVars(before).get(v1)
-          v2s <- localVars(before).get(v2)
+          v1s <- localVars(state).get(v1)
+          v2s <- localVars(state).get(v2)
         } yield for {
           v1 <- v1s
           v2 <- v2s
         } yield InsideEdge(v1,f,v2)).getOrElse( empty )
 
       val mods = (for {
-          v1s <- localVars(before).get(v1)
+          v1s <- localVars(state).get(v1)
         } yield for {
           node <- v1s if !node.isInstanceOf[InsideNode]
         } yield AbstractField(node,f)).getOrElse( empty )
 
-      before.copy( pointsToGraph  = ptGraph(before).copy( insideEdges = ptGraph(before).insideEdges & insideEdges ),
-                   modifiedFields = before.modifiedFields ++ mods)
+      state.copy(
+        result = state.result.copy(
+          pointsToGraph  = ptGraph(state).copy( insideEdges = ptGraph(state).insideEdges ++ insideEdges ),
+          modifiedFields = state.result.modifiedFields ++ mods
+        )
+      )
     }
 
     /*
      * return v
      */
-    def returnTF(stm: SJStatement, before: Result, v: String): Result = {
-      val newStateOfLocalVars = localVars(before).updated(RETURN_LABEL, localVars(before).getOrElse(v, empty))
-      before.copy( pointsToGraph = ptGraph(before).copy( stateOflocalVars = newStateOfLocalVars ))
+    def returnTF(stm: SJStatement, v: String, state: TFState): TFState = {
+      val newStateOfLocalVars = localVars(state).updated(RETURN_LABEL, localVars(state).getOrElse(v, empty))
+      state.copy(
+        result = state.result.copy(
+          pointsToGraph = ptGraph(state).copy( stateOflocalVars = newStateOfLocalVars )
+        )
+      )
     }
 
   }

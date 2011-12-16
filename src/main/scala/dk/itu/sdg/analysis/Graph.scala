@@ -32,9 +32,9 @@ package dk.itu.sdg.analysis
 import scala.collection.immutable.{ HashMap }
 
 // Graph data structures.
-case class Vertex[ItemType](item: ItemType)
-case class Edge[ItemType](from: Vertex[ItemType], to: Vertex[ItemType])
-case class G[ItemType](start: Vertex[ItemType], vertices: List[Vertex[ItemType]], edges: List[Edge[ItemType]])
+case class Vertex[+ItemType](item: ItemType)
+case class Edge[+ItemType](from: Vertex[ItemType], to: Vertex[ItemType], lb: Option[String] = None)
+case class G[+ItemType](start: Vertex[ItemType], vertices: List[Vertex[ItemType]], edges: List[Edge[ItemType]])
 
 trait Graph {
     
