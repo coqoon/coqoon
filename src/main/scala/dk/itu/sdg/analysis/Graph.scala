@@ -1,5 +1,48 @@
 /*
-   
+
+  This file contains implementations of different graphs
+  used in the project.
+
+  @author Mads Hartmann Jensen
+*/
+package dk.itu.sdg.analysis
+
+import scala.collection.immutable.{ HashMap }
+import dk.itu.sdg.javaparser._
+import dk.itu.sdg.analysis.Purity._
+
+// Graph data structures.
+case class Vertex[+ItemType](item: ItemType)
+case class Edge[+ItemType](from: Vertex[ItemType], to: Vertex[ItemType], lb: Option[String] = None)
+
+trait BaseGraph[ItemType] {
+
+  def edges: List[Edge[ItemType]]
+
+  def vertices: List[Vertex[ItemType]]
+
+  protected def adjacent(vertex: Vertex[ItemType]) =
+    for { edge <- edges if edge.from == vertex } yield edge.to
+
+}
+
+trait Root[ItemType] {
+
+  this: BaseGraph[ItemType] =>
+
+  def start: Vertex[ItemType]
+
+}
+
+/*
+
+  # Overview
+
+  Implementation of a SCC (Strongly Connected Components) algorithm for our graphs,
+  mix this into a BaseGraph to get a 'components' method.
+
+  # Details
+
   This is implemented following the instructions in "The Design and Analysis of
   Computer Algorithms, AHO Hopcroft Ullman, 1974".
 
@@ -14,84 +57,72 @@
   is then considered.
 
     - If w is unvisited recurse with w. set LLN(w) to the smallest of LLN(w)
-      & LLN(v). 
-      
-    - If w is visited AND w was visited before v AND w is on the stack then set 
-      LLN(v) to the smallest of DFN(w) and LLN(v). 
+      & LLN(v).
 
-   If, after all the adjacent vertexes have been considered, the LLN(v) is the 
+    - If w is visited AND w was visited before v AND w is on the stack then set
+      LLN(v) to the smallest of DFN(w) and LLN(v).
+
+   If, after all the adjacent vertexes have been considered, the LLN(v) is the
    same as DFN(v) then v the root of the current SSC.
 
    When there are no vertexes un-visited the algorithm is done.
 
    @author Mads Hartmann Jensen.
 */
+trait StronglyConnected[ItemType] {
 
-package dk.itu.sdg.analysis
+  this: BaseGraph[ItemType] with Root[ItemType] =>
 
-import scala.collection.immutable.{ HashMap }
+  type Component = List[Vertex[ItemType]]
 
-// Graph data structures.
-case class Vertex[+ItemType](item: ItemType)
-case class Edge[+ItemType](from: Vertex[ItemType], to: Vertex[ItemType], lb: Option[String] = None)
-case class G[+ItemType](start: Vertex[ItemType], vertices: List[Vertex[ItemType]], edges: List[Edge[ItemType]])
+  // Return a list with the strongly connected components of
+  // this graph.
+  def components: List[Component] = {
 
-trait Graph {
-    
-  // ItemType is abstract. Specified by Graph implementations.
-  type ItemType
-  
-  // Simplifying the types a bit.  
-  type GVertex   = Vertex[ItemType]
-  type GEdge     = Edge[ItemType]
-  type GG        = G[ItemType]
-  type Component = List[GVertex]
-    
+    var state = search(start, initial)
+
+    while(state.visited.exists( _._2 == false)) {
+      state.visited.find(_._2 == false).foreach {
+        case (vertex, _) =>
+          state = search(vertex, state)
+      }
+    }
+
+    state.components
+  }
+
   // State used when implementing the SCC algorithm.
-  case class State(graph: GG,
-                   count: Int,
-                   visited: Map[GVertex, Boolean],
-                   dfNumber: Map[GVertex, Int],
-                   lowlinks: Map[GVertex,Int],
-                   stack: List[GVertex],
-                   components: List[Component])
-  
+  private case class State(
+    count     : Int,
+    visited   : Map[Vertex[ItemType], Boolean],
+    dfNumber  : Map[Vertex[ItemType], Int],
+    lowlinks  : Map[Vertex[ItemType],Int],
+    stack     : List[Vertex[ItemType]],
+    components: List[Component]
+  )
+
   // Initial state for the SCC algorithm.
-  def initial(g: GG) = State (
-    graph      = g,
+  private def initial = State (
     count      = 1,
-    visited    = g.vertices.map { (_,false) } toMap,
+    visited    = vertices.map { (_,false) } toMap,
     dfNumber   = Map(),
     lowlinks   = Map(),
     stack      = Nil,
     components = Nil
   )
-  
-  // Calculate the SCC of a Graph.
-  def components(graph: GG): List[Component] = {
-    
-    var state = search(graph.start, initial(graph))
-    
-    while(state.visited.exists( _._2 == false)) {
-      state.visited.find(_._2 == false).foreach { tuple => 
-        val (vertex, _) = tuple
-        state = search(vertex, state)
-      }
-    }
-    
-    state.components
-  }
-  
+
   // Search for SCC.
-  private def search(vertex: GVertex, state: State): State = {
-    
-    val newState = state.copy( visited  = state.visited.updated(vertex, true),
-                               dfNumber = state.dfNumber.updated(vertex,state.count),
-                               count    = state.count + 1,
-                               lowlinks = state.lowlinks.updated(vertex, state.count),
-                               stack    = vertex :: state.stack)
-    
-    def processVertex(st: State, w: GVertex): State = {
+  private def search(vertex: Vertex[ItemType], state: State): State = {
+
+    val newState = state.copy(
+      visited  = state.visited.updated(vertex, true),
+      dfNumber = state.dfNumber.updated(vertex,state.count),
+      count    = state.count + 1,
+      lowlinks = state.lowlinks.updated(vertex, state.count),
+      stack    = vertex :: state.stack
+    )
+
+    def processVertex(st: State, w: Vertex[ItemType]): State = {
       if (!st.visited(w)) {
         val st1 = search(w, st)
         val min = smallest(st1.lowlinks(w),st1.lowlinks(vertex))
@@ -103,32 +134,173 @@ trait Graph {
         } else st
       }
     }
-      
-    val strslt = adjacent(vertex, newState).foldLeft(newState)( processVertex )
-    
+
+    val strslt = adjacent(vertex).foldLeft(newState)( processVertex )
+
     if (strslt.lowlinks(vertex) == strslt.dfNumber(vertex)) {
-      
       val index = strslt.stack.indexOf(vertex)
       val (comp,rest) = strslt.stack.splitAt( index + 1 )
-      strslt.copy ( stack = rest, 
-                    components = strslt.components :+ comp)
+      strslt.copy (
+        stack = rest,
+        components = strslt.components :+ comp
+      )
     } else strslt
   }
-  
+
   // get the smallest of two numbers.
-  private def smallest(x: Int, y: Int): Int = if (x < y) x else y  
-  
-  // Get the adjacent vertices of a given vertex.
-  private def adjacent(vertex: GVertex, state: State): List[GVertex] = 
-    for { edge <- state.graph.edges if edge.from == vertex } yield edge.to 
+  private def smallest(x: Int, y: Int): Int = if (x < y) x else y
+
 }
 
-// Call-graph. The vertices carry Invocations 
-object CallGraph extends Graph {
-  
-  // Invocation is a pair of strings. _1 is the name of the type and 
+/*
+
+  Implementation of a call graph. use the `fromAST` method in
+  the companion object to constrct the CG.
+
+  @author Mads Hartmann Jensen
+
+*/
+
+import CallGraph.Invocation
+
+class CallGraph(
+  val start: Vertex[Invocation],
+  val vertices: List[Vertex[Invocation]],
+  val edges: List[Edge[Invocation]]
+) extends BaseGraph[Invocation] with Root[Invocation] with StronglyConnected[Invocation] {
+
+  override def equals(other: Any) = other match {
+    case cg: CallGraph => {
+      this.start == cg.start &&
+      this.vertices == cg.vertices &&
+      this.edges == cg.edges
+    }
+    case _ => false
+  }
+}
+
+object CallGraph {
+
+  // Invocation is a pair of strings. _1 is the name of the type and
   // _2 is the name of the method invoked on an instance of the type.
   type Invocation = (String, String)
-  
-  type ItemType = Invocation 
+
+  // Construct a CG from the AST of a method/constructor
+  def fromAST(cls: String, invokable: SJInvokable): CallGraph = {
+
+    // State used in the fold.
+    case class State(
+      vertices: List[Vertex[Invocation]],
+      edges: List[Edge[Invocation]],
+      visited: Map[Invocation, Boolean]
+    )
+
+    // Method that recurses through the AST in a depth first fashion.
+    def recurse(vertex: Vertex[Invocation], invokable: SJInvokable, state: State): State = {
+
+      def wasSJCall(st: State, reciever: String, methodName: String) = {
+        val recieverType = invokable.localvariables.get(reciever).get
+        val invocation   = (recieverType, methodName)
+        wasInvocation(st, invocation, SJTable.getMethodInClass(recieverType,methodName).get)
+      }
+
+      def wasNexExpression(st: State, typ: String) = {
+        val invocation = (typ,"constructor") // TODO: Find a better name than constructor.
+        wasInvocation(st, invocation, SJTable.getConstructor(typ).get)
+      }
+
+      def wasInvocation(st: State, invocation: Invocation, after: SJInvokable) = {
+        if (!st.visited.contains(invocation)) {
+          val v = Vertex(invocation)
+          val e = Edge(vertex, v)
+          val st2 = st.copy(
+            vertices = st.vertices :+ v,
+            edges    = st.edges    :+ e,
+            visited  = st.visited.updated(invocation, true)
+          )
+          recurse(v, after, st2)
+        } else recurse(vertex, after, st)
+      }
+
+      AST.foldLeft(invokable.body, state, (stm, st: State) => stm match {
+        case SJCall(_,SJVariableAccess(reciever),methodName,_) => wasSJCall(st, reciever, methodName)
+        case SJNewExpression(_,typ,_) => wasNexExpression(st, typ)
+        case _ => st // Don't care about the rest of the nodes.
+      })
+    }
+
+    val main = Vertex((cls,invokable.id))
+    val initial = State(main :: Nil, Nil, Map())
+    val state = recurse(main,invokable,initial)
+    new CallGraph(main, state.vertices, state.edges)
+  }
+}
+
+/*
+
+  Implementation of a non-deterministic finite automata.
+
+  @author Mads Hartmann Jensen
+
+*/
+class NFA private (
+  val start: Vertex[Node],
+  val vertices: List[Vertex[Node]],
+  val edges: List[Edge[Node]],
+  val accept: Vertex[Node]
+) extends BaseGraph[Node] with Root[Node] {
+
+  def allPaths: List[String] = {
+
+    def rec(path: List[String], current: Vertex[Node], visited: List[Vertex[Node]]): List[String] = {
+      if (current == accept) {
+        List(path.reverse.mkString("."))
+      } else {
+        (edges.collect {
+          case Edge(v1,v2,Some(lb)) if v1 == current && !visited.contains(v2) =>
+            rec(lb :: path, v2, current :: visited)
+        }).flatten
+      }
+    }
+
+    rec(Nil,start,Nil)
+  }
+
+  def print: Unit = {
+    println("start: " + start)
+    println("edges: \n" + edges.mkString("\n"))
+    println("nodes: \n" + vertices.mkString("\n"))
+  }
+
+}
+
+object NFA {
+
+  def fromPurityResult(analysisResult: Result): NFA = {
+
+    val nodes = analysisResult.pointsToGraph.nodes.toList
+
+    val start  = Vertex(InsideNode("START"))
+    val accept = Vertex(InsideNode("ACCEPT"))
+    val states = start :: accept :: nodes.map(Vertex(_)).toList
+
+    val transitions: List[Edge[Node]] = {
+
+      val startToParameter = for {
+        p@ParameterNode(name) <- nodes
+      } yield Edge(start,Vertex(p), Some(name))
+
+      val stateToState = for {
+        OutsideEdge(n1,f,n2) <- analysisResult.pointsToGraph.outsideEdges
+      } yield Edge(Vertex(n1),Vertex(n2),Some(f))
+
+      val stateToAccept = for {
+        AbstractField(n,f) <- analysisResult.modifiedFields
+      } yield Edge(Vertex(n), accept, Some(f))
+
+      startToParameter ++ stateToState ++ stateToAccept
+    }
+
+    new NFA(start, states, transitions, accept)
+  }
 }

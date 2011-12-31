@@ -1,7 +1,7 @@
 /*
   Object that contains generic methods related to traversal and transformation of
   the Simple Java AST.
-  
+
   Author: Mads Hartmann Jensen
 */
 
@@ -10,18 +10,18 @@ package dk.itu.sdg.analysis
 import dk.itu.sdg.javaparser._
 
 object AST {
-  
-  def foldLeft[B](statements: List[SJStatement], z: B, f: (SJStatement,B) => B): B = 
+
+  def foldLeft[B](statements: List[SJStatement], z: B, f: (SJStatement,B) => B): B =
     statements.foldLeft(z) { (acc,stm) => foldFunc(stm,acc,f,foldLeft[B]) }
-  
-  def foldRight[B](statements: List[SJStatement], z: B, f: (SJStatement,B) => B): B = 
+
+  def foldRight[B](statements: List[SJStatement], z: B, f: (SJStatement,B) => B): B =
     statements.foldRight(z) { (stm,acc) => foldFunc(stm,acc,f,foldRight[B]) }
-  
+
   private def foldFunc[B](
-    stm: SJStatement, 
-    acc: B, 
+    stm: SJStatement,
+    acc: B,
     f: (SJStatement,B) => B,
-    direction: (List[SJStatement], B, (SJStatement,B) => B) => B): B = { 
+    direction: (List[SJStatement], B, (SJStatement,B) => B) => B): B = {
       stm match {
       case a@SJAssert(b)               => f(a,direction(List(b),acc,f))
       case a@SJWhile(b,c)              => f(a,direction(List(b),direction(c,acc,f),f))
@@ -39,9 +39,9 @@ object AST {
     }
   }
 
-  /** 
-   * Returns the result of applying f to each node in the tree 
-   * NOTE: It's very important that f only returns the same type as it's input. 
+  /**
+   * Returns the result of applying f to each node in the tree
+   * NOTE: It's very important that f only returns the same type as it's input.
    */
   def trans(statements: List[SJStatement],f: SJStatement => SJStatement): List[SJStatement] = {
 
@@ -63,126 +63,75 @@ object AST {
       case SJFieldRead(v, v2, field)     => f(SJFieldRead(facc(v),facc(v2),field))
       case SJReturn(ret)                 => f(SJReturn(transExpr(ret)))
       case SJCall(x,rec,fun,args)        => f(SJCall(x.map(facc(_)),transExpr(rec),fun,args.map(transExpr)))
-      case SJNewExpression(v, typ, args) => f(SJNewExpression(facc(v),typ,args.map(transExpr))) 
+      case SJNewExpression(v, typ, args) => f(SJNewExpression(facc(v),typ,args.map(transExpr)))
       case expr: SJExpression            => fexpr(expr)
     }}
   }
-  
+
   // Convenience methods on ASTs
-  
+
   def isUsed(variable: String, in: List[SJStatement]) = {
     in exists { stm => isWriting(variable,stm) || isReading(variable,stm) }
   }
-  
-  def isWriting(dead: String, statement: SJStatement): Boolean = foldRight(List(statement), false, { (stm: SJStatement, acc: Boolean) =>  
+
+  def isWriting(dead: String, statement: SJStatement): Boolean = foldRight(List(statement), false, { (stm: SJStatement, acc: Boolean) =>
     stm match {
       case SJNewExpression(SJVariableAccess(`dead`),_,_) => true
       case SJFieldWrite(SJVariableAccess(`dead`),_,_)    => true
       case SJAssignment(SJVariableAccess(`dead`),_)      => true
       case SJCall(_, SJVariableAccess(`dead`),_,_)       => true
-      case x                                             => acc || false 
+      case x                                             => acc || false
     }
   })
-  
-  def isReading(variable: String, in: SJStatement): Boolean = foldRight(List(in), false, { (stm: SJStatement, acc: Boolean) =>  
+
+  def isReading(variable: String, in: SJStatement): Boolean = foldRight(List(in), false, { (stm: SJStatement, acc: Boolean) =>
     stm match {
-      case SJVariableAccess(`variable`)                  => true 
+      case SJVariableAccess(`variable`)                  => true
       case SJReturn(SJVariableAccess(`variable`))        => true
       case SJFieldRead(SJVariableAccess(`variable`),_,_) => true
       case x                                             => acc || false
     }
   })
-  
+
   def transform(writesOf: String, toWritesOf: String, in: List[SJStatement]) = trans(in, _ match {
     case SJVariableAccess(`writesOf`) => SJVariableAccess(toWritesOf)
     case x => x
   })
-  
+
   def removeWritesOf(variable: String, in: List[SJStatement]) = {
     // It's only safe to remove writes of a variables if it might produce side-effects
     in filterNot { stm => isWriting(variable,stm) && !(stm.isInstanceOf[SJCall] || stm.isInstanceOf[SJNewExpression]) }
   }
-  
-  /** 
-   * Find all the SJStatements in a List of SJStatement where the given variable is 
-   * written. 
+
+  /**
+   * Find all the SJStatements in a List of SJStatement where the given variable is
+   * written.
    */
   def findStmsWithWritesOf(variable: String, in: List[SJStatement]): List[SJStatement] = {
     foldRight(in, Nil: List[SJStatement], (stm:SJStatement, acc: List[SJStatement]) => {
-      if (isWriting(variable,stm)) stm :: acc else acc 
+      if (isWriting(variable,stm)) stm :: acc else acc
     })
   }
-  
-  /** 
-   * Traverse the AST and find the name of all the variables that are written where the value 
+
+  /**
+   * Traverse the AST and find the name of all the variables that are written where the value
    * of 'variable' is read to produce the written value.
    */
   def findWriteVarsWhereVarIsRead(variable: String, in: List[SJStatement]): List[String] = {
-   
+
     val isReadingVariable = isReading(variable,_: SJStatement)
-    
+
     def rec(stm: SJStatement): List[String] = stm match {
       case SJCall(List(SJVariableAccess(w)), SJVariableAccess(`variable`),_,args) => List(w)
       case SJCall(List(SJVariableAccess(w)), SJVariableAccess(r),_,args)          => if (args.map(isReadingVariable).contains(true)) List(w) else Nil
       case SJNewExpression(SJVariableAccess(w),_,args)                            => if (args.map(isReadingVariable).contains(true)) List(w) else Nil
       case SJFieldWrite(SJVariableAccess(w),_,expr)                               => if (isReadingVariable(expr)) List(w) else Nil
-      case SJAssignment(SJVariableAccess(w),expr)                                 => if (isReadingVariable(expr)) List(w) else Nil 
-      case SJBinaryExpression(_,l,r) => 
-        val (x,y) = (rec(l),rec(r)) 
+      case SJAssignment(SJVariableAccess(w),expr)                                 => if (isReadingVariable(expr)) List(w) else Nil
+      case SJBinaryExpression(_,l,r) =>
+        val (x,y) = (rec(l),rec(r))
         if (x.isEmpty) { if (y.isEmpty) Nil else y } else x
       case x => Nil
     }
     foldRight(in, Nil: List[String], (stm: SJStatement,acc: List[String]) => rec(stm) ::: acc )
-  }
-    
-  import CallGraph.{ Invocation }
-  
-  /*
-   *  Construct a Call Graph from a given method. 
-   */
-  def extractCallGraph(cls: String, invokable: SJInvokable): G[Invocation] = {
-    
-    
-    val main = invokable match {
-      case SJMethodDefinition(_,id,_,_,_,_) => Vertex((cls,id)) // The root of the CG
-      case x: SJConstructorDefinition => Vertex((cls, "constructor"))
-    }
-                  
-    var visited = Map[Invocation,Boolean]()       // Keeps track which methods have been visited before.
-    val initialGraph = G(main, main :: Nil, Nil)  // initial graph. Only contains the root vertex, no edges.
-    
-    // Method that recurses through the AST in a depth first fashion. 
-    def recurse(vertex: Vertex[Invocation], invokable: SJInvokable, graph: G[Invocation]): G[Invocation] = {
-      
-      def wasSJCall(g: G[Invocation], reciever: String, methodName: String) = {
-        val recieverType = invokable.localvariables.get(reciever).get
-        val invocation   = (recieverType, methodName)
-        wasInvocation(g, invocation, SJTable.getMethodInClass(recieverType,methodName).get)
-      }
-      
-      def wasNexExpression(g: G[Invocation], typ: String) = {
-        val invocation = (typ,"constructor") // TODO: Find a better name than constructor.
-        wasInvocation(g, invocation, SJTable.getConstructor(typ).get)
-      }
-      
-      def wasInvocation(g: G[Invocation], invocation: Invocation, after: SJInvokable) = {
-        if (!visited.contains(invocation)) {
-          val v  = Vertex(invocation) 
-          val e  = Edge(vertex, v)
-          val g2 = g.copy (vertices = g.vertices :+ v,
-                           edges    = g.edges    :+ e )
-          visited = visited.updated(invocation, true)
-          recurse(v, after, g2)
-        } else recurse(vertex, after, g)
-      }
-      
-      foldLeft(invokable.body, graph, (stm, g: G[Invocation]) => stm match {
-        case SJCall(_,SJVariableAccess(reciever),methodName,_) => wasSJCall(g, reciever, methodName)
-        case SJNewExpression(_,typ,_) => wasNexExpression(g,typ)
-        case _ => g // Don't care about the rest of the nodes. 
-      })
-    }
-    
-    recurse(main,invokable,initialGraph)
   }
 }

@@ -8,8 +8,8 @@
 
 package dk.itu.sdg.analysis
 
-import dk.itu.sdg.analysis.CallGraph.{ Invocation }
 import dk.itu.sdg.javaparser._
+import dk.itu.sdg.analysis.CallGraph.{ Invocation }
 
 import scala.collection.immutable.{HashSet, HashMap}
 import scala.collection.mutable.{Queue}
@@ -143,8 +143,8 @@ object Purity {
    */
   def analysis(className: String, invokable: SJInvokable): Result = {
 
-    val callGraph  = AST.extractCallGraph(className, invokable)
-    val components = CallGraph.components(callGraph)
+    val callGraph  = CallGraph.fromAST(className, invokable)
+    val components = callGraph.components
 
     // Keep track of the result of analyzing the method
     var analyzedMethods = HashMap[Invocation, Result]()
