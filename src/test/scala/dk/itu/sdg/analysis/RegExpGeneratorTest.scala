@@ -19,7 +19,6 @@ class RegExpGeneratorTest extends FlatSpec with ShouldMatchers with ASTSpec {
 
   "Purity analysis on ListItr.next" should "record a mutation on this.cell" in {
     val result = getState("ListItr", listItrNextMethod)
-    result.prettyPrint
     RegExpGenerator.regularExpressions(result) should equal (List("next:this.cell"))
   }
 
@@ -35,7 +34,6 @@ class RegExpGeneratorTest extends FlatSpec with ShouldMatchers with ASTSpec {
 
   "Purity analysis on point.flip" should "mutate this.x & this.y" in {
     val result = getState("Point", pointFlip)
-    result.prettyPrint
     RegExpGenerator.regularExpressions(result) should equal (List("flip:this.x","flip:this.y"))
   }
 
@@ -46,7 +44,7 @@ class RegExpGeneratorTest extends FlatSpec with ShouldMatchers with ASTSpec {
 
   "Purity analysis on PurityAnalysisExample.flipAll" should "record mutations on list.head.next*.data.(x|y)" in {
     val result = getState("PurityAnalysisExample", flipAll)
-    RegExpGenerator.print(result)
+    // RegExpGenerator.print(result)
     println(RegExpGenerator.regularExpressions(result))
     // result.prettyPrint
     // RegExpGenerator.regularExpressions(result) should equal (List("list.head.next.data.x","list.head.next.data.y"))

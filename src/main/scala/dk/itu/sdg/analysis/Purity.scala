@@ -263,13 +263,13 @@ object Purity {
     map = mergeMap(map, mapping3Map)
 
     // Mapping 4
-    // Each non-parameter node should map to itself
+    // Each non-parameter node should map to itself 
     val mapping4Map: Map[Node,Set[Node]] = {
       val nonParameterNodes = gCallee.nodes.filter( !_.isInstanceOf[ParameterNode])
       HashMap( nonParameterNodes.zip(nonParameterNodes.map( HashSet(_) )).toList :_* )
     }
 
-    map = mergeMap(map, mapping4Map)
+    map = mergeMap(map, mapping4Map.filterKeys( !map.contains(_) )) // only extend with the nodes that haven't been mapped before
 
     // continue mapping until a fixed-point has been reached
     (n: Node) => {
@@ -316,13 +316,12 @@ object Purity {
       InsideEdge(n1,f,n2) <- gCallee.insideEdges
       mappedN1            <- mapping(n1)
       mappedN2            <- mapping(n2)
-    } yield InsideEdge(mappedN2, f, mappedN1)
+    } yield InsideEdge(mappedN1, f, mappedN2)
 
     val outsideEdges = for {
       OutsideEdge(n1, f, n2) <- gCallee.outsideEdges
       mappedN1               <- mapping(n1)
     } yield OutsideEdge(mappedN1, f, n2)
-
 
     val newStateOfLocalVars = (for {
       SJVariableAccess(name) <- varName
@@ -379,36 +378,48 @@ object Purity {
     } yield AbstractField(node, f)
   }
 
+  import TransferFunctions.{TFState}
+
   /**
    * Analyze a single method.
-   *
-   * Traverse the body from top to bottom transforming the Points-to-Graph on every
-   * statement on the way and (possibly) adding AbstractField to the writes set
    *
    * @param  invokable The method to analyze
    * @param  analyzed  A map of the currently analyzed methods
    * @return The points-to graph and set of modified abstract fields at the
    *         end of the method.
    */
-  def intraProcedural(invokable: SJInvokable, analyzed: HashMap[Invocation, Result]): Result = {
+  def intraProcedural(invokable: SJInvokable, analyzed: HashMap[Invocation, Result]): Result =
+    bulkTransfer(invokable.body, invokable, analyzed, TFState(initialStateOfMethod(invokable),0,0)).result
 
+  /**
+   * Traverse the statements from top to bottom transforming the Points-to-Graph on every
+   * statement on the way and (possibly) adding AbstractField to the writes set
+   */
+
+  private def bulkTransfer(statements: List[SJStatement], invokable: SJInvokable, analyzed: HashMap[Invocation, Result], st: TFState): TFState = {
     import TransferFunctions._
     import AST.{ foldLeft }
 
-    def transferFunction(stm: SJStatement, state: TFState): TFState = {
-      stm match {
+    var workList: List[SJStatement] = statements
+    var state: TFState = st
+
+    while(!workList.isEmpty) {
+      val stm = workList.head
+      workList = workList.tail
+      state = stm match {
         case SJAssignment(SJVariableAccess(v1), SJVariableAccess(v2))    => assignmentTF(stm, v1, v2, state)
         case SJNewExpression(SJVariableAccess(v),typ,arguments)          => newInstanceTF(stm, v, typ, invokable, state, arguments, analyzed)
         case SJFieldWrite(SJVariableAccess(v1), f, SJVariableAccess(v2)) => fieldWriteTF(stm, v1, f, v2, state)
         case SJReturn(SJVariableAccess(v))                               => returnTF(stm, v, state)
         case SJFieldRead(SJVariableAccess(v1), SJVariableAccess(v2), f)  => fieldReadTF(stm, v1,v2,f, invokable, state)
         case SJCall(value, SJVariableAccess(receiver), fun, arguments)   => callTF(stm, value, receiver, fun, arguments, invokable, analyzed, state)
+        case SJWhile(test,body)                                          => whileTF(stm, invokable, analyzed, state)
         case _                                                           => state
       }
     }
-    foldLeft(invokable.body, TFState(initialStateOfMethod(invokable),0,0), transferFunction).result
-  }
 
+    state
+  }
   /**
    * Given an Invocation it will return the correct SJMethodDefinition or SJConstructorDefinition
    *
@@ -478,6 +489,7 @@ object Purity {
                                 invokedMethod,
                                 args,
                                 state.result.pointsToGraph.stateOflocalVars(receiver).asInstanceOf[Set[Node]])
+
       val combined = combine(state.result.pointsToGraph, stateOfCall.pointsToGraph, mappingFunc, value)
       val simplified = simplify(combined)
 
@@ -622,6 +634,24 @@ object Purity {
           pointsToGraph = ptGraph(state).copy( stateOflocalVars = newStateOfLocalVars )
         )
       )
+    }
+
+    /*
+     * while(test){ body }
+     */
+    def whileTF(stm: SJStatement, invokable: SJInvokable, analyzed: HashMap[Invocation, Result], state: TFState): TFState = {
+      val SJWhile(test,body) = stm
+      var fixedPoint = false
+      var st = state
+      while(!fixedPoint) {
+        val newSt = bulkTransfer(test :: body, invokable, analyzed, st)
+        if (newSt == st) {
+          fixedPoint = true
+        } else {
+          st = newSt
+        }
+      }
+      st
     }
 
   }
