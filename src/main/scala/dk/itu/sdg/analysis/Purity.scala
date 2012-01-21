@@ -20,7 +20,7 @@ object Purity {
    *  public interface
    *  ====================================
    */
-
+ 
   def isPure(className: String, invokable: SJInvokable): Boolean =
     modifiedAbstractFields(className, invokable).isEmpty
 
@@ -108,6 +108,8 @@ object Purity {
       variables ++ inEdges
 
     }
+
+    def edges: Set[Edge] = insideEdges ++ outsideEdges
 
   }
 
@@ -462,7 +464,28 @@ object Purity {
     private def localVars(state: TFState) = state.result.pointsToGraph.stateOflocalVars
     private def ptGraph(state: TFState) = state.result.pointsToGraph
 
-    case class TFState(result: Result, insideNodeCount: Int, outsideNodeCount: Int)
+    case class TFState(result: Result, insideNodeCount: Int, outsideNodeCount: Int) {
+      override def toString() = {
+        ("Outside edges count: %d\n" +
+         "Inside edges count : %d\n" +
+         "Nodes count        : %d\n" + 
+         "Nodes              : %s\n" +
+         "Edges              : %s\n" + 
+         "Local variables    : %s\n"
+        ).format(result.pointsToGraph.outsideEdges.size, 
+                 result.pointsToGraph.insideEdges.size, 
+                 result.pointsToGraph.nodes.size,
+                 result.pointsToGraph.nodes.mkString("\n                     "),
+                 result.pointsToGraph.edges.mkString("\n                     "),
+                 result.pointsToGraph.stateOflocalVars.mkString("\n                     "))
+      }
+
+      override def equals(other: Any) = 
+        other match {
+          case TFState(`result`,_,_) => true
+          case _ => false 
+        }
+    }
 
     /*
      * v = f(...)
@@ -645,14 +668,54 @@ object Purity {
       var st = state
       while(!fixedPoint) {
         val newSt = bulkTransfer(test :: body, invokable, analyzed, st)
-        if (newSt == st) {
+
+        // Special case mapping. 
+        // let st be the graph before the loop iteration 
+        // let newSt be the graph produced by the loop iteration 
+        // Consider the Edge(n1,_,n2) from newSt that doesn't exist in st , i.e. an edge produced by the iteration
+        // if there exists an Edge(n1,_,n3) in st then map the node n2 to n3. 
+
+        val stEdges = ptGraph(st).edges
+        val newStEdges = ptGraph(newSt).edges
+
+        val mapping = {
+          
+          val tuples = (for {
+            edge <- newStEdges if !stEdges.contains(edge)
+            edge_ <- stEdges if edge_.n1 == edge.n1
+          } yield (edge.n2 -> edge_.n2)).groupBy( _._1 )
+                                        .map { case (key,value) => { (key -> value.map( _._2 ).toSet ) }}
+
+          (n: Node) => tuples.getOrElse(n, Set(n))
+        }
+        
+        val newOutsideEdges = for {
+          OutsideEdge(n1,f,n2) <- newStEdges
+          newN2 <- mapping(n2)
+        } yield OutsideEdge(n1,f,newN2)
+
+        val newInsideEdges = for {
+          OutsideEdge(n1,f,n2) <- newStEdges
+          newN2 <- mapping(n2)
+        } yield InsideEdge(n1,f,newN2)
+
+        val newStateOfLocalVars = ptGraph(newSt).stateOflocalVars.map { case (k,v) => 
+          (k -> v.flatMap( mapping(_) ))
+        }
+
+        val newSt_ = newSt.copy( result = newSt.result.copy (pointsToGraph = newSt.result.pointsToGraph.copy (
+          insideEdges = ptGraph(st).insideEdges ++ newInsideEdges,
+          outsideEdges = ptGraph(st).outsideEdges ++ newOutsideEdges,
+          stateOflocalVars = newStateOfLocalVars
+        )))
+
+        if (newSt_ == st) {
           fixedPoint = true
         } else {
-          st = newSt
+          st = newSt_
         }
       }
       st
     }
-
   }
 }
