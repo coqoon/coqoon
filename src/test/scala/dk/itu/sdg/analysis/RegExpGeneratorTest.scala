@@ -44,11 +44,7 @@ class RegExpGeneratorTest extends FlatSpec with ShouldMatchers with ASTSpec {
 
   "Purity analysis on PurityAnalysisExample.flipAll" should "record mutations on list.head.next*.data.(x|y)" in {
     val result = getState("PurityAnalysisExample", flipAll)
-    // RegExpGenerator.print(result)
-    println(RegExpGenerator.regularExpressions(result))
-    // result.prettyPrint
-    // RegExpGenerator.regularExpressions(result) should equal (List("list.head.next.data.x","list.head.next.data.y"))
-    true should equal (true)
+    RegExpGenerator.regularExpressions(result) should equal (List("list.head.next.data.x","list.head.next.data.y"))
   }
 
   val ast = getASTbyParsingFileNamed("PurityAnalysisExample.java", List("src", "test", "resources", "static_analysis", "source"))
