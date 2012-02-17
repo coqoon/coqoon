@@ -172,30 +172,28 @@ class RemoveDeadVariables extends FlatSpec with ShouldMatchers with ASTSpec {
 
 }
 
-class OptimizeVariables extends FlatSpec with ShouldMatchers {
+class OptimizeVariables extends FlatSpec with ShouldMatchers with ASTSpec {
 
   /*
     This fails. It's not able to optimize the code yet.
   */
   "Parsing Conditional3.txt (fails at the moment)" should "produce the correct AST" in {
-    val before = SJMethodDefinition(Set(),"bar","void",List(SJArgument("a","int")),
-        List(
-          SJFieldRead(SJVariableAccess("tmp_2"),SJVariableAccess("this"),"c"),
-          SJConditional(SJBinaryExpression("==",SJVariableAccess("a"),SJVariableAccess("tmp_2")),
-              List(SJAssignment(SJVariableAccess("tmp_1"),SJLiteral("20"))),
-              List(SJAssignment(SJVariableAccess("tmp_1"),SJLiteral("30")))),
-          SJFieldWrite(SJVariableAccess("this"),"b",SJVariableAccess("tmp_1"))),
-        HashMap("this" -> "Foo", "a" -> "int", "tmp_2" -> "int", "tmp_1" -> "Object"))
 
-    val after = SJMethodDefinition(Set(),"bar","void",List(SJArgument("a","int")),
+    val ast = getASTbyParsingFileNamed("Conditional3.txt", List("src", "test", "resources", "javaparser", "source"))
+
+    val after = List(SJClassDefinition(Set(),"Foo","",List(),List(
+      SJFieldDefinition(Set(),"c","int"),
+      SJFieldDefinition(Set(),"b","int"),
+      SJMethodDefinition(Set(),"bar","void",List(SJArgument("a","int")),
         List(
           SJFieldRead(SJVariableAccess("tmp_1"),SJVariableAccess("this"),"c"),
           SJConditional(SJBinaryExpression("==",SJVariableAccess("a"),SJVariableAccess("tmp_1")),
               List(SJFieldWrite(SJVariableAccess("this"),"b",SJLiteral("20"))),
               List(SJFieldWrite(SJVariableAccess("this"),"b",SJLiteral("30"))))),
-        HashMap("this" -> "Foo", "a" -> "int", "tmp_1" -> "int"))
+        HashMap("this" -> "Foo", "a" -> "int", "tmp_1" -> "int")),
+    SJConstructorDefinition(Set(Public()),"Foo",List(),List(),HashMap("this" -> "Foo"))),None,HashMap("b" -> "int", "c" -> "int")))
 
-    liveVariableRewrite(before) should equal (after)
+    removeDeadVariables(ast) should equal (after)
   }
 
   /*
@@ -203,18 +201,12 @@ class OptimizeVariables extends FlatSpec with ShouldMatchers {
     multiple occurences of a variable even though they could be optimized
   */
   "replacing multiple variables (fails at the moment)" should "replace a variable used at more places" in {
-    val before = SJMethodDefinition(Set(Static()), "test", "int",
-       List(SJArgument("n", "int")),
-       List(
-         SJAssignment(SJVariableAccess("tmp_1"), SJLiteral("42")),
-         SJConditional(SJBinaryExpression(">=", SJVariableAccess("n"), SJLiteral("0")),
-                       List(SJAssignment(SJVariableAccess("tmp_1"), SJBinaryExpression("+", SJVariableAccess("tmp_1"), SJLiteral("1")))),
-                       List(SJAssignment(SJVariableAccess("tmp_1"), SJBinaryExpression("-", SJVariableAccess("tmp_1"), SJLiteral("1"))))),
-         SJAssignment(SJVariableAccess("x"), SJVariableAccess("tmp_1")),
-         SJReturn(SJVariableAccess("x"))),
-       HashMap("tmp_1" -> "int", "x" -> "int"))
 
-    val after = SJMethodDefinition(Set(Static()), "test", "int",
+    val ast = getASTbyParsingFileNamed("MultipleOccurancesOfVariable.java", List("src", "test", "resources", "liveliness", "source"))
+
+    val after = List(SJClassDefinition(Set(),"MultipleOccurancesOfVariable","",List(),List(
+      SJFieldDefinition(Set(),"x","int"),
+      SJMethodDefinition(Set(Static()), "test", "int",
        List(SJArgument("n", "int")),
        List(
          SJAssignment(SJVariableAccess("x"), SJLiteral("42")),
@@ -222,8 +214,10 @@ class OptimizeVariables extends FlatSpec with ShouldMatchers {
                        List(SJAssignment(SJVariableAccess("x"), SJBinaryExpression("+", SJVariableAccess("x"), SJLiteral("1")))),
                        List(SJAssignment(SJVariableAccess("x"), SJBinaryExpression("-", SJVariableAccess("x"), SJLiteral("1"))))),
          SJReturn(SJVariableAccess("x"))),
-       HashMap("x" -> "int"))
+       HashMap("x" -> "int")),
+      SJConstructorDefinition(Set(Public()),"MultipleOccurancesOfVariable",List(),List(),HashMap("this" -> "MultipleOccurancesOfVariable"))
+    ),None,HashMap("x" -> "int")))
 
-    liveVariableRewrite(before) should equal (after)
+    removeDeadVariables(ast) should equal (after)
   }
 }
