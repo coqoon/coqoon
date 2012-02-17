@@ -4,7 +4,7 @@ import scala.collection.immutable.{ HashSet, HashMap }
 import org.scalatest.{ FlatSpec }
 import org.scalatest.matchers.{ ShouldMatchers }
 import org.scalatest.Ignore
-import dk.itu.sdg.javaparser._ 
+import dk.itu.sdg.javaparser._
 import dk.itu.sdg.analysis.Optimizer._
 
 class ReadWriteVariablesOfStatement extends FlatSpec with ShouldMatchers {
@@ -25,19 +25,18 @@ class ReadWriteVariablesOfStatement extends FlatSpec with ShouldMatchers {
     }
 }
 
-class RemoveDeadVariables extends FlatSpec with ShouldMatchers {
+class RemoveDeadVariables extends FlatSpec with ShouldMatchers with ASTSpec {
 
   "Removing dead variables" should "remove obviouslyDead in the example" in  {
-    val before = SJMethodDefinition(Set(Static()), "m","int",Nil,List(
-      SJAssignment(SJVariableAccess("obviouslyDead"),SJLiteral("42")),
-      SJReturn(SJLiteral("42"))
-    ),HashMap("obviouslyDead" -> "int"))
 
-    val after = SJMethodDefinition(Set(Static()), "m","int",Nil,List(
-      SJReturn(SJLiteral("42"))
-    ),HashMap[String,String]())
+    val ast = getASTbyParsingFileNamed("ObviouslyDead.java", List("src", "test", "resources", "liveliness", "source"))
 
-    liveVariableRewrite(before) should equal (after)
+    val after = List(SJClassDefinition(Set(),"ObviouslyDead","",Nil,List(
+      SJMethodDefinition(Set(Public()),"m","void",Nil,List(
+        SJReturn(SJLiteral("42"))),HashMap[String,String]()),
+    SJConstructorDefinition(Set(Public()),"ObviouslyDead",Nil,Nil,HashMap(("this","ObviouslyDead")))),None,HashMap[String,String]()))
+
+    removeDeadVariables(ast) should equal (after)
   }
 
   it should "not remove a dead variable in a while loop if it's read in the condition" in {
