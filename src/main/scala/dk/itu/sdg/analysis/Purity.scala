@@ -668,13 +668,6 @@ object Purity {
       var st = state
       while(!fixedPoint) {
         val newSt = bulkTransfer(test :: body, invokable, analyzed, st)
-
-        // Special case mapping. 
-        // let st be the graph before the loop iteration 
-        // let newSt be the graph produced by the loop iteration 
-        // Consider the Edge(n1,_,n2) from newSt that doesn't exist in st , i.e. an edge produced by the iteration
-        // if there exists an Edge(n1,_,n3) in st then map the node n2 to n3. 
-
         val stEdges = ptGraph(st).edges
         val newStEdges = ptGraph(newSt).edges
 
@@ -682,7 +675,7 @@ object Purity {
           
           val tuples = (for {
             edge <- newStEdges if !stEdges.contains(edge)
-            edge_ <- stEdges if edge_.n1 == edge.n1
+            edge_ <- stEdges if edge_.n1 == edge.n1 && edge.field == edge_.field
           } yield (edge.n2 -> edge_.n2)).groupBy( _._1 )
                                         .map { case (key,value) => { (key -> value.map( _._2 ).toSet ) }}
 
