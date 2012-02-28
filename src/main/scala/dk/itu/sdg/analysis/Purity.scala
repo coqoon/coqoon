@@ -20,7 +20,7 @@ object Purity {
    *  public interface
    *  ====================================
    */
- 
+
   def isPure(className: String, invokable: SJInvokable): Boolean =
     modifiedAbstractFields(className, invokable).isEmpty
 
@@ -48,9 +48,6 @@ object Purity {
 
   private def empty[B] = HashSet[B]()
 
-  // TODO: Fix when I generate unique labels for each statement.
-  // name of special variable that points to the nodes returned
-  // form a method. See page page 9 before section 5.3
   val RETURN_LABEL = "RETURN"
 
   trait Node { val lb: String }
@@ -58,6 +55,8 @@ object Purity {
   case class LoadNode(lb: String) extends Node
   case class EscapedNode(lb: String) extends Node
   case class ParameterNode(lb: String) extends Node
+
+  val NGBL = new Node { val lb = "NGBL" }
 
   trait Edge {
     val n1: Node
@@ -74,7 +73,7 @@ object Purity {
     insideEdges         : Set[InsideEdge],
     outsideEdges        : Set[OutsideEdge],
     stateOflocalVars    : Map[String, Set[_ <: Node]],
-    globallyEscapedNodes: Set[EscapedNode]) {
+    globallyEscapedNodes: Set[_ <: Node]) {
 
     // Using BFS for reachability. Has to check taking each of the nodes as the root
     def isReachable(node: Node, from: Node): Boolean = {
@@ -265,7 +264,7 @@ object Purity {
     map = mergeMap(map, mapping3Map)
 
     // Mapping 4
-    // Each non-parameter node should map to itself 
+    // Each non-parameter node should map to itself
     val mapping4Map: Map[Node,Set[Node]] = {
       val nonParameterNodes = gCallee.nodes.filter( !_.isInstanceOf[ParameterNode])
       HashMap( nonParameterNodes.zip(nonParameterNodes.map( HashSet(_) )).toList :_* )
@@ -416,6 +415,8 @@ object Purity {
         case SJFieldRead(SJVariableAccess(v1), SJVariableAccess(v2), f)  => fieldReadTF(stm, v1,v2,f, invokable, state)
         case SJCall(value, SJVariableAccess(receiver), fun, arguments)   => callTF(stm, value, receiver, fun, arguments, invokable, analyzed, state)
         case SJWhile(test,body)                                          => whileTF(stm, invokable, analyzed, state)
+        // TODO: Add C.f = v
+        // TODO: Add v = C.f
         case _                                                           => state
       }
     }
@@ -468,22 +469,22 @@ object Purity {
       override def toString() = {
         ("Outside edges count: %d\n" +
          "Inside edges count : %d\n" +
-         "Nodes count        : %d\n" + 
+         "Nodes count        : %d\n" +
          "Nodes              : %s\n" +
-         "Edges              : %s\n" + 
+         "Edges              : %s\n" +
          "Local variables    : %s\n"
-        ).format(result.pointsToGraph.outsideEdges.size, 
-                 result.pointsToGraph.insideEdges.size, 
+        ).format(result.pointsToGraph.outsideEdges.size,
+                 result.pointsToGraph.insideEdges.size,
                  result.pointsToGraph.nodes.size,
                  result.pointsToGraph.nodes.mkString("\n                     "),
                  result.pointsToGraph.edges.mkString("\n                     "),
                  result.pointsToGraph.stateOflocalVars.mkString("\n                     "))
       }
 
-      override def equals(other: Any) = 
+      override def equals(other: Any) =
         other match {
           case TFState(`result`,_,_) => true
-          case _ => false 
+          case _ => false
         }
     }
 
@@ -539,7 +540,8 @@ object Purity {
 
         val escapedNodes = ("this" :: invokable.parameters.map(_.id)).flatMap{ id => localVars(state).getOrElse(id, empty).toList } ++
                            localVars(state).getOrElse(RETURN_LABEL, empty) ++
-                           ptGraph(state).globallyEscapedNodes // TODO: Need Ngbl
+                           ptGraph(state).globallyEscapedNodes ++
+                           HashSet(NGBL)
 
         escapedNodes.exists(ptGraph(state).isReachable(n, _))
       }
@@ -660,6 +662,35 @@ object Purity {
     }
 
     /*
+     *  C.f = v
+     */
+    def staticStoreTF(v: String, state: TFState): TFState = {
+      // Simply add v to the set of escaped nodes because we have no control over what
+      // happens to static fields.
+      val newGloballyEscapedNodes = ptGraph(state).globallyEscapedNodes ++ localVars(state)(v)
+      state.copy(
+        result = state.result.copy(
+          pointsToGraph = ptGraph(state).copy( globallyEscapedNodes = newGloballyEscapedNodes )
+        )
+      )
+
+    }
+
+    /*
+     *  v = C.f
+     */
+    def staticReadTF(v: String, state: TFState): TFState = {
+      // We've read a static variable - we use NGBL to model static
+      // variables so the variable v should now point to the static variable.
+      val newStateOfLocalVars = localVars(state).updated(v, HashSet(NGBL))
+      state.copy(
+        result = state.result.copy(
+          pointsToGraph = ptGraph(state).copy( stateOflocalVars = newStateOfLocalVars )
+        )
+      )
+    }
+
+    /*
      * while(test){ body }
      */
     def whileTF(stm: SJStatement, invokable: SJInvokable, analyzed: HashMap[Invocation, Result], state: TFState): TFState = {
@@ -672,7 +703,7 @@ object Purity {
         val newStEdges = ptGraph(newSt).edges
 
         val mapping = {
-          
+
           val tuples = (for {
             edge <- newStEdges if !stEdges.contains(edge)
             edge_ <- stEdges if edge_.n1 == edge.n1 && edge.field == edge_.field
@@ -681,7 +712,7 @@ object Purity {
 
           (n: Node) => tuples.getOrElse(n, Set(n))
         }
-        
+
         val newOutsideEdges = for {
           OutsideEdge(n1,f,n2) <- newStEdges
           newN2 <- mapping(n2)
@@ -692,7 +723,7 @@ object Purity {
           newN2 <- mapping(n2)
         } yield InsideEdge(n1,f,newN2)
 
-        val newStateOfLocalVars = ptGraph(newSt).stateOflocalVars.map { case (k,v) => 
+        val newStateOfLocalVars = ptGraph(newSt).stateOflocalVars.map { case (k,v) =>
           (k -> v.flatMap( mapping(_) ))
         }
 

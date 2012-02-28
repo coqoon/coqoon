@@ -102,6 +102,16 @@ class PurityTestsByMads extends FlatSpec with ShouldMatchers with ASTSpec {
     modifiedAbstractFields("ParameterToArgument",existingAndModify) should equal (HashSet(AbstractField(ParameterNode("existingAndModify:person"),"name")))
   }
 
+  "AssignToStaticField (Currently fails b/c of parsing error)" should "..." in  {
+    val ast = getASTbyParsingFileNamed("AssignToStaticField.java", List("src", "test", "resources", "static_analysis", "source"))
+    true should equal (true) // TODO: Implement
+  }
+
+  "ReadFromStaticField (Currently fails b/c of parsing error)" should "..." in {
+    val ast = getASTbyParsingFileNamed("ReadFromStaticField.java", List("src", "test", "resources", "static_analysis", "source"))
+    true should equal (true) // TODO: Implement
+  }
+
   val ast2 = getASTbyParsingFileNamed("PurityAnalysisExample2.java", List("src", "test", "resources", "static_analysis", "source"))
   val swapNames = methodsOf("PersonModifier",ast2).filter(_.id == "swapNames").head
   val setName = methodsOf("PersonModifier",ast2).filter(_.id == "setName").head
