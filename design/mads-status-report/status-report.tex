@@ -99,8 +99,9 @@ is a field of a specific node, i.e., a pair of the form $<n,f>$.
 \begin{figure}[h!]
 \begin{center}
   \includegraphics[width=0.5\textwidth]{data-representation}
-  \caption{Representaton of data as presented in the paper}
 \end{center}
+\caption{Representaton of data as presented in the paper}
+\label{data-notation}
 \end{figure}
 
 \subsubsection*{Algorithm}
@@ -145,13 +146,13 @@ The inter-procedural analysis does four things:
 
 \subsubsection*{Using the results}
 
-Once the analysis is done we have a points-to graph for each method in
-the program. We use these to derive information abut the
-program. A \textbf{method is pure} if the set of modified abstract
-fields is empty. If a method isn't pure we can infer a regular
-expressions that describe all the pre-state locations modified by $m$.
-This  is simply done by constructing a finite state automaton $F$ with
-the following states:
+Once the analysis is done we have a points-to graph and a set of
+abstract modified fields for each method in the program. We use these
+to derive information abut the program. A \textbf{method is pure} if
+the set of modified abstract fields is empty. If a method isn't pure
+we can infer a regular expressions that describe all the pre-state
+locations modified by $m$. This  is simply done by constructing a
+finite state automaton $F$ with the following states:
 
 \begin{itemize}
   \setlength{\itemsep}{1pt}
@@ -179,43 +180,123 @@ all paths from the start state to the accepting state.
 
 \subsection{Implementation}
 
-The implementation can be found in the file
-\texttt{src/main/scala/dk/itu/sdg/analysis/Purity.scala} and the tests
-can be found in
-\texttt{src/test/scala/dk/itu/sdg/analysis/PurityTest.scala} and
-\texttt{src/test/scala/dk/itu/sdg/analysis/RegExpGeneratorTest.scala}.
-\newline
+\subsubsection*{Source Files Overview}
 
-I will attempt to give a high-level overview of the implementation
-covering the entry points and which pieces of code do what and. For a
-deeper understanding of the implementation I suggest reading the code
-and the paper side-by-side. \newline
+The following files are all placed in the folder
+\texttt{src/main/scala/dk/itu/sdg/analysis}
 
-\texttt{analysis(className: String, invokable: SJInvokable): Result}
-is the main entry point to the analysis. \texttt{className} is the
-name of the class that contains the method (this is only needed
-because \texttt{SJInvokable} doesn't have a reference to the class in
-which it is defined) and \texttt{invokable} is the method (or
-constructor) that you want to analyze. \texttt{Result} is simply a
-\texttt{case class} that contains the points-to graph of the method
-and the set of modified abstract fields. This method takes care of
-the fixed-point iteration when analyzing each of the strongly
-connected components of the call graph. \newline
+\begin{itemize}
+  \setlength{\itemsep}{1pt}
+  \setlength{\parskip}{0pt}
+  \item The purity analysis algorithm can be found in \texttt{Purity.scala}
+  \item The Strongly Connected Components Algorithm and other graph related code can be found in \texttt{Graph.scala}. The SCC algorithm is in the the trait \texttt{StronglyConnected}.
+  \item The construction of the regular expressions can be 
+  found in \texttt{RegExpGenerator.scala}
+\end{itemize}
 
-The method \texttt{bulkTransfer} takes care of analyzing a list of
-consecutive \texttt{SJStatement}s. It simply traverses the statements
-from top to bottom and uses the transfer functions to transform the
-points-to graph on every statement on the way and (possibly) adding
-AbstractField to the writes set. The object \texttt{TransferFunctions}
-contains methods for each of the transfer functions as defined in the
-paper. The \texttt{case class TFState} is used to model the state as
-each of the statements are being processed. \newline
+The tests of the various components can be found in the folder
+\texttt{src/test/scala/dk/itu/sdg/analysis/}
 
-\texttt{mapping} creates the appropriate node-mapping used when two
-points-to graphs needs to be merged and \texttt{combine} takes care of
-the actual merging of the two graphs. \newline
+\begin{itemize}
+  \setlength{\itemsep}{1pt}
+  \setlength{\parskip}{0pt}
+  \item \texttt{PurityTest.scala}
+  \item \texttt{RegExpGeneratorTest.scala}
+  \item \texttt{SCCTest.scala}
+\end{itemize}
 
-No mutable state is used in the implementation.
+\subsubsection*{Key Data Classes}
+
+Figure~\ref{code-data} shows the class declarations for the various
+data used in the implementation. Most of the  declaration are just
+translated directly from figure~\ref{data-notation}. It is less
+obvious what \texttt{TFState} and \texttt{Result} are used for;
+\texttt{Result} is used to model the result of invoking the analysis on a
+single method. It stores the final points-to graph and the set of
+modified abstract fields. \texttt{TFState}  is used to represent the
+state of the intra-procedural analysis as it  keeps track of the
+current points-to graph and set of modified fields through an instance
+of \texttt{Result} and the current number of inside and outside
+nodes. These counters are used to provide a unique name for each node
+when they are generated.
+
+\begin{figure}[t]
+\begin{lstlisting}
+trait Node { val lb: String }
+case class InsideNode(lb: String) extends Node
+case class LoadNode(lb: String) extends Node
+case class EscapedNode(lb: String) extends Node
+case class ParameterNode(lb: String) extends Node
+
+trait Edge {
+  val n1: Node
+  val field: String
+  val n2: Node
+}
+
+case class InsideEdge(n1: Node, field: String, n2: Node) extends Edge
+case class OutsideEdge(n1: Node, field: String, n2: Node) extends Edge
+
+case class AbstractField(node: Node, field: String)
+
+case class PTGraph(
+    insideEdges         : Set[InsideEdge],
+    outsideEdges        : Set[OutsideEdge],
+    stateOflocalVars    : Map[String, Set[_ <: Node]],
+    globallyEscapedNodes: Set[_ <: Node])
+
+case class Result(
+    pointsToGraph : PTGraph,
+    modifiedFields: Set[AbstractField])
+
+case class TFState(result: Result, insideNodeCount: Int, outsideNodeCount: Int)
+\end{lstlisting}
+\caption{Data class declaration as used in the implementation}
+\label{code-data}
+\end{figure}
+
+\subsubsection*{Run-through example}
+
+In this example I'll run through the implementation step-by-step as it
+would be executed when analyzing a program. The methods can be found
+in \texttt{Purity.scala} unless otherwise stated. \newline
+
+The main entry point is \texttt{isPure(className: String, invokable:
+SJInvokable)}. This invokes \texttt{modifiedAbstractFields} which is a
+secondary entry point that returns the set of abstract modified
+fields. This in turn invokes \texttt{analysis(className: String,
+invokable: SJInvokable): Result} which constructs the call-graph from
+the AST using the method \texttt{fromAST} in the object
+\texttt{CallGraph} found in \texttt{Graph.scala}. From this call-graph
+the Strongly Connected components are found using the method
+\texttt{components} of the call-graph object which is accessible
+because the class \texttt{CallGraph}  mixes in the
+\texttt{StronglyConnected} trait.  For each of the components we then
+use a work-list to invoke the  \texttt{intraProcedural} method on each method
+until at fixed-point has  been reached. If analyzing a method returns
+a points-to graph that is different from the one produced last time
+the method was analyzed then each method that invokes this method is
+added to the work-list. The case class TFState is used to model the
+state of the intra procedural analysis. The method
+\texttt{intraProcedural} simply create an initial  TFState and invokes
+the method \texttt{bulkTransfer}. \texttt{bulkTransfer} simply
+traverses each SJStatement and invokes the appropriate transfer
+function. each of the transfer functions are defined in the object
+TransferFunctions. Must important is the the transfer function for method
+invocations which is implemented by the \texttt{callTF} method. It gets the
+points-to graph of the method that is being invoked and constructs a node
+mapping using the \texttt{mapping} method. It passes this mapping to the 
+\texttt{combine} method which combines the two points-to graphs using the
+node mapping. Lastly the graph is simplified using \texttt{simplify} and 
+the set of abstract modified fields is updated. \newline
+
+If you want to generate the the regular expressions then you would
+invoke the method \texttt{regularExpressions} of the object
+\texttt{RegExpGenerator} with the result of invoking the method
+\texttt{getState}.
+
+
+\newpage
 
 \subsection{State of Completion}
 
