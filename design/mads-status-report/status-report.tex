@@ -23,6 +23,8 @@
 
 \paragraph{} This report contains the details of my work for Hannes on his PhD project Kopitiam during my employment. The purpose is not to explain the theory behind the work but rather give an overview of what I've worked on and the state of completion as I leave the project. the My work includes build system setup and different kinds of static analysis of Java programs. \newline \newline
 
+\newpage
+
 \tableofcontents
 
 \newpage
@@ -177,29 +179,64 @@ all paths from the start state to the accepting state.
 
 \subsection{Implementation}
 
-The implementation can be found in the file \texttt{src/main/scala/dk/itu/sdg/analysis/Purity.scala} and the tests can be found in \texttt{src/test/scala/dk/itu/sdg/analysis/PurityTest.scala} and \texttt{src/test/scala/dk/itu/sdg/analysis/RegExpGeneratorTest.scala}. \newline
+The implementation can be found in the file
+\texttt{src/main/scala/dk/itu/sdg/analysis/Purity.scala} and the tests
+can be found in
+\texttt{src/test/scala/dk/itu/sdg/analysis/PurityTest.scala} and
+\texttt{src/test/scala/dk/itu/sdg/analysis/RegExpGeneratorTest.scala}.
+\newline
 
-I will attempt to give a high-level overview of the implementation covering the entry points and which pieces of code do what and. For a deeper understanding of the implementation I suggest reading the code and the paper side-by-side. \newline
+I will attempt to give a high-level overview of the implementation
+covering the entry points and which pieces of code do what and. For a
+deeper understanding of the implementation I suggest reading the code
+and the paper side-by-side. \newline
 
-\texttt{analysis(className: String, invokable: SJInvokable): Result} is the main entry point to the analysis. \texttt{className} is the name of the class that contains the method (this is only needed because \texttt{SJInvokable} doesn't have a reference to the class in which it is defined) and \texttt{invokable} is the method (or constructor) that you want to analyze. \texttt{Result} is simply a \texttt{case class} that contains the points-to graph of the method and the set of modified abstract fields. This method takes care of the fixed-point iteration when analyzing each of the strongly connected components of the call graph. \newline
+\texttt{analysis(className: String, invokable: SJInvokable): Result}
+is the main entry point to the analysis. \texttt{className} is the
+name of the class that contains the method (this is only needed
+because \texttt{SJInvokable} doesn't have a reference to the class in
+which it is defined) and \texttt{invokable} is the method (or
+constructor) that you want to analyze. \texttt{Result} is simply a
+\texttt{case class} that contains the points-to graph of the method
+and the set of modified abstract fields. This method takes care of
+the fixed-point iteration when analyzing each of the strongly
+connected components of the call graph. \newline
 
-The method \texttt{bulkTransfer} takes care of analyzing a list of consecutive \texttt{SJStatement}s. It simply traverses the statements from top to bottom and uses the transfer functions to transform the points-to graph on every statement on the way and (possibly) adding AbstractField to the writes set. The object \texttt{TransferFunctions} contains methods for each of the transfer functions as defined in the paper. The \texttt{case class TFState} is used to model the state as each of the statements are being processed. \newline
+The method \texttt{bulkTransfer} takes care of analyzing a list of
+consecutive \texttt{SJStatement}s. It simply traverses the statements
+from top to bottom and uses the transfer functions to transform the
+points-to graph on every statement on the way and (possibly) adding
+AbstractField to the writes set. The object \texttt{TransferFunctions}
+contains methods for each of the transfer functions as defined in the
+paper. The \texttt{case class TFState} is used to model the state as
+each of the statements are being processed. \newline
 
-\texttt{mapping} creates the appropriate node-mapping used when two points-to graphs needs to be merged and \texttt{combine} takes case of the actual merging of the two graphs. \newline
+\texttt{mapping} creates the appropriate node-mapping used when two
+points-to graphs needs to be merged and \texttt{combine} takes care of
+the actual merging of the two graphs. \newline
 
 No mutable state is used in the implementation.
 
 \subsection{State of Completion}
 
-Largely the implementation works. For each of the examples in the paper the implementation is successful in detecting if a method is pure or not. Currently the test \texttt{PurityAnalysisExample.flipAll} fails but this is only because the modified path strings aren't being compressed, see \ref{subsub:mp}
+Largely the implementation works. For each of the examples in the
+paper the implementation is successful in detecting if a method is
+pure or not. Currently the test \texttt{PurityAnalysisExample.flipAll}
+fails but this is only because the modified path strings aren't being
+compressed, see \ref{subsub:mp}
 
-\subsubsection{Points-to graph simplification}
+\subsubsection*{Points-to graph simplification}
 
-The paper explain how to simplify the points-to graph after mering two points-to graphs after a method invocation. The current implementation doesn't do any of these simplifications. I have prepared the method \texttt{simplify} but it's currently the identity function.
+The paper explain how to simplify the points-to graph after merging
+two points-to graphs after a method invocation. The current
+implementation doesn't do any of these simplifications. I have
+prepared the method \texttt{simplify} but it's currently the identity
+function.
 
-\subsubsection{Static Fields}
+\subsubsection*{Static Fields}
 
-There are a couple of aspects of Java that the article covers but the current implementation doesn't. These are:
+There are a couple of aspects of Java that the article covers but the
+current implementation doesn't. These are:
 
 \begin{itemize}
   \setlength{\itemsep}{1pt}
@@ -209,12 +246,21 @@ There are a couple of aspects of Java that the article covers but the current im
   \item Static Fields
 \end{itemize}
 
-As I understand the two first points can be ignore in Kopitiam but the third one might be of interest. I have implemented the transfer functions related to static fields but due to a problem\footnote{See the mail to Hannes in the appendix describing this error in some more detail.} somewhere when the SimpleJava AST is being generated I haven't been able to complete the implementation. I have, however, added TODO comments in the code that describe what would need to be changed.
+As I understand the two first points can be ignore in Kopitiam but the
+third one might be of interest. I have implemented the transfer
+functions related to static fields but due to a problem\footnote{See
+the mail to Hannes in the appendix describing this error in some more
+detail.} somewhere when the SimpleJava AST is being generated I
+haven't been able to complete the implementation. I have, however,
+added TODO comments in the code that describe what would need to be
+changed.
 
-\subsubsection{Modified Paths}
+\subsubsection*{Modified Paths}
 \label{subsub:mp}
 
-With the current implementation it's possible to generate string that show the paths of the objects that are being modified (if any). I still need to add some compression to the strings such that
+With the current implementation it's possible to generate string that
+show the paths of the objects that are being modified (if any). I
+still need to add some compression to the strings such that
 
 \begin{itemize}
   \setlength{\itemsep}{1pt}
@@ -231,22 +277,36 @@ turns into: \texttt{foo.bar.next*.(x|y)}
 
 \subsection{Things not mentioned in the paper}
 
-There is one thing that wasn't completely clear from the paper and one thing that was neglected
+There is one thing that wasn't completely clear from the paper and one
+thing that was neglected
 
 \begin{itemize}
-  \item When a statement is of the form \texttt{v = new C} then in addition to invoking the transfer function as described in the paper it should also be considered a method invocation.
-  \item The article doesn't mention entirely how to deal with while loops so I had to improvise: let \texttt{G} be the graph before the loop iteration and let \texttt{G'} be the graph produced by the loop iteration. Consider the \texttt{Edge(n1,f,n2)} from \texttt{G'} that doesn't exist in \texttt{G}, i.e. an edge produced by the iteration. If there exists an \texttt{Edge(n1,f,n3)} in \texttt{G} then map the node \texttt{n2} to \texttt{n3}.
+  \item When a statement is of the form \texttt{v = new C} then in 
+        addition to invoking the transfer function as described in 
+        the paper it should also be considered a method invocation.
+  \item The article doesn't mention entirely how to deal with while loops 
+        so I had to improvise: let \texttt{G} be the graph before the loop 
+        iteration and let \texttt{G'} be the graph produced by the loop 
+        iteration. Consider the \texttt{Edge(n1,f,n2)} from \texttt{G'} 
+        that doesn't exist in \texttt{G}, i.e. an edge produced by the 
+        iteration. If there exists an \texttt{Edge(n1,f,n3)} in \texttt{G} 
+        then map the node \texttt{n2} to \texttt{n3}.
 \end{itemize}
 
 \newpage
 
 \section{Possible Code Improvements For When There's More Than 24h In A Day}
 
-This is a list of various possible improvements to the parts of the code base of Kopitiam that I've worked on.
+This is a list of various possible improvements to the parts of the
+code base of Kopitiam that I've worked on.
 
 \subsection{Lenses}
 
-In the purity analysis I use case classes to model the state of the algorithm. In an effort to stay sane these case classes are all immutable so I use the \texttt{copy} method when I need to make changes to the data structure. However, this gets quites messy when I want to change something deep in the data structure as shown below.
+In the purity analysis I use case classes to model the state of the
+algorithm. In an effort to stay sane these case classes are all
+immutable so I use the \texttt{copy} method when I need to make
+changes to the data structure. However, this gets quites messy when I
+want to change something deep in the data structure as shown below.
 
 \begin{figure}[h!]
   \begin{lstlisting}
@@ -260,7 +320,13 @@ In the purity analysis I use case classes to model the state of the algorithm. I
   \end{lstlisting}
 \end{figure}
 
-This answer\footnote{http://stackoverflow.com/questions/3900307/cleaner-way-to-update-nested-structures\#answer-5597750} on Stack Overflow contains information about lenses with references to a CS paper and blog posts with examples in Scala. You could hand-code the lenses for the appropriate case classes or if you're feeling brave use this compiler plugin\footnote{https://github.com/gseitz/Lensed} that generates them for you. \newline
+This answer\footnote{http://stackoverflow.com/questions/3900307
+/cleaner-way-to-update-nested-structures\#answer-5597750}  on Stack
+Overflow contains information about lenses with references to a CS
+paper and blog posts with examples in Scala. You could hand-code the
+lenses for the appropriate case classes or if you're feeling brave use
+this compiler plugin\footnote{https://github.com/gseitz/Lensed} that
+generates them for you. \newline
 
 With lenses you could change to code to something like this:
 
@@ -272,7 +338,16 @@ With lenses you could change to code to something like this:
 
 \subsection{Type-safe AST transformations}
 
-Currently when we're transforming the AST during static analysis we're using casting to make it compile. We could instead use the same approach as they do in the Scala compiler\footnote{https://github.com/scala/scala/blob/master/src/library/scala/reflect/api/Trees.scala\#L1035} where we simply define a Transformer abstract class with methods for each of the AST nodes we want to be able to rewrite. For a specific rewrite of the tree we then create a new instance of Transformer and override the tranformXXX method of the node we want to work with. An example of this is shown in figure \ref{transform_ast_scalac}.
+Currently when we're transforming the AST during static analysis we're
+using casting to make it compile. We could instead use the same
+approach as they do in the Scala compiler\footnote{https://github.com/
+scala/scala/blob/master/src/library/scala/reflect/api/Trees.scala\#L10
+35} where we simply define a Transformer abstract class with methods
+for each of the AST nodes we want to be able to rewrite. For a
+specific rewrite of the tree we then create a new instance of
+Transformer and override the tranformXXX method of the node we want to
+work with. An example of this is shown in figure
+\ref{transform_ast_scalac}.
 
 \section{Appendix}
 
