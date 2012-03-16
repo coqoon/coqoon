@@ -31,17 +31,110 @@
 
 \section{Build System}
 
-I switched the build system of the project to use the popular Scala build tool SBT (Simple Build Tool) and set up support for automated tests and automatic test coverage reports.
+I switched the build system of the project to use the popular Scala
+build tool SBT (Simple Build Tool) and set up support for automated
+tests and automatic test coverage reports.
+
+\newpage
 
 \section{Live variable analysis}
 
-I implemented a live variable analysis of Java programs. The goal of the analysis is to remove any dead variables introduced by our conversion from Java to Simple Java rather then attempt to improve the original Java programs written by the user of Kopitiam.
+\subsection{Motivation}
 
-\subsection{Details}
+The scope of this analysis is to remove any unneeded temporary
+variables introduced during the translation from Java to Simple Java
+and as such it is not a normal dead variables analysis; it's a dead
+variable analysis and then some. \newline
 
-The implementation can be found in the file \texttt{src/main/scala/dk/itu/sdg/analysis/Optimizer.scala} and the tests can be found in \texttt{src/test/scala/dk/itu/sdg/analysis/OptimizerTest.scala}. \newline
+It's a backwards analysis that traverses the program by blocks, so
+when we're analyzing a block we know all of the variables that are
+needed in the blocks of the rest of the program. \newline
 
-TODO: Write a little about the data-structures and high-level algorithm.
+If a variable is written in a block but not used in the rest of the
+blocks then we might be able to remove the use of that variable. It's
+not a dead variable in the usual sense because it might be used in 
+this block but because it's not used in the rest of the blocks we're
+free to fiddle with it. \newline
+
+An example would be this Simple Java Program. \newline
+
+\begin{lstlisting}
+class Fac {
+  static int fac (int n) {
+    int x;
+    int tmp_1;
+    if (n >= 0) {
+      tmp_1 = this.fac(n - 1);
+      x = n * tmp_1;
+    } else {
+      x = 1;
+    };
+    return x;
+  }
+}
+\end{lstlisting}
+
+In this case it would be much nicer if we could remove that temporary
+variable tmp\_1 so we would have  \newline
+
+\begin{lstlisting}
+class Fac {
+  static int fac (int n) {
+    int x;
+
+    if (n >= 0) {
+      x = this.fac(n - 1);
+      x = n * x;
+    } else {
+      x = 1;
+    };
+    return x;
+  }
+}
+\end{lstlisting}
+    
+This is still a valid Simple Java program but it doesn't use the temporary 
+variable tmp\_1
+
+\subsection{High Level Algorithm}
+
+The analysis traverses the method body backwards by block. For each
+block it calculates the set of variables that the block reads and
+writes and uses this information to construct a set of variables that
+are live at the beginning of the block. \newline
+
+If a variable is written to in the current block but isn't in the live
+set calculated from the previous block then it means that the rest of
+the method doesn't need the value we just wrote and it's only used in
+the current block; i.e. we might be able to remove it. In this case we
+attempt to rewrite the block. \newline
+
+TODO: Write a bit about the re-write rules we use.
+
+\subsection{Implementation}
+
+The implementation can be found in the file 
+\texttt{src/main/scala/dk/itu/sdg/analysis/Optimizer.scala} and the tests 
+can be found in 
+\texttt{src/test/scala/dk/itu/sdg/analysis/OptimizerTest.scala}. \newline
+
+You can run the analysis on a source file by typing the following in
+an SBT session \texttt{run relative-path} and pick the main method 
+\texttt{dk.itu.sdg.javaparser.SimpleJavaOptimizedMain} which will
+translate the Java file to Simple Java and run optimize that. It will
+print out the original Java program, the simple Java program and the
+optimized simple Java program. \newline
+
+\texttt{removeDeadVariables} is the main entry point. It invokes 
+\texttt{liveVariableRewrite} which traverses the method body in 
+reverse order block by block. For each block it keeps track of 
+the live variables represented using a \texttt{HashSet[String]}. 
+Whenever it finds a block that writes to a variable that is dead
+after the block it invokes \texttt{rewrite} which takes care of 
+the actual rewriting of the AST. The method \texttt{rwOfStatement}
+and \texttt{rwOfStatements} returns the set of variables that are
+written/read by that statement(s) represented using the case class
+\texttt{ReadsAndWrites}.
 
 \subsection{State of Completion}
 
