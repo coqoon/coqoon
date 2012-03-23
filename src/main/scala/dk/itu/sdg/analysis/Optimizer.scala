@@ -14,12 +14,19 @@ object Optimizer {
 
   type Variables = HashSet[String]
 
-  case class ReadsAndWrites(reads: Variables = 
+  case class IfPullOut(
+    replaceUsesOf: String,
+    withUsesOf: String,
+    pullOut: SJStatement,
+    remove: List[SJStatement]
+  )
+
+  case class ReadsAndWrites(reads: Variables =
     new HashSet(), writes: Variables = new HashSet())
 
-  // 
+  //
   // Removes dead variables from an entire program, each method at a time.
-  // 
+  //
   def removeDeadVariables(definitions: List[SJDefinition]): List[SJDefinition] = {
 
     def process(xs: List[SJBodyDefinition]): List[SJBodyDefinition] = xs map {
@@ -33,9 +40,9 @@ object Optimizer {
     }
   }
 
-  // 
+  //
   // Rewrites the SJMethodDefinition to remove any dead variables.
-  // 
+  //
   def liveVariableRewrite(method: SJMethodDefinition): SJMethodDefinition = {
 
     @tailrec
@@ -48,32 +55,20 @@ object Optimizer {
         val deadInBlock    = findDeadVariables(live, currentBlock)
         val processedBlock = deadInBlock.map( deads => rewrite(deads, currentBlock, method) )
         processedBlock.getOrElse(currentBlock) ::: processed
-      
+
       case x :: xs =>
         x match {
-          case SJConditional(cond, consequent, alternative) =>
-          {
-            // Process the block after the current SJConditional (i.e. the current block)
+
+          case cond: SJConditional => {
+            // Process the block 'after' the conditional
             val rwOfBlock = rwOfStatements(currentBlock).getOrElse(ReadsAndWrites())
             val cBlockProcced = findDeadVariables(live, currentBlock).map(rewrite(_, currentBlock, method)).getOrElse(currentBlock)
             val newLive = (rwOfBlock.reads ++ live).filterNot( rwOfBlock.writes.contains(_) )
-
-            // now process the SJConditional.
-            val newConsequent  = findDeadVariables(newLive, consequent).map(rewrite(_, consequent, method)).getOrElse(consequent)
-            val newAlternative = findDeadVariables(newLive, alternative).map(rewrite(_, alternative, method)).getOrElse(alternative)
-            val rwConsequent   = rwOfStatements(consequent).getOrElse(ReadsAndWrites())
-            val rwAlternative  = rwOfStatements(alternative).getOrElse(ReadsAndWrites())
-            val rwOfCond       = rwOfStatement(cond).getOrElse(ReadsAndWrites())
-
-
-            val nextLive = newLive.filterNot( x => rwConsequent.writes.contains(x) || rwAlternative.writes.contains(x) ) ++
-              (rwOfCond.reads ++ rwConsequent.reads ++ rwAlternative.reads)
-
-            rec(xs,Nil, SJConditional(cond, newConsequent, newAlternative) :: cBlockProcced ::: processed, nextLive)
+            val (newProcssed, nextLive) = removeSuperfluousInConditional(cond, newLive, method)
+            rec(xs,Nil, newProcssed ::: cBlockProcced ::: processed, nextLive)
           }
 
-          case SJWhile(cond, body) =>
-          {
+          case SJWhile(cond, body) => {
             // Process the block after the current SJWhile (i.e. the current block)
             val rwOfBlock = rwOfStatements(currentBlock).getOrElse(ReadsAndWrites())
             val cBlockProcced = findDeadVariables(live, currentBlock).map(rewrite(_, currentBlock, method)).getOrElse(currentBlock)
@@ -94,21 +89,92 @@ object Optimizer {
     }
 
     val newBody = rec(method.body.reverse)
-    
+
     // remove any local variables from the methods 'localvariables' that are no longer used.
     val variables = for { (k,v) <- method.localvariables if isUsed(variable = k, in = newBody) } yield (k,v)
 
     method.copy( body = newBody, localvariables = variables )
   }
 
-  // 
-  // the rewrite algorithm. Given a set of dead variables, i.e. variables 
-  // that are written in this block but not read in the blocks following 
-  // it and a list of SJStatements (representing a block) rewrite the block 
-  // to remove any unnecessary temporary variables 
-  // 
-  def rewrite(deads: HashSet[String], 
-              statements: List[SJStatement], 
+  //
+  // Remove any superfluous temporary variables introduced by the transformation to
+  // Simple Java.
+  //
+  // If the same field of an object is read in both branches it will introduce two
+  // temporary variables where just one would be sufficient; In this case we simply
+  // move the statement that reads the field in the 'consequent' branch out and place
+  // it before the conditional. We then remove the SJField reads in both branches and
+  // rename the use of the variable in the 'alternative' branch.
+  //
+  def removeSuperfluousInConditional(
+    conditional: SJConditional,
+    live: HashSet[String],
+    method: SJMethodDefinition): (List[SJStatement], HashSet[String]) = {
+
+    val SJConditional(cond, consequent, alternative) = conditional
+
+    val deadInConsequent  = findDeadVariables(live, consequent)
+    val deadInAlternative = findDeadVariables(live, alternative)
+
+    val stmsWrintingToDeadInCons = deadInConsequent.map(_.flatMap( findStatementsWritingTo(_, consequent) ).toList )
+    val stmsWrintingToDeadInAlt  = deadInAlternative.map (_.flatMap( findStatementsWritingTo(_, alternative) ).toList )
+
+    val possbileTransformation = for {
+      inAlt  <- stmsWrintingToDeadInAlt
+      inCons <- stmsWrintingToDeadInCons
+    } yield {
+      findPossiblePullOuts(inAlt, inCons)
+    }
+
+    val possiblyNew = possbileTransformation.map { (xs: List[IfPullOut]) =>
+      xs.foldLeft( (consequent, alternative) ) { (result, pullout) =>
+
+        val (cons, alt) = result
+
+        val removedCons  = cons.filterNot { pullout.remove.contains(_) }
+        val replacedCons = repalceReads(pullout.replaceUsesOf, pullout.withUsesOf, removedCons)
+
+        val removedAlt  = alt.filterNot { pullout.remove.contains(_) }
+        val replacedAlt = repalceReads(pullout.replaceUsesOf, pullout.withUsesOf, removedAlt)
+
+        (replacedCons, replacedAlt)
+      }
+    }
+
+    val pulledOutConsequent  = possiblyNew.map( _._1 ).getOrElse(consequent)
+    val pulledOutAlternative = possiblyNew.map( _._2 ).getOrElse(alternative)
+
+    // Now remove normal temporary variable in each block of the conditional.
+    val newConsequent  = findDeadVariables(live, pulledOutConsequent)
+                          .map(rewrite(_, pulledOutConsequent, method))
+                          .getOrElse(pulledOutConsequent)
+
+    val newAlternative = findDeadVariables(live, pulledOutAlternative)
+                          .map(rewrite(_, pulledOutAlternative, method))
+                          .getOrElse(pulledOutAlternative)
+
+    val rwConsequent   = rwOfStatements(newConsequent).getOrElse(ReadsAndWrites())
+    val rwAlternative  = rwOfStatements(newAlternative).getOrElse(ReadsAndWrites())
+    val rwOfCond       = rwOfStatement(cond).getOrElse(ReadsAndWrites())
+
+    val nextLive = live.filterNot( x => rwConsequent.writes.contains(x) || rwAlternative.writes.contains(x) ) ++
+      (rwOfCond.reads ++ rwConsequent.reads ++ rwAlternative.reads)
+
+    val prelude = possbileTransformation.map( _.map(_.pullOut) ).getOrElse(Nil)
+
+    val newProcssed = prelude ::: (SJConditional(cond, newConsequent, newAlternative) :: Nil)
+
+    (newProcssed, nextLive)
+  }
+
+  //
+  // the rewrite algorithm. Given a set of dead variables, i.e. variables
+  // that are written in this block but not read in the blocks following
+  // it and a list of SJStatements (representing a block) rewrite the block
+  // to remove any unnecessary temporary variables
+  //
+  def rewrite(deads: HashSet[String],
+              statements: List[SJStatement],
               method: SJMethodDefinition): List[SJStatement] = {
 
     rwOfStatements(statements).map { rw =>
@@ -132,10 +198,10 @@ object Optimizer {
 
   }
 
-  // 
-  // Given two variables and a method definition it checks if the two 
+  //
+  // Given two variables and a method definition it checks if the two
   // variables have the same type in that method.
-  // 
+  //
   def hasSameType(x: String, y: String, method: SJMethodDefinition) =
       method.localvariables(x) == method.localvariables(y)
 
@@ -143,8 +209,8 @@ object Optimizer {
   // Given a list of variable that are read after the list of SJStatements (live) find
   // any dead variables. A variable is dead if it's written but not in the 'live' set. I.e.
   // because the analysis is backwards when we hit this block we know that none of the
-  // blocks coming after this one actually reads the variable 
-  // 
+  // blocks coming after this one actually reads the variable
+  //
   def findDeadVariables(live: Set[String], statements: List[SJStatement]): Option[HashSet[String]] = {
     val rw = rwOfStatements(statements).getOrElse(ReadsAndWrites())
     val dead = rw.writes.filterNot(live.contains(_))
@@ -154,31 +220,31 @@ object Optimizer {
   //
   // Given a SJStatement it will return Some(ReadsAndWrites) with the variable being
   // read/written. None if no variable are read/written
-  // 
+  //
   def rwOfStatement(statement: SJStatement): Option[ReadsAndWrites] = {
     def recursive(stm: SJStatement, before: Option[ReadsAndWrites]): Option[ReadsAndWrites] = {
       val after = (stm match {
 
-        case SJVariableAccess(r) => 
+        case SJVariableAccess(r) =>
           Some(ReadsAndWrites( reads = HashSet(r)))
 
-        case SJReturn(SJVariableAccess(r)) => 
+        case SJReturn(SJVariableAccess(r)) =>
           Some(ReadsAndWrites( reads = HashSet(r)))
 
-        case SJFieldRead(SJVariableAccess(w),SJVariableAccess(r),_) => 
+        case SJFieldRead(SJVariableAccess(w),SJVariableAccess(r),_) =>
           Some(ReadsAndWrites(HashSet(r), HashSet(w)))
 
         case SJNewExpression(SJVariableAccess(w),_,args) =>
           val writes = Some(ReadsAndWrites( writes = HashSet(w)))
           merge(rwOfStatements(args, writes), before)
 
-        case SJFieldWrite(SJVariableAccess(w),_,expr) => 
+        case SJFieldWrite(SJVariableAccess(w),_,expr) =>
           recursive(expr, merge(Some(ReadsAndWrites( writes = HashSet((w)))), before))
 
-        case SJAssignment(SJVariableAccess(w),expr) => 
+        case SJAssignment(SJVariableAccess(w),expr) =>
           recursive(expr, merge(Some(ReadsAndWrites( writes = HashSet((w)))), before))
 
-        case SJBinaryExpression(_,l,r) => 
+        case SJBinaryExpression(_,l,r) =>
           merge(merge(before, recursive(l,None)),recursive(r,None))
 
         case SJCall(value, a:SJVariableAccess,_,args) =>
@@ -193,20 +259,63 @@ object Optimizer {
     recursive(statement, None)
   }
 
-  // 
+  //
   // @see rwOfStatements. Does the same but on a List of SJStatements
-  // 
+  //
   def rwOfStatements(statements: List[SJStatement], initial: Option[ReadsAndWrites] = Some(ReadsAndWrites())): Option[ReadsAndWrites] = {
     statements.map(rwOfStatement(_)).foldLeft(initial){ (acc, current) => merge(current, acc) }
   }
 
-  // 
+  //
   // Merges two option wrapped instances of ReadsAndWrites.
-  // 
+  //
   private def merge(x: Option[ReadsAndWrites], y: Option[ReadsAndWrites]) = (x,y) match {
     case (None, Some(q))   => Some(q)
     case (Some(q), None)   => Some(q)
     case (None, None)      => None
     case (Some(p),Some(q)) => Some(ReadsAndWrites(p.reads ++ q.reads, p.writes ++ q.writes))
   }
+
+  //
+  // Returns a list of all SJFieldRead that stores its value in 'to'
+  //
+  private def findStatementsWritingTo(to: String, block: List[SJStatement]): List[SJStatement] = {
+    AST.foldRight(block, Nil, { (stm: SJStatement, acc: List[SJStatement]) =>
+      stm match {
+        case stm @ SJFieldRead(SJVariableAccess(`to`),_,_) => stm :: acc
+        case _ => acc
+      }
+    })
+  }
+
+  //
+  // Replace all reads of the variable 'of' with reads of the variable
+  // 'use'.
+  //
+  def repalceReads( of: String, to: String, in: List[SJStatement] ) = AST.trans(in, (x: SJStatement) =>
+    x match {
+      case SJVariableAccess(`of`) => SJVariableAccess(to)
+      case x => x
+    })
+
+  //
+  // Given the two blocks of a conditional it will find candidates to
+  // be 'pulled' out of the branches to the prelude of the conditional
+  //
+  // @see removeSuperfluousInConditional for why we want this
+  //
+  def findPossiblePullOuts(alternative: List[SJStatement], consequent: List[SJStatement]): List[IfPullOut] = {
+    consequent.flatMap {
+      case stm1 @ SJFieldRead(SJVariableAccess(toUse),a,b) => alternative.collect {
+        case stm2 @ SJFieldRead(SJVariableAccess(toRemove),`a`,`b`) =>
+          IfPullOut( replaceUsesOf = toRemove,
+                     withUsesOf = toUse,
+                     pullOut = stm1,
+                     remove = List(stm1, stm2) )
+      }
+      case _ => Nil
+    }
+  }
+
+
 }

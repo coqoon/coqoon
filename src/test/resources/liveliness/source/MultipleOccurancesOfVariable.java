@@ -1,11 +1,13 @@
 class MultipleOccurancesOfVariable {
-    int x;
-    public void m(int n) {
-        if (n >= 0) {
-            x += 1;
-        } else {
-            x -= 1;
-        }
-        return x;
+
+  int x;
+
+  int test(int n) {
+    if (n >= 0) {
+      this.x += 1;
+    } else {
+      this.x -= 1;
     }
+    return x;
+  }
 }

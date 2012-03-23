@@ -138,10 +138,6 @@ class RemoveTemporaryVariables extends FlatSpec with ShouldMatchers with ASTSpec
 
   }
 
-}
-
-class OptimizeVariables extends FlatSpec with ShouldMatchers with ASTSpec {
-
   /*
     This fails. It's not able to optimize the code yet.
   */
@@ -168,24 +164,27 @@ class OptimizeVariables extends FlatSpec with ShouldMatchers with ASTSpec {
     This fails. It shows that the dead variable rewrite currently isn't mature enough to deal with
     multiple occurences of a variable even though they could be optimized
   */
-  "replacing multiple variables (fails at the moment)" should "replace a variable used at more places" in {
+  "replacing multiple variables" should "replace a variable used at more places" in {
 
     val ast = getASTbyParsingFileNamed("MultipleOccurancesOfVariable.java", List("src", "test", "resources", "liveliness", "source"))
 
-    val after = List(SJClassDefinition(Set(),"MultipleOccurancesOfVariable","",List(),List(
-      SJFieldDefinition(Set(),"x","int"),
-      SJMethodDefinition(Set(Static()), "test", "int",
-       List(SJArgument("n", "int")),
-       List(
-         SJAssignment(SJVariableAccess("x"), SJLiteral("42")),
-         SJConditional(SJBinaryExpression(">=", SJVariableAccess("n"), SJLiteral("0")),
-                       List(SJAssignment(SJVariableAccess("x"), SJBinaryExpression("+", SJVariableAccess("x"), SJLiteral("1")))),
-                       List(SJAssignment(SJVariableAccess("x"), SJBinaryExpression("-", SJVariableAccess("x"), SJLiteral("1"))))),
-         SJReturn(SJVariableAccess("x"))),
-       HashMap("x" -> "int")),
+    val after = List(SJClassDefinition(Set(),"MultipleOccurancesOfVariable","",List(),
+      List(
+        SJFieldDefinition(Set(),"x","int"), 
+        SJMethodDefinition(Set(),"test","int",List(SJArgument("n","int")),List(
+          SJFieldRead(SJVariableAccess("tmp_1"),SJVariableAccess("this"),"x"), 
+          SJConditional(SJBinaryExpression(">=",SJVariableAccess("n"),SJLiteral("0")),
+            List(SJFieldWrite(SJVariableAccess("this"),"x",SJBinaryExpression("+",SJVariableAccess("tmp_1"),SJLiteral("1")))),
+            List(SJFieldWrite(SJVariableAccess("this"),"x",SJBinaryExpression("-",SJVariableAccess("tmp_1"),SJLiteral("1"))))), 
+          SJFieldRead(SJVariableAccess("tmp_3"),SJVariableAccess("this"),"x"), 
+          SJReturn(SJVariableAccess("tmp_3"))),
+      HashMap("this" -> "MultipleOccurancesOfVariable", "n" -> "int", "tmp_3" -> "int", "tmp_1" -> "int")), 
       SJConstructorDefinition(Set(Public()),"MultipleOccurancesOfVariable",List(),List(),HashMap("this" -> "MultipleOccurancesOfVariable"))
     ),None,HashMap("x" -> "int")))
 
     removeDeadVariables(ast) should equal (after)
   }
+
 }
+
+

@@ -88,7 +88,7 @@ object AST {
     stm match {
       case SJVariableAccess(`variable`)                  => true
       case SJReturn(SJVariableAccess(`variable`))        => true
-      case SJFieldRead(SJVariableAccess(`variable`),_,_) => true
+      case SJFieldRead(SJVariableAccess(`variable`),_,_) => true //TODO, isn't this wrong? Shouldn't it be SJFieldRead(_, ..., _)
       case x                                             => acc || false
     }
   })
@@ -134,4 +134,6 @@ object AST {
     }
     foldRight(in, Nil: List[String], (stm: SJStatement,acc: List[String]) => rec(stm) ::: acc )
   }
+
+
 }
