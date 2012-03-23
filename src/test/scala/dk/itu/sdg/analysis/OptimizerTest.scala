@@ -25,21 +25,9 @@ class ReadWriteVariablesOfStatement extends FlatSpec with ShouldMatchers {
     }
 }
 
-class RemoveDeadVariables extends FlatSpec with ShouldMatchers with ASTSpec {
+class RemoveTemporaryVariables extends FlatSpec with ShouldMatchers with ASTSpec {
 
-  "Removing dead variables" should "remove obviouslyDead in the example" in  {
-
-    val ast = getASTbyParsingFileNamed("ObviouslyDead.java", List("src", "test", "resources", "liveliness", "source"))
-
-    val after = List(SJClassDefinition(Set(),"ObviouslyDead","",Nil,List(
-      SJMethodDefinition(Set(Public()),"m","void",Nil,List(
-        SJReturn(SJLiteral("42"))),HashMap[String,String]()),
-    SJConstructorDefinition(Set(Public()),"ObviouslyDead",Nil,Nil,HashMap(("this","ObviouslyDead")))),None,HashMap[String,String]()))
-
-    removeDeadVariables(ast) should equal (after)
-  }
-
-  it should "not remove a dead variable in a while loop if it's read in the condition" in {
+  "Removing dead variables" should "not remove a dead variable in a while loop if it's read in the condition" in {
     val before = SJMethodDefinition(Set(Static()), "sum", "int", Nil, List(
       SJAssignment(SJVariableAccess("keepGoing"),SJLiteral("true")),
       SJAssignment(SJVariableAccess("sum"),SJLiteral("0")),
@@ -57,8 +45,8 @@ class RemoveDeadVariables extends FlatSpec with ShouldMatchers with ASTSpec {
     liveVariableRewrite(before) should equal (after)
   }
 
-  it should """not remove a dead variable if it's using SJNewExpression in the
-               assignment of the variable as it might have side-effects""" in {
+  it should ("not remove a dead variable if it's using SJNewExpression" +
+             "in the assignment of the variable as it might have side-effects") in {
 
     val before = SJMethodDefinition(Set(Static()), "m","int",Nil,List(
                    SJNewExpression(SJVariableAccess("obviouslyDead"),"Number",List(SJLiteral("42"))),
@@ -71,8 +59,8 @@ class RemoveDeadVariables extends FlatSpec with ShouldMatchers with ASTSpec {
 
   }
 
-  it should """not remove a dead variable if it's using SJCall in the
-               assignment of the variable as it might have side-effects""" in {
+  it should ("not remove a dead variable if it's using SJCall in the" +
+             "assignment of the variable as it might have side-effects") in {
 
     val before = SJMethodDefinition(Set(Static()), "m","int",Nil,List(
                    SJCall(Some(SJVariableAccess("obviouslyDead")),SJVariableAccess("obj"),"randomInt",Nil),
