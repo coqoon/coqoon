@@ -73,46 +73,26 @@ class RemoveTemporaryVariables extends FlatSpec with ShouldMatchers with ASTSpec
 
   }
 
-  "Replacing dead variables" should "replace tmp_1 with x in fac" in {
-    val before = SJMethodDefinition(Set(Static()), "fac", "int",
-      List(SJArgument("n", "int")), List(
+  "Remove Superfluous Temporary Variables" should "replace tmp_1 with x in fac" in {
+    
+    val ast = getASTbyParsingFileNamed("Fac2.txt", List("src", "test", "resources", "javaparser", "source"))
+
+    val after = List(SJClassDefinition(Set(),"Fac","",List(),List(
+      SJMethodDefinition(Set(Static()), "fac", "int",List(SJArgument("n", "int")), List(
         SJConditional(SJBinaryExpression(">=", SJVariableAccess("n"), SJLiteral("0")),
           List(
-            SJCall(
-              Some(SJVariableAccess("tmp_1")),
-              SJVariableAccess("this"),
-              "fac",
-              List(SJBinaryExpression("-", SJVariableAccess("n"), SJLiteral("1")))
-            ),
-            SJAssignment(SJVariableAccess("x"), SJBinaryExpression("*", SJVariableAccess("n"), SJVariableAccess("tmp_1")))
+            SJCall(Some(SJVariableAccess("x")),SJVariableAccess("this"),"fac",List(SJBinaryExpression("-", SJVariableAccess("n"), SJLiteral("1")))),
+            SJAssignment(SJVariableAccess("x"), SJBinaryExpression("*", SJVariableAccess("n"), SJVariableAccess("x")))
           ),
           List(
-            SJAssignment(SJVariableAccess("x"), SJLiteral("1"))
-          )
-        ),
+           SJAssignment(SJVariableAccess("x"), SJLiteral("1"))
+          )),
         SJReturn(SJVariableAccess("x"))),
-      HashMap("x" -> "int", "tmp_1" -> "int", "n" -> "int", "this" -> "Fac"))
+        HashMap("x" -> "int", "n" -> "int", "this" -> "Fac")),
+      SJConstructorDefinition(Set(Public()),"Fac",List(),List(),HashMap("this" -> "Fac"))),None, HashMap()))
 
-    val after = SJMethodDefinition(Set(Static()), "fac", "int",
-        List(SJArgument("n", "int")), List(
-          SJConditional(SJBinaryExpression(">=", SJVariableAccess("n"), SJLiteral("0")),
-            List(
-              SJCall(
-                Some(SJVariableAccess("x")),
-                SJVariableAccess("this"),
-                "fac",
-                List(SJBinaryExpression("-", SJVariableAccess("n"), SJLiteral("1")))
-              ),
-              SJAssignment(SJVariableAccess("x"), SJBinaryExpression("*", SJVariableAccess("n"), SJVariableAccess("x")))
-            ),
-            List(
-              SJAssignment(SJVariableAccess("x"), SJLiteral("1"))
-            )
-          ),
-          SJReturn(SJVariableAccess("x"))),
-        HashMap("x" -> "int", "n" -> "int", "this" -> "Fac"))
 
-    liveVariableRewrite(before) should equal (after)
+    removeDeadVariables(ast) should equal (after)
   }
 
   it should "should not replace dead variable if it's used in more than one assignment inside the block" in {
