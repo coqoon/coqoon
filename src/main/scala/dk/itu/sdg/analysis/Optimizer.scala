@@ -179,20 +179,17 @@ object Optimizer {
 
     rwOfStatements(statements).map { rw =>
       deads.foldLeft(statements){ (rewritten, dead) =>  // for each dead variable: rewrite the AST.
-        if ( rw.reads.contains(dead) ) {                // it's read & written
-          // it's dead but still read in the block. If it's truly a temporary value that is simply used in _one_
-          // other assignment we can replace the assignment to the tmp variable with a assignment to the variable
-          // that's using the tmp variable. Also They have to be of the same type.
-          val usingDeadVar = findWriteVarsWhereVarIsRead( variable = dead, in = rewritten)
-          if (usingDeadVar.size == 1 && hasSameType(dead, usingDeadVar.head, method)) {
-            transform(writesOf = dead, toWritesOf = usingDeadVar.head, in = rewritten)
-          } else {
-            rewritten
-          }
+        
+        // it's dead but still read in the block. If it's truly a temporary value that is simply used in _one_
+        // other assignment we can replace the assignment to the tmp variable with a assignment to the variable
+        // that's using the tmp variable. Also They have to be of the same type.
+        val usingDeadVar = findWriteVarsWhereVarIsRead( variable = dead, in = rewritten)
+        if (usingDeadVar.size == 1 && hasSameType(dead, usingDeadVar.head, method)) {
+          transform(writesOf = dead, toWritesOf = usingDeadVar.head, in = rewritten)
+        } else {
+          rewritten
         }
-        else { // it's written and not read in the block we can just remove it.
-          removeWritesOf(variable = dead, in = rewritten)
-        }
+        
       }
     } getOrElse(statements)
 
