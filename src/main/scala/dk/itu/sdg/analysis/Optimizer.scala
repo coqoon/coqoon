@@ -64,8 +64,20 @@ object Optimizer {
             val rwOfBlock = rwOfStatements(currentBlock).getOrElse(ReadsAndWrites())
             val cBlockProcced = findDeadVariables(live, currentBlock).map(rewrite(_, currentBlock, method)).getOrElse(currentBlock)
             val newLive = (rwOfBlock.reads ++ live).filterNot( rwOfBlock.writes.contains(_) )
-            val (newProcssed, nextLive) = removeSuperfluousInConditional(cond, newLive, method)
-            rec(xs,Nil, newProcssed ::: cBlockProcced ::: processed, nextLive)
+
+            val (prelude, newCond1) = removeSuperfluousInConditional(cond, newLive, method)
+            val (newCond2, newCBlock) = removeSuperfluousByTernary(newCond1, cBlockProcced)
+
+            val SJConditional(test, consequent, alternative) = newCond2
+
+            val rwConsequent   = rwOfStatements(consequent).getOrElse(ReadsAndWrites())
+            val rwAlternative  = rwOfStatements(alternative).getOrElse(ReadsAndWrites())
+            val rwOfTest       = rwOfStatement(test).getOrElse(ReadsAndWrites())
+
+            val nextLive = live.filterNot( x => rwConsequent.writes.contains(x) || rwAlternative.writes.contains(x) ) ++
+              (rwOfTest.reads ++ rwConsequent.reads ++ rwAlternative.reads)
+
+            rec(xs, Nil, prelude ::: (List(newCond2)) ::: newCBlock ::: processed, nextLive)
           }
 
           case SJWhile(cond, body) => {
@@ -97,8 +109,46 @@ object Optimizer {
   }
 
   //
-  // Remove any superfluous temporary variables introduced by the transformation to
-  // Simple Java.
+  // Remove any superfluous temporary variables introduced by the ternary operator
+  //
+  // If the ternary operator is used in a field/variable assignment then this will
+  // produce a Simple Java Program with an if-statement where both branches writes
+  // to a temporary variable and straight after the if-statement it will use that
+  // temporary variable in a field/variable assignment
+  //
+  // In this case we can get rid of the temporary variable by moving the assignment
+  // into both branches.
+  //
+  def removeSuperfluousByTernary(
+    conditional: SJConditional,
+    blockAfterCond: List[SJStatement]): (SJConditional, List[SJStatement]) = {
+
+    val otherwise = (conditional, blockAfterCond)
+
+    val result = blockAfterCond.headOption.map {
+      case fw @ SJFieldWrite(SJVariableAccess(writeTo), field, SJVariableAccess(read)) if read.matches("""tmp_(\d*)""") => {
+
+        val replace = (x: SJStatement) => x match {
+          case SJAssignment(SJVariableAccess(`read`), expr) =>
+            SJFieldWrite(SJVariableAccess(writeTo), field, expr)
+          case stm => stm
+        }
+
+        val newConsequent  = conditional.consequent.map( replace )
+        val newAlternative = conditional.alternative.map( replace )
+        val newConditional = SJConditional(conditional.test, newConsequent, newAlternative)
+
+        (newConditional, blockAfterCond.filterNot( _ == fw ) )
+      }
+      case stm => otherwise
+    }
+
+    result.getOrElse( otherwise )
+  }
+
+  //
+  // Remove any superfluous temporary variables introduced by field reads in if-
+  // statement branches.
   //
   // If the same field of an object is read in both branches it will introduce two
   // temporary variables where just one would be sufficient; In this case we simply
@@ -109,7 +159,7 @@ object Optimizer {
   def removeSuperfluousInConditional(
     conditional: SJConditional,
     live: HashSet[String],
-    method: SJMethodDefinition): (List[SJStatement], HashSet[String]) = {
+    method: SJMethodDefinition): (List[SJStatement], SJConditional) = {
 
     val SJConditional(cond, consequent, alternative) = conditional
 
@@ -153,18 +203,11 @@ object Optimizer {
                           .map(rewrite(_, pulledOutAlternative, method))
                           .getOrElse(pulledOutAlternative)
 
-    val rwConsequent   = rwOfStatements(newConsequent).getOrElse(ReadsAndWrites())
-    val rwAlternative  = rwOfStatements(newAlternative).getOrElse(ReadsAndWrites())
-    val rwOfCond       = rwOfStatement(cond).getOrElse(ReadsAndWrites())
-
-    val nextLive = live.filterNot( x => rwConsequent.writes.contains(x) || rwAlternative.writes.contains(x) ) ++
-      (rwOfCond.reads ++ rwConsequent.reads ++ rwAlternative.reads)
-
     val prelude = possbileTransformation.map( _.map(_.pullOut) ).getOrElse(Nil)
 
-    val newProcssed = prelude ::: (SJConditional(cond, newConsequent, newAlternative) :: Nil)
+    val newConditional = SJConditional(cond, newConsequent, newAlternative)
 
-    (newProcssed, nextLive)
+    (prelude, newConditional)
   }
 
   //
@@ -179,7 +222,7 @@ object Optimizer {
 
     rwOfStatements(statements).map { rw =>
       deads.foldLeft(statements){ (rewritten, dead) =>  // for each dead variable: rewrite the AST.
-        
+
         // it's dead but still read in the block. If it's truly a temporary value that is simply used in _one_
         // other assignment we can replace the assignment to the tmp variable with a assignment to the variable
         // that's using the tmp variable. Also They have to be of the same type.
@@ -189,7 +232,7 @@ object Optimizer {
         } else {
           rewritten
         }
-        
+
       }
     } getOrElse(statements)
 

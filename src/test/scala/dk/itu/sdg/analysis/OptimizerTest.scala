@@ -74,7 +74,7 @@ class RemoveTemporaryVariables extends FlatSpec with ShouldMatchers with ASTSpec
   }
 
   "Remove Superfluous Temporary Variables" should "replace tmp_1 with x in fac" in {
-    
+
     val ast = getASTbyParsingFileNamed("Fac2.txt", List("src", "test", "resources", "javaparser", "source"))
 
     val after = List(SJClassDefinition(Set(),"Fac","",List(),List(
@@ -141,7 +141,7 @@ class RemoveTemporaryVariables extends FlatSpec with ShouldMatchers with ASTSpec
   /*
     This fails. It's not able to optimize the code yet.
   */
-  "Parsing Conditional3.txt (fails at the moment)" should "produce the correct AST" in {
+  "Parsing Conditional3.txt" should "produce the correct AST" in {
 
     val ast = getASTbyParsingFileNamed("Conditional3.txt", List("src", "test", "resources", "javaparser", "source"))
 
@@ -150,11 +150,11 @@ class RemoveTemporaryVariables extends FlatSpec with ShouldMatchers with ASTSpec
       SJFieldDefinition(Set(),"b","int"),
       SJMethodDefinition(Set(),"bar","void",List(SJArgument("a","int")),
         List(
-          SJFieldRead(SJVariableAccess("tmp_1"),SJVariableAccess("this"),"c"),
-          SJConditional(SJBinaryExpression("==",SJVariableAccess("a"),SJVariableAccess("tmp_1")),
+          SJFieldRead(SJVariableAccess("tmp_2"),SJVariableAccess("this"),"c"),
+          SJConditional(SJBinaryExpression("==",SJVariableAccess("a"),SJVariableAccess("tmp_2")),
               List(SJFieldWrite(SJVariableAccess("this"),"b",SJLiteral("20"))),
               List(SJFieldWrite(SJVariableAccess("this"),"b",SJLiteral("30"))))),
-        HashMap("this" -> "Foo", "a" -> "int", "tmp_1" -> "int")),
+        HashMap("this" -> "Foo", "a" -> "int", "tmp_2" -> "int")),
     SJConstructorDefinition(Set(Public()),"Foo",List(),List(),HashMap("this" -> "Foo"))),None,HashMap("b" -> "int", "c" -> "int")))
 
     removeDeadVariables(ast) should equal (after)
@@ -170,15 +170,15 @@ class RemoveTemporaryVariables extends FlatSpec with ShouldMatchers with ASTSpec
 
     val after = List(SJClassDefinition(Set(),"MultipleOccurancesOfVariable","",List(),
       List(
-        SJFieldDefinition(Set(),"x","int"), 
+        SJFieldDefinition(Set(),"x","int"),
         SJMethodDefinition(Set(),"test","int",List(SJArgument("n","int")),List(
-          SJFieldRead(SJVariableAccess("tmp_1"),SJVariableAccess("this"),"x"), 
+          SJFieldRead(SJVariableAccess("tmp_1"),SJVariableAccess("this"),"x"),
           SJConditional(SJBinaryExpression(">=",SJVariableAccess("n"),SJLiteral("0")),
             List(SJFieldWrite(SJVariableAccess("this"),"x",SJBinaryExpression("+",SJVariableAccess("tmp_1"),SJLiteral("1")))),
-            List(SJFieldWrite(SJVariableAccess("this"),"x",SJBinaryExpression("-",SJVariableAccess("tmp_1"),SJLiteral("1"))))), 
-          SJFieldRead(SJVariableAccess("tmp_3"),SJVariableAccess("this"),"x"), 
+            List(SJFieldWrite(SJVariableAccess("this"),"x",SJBinaryExpression("-",SJVariableAccess("tmp_1"),SJLiteral("1"))))),
+          SJFieldRead(SJVariableAccess("tmp_3"),SJVariableAccess("this"),"x"),
           SJReturn(SJVariableAccess("tmp_3"))),
-      HashMap("this" -> "MultipleOccurancesOfVariable", "n" -> "int", "tmp_3" -> "int", "tmp_1" -> "int")), 
+      HashMap("this" -> "MultipleOccurancesOfVariable", "n" -> "int", "tmp_3" -> "int", "tmp_1" -> "int")),
       SJConstructorDefinition(Set(Public()),"MultipleOccurancesOfVariable",List(),List(),HashMap("this" -> "MultipleOccurancesOfVariable"))
     ),None,HashMap("x" -> "int")))
 
