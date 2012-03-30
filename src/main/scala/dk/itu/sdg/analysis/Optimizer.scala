@@ -12,8 +12,12 @@ object Optimizer {
 
   import AST._
 
+  // Keeping the type annotations smaller.
   type Variables = HashSet[String]
 
+  // Used to possibility of being able to pull out a
+  // SJStatement from an If-statement to reduce temporary
+  // variables.
   case class IfPullOut(
     replaceUsesOf: String,
     withUsesOf: String,
@@ -21,6 +25,7 @@ object Optimizer {
     remove: List[SJStatement]
   )
 
+  // Used to keep track of variables that are read and written to.
   case class ReadsAndWrites(reads: Variables =
     new HashSet(), writes: Variables = new HashSet())
 

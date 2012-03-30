@@ -41,20 +41,22 @@ tests and automatic test coverage reports.
 
 \subsection{Motivation}
 
-The scope of this analysis is to remove any unneeded temporary
+The scope of this analysis is to remove any superfluous temporary
 variables introduced during the translation from Java to Simple Java
-and as such it is not a normal dead variables analysis; it's a dead
-variable analysis and then some. \newline
+and as such it is not a normal dead variables analysis. \newline
 
 It's a backwards analysis that traverses the program by blocks, so
 when we're analyzing a block we know all of the variables that are
-needed in the blocks of the rest of the program. \newline
+needed in the blocks of the rest of the program. It might help to think
+of it as a liveliness analysis on a block-by-block basis rather than
+statement-by-statement.\newline
 
 If a variable is written in a block but not used in the rest of the
 blocks then we might be able to remove the use of that variable. It's
-not a dead variable in the usual sense because it might be used in 
+not a dead variable in the usual sense because it might be used in
 this block but because it's not used in the rest of the blocks we're
-free to fiddle with it. \newline
+free to fiddle with it. There are a few exceptions to this that I will
+cover later. \newline
 
 An example would be this Simple Java Program. \newline
 
@@ -92,8 +94,8 @@ class Fac {
   }
 }
 \end{lstlisting}
-    
-This is still a valid Simple Java program but it doesn't use the temporary 
+
+This is still a valid Simple Java program but it doesn't use the temporary
 variable tmp\_1
 
 \subsection{High Level Algorithm}
@@ -101,44 +103,124 @@ variable tmp\_1
 The analysis traverses the method body backwards by block. For each
 block it calculates the set of variables that the block reads and
 writes and uses this information to construct a set of variables that
-are live at the beginning of the block. \newline
+are live at the beginning of the block. This information is then used
+in the analysis of the previous block in the program. \newline
 
 If a variable is written to in the current block but isn't in the live
-set calculated from the previous block then it means that the rest of
-the method doesn't need the value we just wrote and it's only used in
-the current block; i.e. we might be able to remove it. In this case we
-attempt to rewrite the block. \newline
+set calculated from the next block then it means that the rest of the
+method doesn't need the value we just wrote and it's only used in the
+current block; i.e. we might be able to remove the use of that
+temporary variable. In this case we attempt to rewrite the block, for
+example, as shown in the previous example.. \newline
 
-TODO: Write a bit about the re-write rules we use.
+The analysis also covers two other special cases. The first occurs
+when you read the same field of an object in each branch of an if-
+statement. During the translation this will create a temporary
+variable in each branch that represents the same object. In this case
+we simply move the field read out of the if-statement and update the
+branches to use that temporary variable. I realize now that this is
+actually re-writing the original program and not only removing
+superfluous temporary variable. The second occurs when the ternary
+operator is used in assignments, see \texttt{src/test/resources/javaparser/Conditional3.txt}
+for the example program that is used in the \texttt{OptimizerTest.scala} test.
+Basically a simple program like the following:
+
+\begin{figure}[h!]
+\begin{lstlisting}
+class Foo {
+  int c;
+  int b;
+  void bar (int a) {
+   b = a == c ? 20 : 30;
+  }
+}
+\end{lstlisting}
+\end{figure}
+
+Results in the following Simple Java code:
+
+\begin{figure}[h!]
+\begin{lstlisting}
+ class Foo {
+   int c;
+   int b;
+   void bar (int a) {
+    int tmp_2;
+    Object tmp_1;
+
+    tmp_2 = this.c;
+    if (a == tmp_2) {
+      tmp_1 = 20;
+    } else {
+      tmp_1 = 30;
+    };
+    this.b = tmp_1;
+  }
+}
+\end{lstlisting}
+\end{figure}
+
+In this case we observe that the temporary variable that is being written to in both
+branches of the if-statement is used in an assignment straight after. In this
+case we simply move the assignment up into the if-statement branches like so:
+
+\begin{figure}[h!]
+\begin{lstlisting}
+ void bar (int a) {
+  int tmp_2;
+
+  tmp_2 = this.c;
+  if (a == tmp_2) {
+    this.b = 20;
+  } else {
+    this.b = 30;
+  };
+}
+\end{lstlisting}
+\end{figure}
 
 \subsection{Implementation}
 
-The implementation can be found in the file 
-\texttt{src/main/scala/dk/itu/sdg/analysis/Optimizer.scala} and the tests 
-can be found in 
+The implementation can be found in the file
+\texttt{src/main/scala/dk/itu/sdg/analysis/Optimizer.scala} and the tests
+can be found in
 \texttt{src/test/scala/dk/itu/sdg/analysis/OptimizerTest.scala}. \newline
 
 You can run the analysis on a source file by typing the following in
-an SBT session \texttt{run relative-path} and pick the main method 
+an SBT session \texttt{run relative-path} and pick the main method
 \texttt{dk.itu.sdg.javaparser.SimpleJavaOptimizedMain} which will
-translate the Java file to Simple Java and run optimize that. It will
+translate the Java file to Simple Java and optimize that. It will
 print out the original Java program, the simple Java program and the
 optimized simple Java program. \newline
 
-\texttt{removeDeadVariables} is the main entry point. It invokes 
-\texttt{liveVariableRewrite} which traverses the method body in 
-reverse order block by block. For each block it keeps track of 
-the live variables represented using a \texttt{HashSet[String]}. 
-Whenever it finds a block that writes to a variable that is dead
-after the block it invokes \texttt{rewrite} which takes care of 
-the actual rewriting of the AST. The method \texttt{rwOfStatement}
-and \texttt{rwOfStatements} returns the set of variables that are
-written/read by that statement(s) represented using the case class
-\texttt{ReadsAndWrites}.
+\texttt{removeDeadVariables} is the main entry point which invokes
+\texttt{liveVariableRewrite} which traverses the method body in
+reverse order block by block. The analysis only traverses the body
+once so the separation into blocks is done on the fly. This is done by
+the internal \texttt{rec} method inside \texttt{liveVariableRewrite}.
+It runs through the statements in the program in reverse order and
+whenever it reads a statement that isn't  an instance of SJWhile or
+SJConditional it simply adds the statement  to the current block and
+continues backwards in the body of the method.  When there are no more
+statements it finishes by analyzing the current  block. SJConditional
+and SJWhile are considered block-separators, i.e. whenever one of
+these statements are reached the current block accumulated so far is
+analyzed and the block(s) of the SJConditional/SJWhile are processed.
+The \texttt{rec} method is tail recursive and it keeps track of the
+remaining statements (\texttt{List[SJStatement]}), the current block
+(\texttt{List[SJStatement]}), the processed (i.e. result of rewrites)
+lines so far (\texttt{List[SJStatement]}) and finally the set of
+variables that are currently live (\texttt{HashSet[String]}). The re-
+writing of normal blocks are taking care of by the method
+\texttt{rewrite}. The  other two special cases are taken care of by
+\texttt{removeSuperfluousInConditional}  and
+\texttt{removeSuperfluousByTernary}. No mutable state is used in the implementation.
+
 
 \subsection{State of Completion}
 
-TODO: I'll write this when the two last tests pass.
+All the test cases pass. It might, however, be possible to find more
+opportunities for optimization that I haven't thought of.
 
 \newpage
 
@@ -163,7 +245,7 @@ model heap objects and can be of the following types:
   \setlength{\itemsep}{1pt}
   \setlength{\parskip}{0pt}
   \item \emph{Inside Nodes} model the objects created by the analyzed method
-  \item \emph{Outside Nodes} model the objects that are passed as arguments 
+  \item \emph{Outside Nodes} model the objects that are passed as arguments
         to the method
   \item \emph{Parameter Nodes} model the objects read from outside the method
 \end{itemize}
@@ -177,10 +259,10 @@ edges:
 \begin{itemize}
   \setlength{\itemsep}{1pt}
   \setlength{\parskip}{0pt}
-  \item \emph{Inside Edges} model the heap references created by the analyzed 
+  \item \emph{Inside Edges} model the heap references created by the analyzed
         method
-  \item \emph{Outside Edges} model the heap references read by the analyzed 
-        method from escaped objects. An object escapes if it is reachable 
+  \item \emph{Outside Edges} model the heap references read by the analyzed
+        method from escaped objects. An object escapes if it is reachable
         from outside the analyzed method.
 \end{itemize}
 
@@ -223,14 +305,14 @@ statement. It also computes the set of modified abstract fields. For a
 detailed description of each of the transfer functions see the paper.
 \newline
 
-The inter-procedural analysis does four things: 
+The inter-procedural analysis does four things:
 
 \begin{itemize}
   \setlength{\itemsep}{1pt}
   \setlength{\parskip}{0pt}
-  \item Constructs a node mapping from nodes of the points-to graph of 
-        $m2$ ($G_{callee}$) to nodes of the points-to graph of 
-        $m1$ ($G$). The node mapping disambiguates as many parameter- 
+  \item Constructs a node mapping from nodes of the points-to graph of
+        $m2$ ($G_{callee}$) to nodes of the points-to graph of
+        $m1$ ($G$). The node mapping disambiguates as many parameter-
         and load-nodes from the callee as possible
   \item Combines the graph $G$ and graph $G_{callee}$
   \item Simplifies the resulting graph
@@ -255,16 +337,16 @@ finite state automaton $F$ with the following states:
   \item An accepting state t
 \end{itemize}
 
-And the following transitions: 
+And the following transitions:
 
 \begin{itemize}
   \setlength{\itemsep}{1pt}
   \setlength{\parskip}{0pt}
-  \item Each outside edge from $G$ generates a transition in $F$ labeled with 
+  \item Each outside edge from $G$ generates a transition in $F$ labeled with
         the field of the outside edge
-  \item For each parameter $p_i$ of $m$, we create a transition from $s$ to 
+  \item For each parameter $p_i$ of $m$, we create a transition from $s$ to
         the corresponding parameter node, and label it with the parameter $p_i$
-  \item For each mutated abstract field $<n,f>$ add a transition from $n$ to the 
+  \item For each mutated abstract field $<n,f>$ add a transition from $n$ to the
         accepting state $t$. Label it with the field $f$.
 \end{itemize}
 
@@ -283,7 +365,7 @@ The following files are all placed in the folder
   \setlength{\parskip}{0pt}
   \item The purity analysis algorithm can be found in \texttt{Purity.scala}
   \item The Strongly Connected Components Algorithm and other graph related code can be found in \texttt{Graph.scala}. The SCC algorithm is in the the trait \texttt{StronglyConnected}.
-  \item The construction of the regular expressions can be 
+  \item The construction of the regular expressions can be
   found in \texttt{RegExpGenerator.scala}
 \end{itemize}
 
@@ -352,7 +434,8 @@ case class TFState(result: Result, insideNodeCount: Int, outsideNodeCount: Int)
 
 In this example I'll run through the implementation step-by-step as it
 would be executed when analyzing a program. The methods can be found
-in \texttt{Purity.scala} unless otherwise stated. \newline
+in \texttt{Purity.scala} unless otherwise stated. I note that no mutable
+state is used in the implementation. \newline
 
 The main entry point is \texttt{isPure(className: String, invokable:
 SJInvokable)}. This invokes \texttt{modifiedAbstractFields} which is a
@@ -378,9 +461,9 @@ function. each of the transfer functions are defined in the object
 TransferFunctions. Must important is the the transfer function for method
 invocations which is implemented by the \texttt{callTF} method. It gets the
 points-to graph of the method that is being invoked and constructs a node
-mapping using the \texttt{mapping} method. It passes this mapping to the 
+mapping using the \texttt{mapping} method. It passes this mapping to the
 \texttt{combine} method which combines the two points-to graphs using the
-node mapping. Lastly the graph is simplified using \texttt{simplify} and 
+node mapping. Lastly the graph is simplified using \texttt{simplify} and
 the set of abstract modified fields is updated. \newline
 
 If you want to generate the the regular expressions then you would
@@ -455,15 +538,15 @@ There is one thing that wasn't completely clear from the paper and one
 thing that was neglected
 
 \begin{itemize}
-  \item When a statement is of the form \texttt{v = new C} then in 
-        addition to invoking the transfer function as described in 
+  \item When a statement is of the form \texttt{v = new C} then in
+        addition to invoking the transfer function as described in
         the paper it should also be considered a method invocation.
-  \item The article doesn't mention entirely how to deal with while loops 
-        so I had to improvise: let \texttt{G} be the graph before the loop 
-        iteration and let \texttt{G'} be the graph produced by the loop 
-        iteration. Consider the \texttt{Edge(n1,f,n2)} from \texttt{G'} 
-        that doesn't exist in \texttt{G}, i.e. an edge produced by the 
-        iteration. If there exists an \texttt{Edge(n1,f,n3)} in \texttt{G} 
+  \item The article doesn't mention entirely how to deal with while loops
+        so I had to improvise: let \texttt{G} be the graph before the loop
+        iteration and let \texttt{G'} be the graph produced by the loop
+        iteration. Consider the \texttt{Edge(n1,f,n2)} from \texttt{G'}
+        that doesn't exist in \texttt{G}, i.e. an edge produced by the
+        iteration. If there exists an \texttt{Edge(n1,f,n3)} in \texttt{G}
         then map the node \texttt{n2} to \texttt{n3}.
 \end{itemize}
 
