@@ -348,7 +348,8 @@ And the following transitions:
 \end{itemize}
 
 Now we can generate the regular expressions by recording the labels of
-all paths from the start state to the accepting state.
+all paths from the start state to the accepting state. This is also
+described in section 6.2 in the paper.
 
 \subsection{Implementation}
 
@@ -432,7 +433,9 @@ case class TFState(result: Result, insideNodeCount: Int, outsideNodeCount: Int)
 In this example I'll run through the implementation step-by-step as it
 would be executed when analyzing a program. The methods can be found
 in \texttt{Purity.scala} unless otherwise stated. I note that no mutable
-state is used in the implementation. \newline
+state is used in the implementation. If you want a run-through of the
+analysis of a program rather than a run-through of the implementation then
+see section 2.3 in the paper. \newline
 
 The main entry point is \texttt{isPure(className: String, invokable:
 SJInvokable)}. This invokes \texttt{modifiedAbstractFields} which is a
