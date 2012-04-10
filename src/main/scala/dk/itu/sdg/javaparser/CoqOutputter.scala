@@ -100,10 +100,15 @@ trait CoqOutputter extends JavaToSimpleJava {
     ex match {
       case SJVariableAccess(x) => "\"" + x + "\""
       case SJUnaryExpression(op, e) => "(" + translateOp(op) + " " + printE(e) + ")"
-      case SJBinaryExpression(op, l, r) => "(" + translateOp(op) + " " + printE(l) + " " + printE(r) + ")"
+      case SJBinaryExpression(op, l, r) =>
+        if (op == "!=")
+          //XXX: hack for AMP (list reversal) 11-04-12
+          "(enot (eeq_ptrs (" + printE(l) + ":expr) " + printE(r) + "))"
+        else
+          "(" + translateOp(op) + " " + printE(l) + " " + printE(r) + ")"
       case SJLiteral(v) =>
         if (v == "null" || v == "true" || v == "false")
-          v
+          "`" + v
         else
           try { "(" + v.toInt.toString + ":expr)" }
           catch { case e => "\"" + e + "\"" }
@@ -147,10 +152,10 @@ trait CoqOutputter extends JavaToSimpleJava {
               case Some(x) => x.modifiers.contains(Static())
             }
           }
-        val (cw, cp) = if (isstatic) ("cscall", cl) else ("cdcall", printE(r))
+        val (cw, cp) = if (isstatic) ("cscall", "\"" + cl + "\"") else ("cdcall", printE(r))
         Some("(" + cw + " " + value + " " + cp + " \"" + f + "\" (" +  argstring(a) + "))")
       case SJNewExpression(v, t, a) =>
-        Some("(cscall " + printE(v) + " " + t + " " + argstring(a) + ")")
+        Some("(cscall " + printE(v) + " \"" + t + "\" \"" + t + "_new\" " + argstring(a) + ")")
       case SJConditional(test, consequence, alternative) =>
         val te = printE(test)
         val tr = optPrintBody(consequence.flatMap(x => printStatement(x, locals)))
@@ -185,7 +190,7 @@ trait CoqOutputter extends JavaToSimpleJava {
     val defi = "Definition " + myname + " := " + b + "."
     val res =
       if (ret == "myreturnvaluedummy")
-        "0"
+        "`0"
       else
         ret
     (defi, res)
@@ -222,12 +227,11 @@ trait CoqOutputter extends JavaToSimpleJava {
   private val unique_names : List[String] = List("Opaque unique_method_names.", "Definition unique_method_names := option_proof (search_unique_names Prog).")
 
   private val prelude : String = """
+Add LoadPath "/Users/hannes/tomeso/git/semantics/coq".
 Require Import Tactics.
-Require Import LiftOp.
-Require Import Frame.
 
 Open Scope string_scope.
-Open Scope list_scope.
+Open Scope hasn_scope.
 """
 
 
@@ -237,6 +241,10 @@ Open Scope list_scope.
     if (spec)
       outp ::= prelude
     var interfs : List[String] = List[String]()
+    outp ::= "Module " + name + " <: PROGRAM."
+    //XXX hardcoded for AMP (list reversal) 11-04-12
+    outp ::= """Notation "'eeq_ptrs'" :=
+  (lift2 eeq_ptr_up) (at level 50) : hasn_scope."""
     xs.foreach(x => x match {
       case SJInterfaceDefinition(modifiers, id, inters, body) =>
         //Console.println("interfaces are " + inters)
@@ -251,7 +259,6 @@ Open Scope list_scope.
       case SJClassDefinition(modifiers, id, supers, inters, body, par, fs) =>
         //let's hope only a single class and interfaces before that!
         cs ::= id
-        outp ::= "Module " + name + " <: PROGRAM."
         val fields = fs.keys.toList
         val methods = classMethods(body)
         outp ::= "Definition " + id + " := Build_Class " + printFiniteSet(fields) + " " + printFiniteMap(methods) + "."
@@ -261,8 +268,9 @@ Open Scope list_scope.
     outp = unique_names ++ outp
     outp ::= "End " + name + "."
     if (spec) {
+      outp ::= "\nModule " + name + "_spec."
       outp ::= "\nImport " + name + "."
-      outp ::= "\nSection " + name + "_spec."
+      outp ::= "\nEnd " + name + "_spec."
     }
 /* if (spec) {
       outp ::= "End " + name + "."
