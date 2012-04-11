@@ -15,6 +15,7 @@ class KopitiamPreferencePage extends FieldEditorPreferencePage with IWorkbenchPr
   import org.eclipse.jface.preference.DirectoryFieldEditor
   override def createFieldEditors () : Unit = {
     addField(new DirectoryFieldEditor("coqpath", "Path to Coq", getFieldEditorParent))
+    addField(new DirectoryFieldEditor("loadpath", "Path to Load", getFieldEditorParent))
   }
 
   import java.io.File

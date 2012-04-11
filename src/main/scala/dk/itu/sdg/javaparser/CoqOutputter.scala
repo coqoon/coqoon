@@ -1,6 +1,8 @@
 /* (c) 2010-2011 Hannes Mehnert */
 
 package dk.itu.sdg.javaparser
+import dk.itu.sdg.kopitiam.Activator
+import java.io.File
 
 trait CoqOutputter extends JavaToSimpleJava {
   import scala.collection.immutable.HashMap
@@ -227,7 +229,6 @@ trait CoqOutputter extends JavaToSimpleJava {
   private val unique_names : List[String] = List("Opaque unique_method_names.", "Definition unique_method_names := option_proof (search_unique_names Prog).")
 
   private val prelude : String = """
-Add LoadPath "/Users/hannes/tomeso/git/semantics/coq".
 Require Import Tactics.
 
 Open Scope string_scope.
@@ -238,6 +239,10 @@ Open Scope hasn_scope.
   def coqoutput (xs : List[SJDefinition], spec : Boolean, name : String) : List[String] = {
     outp = List[String]()
     var cs : List[String] = List[String]()
+
+    val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
+    if (new File(loadp).exists && spec)
+      outp ::= "Add LoadPath \"" + loadp + "\"."
     if (spec)
       outp ::= prelude
     var interfs : List[String] = List[String]()
@@ -269,8 +274,9 @@ Open Scope hasn_scope.
     outp ::= "End " + name + "."
     if (spec) {
       outp ::= "\nModule " + name + "_spec."
-      outp ::= "\nImport " + name + "."
-      outp ::= "\nEnd " + name + "_spec."
+      outp ::= "Import " + name + "."
+      outp ::= "Module Import SC := Tac " + name + "."
+      outp ::= "End " + name + "_spec."
     }
 /* if (spec) {
       outp ::= "End " + name + "."
