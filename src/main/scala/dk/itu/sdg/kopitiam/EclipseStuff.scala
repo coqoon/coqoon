@@ -284,12 +284,11 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   }
 
   def uncolor (offset : Int) : Unit = {
-    if (activeEditor != null) {
+    if (activeEditor != null)
       Display.getDefault.syncExec(
         new Runnable() {
           def run() = activeEditor.getSource.invalidateTextPresentation()
         });
-    }
   }
 
   def undoAll () : Unit = { uncolor(0) }
@@ -309,13 +308,14 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         //Console.println("undo (start " + start + " send length " + sendlen + " content length " + content.length + " submitting length " + (end - start) + ")")
         val txtp = new TextPresentation(new Region(0, start), 20)
         txtp.setDefaultStyleRange(new StyleRange(0, start, null, sentColor))
-        Display.getDefault.syncExec(
-          new Runnable() {
-            def run() = {
-              activeEditor.getSource.invalidateTextPresentation()
-              activeEditor.getSource.changeTextPresentation(txtp, true)
-            }
-          })
+        if (activeEditor != null)
+          Display.getDefault.syncExec(
+            new Runnable() {
+              def run() = {
+                activeEditor.getSource.invalidateTextPresentation()
+                activeEditor.getSource.changeTextPresentation(txtp, true)
+              }
+            })
         position = start
         sendlen = 0
       } else { //just an error
@@ -342,10 +342,11 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       //Console.println("commiting, end is " + end + " (pos + len: " + (position + sendlen) + ")" + ", pos:" + position + ", submitted length " + (len - position))
       val txtp = new TextPresentation(new Region(0, position + end), 20)
       txtp.setDefaultStyleRange(new StyleRange(0, position + end, null, sentColor))
-      Display.getDefault.syncExec(
-        new Runnable() {
-          def run() = activeEditor.getSource.changeTextPresentation(txtp, true)
-        })
+      if (activeEditor != null)
+        Display.getDefault.syncExec(
+          new Runnable() {
+            def run() = activeEditor.getSource.changeTextPresentation(txtp, true)
+          })
       position += end
       sendlen = 0
     }
