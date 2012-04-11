@@ -1,5 +1,8 @@
+* Kopitiam 0.0.17 [11 April 2012]
+** fixes for Coq mode and Java translation
+** Purity analysis (not yet connected)
 * Kopitiam 0.0.16 [06 November 2011]
-** minor fixes for Coq and java translation
+** minor fixes for Coq and Java translation
 * Kopitiam 0.0.15 [29 June 2011]
 ** Outline for Coq
 ** more persistent syntax highlighting for Coq
