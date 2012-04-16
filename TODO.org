@@ -115,7 +115,10 @@ if (node.item > 20)
 ** array types
 ** dynamic casts
 
-bugs (when shutting down):
+* bugs
+** green markup sometimes disappears when typing on next line
+** File -> Open .. select .v crashes
+** shutting down
 dk.itu.sdg.kopitiam.ErrorOutputActor$@1683e80: caught org.eclipse.swt.SWTException: Failed to execute runnable (org.eclipse.swt.SWTException: Widget is disposed)
 org.eclipse.swt.SWTException: Failed to execute runnable (org.eclipse.swt.SWTException: Widget is disposed)
 	at org.eclipse.swt.SWT.error(SWT.java:4083)
