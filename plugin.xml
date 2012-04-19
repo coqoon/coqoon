@@ -16,6 +16,14 @@
                tooltip="Restart Coq">
          </action>
          <action
+               class="dk.itu.sdg.kopitiam.CoqRefreshAction"
+               icon="icons/refresh.gif"
+               id="kopitiam.actions.RefreshAction"
+               label="&amp;Refresh"
+               toolbarPath="CoqGroup"
+               tooltip="Refresh">
+         </action>
+         <action
                class="dk.itu.sdg.kopitiam.CoqStepAllAction"
                icon="icons/downtoo.gif"
                id="kopitiam.actions.StepAllAction"
@@ -88,6 +96,12 @@
             contextId="Kopitiam.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="Ctrl+B">
+      </key>
+      <key
+            commandId="Kopitiam.refresh"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="Ctrl+P">
       </key>
    </extension>
    <extension
@@ -203,6 +217,12 @@
             description="Translate to Coq"
             id="Kopitiam.translatetocoq"
             name="Translate to Coq">
+      </command>
+      <command
+            categoryId="Kopitiam.category"
+            defaultHandler="dk.itu.sdg.kopitiam.CoqRefreshAction"
+            id="Kopitiam.refresh"
+            name="Refresh Coq command">
       </command>
    </extension>
    <extension

@@ -268,6 +268,15 @@ class RestartCoqAction extends KAction {
 }
 object RestartCoqAction extends RestartCoqAction { }
 
+class CoqRefreshAction extends KCoqAction {
+  override def doit () : Unit = {
+    CoqTop.writeToCoq("Show. ")
+  }
+  override def start () : Boolean = true
+  override def end () : Boolean = false
+}
+object CoqRefreshAction extends CoqRefreshAction { }
+
 class TranslateAction extends KAction {
   import org.eclipse.ui.handlers.HandlerUtil
   import org.eclipse.jface.viewers.IStructuredSelection
