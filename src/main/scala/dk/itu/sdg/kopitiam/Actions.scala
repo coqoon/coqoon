@@ -202,8 +202,7 @@ class CoqStepAction extends KCoqAction {
         DocumentState.sendlen = eoc
         val cmd = content.take(eoc).trim
         Console.println("command is (" + eoc + "): " + cmd)
-        EclipseBoilerPlate.startProgress
-        EclipseBoilerPlate.nameProgress(cmd)
+        EclipseBoilerPlate.startProgress(cmd)
         CoqTop.writeToCoq(cmd) //sends comments over the line
       }
     }

@@ -135,7 +135,7 @@ object EclipseBoilerPlate {
   private var pmd : MyProgressMonitorDialog = null
   var multistep : Boolean = false
   private val nam = "Coq interaction"
-  def startProgress () : Unit = {
+  def startProgress (n : String) : Unit = {
     //Console.println("Starting progress monitor")
     if (p == null) {
     //assert(pmd == null)
@@ -148,12 +148,8 @@ object EclipseBoilerPlate {
         override def mouseUp (m : MouseEvent) : Unit = ()
       })
       p = pmd.getProgressMonitor
-      p.beginTask(nam, IProgressMonitor.UNKNOWN)
-    }
-  }
-
-  def nameProgress (n : String) : Unit = {
-    if (p != null)
+      p.beginTask(nam + n, IProgressMonitor.UNKNOWN)
+    } else
       Display.getDefault.asyncExec(
         new Runnable() {
           def run() = {
