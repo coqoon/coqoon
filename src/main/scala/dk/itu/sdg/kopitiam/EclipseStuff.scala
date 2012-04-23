@@ -314,6 +314,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
               def run() = {
                 activeEditor.getSource.invalidateTextPresentation()
                 activeEditor.getSource.changeTextPresentation(txtp, true)
+                activeEditor.selectAndReveal(start, 0)
               }
             })
         position = start
@@ -345,7 +346,10 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       if (activeEditor != null)
         Display.getDefault.syncExec(
           new Runnable() {
-            def run() = activeEditor.getSource.changeTextPresentation(txtp, true)
+            def run() = {
+              activeEditor.getSource.changeTextPresentation(txtp, true)
+              activeEditor.selectAndReveal(position + end, 0)
+            }
           })
       position += end
       sendlen = 0
