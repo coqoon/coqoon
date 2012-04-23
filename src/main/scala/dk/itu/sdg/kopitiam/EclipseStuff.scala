@@ -96,6 +96,74 @@ object EclipseTables {
   val StringToDoc = new HashMap[String,IDocument]()
 }
 
+import scala.actors.Actor
+object CoqProgressMonitor extends Actor {
+  import org.eclipse.core.runtime.IProgressMonitor
+  import org.eclipse.jface.dialogs.ProgressMonitorDialog
+  import org.eclipse.swt.widgets.Shell
+  import org.eclipse.swt.widgets.Display
+  class MyProgressMonitorDialog (parent : Shell) extends ProgressMonitorDialog(parent) {
+    import org.eclipse.swt.widgets.Button
+    def getC () : Button = cancel
+  }
+
+  import org.eclipse.swt.events.{MouseListener, MouseEvent}
+  private var p : IProgressMonitor = null
+  private var pmd : MyProgressMonitorDialog = null
+  var multistep : Boolean = false
+  private val nam = "Coq interaction"
+
+  def act () {
+    while (true) {
+      receive {
+        case ("START", n : String) =>
+          Console.println("Starting progress monitor " + n)
+          if (p == null) {
+            //assert(pmd == null)
+            Display.getDefault.asyncExec(
+              new Runnable() {
+                def run() = {
+                  pmd = new MyProgressMonitorDialog(Display.getDefault.getActiveShell)
+                  pmd.setCancelable(true)
+                  pmd.open
+                  pmd.getC.addMouseListener(new MouseListener() {
+                    override def mouseDoubleClick (m : MouseEvent) : Unit = ()
+                    override def mouseDown (m : MouseEvent) : Unit = CoqTop.interruptCoq
+                    override def mouseUp (m : MouseEvent) : Unit = ()
+                  })
+                  p = pmd.getProgressMonitor
+                  p.beginTask(nam + n, IProgressMonitor.UNKNOWN)
+                }})
+          } else
+            Display.getDefault.asyncExec(
+              new Runnable() {
+                def run() = {
+                  if (p != null)
+                    p.setTaskName(nam + ": " + n)
+                }})
+        case "FINISHED" =>
+          Console.println("Finished progress monitor " + p)
+          if (p != null && !multistep) {
+            val oldp = p
+            val oldpmd = pmd
+            p = null
+            pmd = null
+            Display.getDefault.asyncExec(
+              new Runnable() {
+                def run() = {
+                  oldp.done
+                  oldpmd.close
+                  //Clients should not call this method (the workbench calls this method at appropriate times). To have the workbench activate a part, use IWorkbenchPage.activate(IWorkbenchPart) instead.
+                  DocumentState.activeEditor.setFocus
+                }
+              })
+          }
+        case x => Console.println("fell through receive of CoqProgressMonitor " + x)
+      }
+    }
+  }
+}
+
 object EclipseBoilerPlate {
   import org.eclipse.ui.{IWorkbenchWindow,IEditorPart}
   import org.eclipse.ui.texteditor.{ITextEditor,IDocumentProvider,AbstractTextEditor}
@@ -122,60 +190,6 @@ object EclipseBoilerPlate {
       })
   }
 
-  import org.eclipse.core.runtime.IProgressMonitor
-  import org.eclipse.jface.dialogs.ProgressMonitorDialog
-  import org.eclipse.swt.widgets.Shell
-  class MyProgressMonitorDialog (parent : Shell) extends ProgressMonitorDialog(parent) {
-    import org.eclipse.swt.widgets.Button
-    def getC () : Button = cancel
-  }
-
-  import org.eclipse.swt.events.{MouseListener, MouseEvent}
-  private var p : IProgressMonitor = null
-  private var pmd : MyProgressMonitorDialog = null
-  var multistep : Boolean = false
-  private val nam = "Coq interaction"
-  def startProgress (n : String) : Unit = {
-    //Console.println("Starting progress monitor")
-    if (p == null) {
-    //assert(pmd == null)
-      pmd = new MyProgressMonitorDialog(Display.getDefault.getActiveShell)
-      pmd.setCancelable(true)
-      pmd.open
-      pmd.getC.addMouseListener(new MouseListener() {
-        override def mouseDoubleClick (m : MouseEvent) : Unit = ()
-        override def mouseDown (m : MouseEvent) : Unit = CoqTop.interruptCoq
-        override def mouseUp (m : MouseEvent) : Unit = ()
-      })
-      p = pmd.getProgressMonitor
-      p.beginTask(nam + n, IProgressMonitor.UNKNOWN)
-    } else
-      Display.getDefault.asyncExec(
-        new Runnable() {
-          def run() = {
-            if (p != null)
-              p.setTaskName(nam + ": " + n)
-          }})
-  }
-
-  def finishedProgress () : Unit = {
-    //Console.println("Finished progress monitor " + p)
-    if (p != null && !multistep) {
-      val oldp = p
-      val oldpmd = pmd
-      p = null
-      pmd = null
-      Display.getDefault.asyncExec(
-        new Runnable() {
-          def run() = {
-            oldp.done
-            oldpmd.close
-            //Clients should not call this method (the workbench calls this method at appropriate times). To have the workbench activate a part, use IWorkbenchPage.activate(IWorkbenchPart) instead.
-            DocumentState.activeEditor.setFocus
-          }
-        })
-    }
-  }
 
   import org.eclipse.core.resources.{IMarker, IResource}
 
@@ -457,5 +471,7 @@ class Startup extends IStartup {
     PrintActor.register(DocumentState)
     CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + System.getProperty("file.separator")
     CoqTop.init
+    Console.println("starting progressmonitor")
+    CoqProgressMonitor.start
   }
 }

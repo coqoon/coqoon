@@ -202,7 +202,7 @@ class CoqStepAction extends KCoqAction {
         DocumentState.sendlen = eoc
         val cmd = content.take(eoc).trim
         Console.println("command is (" + eoc + "): " + cmd)
-        EclipseBoilerPlate.startProgress(cmd)
+        CoqProgressMonitor ! ("START", cmd)
         CoqTop.writeToCoq(cmd) //sends comments over the line
       }
     }
@@ -215,7 +215,7 @@ object CoqStepAction extends CoqStepAction { }
 class CoqStepAllAction extends KCoqAction {
   override def doit () : Unit = {
     //Console.println("registering CoqStepNotifier to PrintActor, now stepping")
-    EclipseBoilerPlate.multistep = true
+    CoqProgressMonitor.multistep = true
     PrintActor.register(CoqStepNotifier)
     //we need to provoke first message to start callback loops
     CoqStepAction.doit()
@@ -234,7 +234,7 @@ class CoqStepUntilAction extends KCoqAction {
     Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition + ", docpos is " + DocumentState.position)
     if (DocumentState.position == togo) { } else
     if (DocumentState.position < togo) {
-      EclipseBoilerPlate.multistep = true
+      CoqProgressMonitor.multistep = true
       CoqStepNotifier.test = Some((x : Int, y : Int) => y >= togo)
       PrintActor.register(CoqStepNotifier)
       CoqStepAction.doit()
@@ -400,8 +400,8 @@ object CoqStepNotifier extends CoqCallback {
     PrintActor.deregister(CoqStepNotifier)
     err = false
     test = None
-    EclipseBoilerPlate.multistep = false
-    EclipseBoilerPlate.finishedProgress
+    CoqProgressMonitor.multistep = false
+    CoqProgressMonitor ! "FINISHED"
   }
 }
 
@@ -415,7 +415,7 @@ object CoqOutputDispatcher extends CoqCallback {
     //Console.println("received in dispatch " + x)
     x match {
       case CoqShellReady(monoton, token) =>
-        EclipseBoilerPlate.finishedProgress
+        CoqProgressMonitor ! "FINISHED"
         if (monoton)
           EclipseBoilerPlate.unmark
         ActionDisabler.enableMaybe
