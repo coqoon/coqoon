@@ -1,4 +1,4 @@
-/* (c) 2010-2011 Hannes Mehnert and David Christiansen */
+/* (c) 2010-2012 Hannes Mehnert and David Christiansen */
 
 package dk.itu.sdg.kopitiam
 import dk.itu.sdg.util.KopitiamLogger
@@ -97,6 +97,21 @@ object EclipseTables {
 }
 
 import scala.actors.Actor
+object MyTimer extends Actor {
+  def act () {
+    while (true) {
+      receive {
+        case ("START", x : Int) =>
+          Thread.sleep(1000);
+          if (DocumentState.position == x) {
+            Console.println("position " + DocumentState.position + " is equal to x " + x)
+            CoqProgressMonitor ! "REALLY"
+          }
+      }
+    }
+  }
+}
+
 object CoqProgressMonitor extends Actor {
   import org.eclipse.core.runtime.IProgressMonitor
   import org.eclipse.jface.dialogs.ProgressMonitorDialog
@@ -112,13 +127,24 @@ object CoqProgressMonitor extends Actor {
   private var pmd : MyProgressMonitorDialog = null
   var multistep : Boolean = false
   private val nam = "Coq interaction"
+  private var title : String = ""
 
   def act () {
     while (true) {
       receive {
         case ("START", n : String) =>
-          Console.println("Starting progress monitor " + n)
-          if (p == null) {
+          title = n
+          Console.println("Starting progress monitor")
+          if (p == null)
+            MyTimer ! ("START", DocumentState.position)
+          else
+            Display.getDefault.asyncExec(
+              new Runnable() {
+                def run() = {
+                  if (p != null)
+                    p.setTaskName(nam + ": " + n)
+                }})
+        case "REALLY" =>
             //assert(pmd == null)
             Display.getDefault.asyncExec(
               new Runnable() {
@@ -132,14 +158,7 @@ object CoqProgressMonitor extends Actor {
                     override def mouseUp (m : MouseEvent) : Unit = ()
                   })
                   p = pmd.getProgressMonitor
-                  p.beginTask(nam + n, IProgressMonitor.UNKNOWN)
-                }})
-          } else
-            Display.getDefault.asyncExec(
-              new Runnable() {
-                def run() = {
-                  if (p != null)
-                    p.setTaskName(nam + ": " + n)
+                  p.beginTask(nam + title, IProgressMonitor.UNKNOWN)
                 }})
         case "FINISHED" =>
           Console.println("Finished progress monitor " + p)
@@ -345,24 +364,24 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   }
 
   private def commit () : Unit = {
-    //Console.println("commited (@" + position + ", " + sendlen + ")")
+    Console.println("commited (@" + position + ", " + sendlen + ")")
     if (sendlen != 0) {
       //Console.println("commited - and doing some work")
       val end = scala.math.min(sendlen, content.length - position)
-      val len = scala.math.min(position + end, content.length)
+      position += end
+      sendlen = 0
+      val len = scala.math.min(position, content.length)
       //Console.println("commiting, end is " + end + " (pos + len: " + (position + sendlen) + ")" + ", pos:" + position + ", submitted length " + (len - position))
-      val txtp = new TextPresentation(new Region(0, position + end), 20)
-      txtp.setDefaultStyleRange(new StyleRange(0, position + end, null, sentColor))
+      val txtp = new TextPresentation(new Region(0, position), 20)
+      txtp.setDefaultStyleRange(new StyleRange(0, position, null, sentColor))
       if (activeEditor != null)
         Display.getDefault.syncExec(
           new Runnable() {
             def run() = {
               activeEditor.getSource.changeTextPresentation(txtp, true)
-              activeEditor.selectAndReveal(position + end, 0)
+              activeEditor.selectAndReveal(position, 0)
             }
           })
-      position += end
-      sendlen = 0
     }
   }
 }
@@ -473,5 +492,6 @@ class Startup extends IStartup {
     CoqTop.init
     Console.println("starting progressmonitor")
     CoqProgressMonitor.start
+    MyTimer.start
   }
 }

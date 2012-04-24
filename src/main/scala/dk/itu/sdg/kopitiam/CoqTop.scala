@@ -18,16 +18,19 @@ class BusyStreamReader (input : InputStream) extends Runnable {
       while (input.available >= 0) {
         val avail = input.available
         val bytesread = input.read(inbuf, 0, if (avail == 0 | avail > bufsize) bufsize else avail)
-        //Console.println("read " + bytesread + " (actors: " + callbacks.length + ")")
+        Console.println("read " + bytesread + " (actors: " + callbacks.length + ")")
         if (bytesread < avail && bytesread < bufsize)
           Console.println("bytesread " + bytesread + " < avail " + avail)
         if (bytesread > 0) {
           val res = new String(inbuf, 0, bytesread, "UTF-8")
+          Console.println("distributing " + res + " to " + callbacks.length)
           callbacks.foreach((_ : Actor) ! res)
         }
       }
     } catch {
-      case e : IOException => //nothing to do if coq dies
+      case e =>
+        Console.println("yay, exception! " + e)
+        //nothing to do if coq dies
     }
   }
 }
@@ -129,9 +132,10 @@ object CoqState {
 object ErrorOutputActor extends Actor with OutputChannel[String] {
   def act() {
     while (true) {
+      try {
       receive {
         case msg : String =>
-          //Console.println("receiving shell " + msg)
+          Console.println("receiving shell " + msg)
           ValidCoqShell.getTokens(msg) match {
             case Some(tokens : CoqShellTokens) => {
               //Console.println("set coq ready " + tokens)
@@ -143,7 +147,13 @@ object ErrorOutputActor extends Actor with OutputChannel[String] {
                 PrintActor.distribute(CoqUnknown(msg.trim)) //used CoqWarning here, but that doesn't work too well
               }
         }
+        case x => Console.println("x here? " + x)
       }
+      } catch {
+      case e =>
+        Console.println("yayYAYYAY, exception! " + e)
+        //nothing to do if coq dies
+    }
     }
   }
 }
@@ -170,6 +180,7 @@ object CoqTop {
         Console.println("coqin is null")
       //Console.println("ready? " + CoqState.readyForInput + ", sending " + data.take(10) + "..." + data.takeRight(10))
       if (CoqState.readyForInput) {
+        CoqState.sendCommand
         val datarr = data.getBytes("UTF-8")
         coqin.write(datarr)
         if (data.length < 20)
@@ -179,7 +190,6 @@ object CoqTop {
         if (data.endsWith(".")) //we've EOF or command, need whitespace
           coqin.write("\n".getBytes("UTF-8"))
         coqin.flush
-        CoqState.sendCommand
       } else if (waiting > 400) {
         Console.println("initiating self-destruct mechanism")
         killCoq
