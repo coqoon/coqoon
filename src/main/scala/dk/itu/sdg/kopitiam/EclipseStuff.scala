@@ -96,23 +96,26 @@ object EclipseTables {
   val StringToDoc = new HashMap[String,IDocument]()
 }
 
-import scala.actors.Actor
-object MyTimer extends Actor {
-  def act () {
-    while (true) {
-      receive {
-        case ("START", x : Int) =>
-          Thread.sleep(1000);
-          if (DocumentState.position == x) {
-            Console.println("position " + DocumentState.position + " is equal to x " + x)
-            CoqProgressMonitor ! "REALLY"
-          }
+import akka.actor._
+class MyTimer extends Actor {
+  def receive = {
+    case ("START", x : Int) =>
+      Thread.sleep(1000);
+      if (CoqProgressMonitor.tick == x) {
+        Console.println("tick " + CoqProgressMonitor.tick + " is equal to x " + x)
+        CoqProgressMonitor.actor.tell("REALLY")
       }
-    }
   }
 }
 
-object CoqProgressMonitor extends Actor {
+object CoqProgressMonitor {
+  var tick : Int = 0
+  var timer : ActorRef = null
+  var actor : ActorRef = null
+  var multistep : Boolean = false
+}
+
+class CoqProgressMonitorImplementation extends Actor {
   import org.eclipse.core.runtime.IProgressMonitor
   import org.eclipse.jface.dialogs.ProgressMonitorDialog
   import org.eclipse.swt.widgets.Shell
@@ -125,61 +128,60 @@ object CoqProgressMonitor extends Actor {
   import org.eclipse.swt.events.{MouseListener, MouseEvent}
   private var p : IProgressMonitor = null
   private var pmd : MyProgressMonitorDialog = null
-  var multistep : Boolean = false
   private val nam = "Coq interaction"
   private var title : String = ""
 
-  def act () {
-    while (true) {
-      receive {
-        case ("START", n : String) =>
-          title = n
-          Console.println("Starting progress monitor")
-          if (p == null)
-            MyTimer ! ("START", DocumentState.position)
-          else
-            Display.getDefault.asyncExec(
-              new Runnable() {
-                def run() = {
-                  if (p != null)
-                    p.setTaskName(nam + ": " + n)
-                }})
-        case "REALLY" =>
-            //assert(pmd == null)
-            Display.getDefault.asyncExec(
-              new Runnable() {
-                def run() = {
-                  pmd = new MyProgressMonitorDialog(Display.getDefault.getActiveShell)
-                  pmd.setCancelable(true)
-                  pmd.open
-                  pmd.getC.addMouseListener(new MouseListener() {
-                    override def mouseDoubleClick (m : MouseEvent) : Unit = ()
-                    override def mouseDown (m : MouseEvent) : Unit = CoqTop.interruptCoq
-                    override def mouseUp (m : MouseEvent) : Unit = ()
-                  })
-                  p = pmd.getProgressMonitor
-                  p.beginTask(nam + title, IProgressMonitor.UNKNOWN)
-                }})
-        case "FINISHED" =>
-          Console.println("Finished progress monitor " + p)
-          if (p != null && !multistep) {
-            val oldp = p
-            val oldpmd = pmd
-            p = null
-            pmd = null
-            Display.getDefault.asyncExec(
-              new Runnable() {
-                def run() = {
-                  oldp.done
-                  oldpmd.close
-                  //Clients should not call this method (the workbench calls this method at appropriate times). To have the workbench activate a part, use IWorkbenchPage.activate(IWorkbenchPart) instead.
-                  DocumentState.activeEditor.setFocus
-                }
-              })
-          }
-        case x => Console.println("fell through receive of CoqProgressMonitor " + x)
+  def receive = {
+    case ("START", n : String) =>
+      title = n
+      Console.println("Starting progress monitor")
+      if (p == null)
+        if (CoqProgressMonitor.multistep)
+          this.self.tell("REALLY")
+        else
+          CoqProgressMonitor.timer.tell(("START", CoqProgressMonitor.tick))
+      else
+        Display.getDefault.asyncExec(
+          new Runnable() {
+            def run() = {
+              if (p != null)
+                p.setTaskName(nam + ": " + n)
+            }})
+    case "REALLY" =>
+      //assert(pmd == null)
+      Display.getDefault.asyncExec(
+        new Runnable() {
+          def run() = {
+            pmd = new MyProgressMonitorDialog(Display.getDefault.getActiveShell)
+            pmd.setCancelable(true)
+            pmd.open
+            pmd.getC.addMouseListener(new MouseListener() {
+              override def mouseDoubleClick (m : MouseEvent) : Unit = ()
+              override def mouseDown (m : MouseEvent) : Unit = CoqTop.interruptCoq
+              override def mouseUp (m : MouseEvent) : Unit = ()
+            })
+            p = pmd.getProgressMonitor
+            p.beginTask(nam + title, IProgressMonitor.UNKNOWN)
+          }})
+    case "FINISHED" =>
+      CoqProgressMonitor.tick = CoqProgressMonitor.tick + 1
+      Console.println("Finished progress monitor " + p)
+      if (p != null && !CoqProgressMonitor.multistep) {
+        val oldp = p
+        val oldpmd = pmd
+        p = null
+        pmd = null
+        Display.getDefault.asyncExec(
+          new Runnable() {
+            def run() = {
+              oldp.done
+              oldpmd.close
+              //Clients should not call this method (the workbench calls this method at appropriate times). To have the workbench activate a part, use IWorkbenchPage.activate(IWorkbenchPart) instead.
+              DocumentState.activeEditor.setFocus
+            }
+          })
       }
-    }
+    case x => Console.println("fell through receive of CoqProgressMonitor " + x)
   }
 }
 
@@ -483,15 +485,16 @@ object GoalViewer extends GoalViewer { }
 
 import org.eclipse.ui.IStartup
 class Startup extends IStartup {
+  import akka.actor.ActorSystem
   override def earlyStartup () : Unit = {
     Console.println("earlyStartup called")
     ActionDisabler.disableAll
     DocumentMonitor.init
+    val system = ActorSystem("Kopitiam")
+    CoqProgressMonitor.actor = system.actorOf(Props[CoqProgressMonitorImplementation], name = "ProgressMonitor")
+    CoqProgressMonitor.timer = system.actorOf(Props[MyTimer], name = "MyTimer")
+    CoqTop.init
     PrintActor.register(DocumentState)
     CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + System.getProperty("file.separator")
-    CoqTop.init
-    Console.println("starting progressmonitor")
-    CoqProgressMonitor.start
-    MyTimer.start
   }
 }

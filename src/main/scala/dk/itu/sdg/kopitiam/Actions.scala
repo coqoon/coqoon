@@ -134,32 +134,34 @@ class CoqUndoAction extends KCoqAction {
   }
 
   def doitReally (pos : Int) : Unit = {
-    //invariant: we're at position p, all previous commands are already sent to coq
-    // this implies that the table (positionToShell) is fully populated until p
-    // this also implies that the previous content is not messed up!
-    val curshell = CoqState.getShell
-    //curshell is head of prevs, so we better have one more thing
-    val prevs = DocumentState.positionToShell.keys.toList.sort(_ > _)
-    assert(prevs.length > 0)
-    Console.println("working (pos: " + pos + ") on the following keys " + prevs)
-    //now we have the current state (curshell): g cs l
-    //we look into lastmost shell, either:
-    //g-- cs l or g-- cs l-- <- we're fine
-    //g-- cs+c l++ <- we need to find something with cs (just jumped into a proof)
-    var i : Int = prevs.filter(_ >= pos).length
-    var prevshell : CoqShellTokens = DocumentState.positionToShell(prevs(i))
-    assert(prevshell.globalStep < curshell.globalStep) //we're decreasing!
-    while (! prevshell.context.toSet.subsetOf(curshell.context.toSet) && prevs.length > (i + 1)) {
-      i += 1
-      prevshell = DocumentState.positionToShell(prevs(i))
+    if (CoqState.readyForInput) {
+      //invariant: we're at position p, all previous commands are already sent to coq
+      // this implies that the table (positionToShell) is fully populated until p
+      // this also implies that the previous content is not messed up!
+      val curshell = CoqState.getShell
+      //curshell is head of prevs, so we better have one more thing
+      val prevs = DocumentState.positionToShell.keys.toList.sort(_ > _)
+      assert(prevs.length > 0)
+      Console.println("working (pos: " + pos + ") on the following keys " + prevs)
+      //now we have the current state (curshell): g cs l
+      //we look into lastmost shell, either:
+      //g-- cs l or g-- cs l-- <- we're fine
+      //g-- cs+c l++ <- we need to find something with cs (just jumped into a proof)
+      var i : Int = prevs.filter(_ >= pos).length
+      var prevshell : CoqShellTokens = DocumentState.positionToShell(prevs(i))
+      assert(prevshell.globalStep < curshell.globalStep) //we're decreasing!
+      while (! prevshell.context.toSet.subsetOf(curshell.context.toSet) && prevs.length > (i + 1)) {
+        i += 1
+        prevshell = DocumentState.positionToShell(prevs(i))
+      }
+      val ctxdrop = curshell.context.length - prevshell.context.length
+      DocumentState.realundo = true
+      EclipseBoilerPlate.unmarkReally
+      DocumentState.sendlen = DocumentState.position - prevs(i)
+      prevs.take(i).foreach(DocumentState.positionToShell.remove(_))
+      assert(DocumentState.positionToShell.contains(0) == true)
+      CoqTop.writeToCoq("Backtrack " + prevshell.globalStep + " " + prevshell.localStep + " " + ctxdrop + ".")
     }
-    val ctxdrop = curshell.context.length - prevshell.context.length
-    DocumentState.realundo = true
-    EclipseBoilerPlate.unmarkReally
-    DocumentState.sendlen = DocumentState.position - prevs(i)
-    prevs.take(i).foreach(DocumentState.positionToShell.remove(_))
-    assert(DocumentState.positionToShell.contains(0) == true)
-    CoqTop.writeToCoq("Backtrack " + prevshell.globalStep + " " + prevshell.localStep + " " + ctxdrop + ".")
   }
   override def start () : Boolean = true
   override def end () : Boolean = false
@@ -192,18 +194,20 @@ object CoqRetractAction extends CoqRetractAction { }
 
 class CoqStepAction extends KCoqAction {
   override def doit () : Unit = {
-    //Console.println("run called, sending a command")
-    val con = DocumentState.content
-    val content = con.drop(DocumentState.position)
-    if (content.length > 0) {
-      val eoc = CoqTop.findNextCommand(content)
-      //Console.println("eoc is " + eoc)
-      if (eoc > 0) {
-        DocumentState.sendlen = eoc
-        val cmd = content.take(eoc).trim
-        Console.println("command is (" + eoc + "): " + cmd)
-        CoqProgressMonitor ! ("START", cmd)
-        CoqTop.writeToCoq(cmd) //sends comments over the line
+    if (CoqState.readyForInput) {
+      //Console.println("run called, sending a command")
+      val con = DocumentState.content
+      val content = con.drop(DocumentState.position)
+      if (content.length > 0) {
+        val eoc = CoqTop.findNextCommand(content)
+        //Console.println("eoc is " + eoc)
+        if (eoc > 0) {
+          DocumentState.sendlen = eoc
+          val cmd = content.take(eoc).trim
+          Console.println("command is (" + eoc + "): " + cmd)
+          CoqProgressMonitor.actor.tell(("START", cmd))
+          CoqTop.writeToCoq(cmd) //sends comments over the line
+        }
       }
     }
   }
@@ -401,7 +405,7 @@ object CoqStepNotifier extends CoqCallback {
     err = false
     test = None
     CoqProgressMonitor.multistep = false
-    CoqProgressMonitor ! "FINISHED"
+    CoqProgressMonitor.actor.tell("FINISHED")
   }
 }
 
@@ -415,7 +419,7 @@ object CoqOutputDispatcher extends CoqCallback {
     //Console.println("received in dispatch " + x)
     x match {
       case CoqShellReady(monoton, token) =>
-        CoqProgressMonitor ! "FINISHED"
+        CoqProgressMonitor.actor.tell("FINISHED")
         if (monoton)
           EclipseBoilerPlate.unmark
         ActionDisabler.enableMaybe

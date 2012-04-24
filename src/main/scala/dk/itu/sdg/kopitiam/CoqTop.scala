@@ -3,15 +3,15 @@
 package dk.itu.sdg.kopitiam
 
 import java.io.{ InputStream, IOException }
-import scala.actors._
+import akka.actor.{ Actor, ActorRef }
 
 class BusyStreamReader (input : InputStream) extends Runnable {
   private val bufsize = 256
   private val inbuf = new Array[Byte](bufsize)
-  private var callbacks : List[Actor] = List[Actor]()
+  private var callbacks : List[ActorRef] = List[ActorRef]()
 
-  def addActor (c : Actor) : Unit = { callbacks = c :: callbacks }
-  def removeActor (c : Actor) : Unit = { callbacks = callbacks.filterNot(_ == c) }
+  def addActor (c : ActorRef) : Unit = { callbacks = c :: callbacks }
+  def removeActor (c : ActorRef) : Unit = { callbacks = callbacks.filterNot(_ == c) }
 
   override def run () : Unit = {
     try {
@@ -24,7 +24,7 @@ class BusyStreamReader (input : InputStream) extends Runnable {
         if (bytesread > 0) {
           val res = new String(inbuf, 0, bytesread, "UTF-8")
           Console.println("distributing " + res + " to " + callbacks.length)
-          callbacks.foreach((_ : Actor) ! res)
+          callbacks.foreach((_ : ActorRef).tell(res))
         }
       }
     } catch {
@@ -39,14 +39,14 @@ trait CoqCallback {
   def dispatch (x : CoqResponse) : Unit
 }
 
-object PrintActor extends Actor with OutputChannel[String] {
+object PrintActor {
   object PCons {
     def println (x : String) : Unit = { Console.println(x) }
   }
   type Printable = { def println (x : String) : Unit }
   var stream : Printable = PCons
 
-  private var callbacks : List[CoqCallback] = List[CoqCallback]() //why not actors?
+  var callbacks : List[CoqCallback] = List[CoqCallback]() //why not actors?
 
   def register (c : CoqCallback) : Unit = { callbacks = (c :: callbacks.reverse).reverse }
   def deregister (c : CoqCallback) : Unit = { callbacks = callbacks.filterNot(_ == c) }
@@ -56,23 +56,21 @@ object PrintActor extends Actor with OutputChannel[String] {
     callbacks.foreach(_.dispatch(c))
     //Console.println(" -> done distribution")
   }
+}
 
-  def act() {
-    var buf = ""
-    while (true) {
-      receive {
-        case msg : String => {
-          //Console.println("received " + msg)
-          buf = buf + msg
-          if (msg.endsWith("\n") && !msg.endsWith("============================\n")) {
-            Console.println("received message:" + buf.trim)
-            val coqr = ParseCoqResponse.parse(buf.trim)
-            Console.println("parsed response is " + coqr)
-            buf = ""
-            callbacks.foreach(_.dispatch(coqr))
-          } //else Console.println("filling buffer with " + msg)
-        }
-      }
+class PrintActorImplementation extends Actor {
+  var buf : String = ""
+  def receive = {
+    case msg : String => {
+      //Console.println("received " + msg)
+      buf = buf + msg
+      if (msg.endsWith("\n") && !msg.endsWith("============================\n")) {
+        Console.println("received message:" + buf.trim)
+        val coqr = ParseCoqResponse.parse(buf.trim)
+        Console.println("parsed response is " + coqr)
+        buf = ""
+        PrintActor.callbacks.foreach(_.dispatch(coqr))
+      } //else Console.println("filling buffer with " + msg)
     }
   }
 }
@@ -129,32 +127,22 @@ object CoqState {
   }
 }
 
-object ErrorOutputActor extends Actor with OutputChannel[String] {
-  def act() {
-    while (true) {
-      try {
-      receive {
-        case msg : String =>
-          Console.println("receiving shell " + msg)
-          ValidCoqShell.getTokens(msg) match {
-            case Some(tokens : CoqShellTokens) => {
-              //Console.println("set coq ready " + tokens)
-              CoqState.setShell(tokens)
-            }
-            case None =>
-              if (msg.filterNot(_ == '\n').length > 0) {
-                Console.println("couldn't parse on stderr: " + msg)
-                PrintActor.distribute(CoqUnknown(msg.trim)) //used CoqWarning here, but that doesn't work too well
-              }
+class ErrorOutputActor extends Actor {
+  def receive = {
+    case msg : String =>
+      Console.println("receiving shell " + msg)
+      ValidCoqShell.getTokens(msg) match {
+        case Some(tokens : CoqShellTokens) => {
+          //Console.println("set coq ready " + tokens)
+          CoqState.setShell(tokens)
         }
-        case x => Console.println("x here? " + x)
+        case None =>
+          if (msg.filterNot(_ == '\n').length > 0) {
+            Console.println("couldn't parse on stderr: " + msg)
+            PrintActor.distribute(CoqUnknown(msg.trim)) //used CoqWarning here, but that doesn't work too well
+          }
       }
-      } catch {
-      case e =>
-        Console.println("yayYAYYAY, exception! " + e)
-        //nothing to do if coq dies
-    }
-    }
+    case x => Console.println("x here? " + x)
   }
 }
 
@@ -202,9 +190,15 @@ object CoqTop {
     }
   }
 
+  var printactor : ActorRef = null
+  var erroroutputactor : ActorRef = null
+
+  import akka.actor.ActorSystem
+  import akka.actor.Props
   def init () : Unit = {
-    PrintActor.start
-    ErrorOutputActor.start
+    val system = ActorSystem("Kopitiam")
+    printactor = system.actorOf(Props[PrintActorImplementation], name = "PrintActor")
+    erroroutputactor = system.actorOf(Props[ErrorOutputActor], name = "ErrorOutputActor")
   }
 
   def killCoq () : Unit = {
@@ -268,8 +262,8 @@ object CoqTop {
     coqin = coqprocess.getOutputStream
     coqout = new BusyStreamReader(coqprocess.getInputStream)
     coqerr = new BusyStreamReader(coqprocess.getErrorStream)
-    coqout.addActor(PrintActor)
-    coqerr.addActor(ErrorOutputActor)
+    coqout.addActor(printactor)
+    coqerr.addActor(erroroutputactor)
     waiting = 0
     started = true
     new Thread(coqout).start

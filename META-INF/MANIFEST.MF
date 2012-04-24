@@ -20,3 +20,5 @@ Require-Bundle: org.scala-ide.scala.library,
  org.eclipse.ui.views;bundle-version="3.5.0"
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-ClassPath: lib_managed/akka-actor-2.0.1.jar,
+ .

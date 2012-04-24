@@ -1,3 +1,6 @@
+** upgrade to Scala 2.9.2 and sbt-0.11.2
+** display ProgressDialog only if Coq takes longer than 1 second
+** upgrade to akka.actor instead of scala.actors
 ** Scroll to last sent command
 ** Refresh/Show (icon and C-p)
 * Kopitiam 0.0.17 [11 April 2012]
