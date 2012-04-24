@@ -1,3 +1,4 @@
+* Kopitiam 0.0.18 [24 April 2012]
 ** limit error location by parsing Coq's output
 ** upgrade to Scala 2.9.2 and sbt-0.11.2
 ** display ProgressDialog only if Coq takes longer than 1 second
