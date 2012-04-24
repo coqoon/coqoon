@@ -443,8 +443,22 @@ object CoqOutputDispatcher extends CoqCallback {
           goalviewer.writeGoal("Proof completed", "", "")
       case CoqError(msg) =>
         //TODO: what if Error not found, should come up with a sensible message anyways!
-        val ps = msg.drop(msg.findIndexOf(_.startsWith("Error")))
-        EclipseBoilerPlate.mark(ps.reduceLeft(_ + " " + _))
+        val mess = msg.findIndexOf(_.startsWith("Error"))
+        val p = if (mess == -1)
+                  //"Syntax error" for example!
+                  msg.drop(msg.findIndexOf(_.contains("error")))
+                else
+                  msg.drop(mess)
+        val ps = p.reduceLeft(_ + " " + _)
+        if (msg.length > 0 && msg(0).contains("characters")) {
+          //msg(0) is: Toplevel input, characters xx-yy
+          val ff = msg(0).drop(msg(0).findIndexOf(_ == 's') + 2).trim
+          val split = ff.findIndexOf(_ == '-')
+          val pos0 = ff.substring(0, split).toInt
+          val pos1 = ff.substring(split + 1, ff.length - 1).toInt
+          EclipseBoilerPlate.mark(ps, IMarker.SEVERITY_ERROR, false, pos0, pos1 - pos0)
+        } else
+          EclipseBoilerPlate.mark(ps)
       case CoqWarning(msg) =>
         EclipseBoilerPlate.mark(msg, IMarker.SEVERITY_WARNING, true)
       case CoqUserInterrupt() => 

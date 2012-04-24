@@ -128,7 +128,7 @@ class CoqProgressMonitorImplementation extends Actor {
   import org.eclipse.swt.events.{MouseListener, MouseEvent}
   private var p : IProgressMonitor = null
   private var pmd : MyProgressMonitorDialog = null
-  private val nam = "Coq interaction"
+  private val nam = "Coq interaction: "
   private var title : String = ""
 
   def receive = {
@@ -214,18 +214,24 @@ object EclipseBoilerPlate {
 
   import org.eclipse.core.resources.{IMarker, IResource}
 
-  def mark (text : String, severity : Int = IMarker.SEVERITY_ERROR, advance : Boolean = false) : Unit = {
+  def mark (text : String, severity : Int = IMarker.SEVERITY_ERROR, advance : Boolean = false, off : Int = 0, len : Int = 0) : Unit = {
     val file = DocumentState.resource
     var spos = if (advance) DocumentState.sendlen + DocumentState.position + 1 else DocumentState.position + 1
     val con = DocumentState.content
     while ((con(spos) == '\n' || con(spos) == ' ' || con(spos) == '\t') && spos < con.length)
       spos += 1
-    val epos = if (advance) spos + 1 else DocumentState.position + DocumentState.oldsendlen - 1
+    spos += off
+    val epos = if (advance)
+                 spos + 1
+               else if (len > 0)
+                 spos + len
+               else
+                 DocumentState.position + DocumentState.oldsendlen - 1
     val marker = file.createMarker(IMarker.PROBLEM)
     marker.setAttribute(IMarker.MESSAGE, text)
     marker.setAttribute(IMarker.LOCATION, file.getName)
     marker.setAttribute(IMarker.CHAR_START, spos)
-    marker.setAttribute(IMarker.CHAR_END, DocumentState.position + DocumentState.oldsendlen - 1) //for tha whitespace
+    marker.setAttribute(IMarker.CHAR_END, epos) //for tha whitespace
     marker.setAttribute(IMarker.SEVERITY, severity)
     marker.setAttribute(IMarker.TRANSIENT, true)
   }
