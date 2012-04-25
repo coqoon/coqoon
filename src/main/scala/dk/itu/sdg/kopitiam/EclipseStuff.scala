@@ -95,7 +95,7 @@ object EclipseTables {
   val DocToString = new HashMap[IDocument,String]()
   val StringToDoc = new HashMap[String,IDocument]()
 }
-
+/*
 import akka.actor._
 class MyTimer extends Actor {
   def receive = {
@@ -184,7 +184,7 @@ class CoqProgressMonitorImplementation extends Actor {
     case x => Console.println("fell through receive of CoqProgressMonitor " + x)
   }
 }
-
+*/
 object EclipseBoilerPlate {
   import org.eclipse.ui.{IWorkbenchWindow,IEditorPart}
   import org.eclipse.ui.texteditor.{ITextEditor,IDocumentProvider,AbstractTextEditor}
@@ -334,6 +334,9 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   import org.eclipse.jface.text.{ Region, TextPresentation }
   import org.eclipse.swt.custom.StyleRange
 
+  var reveal : Boolean = true
+  var autoreveal : Boolean = false
+
   private def undo () : Unit = {
     //Console.println("undo (@" + position + ", " + sendlen + ")")
     if (sendlen != 0) {
@@ -345,15 +348,21 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         //Console.println("undo (start " + start + " send length " + sendlen + " content length " + content.length + " submitting length " + (end - start) + ")")
         val txtp = new TextPresentation(new Region(0, start), 20)
         txtp.setDefaultStyleRange(new StyleRange(0, start, null, sentColor))
+        val rev = reveal
         if (activeEditor != null)
           Display.getDefault.syncExec(
             new Runnable() {
               def run() = {
                 activeEditor.getSource.invalidateTextPresentation()
                 activeEditor.getSource.changeTextPresentation(txtp, true)
-                activeEditor.selectAndReveal(start, 0)
+                if (rev)
+                  activeEditor.selectAndReveal(start, 0)
               }
             })
+        if (autoreveal) {
+          reveal = true
+          autoreveal = false
+        }
         position = start
         sendlen = 0
       } else { //just an error
@@ -382,12 +391,14 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       //Console.println("commiting, end is " + end + " (pos + len: " + (position + sendlen) + ")" + ", pos:" + position + ", submitted length " + (len - position))
       val txtp = new TextPresentation(new Region(0, position), 20)
       txtp.setDefaultStyleRange(new StyleRange(0, position, null, sentColor))
+      val rev = reveal
       if (activeEditor != null)
         Display.getDefault.syncExec(
           new Runnable() {
             def run() = {
               activeEditor.getSource.changeTextPresentation(txtp, true)
-              activeEditor.selectAndReveal(position, 0)
+              if (rev)
+                activeEditor.selectAndReveal(position, 0)
             }
           })
     }
@@ -491,14 +502,14 @@ object GoalViewer extends GoalViewer { }
 
 import org.eclipse.ui.IStartup
 class Startup extends IStartup {
-  import akka.actor.ActorSystem
+//  import akka.actor.ActorSystem
   override def earlyStartup () : Unit = {
     Console.println("earlyStartup called")
     ActionDisabler.disableAll
     DocumentMonitor.init
-    val system = ActorSystem("Kopitiam")
-    CoqProgressMonitor.actor = system.actorOf(Props[CoqProgressMonitorImplementation], name = "ProgressMonitor")
-    CoqProgressMonitor.timer = system.actorOf(Props[MyTimer], name = "MyTimer")
+    //val system = ActorSystem("Kopitiam")
+    //CoqProgressMonitor.actor = system.actorOf(Props[CoqProgressMonitorImplementation], name = "ProgressMonitor")
+    //CoqProgressMonitor.timer = system.actorOf(Props[MyTimer], name = "MyTimer")
     CoqTop.init
     PrintActor.register(DocumentState)
     CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + System.getProperty("file.separator")

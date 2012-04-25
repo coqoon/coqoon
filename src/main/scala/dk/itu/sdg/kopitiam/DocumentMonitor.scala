@@ -151,6 +151,8 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       if (off < DocumentState.position) {
         //retract to before
         Console.println("retracting to " + off + " (from " + DocumentState.position + ")")
+        DocumentState.reveal = false
+        DocumentState.autoreveal = true
         CoqUndoAction.doitReally(off)
         //color black from off to end
         DocumentState.uncolor(off)

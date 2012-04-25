@@ -205,7 +205,7 @@ class CoqStepAction extends KCoqAction {
           DocumentState.sendlen = eoc
           val cmd = content.take(eoc).trim
           //Console.println("command is (" + eoc + "): " + cmd)
-          CoqProgressMonitor.actor.tell(("START", cmd))
+          //CoqProgressMonitor.actor.tell(("START", cmd))
           CoqTop.writeToCoq(cmd) //sends comments over the line
         }
       }
@@ -219,7 +219,8 @@ object CoqStepAction extends CoqStepAction { }
 class CoqStepAllAction extends KCoqAction {
   override def doit () : Unit = {
     //Console.println("registering CoqStepNotifier to PrintActor, now stepping")
-    CoqProgressMonitor.multistep = true
+    //CoqProgressMonitor.multistep = true
+    DocumentState.reveal = false
     PrintActor.register(CoqStepNotifier)
     //we need to provoke first message to start callback loops
     CoqStepAction.doit()
@@ -238,12 +239,14 @@ class CoqStepUntilAction extends KCoqAction {
     //Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition + ", docpos is " + DocumentState.position)
     if (DocumentState.position == togo) { } else
     if (DocumentState.position < togo) {
-      CoqProgressMonitor.multistep = true
+      //CoqProgressMonitor.multistep = true
+      DocumentState.reveal = false
       CoqStepNotifier.test = Some((x : Int, y : Int) => y >= togo)
       PrintActor.register(CoqStepNotifier)
       CoqStepAction.doit()
     } else { //Backtrack
       //go forward till cursor afterwards
+      DocumentState.reveal = false
       PrintActor.register(CoqLater(() =>
         Display.getDefault.syncExec(
           new Runnable() {
@@ -271,6 +274,15 @@ class RestartCoqAction extends KAction {
 }
 object RestartCoqAction extends RestartCoqAction { }
 
+class InterruptCoqAction extends KAction {
+  override def doit () : Unit = {
+    Console.println("interrupt called")
+    CoqTop.interruptCoq
+  }
+}
+object InterruptCoqAction extends InterruptCoqAction { }
+
+//only enable in proof edit mode!
 class CoqRefreshAction extends KCoqAction {
   override def doit () : Unit = {
     CoqTop.writeToCoq("Show. ")
@@ -404,8 +416,9 @@ object CoqStepNotifier extends CoqCallback {
     PrintActor.deregister(CoqStepNotifier)
     err = false
     test = None
-    CoqProgressMonitor.multistep = false
-    CoqProgressMonitor.actor.tell("FINISHED")
+    DocumentState.reveal = true
+    //CoqProgressMonitor.multistep = false
+    //CoqProgressMonitor.actor.tell("FINISHED")
   }
 }
 
@@ -419,7 +432,7 @@ object CoqOutputDispatcher extends CoqCallback {
     //Console.println("received in dispatch " + x)
     x match {
       case CoqShellReady(monoton, token) =>
-        CoqProgressMonitor.actor.tell("FINISHED")
+        //CoqProgressMonitor.actor.tell("FINISHED")
         if (monoton)
           EclipseBoilerPlate.unmark
         ActionDisabler.enableMaybe

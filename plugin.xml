@@ -8,6 +8,14 @@
             label="Kopitiam Action Set"
             visible="true">
          <action
+               class="dk.itu.sdg.kopitiam.InterruptCoqAction"
+               icon="icons/stop.gif"
+               id="kopitiam.actions.InterruptAction"
+               label="&amp;Interrupt Coq"
+               toolbarPath="CoqGroup"
+               tooltip="Interrupt Coq">
+         </action>
+         <action
                class="dk.itu.sdg.kopitiam.RestartCoqAction"
                icon="icons/dead.gif"
                id="kopitiam.actions.RestartAction"
@@ -102,6 +110,12 @@
             contextId="Kopitiam.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="Ctrl+P">
+      </key>
+      <key
+            commandId="Kopitiam.interrupt"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="Ctrl+C">
       </key>
    </extension>
    <extension
@@ -223,6 +237,12 @@
             defaultHandler="dk.itu.sdg.kopitiam.CoqRefreshAction"
             id="Kopitiam.refresh"
             name="Refresh Coq command">
+      </command>
+      <command
+            categoryId="Kopitiam.category"
+            defaultHandler="dk.itu.sdg.kopitiam.InterruptCoqAction"
+            id="Kopitiam.interrupt"
+            name="Interrupt Coq command">
       </command>
    </extension>
    <extension
