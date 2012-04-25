@@ -44,13 +44,9 @@ displaying the Qed solely
 *** start with SearchAbout and similar helpers
 ** dependency graph of coq files, run coqc as background task
 ** Progress as part of progress window, not custom dialog (without using Job API?)
-*** [Jesper] don't freeze eclipse during processing
 *** real steps while GotoCursor/GotoEnd
 *** add lemma name to progress (especially interesting for Qed.)
 *** join strings (otherwise displays one line only, might be (* COMMENT *))
-** scroll to document position (recenter while passing stuff to coq)
-[Jesper] make this maybe optionally/as a preference?
-(according to Jesper shouldn't be done when stepping backwards)
 ** [Jesper] Using ctrl-Enter to parse lots of code works nicely, but would it be faster if it didn't print the output for all steps? If not then disregard this.
 ** syntax highlighting in GoalViewer
 * Java side

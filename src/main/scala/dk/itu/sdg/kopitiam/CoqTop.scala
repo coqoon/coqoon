@@ -18,12 +18,12 @@ class BusyStreamReader (input : InputStream) extends Runnable {
       while (input.available >= 0) {
         val avail = input.available
         val bytesread = input.read(inbuf, 0, if (avail == 0 | avail > bufsize) bufsize else avail)
-        Console.println("read " + bytesread + " (actors: " + callbacks.length + ")")
+        //Console.println("read " + bytesread + " (actors: " + callbacks.length + ")")
         if (bytesread < avail && bytesread < bufsize)
           Console.println("bytesread " + bytesread + " < avail " + avail)
         if (bytesread > 0) {
           val res = new String(inbuf, 0, bytesread, "UTF-8")
-          Console.println("distributing " + res + " to " + callbacks.length)
+          //Console.println("distributing " + res + " to " + callbacks.length)
           callbacks.foreach((_ : ActorRef).tell(res))
         }
       }
@@ -65,9 +65,9 @@ class PrintActorImplementation extends Actor {
       //Console.println("received " + msg)
       buf = buf + msg
       if (msg.endsWith("\n") && !msg.endsWith("============================\n")) {
-        Console.println("received message:" + buf.trim)
+        //Console.println("received message:" + buf.trim)
         val coqr = ParseCoqResponse.parse(buf.trim)
-        Console.println("parsed response is " + coqr)
+        //Console.println("parsed response is " + coqr)
         buf = ""
         PrintActor.callbacks.foreach(_.dispatch(coqr))
       } //else Console.println("filling buffer with " + msg)
@@ -130,7 +130,7 @@ object CoqState {
 class ErrorOutputActor extends Actor {
   def receive = {
     case msg : String =>
-      Console.println("receiving shell " + msg)
+      //Console.println("receiving shell " + msg)
       ValidCoqShell.getTokens(msg) match {
         case Some(tokens : CoqShellTokens) => {
           //Console.println("set coq ready " + tokens)
@@ -171,10 +171,10 @@ object CoqTop {
         CoqState.sendCommand
         val datarr = data.getBytes("UTF-8")
         coqin.write(datarr)
-        if (data.length < 20)
-          Console.println("wrote " + data)
-        else
-          Console.println("wrote " + data.take(10) + "..." + data.takeRight(10))
+        //if (data.length < 20)
+        //  Console.println("wrote " + data)
+        //else
+        //  Console.println("wrote " + data.take(10) + "..." + data.takeRight(10))
         if (data.endsWith(".")) //we've EOF or command, need whitespace
           coqin.write("\n".getBytes("UTF-8"))
         coqin.flush

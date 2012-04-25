@@ -102,7 +102,7 @@ class MyTimer extends Actor {
     case ("START", x : Int) =>
       Thread.sleep(1000);
       if (CoqProgressMonitor.tick == x) {
-        Console.println("tick " + CoqProgressMonitor.tick + " is equal to x " + x)
+        //Console.println("tick " + CoqProgressMonitor.tick + " is equal to x " + x)
         CoqProgressMonitor.actor.tell("REALLY")
       }
   }
@@ -134,7 +134,7 @@ class CoqProgressMonitorImplementation extends Actor {
   def receive = {
     case ("START", n : String) =>
       title = n
-      Console.println("Starting progress monitor")
+      //Console.println("Starting progress monitor")
       if (p == null)
         if (CoqProgressMonitor.multistep)
           this.self.tell("REALLY")
@@ -165,7 +165,7 @@ class CoqProgressMonitorImplementation extends Actor {
           }})
     case "FINISHED" =>
       CoqProgressMonitor.tick = CoqProgressMonitor.tick + 1
-      Console.println("Finished progress monitor " + p)
+      //Console.println("Finished progress monitor " + p)
       if (p != null && !CoqProgressMonitor.multistep) {
         val oldp = p
         val oldpmd = pmd
@@ -372,7 +372,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   }
 
   private def commit () : Unit = {
-    Console.println("commited (@" + position + ", " + sendlen + ")")
+    //Console.println("commited (@" + position + ", " + sendlen + ")")
     if (sendlen != 0) {
       //Console.println("commited - and doing some work")
       val end = scala.math.min(sendlen, content.length - position)
