@@ -457,10 +457,14 @@ object CoqOutputDispatcher extends CoqCallback {
       case CoqError(msg) =>
         //TODO: what if Error not found, should come up with a sensible message anyways!
         val mess = msg.findIndexOf(_.startsWith("Error"))
-        val p = if (mess == -1)
+        val p = if (mess == -1) {
                   //"Syntax error" for example!
-                  msg.drop(msg.findIndexOf(_.contains("error")))
-                else
+                  val err = msg.findIndexOf(_.contains("error"))
+                  if (err == -1)
+                    msg.drop(msg.findIndexOf(_.contains("^^")))
+                  else
+                    msg.drop(err)
+                } else
                   msg.drop(mess)
         val ps = p.reduceLeft(_ + " " + _)
         if (msg.length > 0 && msg(0).contains("characters")) {
