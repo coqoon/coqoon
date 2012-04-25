@@ -65,12 +65,12 @@ class PrintActorImplementation extends Actor {
       //Console.println("received " + msg)
       buf = buf + msg
       if (msg.endsWith("\n") && !msg.endsWith("============================\n")) {
-        //Console.println("received message:" + buf.trim)
+        Console.println("received message:" + buf.trim)
         val coqr = ParseCoqResponse.parse(buf.trim)
-        //Console.println("parsed response is " + coqr)
+        Console.println("parsed response is " + coqr)
         buf = ""
         PrintActor.callbacks.foreach(_.dispatch(coqr))
-      } //else Console.println("filling buffer with " + msg)
+      } else Console.println("filling buffer with " + msg)
     }
   }
 }
@@ -171,10 +171,10 @@ object CoqTop {
         CoqState.sendCommand
         val datarr = data.getBytes("UTF-8")
         coqin.write(datarr)
-        //if (data.length < 20)
-        //  Console.println("wrote " + data)
-        //else
-        //  Console.println("wrote " + data.take(10) + "..." + data.takeRight(10))
+        if (data.length < 20)
+          Console.println("wrote " + data)
+        else
+          Console.println("wrote " + data.take(10) + "..." + data.takeRight(10))
         if (data.endsWith(".")) //we've EOF or command, need whitespace
           coqin.write("\n".getBytes("UTF-8"))
         coqin.flush

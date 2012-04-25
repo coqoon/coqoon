@@ -204,7 +204,7 @@ class CoqStepAction extends KCoqAction {
         if (eoc > 0) {
           DocumentState.sendlen = eoc
           val cmd = content.take(eoc).trim
-          //Console.println("command is (" + eoc + "): " + cmd)
+          Console.println("command is (" + eoc + "): " + cmd)
           //CoqProgressMonitor.actor.tell(("START", cmd))
           CoqTop.writeToCoq(cmd) //sends comments over the line
         }
@@ -236,7 +236,7 @@ class CoqStepUntilAction extends KCoqAction {
   override def doit () : Unit = {
     val togo = CoqTop.findNextCommand(DocumentState.content.drop(EclipseBoilerPlate.getCaretPosition)) + EclipseBoilerPlate.getCaretPosition
     //doesn't work reliable when inside a comment
-    //Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition + ", docpos is " + DocumentState.position)
+    Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition + ", docpos is " + DocumentState.position)
     if (DocumentState.position == togo) { } else
     if (DocumentState.position < togo) {
       //CoqProgressMonitor.multistep = true
