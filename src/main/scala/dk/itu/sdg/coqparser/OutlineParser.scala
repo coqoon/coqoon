@@ -34,7 +34,7 @@ object OutlineVernacular {
     override def outlineName = chars
   }
   
-  case class ModuleStart (name : String) extends OutlineSentence {
+  case class ModuleStart (name : String, content : String) extends OutlineSentence {
     override def outlineName = "Module " + name
   }
   
@@ -230,8 +230,8 @@ trait SentenceParser extends Parsers with TokenParsers {
     )
 
   def moduleStartSentence : Parser[ModuleStart] =
-    withDot(Tok("Module")~>(notTok("Import", ".")<~rep(notDot))) ^^ {
-      case name if name != "Import" => ModuleStart(name)
+    withDot(Tok("Module")~>(notTok("Import", ".")~rep(notDot))) ^^ {
+      case name~content if name != "Import" => ModuleStart(name, if (content.isEmpty) "" else content.reduceLeft(_ + " " + _))
     }
   
   def sectionStartSentence : Parser[SectionStart] =
@@ -282,7 +282,13 @@ trait SentenceParser extends Parsers with TokenParsers {
   
   def parseString (input : String) : ParseResult[OutlineSentence] = {
     import scala.util.parsing.input.CharSequenceReader
-    phrase(sentence)(new lexical.Scanner(input))
+    val res = phrase(sentence)(new lexical.Scanner(input))
+    res match {
+      case x:NoSuccess =>
+        Console.println("nosuccess for " + input)
+        x
+      case x => x
+    }
   }
 }
 // End pass 2
@@ -308,8 +314,8 @@ object OutlineBuilder {
   private def buildOutline(sentences : List[VernacularRegion]) : List[VernacularRegion] = {
     sentences match {
       case Nil => Nil
-      case ModuleStart(name) :: rest => buildOutline(findModule({(id, contents) => Module(id, contents)}, rest, name))
-      case SectionStart(name) :: rest => println("  ---Section " + name);buildOutline(findModule({(id, contents) => Section(id, contents)}, rest, name))
+      case ModuleStart(name, content) :: rest => buildOutline(findModule({(id, contents) => Module(id, contents)}, rest, name, content))
+      case SectionStart(name) :: rest => println("  ---Section " + name);buildOutline(findModule({(id, contents) => Section(id, contents)}, rest, name, ""))
       case (a@Assertion(kwd, name, args, prop)) :: rest => a :: buildOutline(findProof(rest, None))
       case s :: ss => s :: buildOutline(ss)
     }
@@ -345,12 +351,15 @@ object OutlineBuilder {
   }
   
   @tailrec
-  private def findModule(constructor : (String, List[VernacularRegion]) => OutlineStructure, sentences : List[VernacularRegion], name : String, soFar : List[VernacularRegion] = Nil) : List[VernacularRegion] = {
-    sentences match {
-      case Nil => Nil
-      case End(what) :: rest if name == what => constructor(name, buildOutline(soFar.reverse)) :: rest
-      case s :: ss => findModule(constructor, ss, name, s :: soFar)
-    }
+  private def findModule(constructor : (String, List[VernacularRegion]) => OutlineStructure, sentences : List[VernacularRegion], name : String, content : String, soFar : List[VernacularRegion] = Nil) : List[VernacularRegion] = {
+    if (content.contains(":="))
+      constructor(name, buildOutline(soFar.reverse)) :: sentences
+    else
+      sentences match {
+        case Nil => constructor(name, buildOutline(soFar.reverse)) :: Nil
+        case End(what) :: rest if name == what => constructor(name, buildOutline(soFar.reverse)) :: rest
+        case s :: ss => findModule(constructor, ss, name, content, s :: soFar)
+      }
   }
   
 }
