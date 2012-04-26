@@ -1,3 +1,5 @@
+* Kopitiam 0.0.20 [26 April 2012]
+** color processing background properly
 * Kopitiam 0.0.19 [25 April 2012]
 ** get rid of ProgressDialog
 ** new command: interrupt

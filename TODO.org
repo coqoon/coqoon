@@ -17,6 +17,7 @@
 
   also, track more precisely all internal state and be able to destroy
    it (too much depends on activeeditor == null in DocumentMonitor and EclipseStuff)
+** useful: http://robertvarttinen.blogspot.com/2007/01/adding-third-party-jar-to-your-eclipse.html
 * Coq side
 ** Annotation/Folding:
 Lemma foo : .

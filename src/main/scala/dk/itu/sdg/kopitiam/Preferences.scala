@@ -48,6 +48,7 @@ class KopitiamColorPreferencePage extends FieldEditorPreferencePage with IWorkbe
   override def createFieldEditors () : Unit = {
     val fields = List(
       ("coqSentBg", "Coq Sent Background"),
+      ("coqSentProcessBg", "Coq Processing Background"),
       ("coqKeywordFg", "Keyword Foreground")
     )
     for ((pref, label) <- fields)

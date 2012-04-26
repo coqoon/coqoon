@@ -273,6 +273,30 @@ object CoqTop {
 
   def isStarted () : Boolean = { started }
 
+  def findPreviousCommand (s : String, start : Int) : Int = {
+    if (start == 0) 0
+    else {
+      var cdepth : Int = 0
+      var i : Int = start
+      var found : Boolean = false
+      while (i > 0 && ! found) {
+        val c = s(i)
+        if (c == ')' && s(i - 1) == '*')
+          cdepth += 1
+        else if (c == '*' && s(i - 1) == '(' && cdepth > 0)
+          cdepth -= 1
+        else if (cdepth == 0 && c == '.' && (s(i + 1) == '\n' || s(i + 1) == ' ' || s(i + 1) == '\r') && s(i - 1) != '.')
+          found = true
+        if (! found)
+          i -= 1
+      }
+      if (found)
+        i
+      else
+        0
+    }
+  }
+
   def findNextCommand (s : String) : Int = {
     if (s == "") -1
     else {

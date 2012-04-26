@@ -380,6 +380,41 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     new Color(Display.getDefault, PreferenceConverter.getColor(store, "coqSentBg"))
   }
 
+  def sentProcessColor : Color = {
+    //log.warning("Getting sent color")
+    import org.eclipse.jface.preference.PreferenceConverter
+    val store = Activator.getDefault.getPreferenceStore
+    new Color(Display.getDefault, PreferenceConverter.getColor(store, "coqSentProcessBg"))
+  }
+
+  def process (until : Int) : Unit = {
+    val off = if (until == -1)
+                sendlen
+              else
+                until - position
+    val txtp = new TextPresentation(new Region(position, off), 20) //wtf 20?
+    txtp.setDefaultStyleRange(new StyleRange(position, off, null, sentProcessColor))
+    if (activeEditor != null)
+      Display.getDefault.syncExec(
+        new Runnable () {
+          def run () =
+            activeEditor.getSource.changeTextPresentation(txtp, true)
+        })
+  }
+
+  def processUndo () : Unit = {
+    val txtp = new TextPresentation(new Region(0, position), 20)
+    txtp.setDefaultStyleRange(new StyleRange(0, position, null, sentColor))
+    if (activeEditor != null)
+      Display.getDefault.syncExec(
+        new Runnable () {
+          def run () = {
+            activeEditor.getSource.invalidateTextPresentation()
+            activeEditor.getSource.changeTextPresentation(txtp, true)
+          }
+        })
+  }
+
   private def commit () : Unit = {
     //Console.println("commited (@" + position + ", " + sendlen + ")")
     if (sendlen != 0) {

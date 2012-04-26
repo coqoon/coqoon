@@ -203,6 +203,7 @@ class CoqStepAction extends KCoqAction {
         //Console.println("eoc is " + eoc)
         if (eoc > 0) {
           DocumentState.sendlen = eoc
+          DocumentState.process(-1)
           val cmd = content.take(eoc).trim
           Console.println("command is (" + eoc + "): " + cmd)
           //CoqProgressMonitor.actor.tell(("START", cmd))
@@ -239,6 +240,7 @@ class CoqStepUntilAction extends KCoqAction {
     Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition + ", docpos is " + DocumentState.position)
     if (DocumentState.position == togo) { } else
     if (DocumentState.position < togo) {
+      DocumentState.process(CoqTop.findPreviousCommand(DocumentState.content, togo - 2))
       //CoqProgressMonitor.multistep = true
       DocumentState.reveal = false
       CoqStepNotifier.test = Some((x : Int, y : Int) => y >= togo)
@@ -277,6 +279,7 @@ object RestartCoqAction extends RestartCoqAction { }
 class InterruptCoqAction extends KAction {
   override def doit () : Unit = {
     Console.println("interrupt called")
+    DocumentState.processUndo
     CoqTop.interruptCoq
   }
 }
