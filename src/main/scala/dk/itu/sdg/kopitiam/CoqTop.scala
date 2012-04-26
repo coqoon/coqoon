@@ -6,8 +6,6 @@ import java.io.{ InputStream, IOException }
 import akka.actor.{ Actor, ActorRef }
 
 class BusyStreamReader (input : InputStream) extends Runnable {
-  private val bufsize = 256
-  private val inbuf = new Array[Byte](bufsize)
   private var callbacks : List[ActorRef] = List[ActorRef]()
 
   def addActor (c : ActorRef) : Unit = { callbacks = c :: callbacks }
@@ -17,13 +15,14 @@ class BusyStreamReader (input : InputStream) extends Runnable {
     try {
       while (input.available >= 0) {
         val avail = input.available
-        val bytesread = input.read(inbuf, 0, if (avail == 0 | avail > bufsize) bufsize else avail)
+        val inbuf = new Array[Byte](avail)
+        val bytesread = input.read(inbuf, 0, avail)
         //Console.println("read " + bytesread + " (actors: " + callbacks.length + ")")
-        if (bytesread < avail && bytesread < bufsize)
+        if (bytesread < avail) // && bytesread < bufsize)
           Console.println("bytesread " + bytesread + " < avail " + avail)
         if (bytesread > 0) {
           val res = new String(inbuf, 0, bytesread, "UTF-8")
-          //Console.println("distributing " + res + " to " + callbacks.length)
+          //Console.println("distributing [" + bytesread + "]" + res + " to " + callbacks.length)
           callbacks.foreach((_ : ActorRef).tell(res))
         }
       }
@@ -59,18 +58,12 @@ object PrintActor {
 }
 
 class PrintActorImplementation extends Actor {
-  var buf : String = ""
   def receive = {
     case msg : String => {
-      //Console.println("received " + msg)
-      buf = buf + msg
-      if (msg.endsWith("\n") && !msg.endsWith("============================\n")) {
-        Console.println("received message:" + buf.trim)
-        val coqr = ParseCoqResponse.parse(buf.trim)
-        Console.println("parsed response is " + coqr)
-        buf = ""
-        PrintActor.callbacks.foreach(_.dispatch(coqr))
-      } else Console.println("filling buffer with " + msg)
+      Console.println("received message:" + msg)
+      val coqr = ParseCoqResponse.parse(msg.trim)
+      Console.println("parsed response is " + coqr)
+      PrintActor.callbacks.foreach(_.dispatch(coqr))
     }
   }
 }
