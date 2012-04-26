@@ -469,7 +469,7 @@ object CoqOutputDispatcher extends CoqCallback {
                     msg.drop(err)
                 } else
                   msg.drop(mess)
-        val ps = p.reduceLeft(_ + " " + _)
+        val ps = p.reduceLeft(_ + "\n" + _)
         if (msg.length > 0 && msg(0).contains("characters")) {
           //msg(0) is: Toplevel input, characters xx-yy
           val ff = msg(0).drop(msg(0).findIndexOf(_ == 's') + 2).trim
@@ -479,7 +479,7 @@ object CoqOutputDispatcher extends CoqCallback {
           EclipseBoilerPlate.mark(ps, IMarker.SEVERITY_ERROR, false, pos0, pos1 - pos0)
         } else
           EclipseBoilerPlate.mark(ps)
-        EclipseConsole.out.println("Error: " + msg)
+        EclipseConsole.out.println("Error: " + msg.reduceLeft(_ + "\n" + _))
       case CoqWarning(msg) =>
         EclipseBoilerPlate.mark(msg, IMarker.SEVERITY_WARNING, true)
         EclipseConsole.out.println("Warning: " + msg)
