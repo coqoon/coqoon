@@ -479,9 +479,11 @@ object CoqOutputDispatcher extends CoqCallback {
           EclipseBoilerPlate.mark(ps, IMarker.SEVERITY_ERROR, false, pos0, pos1 - pos0)
         } else
           EclipseBoilerPlate.mark(ps)
+        EclipseConsole.out.println("Error: " + msg)
       case CoqWarning(msg) =>
         EclipseBoilerPlate.mark(msg, IMarker.SEVERITY_WARNING, true)
-      case CoqUserInterrupt() => 
+        EclipseConsole.out.println("Warning: " + msg)
+      case CoqUserInterrupt() =>
         EclipseConsole.out.println("Interrupted. Most likely in a sane state.")
       case CoqVariablesAssumed(v) =>
         EclipseConsole.out.println("Variable " + v + " assumed")
