@@ -14,14 +14,17 @@ class BusyStreamReader (input : InputStream) extends Runnable {
   override def run () : Unit = {
     try {
       while (input.available >= 0) {
+        val f = input.read //blocking
         val avail = input.available
-        val inbuf = new Array[Byte](avail)
-        val bytesread = input.read(inbuf, 0, avail)
-        //Console.println("read " + bytesread + " (actors: " + callbacks.length + ")")
+        val inbuf = new Array[Byte](avail + 1)
+        Console.println("first byte was " + f)
+        inbuf(0) = f.toByte
+        val bytesread = input.read(inbuf, 1, avail)
+        Console.println("read " + bytesread + " (actors: " + callbacks.length + ")")
         if (bytesread < avail) // && bytesread < bufsize)
           Console.println("bytesread " + bytesread + " < avail " + avail)
         if (bytesread > 0) {
-          val res = new String(inbuf, 0, bytesread, "UTF-8")
+          val res = new String(inbuf, 0, bytesread + 1, "UTF-8")
           //Console.println("distributing [" + bytesread + "]" + res + " to " + callbacks.length)
           callbacks.foreach((_ : ActorRef).tell(res))
         }
