@@ -17,10 +17,10 @@ class BusyStreamReader (input : InputStream) extends Runnable {
         val f = input.read //blocking
         val avail = input.available
         val inbuf = new Array[Byte](avail + 1)
-        Console.println("first byte was " + f)
+        //Console.println("first byte was " + f)
         inbuf(0) = f.toByte
         val bytesread = input.read(inbuf, 1, avail)
-        Console.println("read " + bytesread + " (actors: " + callbacks.length + ")")
+        //Console.println("read " + bytesread + " (actors: " + callbacks.length + ")")
         if (bytesread < avail) // && bytesread < bufsize)
           Console.println("bytesread " + bytesread + " < avail " + avail)
         if (bytesread > 0) {
@@ -63,9 +63,9 @@ object PrintActor {
 class PrintActorImplementation extends Actor {
   def receive = {
     case msg : String => {
-      Console.println("received message:" + msg)
+      //Console.println("received message:" + msg)
       val coqr = ParseCoqResponse.parse(msg.trim)
-      Console.println("parsed response is " + coqr)
+      //Console.println("parsed response is " + coqr)
       PrintActor.callbacks.foreach(_.dispatch(coqr))
     }
   }
