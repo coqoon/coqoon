@@ -285,7 +285,7 @@ trait SentenceParser extends Parsers with TokenParsers {
     val res = phrase(sentence)(new lexical.Scanner(input))
     res match {
       case x:NoSuccess =>
-        Console.println("nosuccess for " + input)
+        //Console.println("nosuccess for " + input)
         x
       case x => x
     }
