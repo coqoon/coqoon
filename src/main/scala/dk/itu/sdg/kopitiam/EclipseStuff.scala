@@ -392,14 +392,16 @@ object DocumentState extends CoqCallback with KopitiamLogger {
                 sendlen
               else
                 until - position
-    val txtp = new TextPresentation(new Region(position, off), 20) //wtf 20?
-    txtp.setDefaultStyleRange(new StyleRange(position, off, null, sentProcessColor))
-    if (activeEditor != null)
-      Display.getDefault.syncExec(
-        new Runnable () {
-          def run () =
-            activeEditor.getSource.changeTextPresentation(txtp, true)
-        })
+    if (off > 0) {
+      val txtp = new TextPresentation(new Region(position, off), 20) //wtf 20?
+      txtp.setDefaultStyleRange(new StyleRange(position, off, null, sentProcessColor))
+      if (activeEditor != null)
+        Display.getDefault.syncExec(
+          new Runnable () {
+            def run () =
+              activeEditor.getSource.changeTextPresentation(txtp, true)
+          })
+    }
   }
 
   def processUndo () : Unit = {
@@ -507,25 +509,27 @@ class GoalViewer extends ViewPart {
   def clear () : Unit = {
     Display.getDefault.syncExec(
       new Runnable() {
-        def run() = {
-          hypos.setText("")
-          goal.setText("")
-          othersubs.setText("")
-          comp.layout
-        }
-      })
+        def run() =
+          if (! comp.isDisposed) {
+            hypos.setText("")
+            goal.setText("")
+            othersubs.setText("")
+            comp.layout
+          }
+        })
   }
 
   def writeGoal (assumptions : String, cgoal : String, othergoals : String) : Unit = {
     Display.getDefault.syncExec(
       new Runnable() {
-        def run() = {
-          hypos.setText(assumptions)
-          goal.setText(cgoal)
-          othersubs.setText(othergoals)
-          comp.layout
-        }
-      })
+        def run() =
+          if (! comp.isDisposed) {
+            hypos.setText(assumptions)
+            goal.setText(cgoal)
+            othersubs.setText(othergoals)
+            comp.layout
+          }
+        })
   }
 
   def setFocus() : Unit = {
