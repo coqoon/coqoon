@@ -281,7 +281,7 @@ object CoqTop {
           cdepth += 1
         else if (c == '*' && s(i - 1) == '(' && cdepth > 0)
           cdepth -= 1
-        else if (cdepth == 0 && c == '.' && (s(i + 1) == '\n' || s(i + 1) == ' ' || s(i + 1) == '\r') && s(i - 1) != '.')
+        else if (cdepth == 0 && c == '.' && (s(i + 1) == '\n' || s(i + 1) == ' ' || s(i + 1) == '\r' || s(i + 1) == '\t') && s(i - 1) != '.')
           found = true
         if (! found)
           i -= 1
@@ -305,7 +305,7 @@ object CoqTop {
           cdepth += 1
         else if (c == '*' && s(i + 1) == ')' && cdepth > 0)
           cdepth -= 1
-        else if (cdepth == 0 && c == '.' && (i + 1 == s.length || s(i + 1) == '\n' || s(i + 1) == ' ' || (s(i + 1) == '\r' && s(i + 2) == '\n')) && (i == 0 || s(i - 1) != '.'))
+        else if (cdepth == 0 && c == '.' && (i + 1 == s.length || s(i + 1) == '\n' || s(i + 1) == ' ' || (s(i + 1) == '\r' && s(i + 2) == '\n') || s(i + 1) == '\t') && (i == 0 || s(i - 1) != '.'))
           found = true
         i += 1
       }
