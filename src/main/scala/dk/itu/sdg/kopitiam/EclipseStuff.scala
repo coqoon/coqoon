@@ -317,6 +317,9 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     //Console.println("position updated to " + x)
   }
 
+  def readyForInput () : Boolean = { _readyForInput }
+  def setBusy () : Unit = { _readyForInput = false }
+  private var _readyForInput : Boolean = false
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqShellReady(monoton, token) =>
@@ -326,6 +329,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
           positionToShell += position -> token
         } else
           undo
+        _readyForInput = true
       case y =>
     }
   }
@@ -348,7 +352,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   var autoreveal : Boolean = false
 
   private def undo () : Unit = {
-    //Console.println("undo (@" + position + ", " + sendlen + ")")
+    //Console.println("undo (@" + position + ", sendlen: " + sendlen + ") real: " + realundo)
     if (sendlen != 0) {
       if (realundo) {
         realundo = false
@@ -428,7 +432,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   }
 
   private def commit () : Unit = {
-    //Console.println("commited (@" + position + ", " + sendlen + ")")
+    //Console.println("commited (@" + position + ", " + sendlen + "): " + positionToShell.contains(position))
     if (sendlen != 0) {
       //Console.println("commited - and doing some work")
       val end = scala.math.min(sendlen, content.length - position)

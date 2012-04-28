@@ -81,6 +81,7 @@ abstract class KCoqAction extends KAction {
         CoqOutputDispatcher.goalviewer.clear
 
       if (coqstarted) {
+        DocumentState.setBusy
         PrintActor.deregister(CoqOutputDispatcher)
         val shell = CoqState.getShell
         PrintActor.register(CoqStartUp)
@@ -134,7 +135,8 @@ class CoqUndoAction extends KCoqAction {
   }
 
   def doitReally (pos : Int) : Unit = {
-    if (CoqState.readyForInput) {
+    if (DocumentState.readyForInput) {
+      DocumentState.setBusy
       //invariant: we're at position p, all previous commands are already sent to coq
       // this implies that the table (positionToShell) is fully populated until p
       // this also implies that the previous content is not messed up!
@@ -151,6 +153,7 @@ class CoqUndoAction extends KCoqAction {
       if (i == prevs.length) //special case, go to lastmost
         i = i - 1
       var prevshell : CoqShellTokens = DocumentState.positionToShell(prevs(i))
+      //Console.println("prevshell: " + prevshell + "\ncurshell: " + curshell)
       assert(prevshell.globalStep < curshell.globalStep) //we're decreasing!
       while (! prevshell.context.toSet.subsetOf(curshell.context.toSet) && prevs.length > (i + 1)) {
         i += 1
@@ -172,6 +175,7 @@ object CoqUndoAction extends CoqUndoAction { }
 
 class CoqRetractAction extends KCoqAction {
   override def doit () : Unit = {
+    DocumentState.setBusy
     PrintActor.deregister(CoqOutputDispatcher)
     DocumentState.position = 0
     DocumentState.sendlen = 0
@@ -196,7 +200,7 @@ object CoqRetractAction extends CoqRetractAction { }
 
 class CoqStepAction extends KCoqAction {
   override def doit () : Unit = {
-    if (CoqState.readyForInput) {
+    if (DocumentState.readyForInput) {
       //Console.println("run called, sending a command")
       val con = DocumentState.content
       val content = con.drop(DocumentState.position)
@@ -204,6 +208,7 @@ class CoqStepAction extends KCoqAction {
         val eoc = CoqTop.findNextCommand(content)
         //Console.println("eoc is " + eoc)
         if (eoc > 0) {
+          DocumentState.setBusy
           DocumentState.sendlen = eoc
           DocumentState.process(-1)
           val cmd = content.take(eoc).trim
@@ -374,6 +379,7 @@ object CoqStartUp extends CoqCallback {
       case CoqShellReady(m, t) =>
       	Console.println("dispatch, first is " + first + " fini is " + fini + " in CoqStartUp")
         if (first) {
+          DocumentState.setBusy
           CoqTop.writeToCoq("Add LoadPath \"" + EclipseBoilerPlate.getProjectDir + "\".")
           first = false
         } else {

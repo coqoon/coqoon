@@ -118,6 +118,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         DocumentState.coqmarker = null
         PrintActor.deregister(CoqOutputDispatcher)
         val shell = CoqState.getShell
+        DocumentState.setBusy
         CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
         PrintActor.register(CoqOutputDispatcher)
       }
@@ -154,8 +155,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         DocumentState.reveal = false
         DocumentState.autoreveal = true
         CoqUndoAction.doitReally(off)
-        //color black from off to end
-        DocumentState.uncolor(off)
       }
       //also, remove markers around here
       EclipseBoilerPlate.maybeunmark(off)
