@@ -148,6 +148,8 @@ class CoqUndoAction extends KCoqAction {
       //g-- cs l or g-- cs l-- <- we're fine
       //g-- cs+c l++ <- we need to find something with cs (just jumped into a proof)
       var i : Int = prevs.filter(_ >= pos).length
+      if (i == prevs.length) //special case, go to lastmost
+        i = i - 1
       var prevshell : CoqShellTokens = DocumentState.positionToShell(prevs(i))
       assert(prevshell.globalStep < curshell.globalStep) //we're decreasing!
       while (! prevshell.context.toSet.subsetOf(curshell.context.toSet) && prevs.length > (i + 1)) {
