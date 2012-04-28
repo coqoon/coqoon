@@ -288,6 +288,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   var realundo : Boolean = false
 
   import org.eclipse.core.resources.IMarker
+  import org.eclipse.core.runtime.CoreException
   var coqmarker : IMarker = null
 
   var position_ : Int = 0
@@ -302,9 +303,18 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       coqmarker.setAttribute(IMarker.TRANSIENT, true)
       coqmarker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO)
     }
-    coqmarker.setAttribute(IMarker.CHAR_START, x)
-    coqmarker.setAttribute(IMarker.CHAR_END, x - 1) //at dot, not whitespace
-    position_ = x
+    try {
+      coqmarker.setAttribute(IMarker.CHAR_START, x)
+      coqmarker.setAttribute(IMarker.CHAR_END, x - 1) //at dot, not whitespace
+      position_ = x
+    } catch {
+      case e : CoreException =>
+        Console.println("caught CoreException")
+        coqmarker.delete
+        coqmarker = null
+        position = x
+    }
+    //Console.println("position updated to " + x)
   }
 
   override def dispatch (x : CoqResponse) : Unit = {
