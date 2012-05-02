@@ -240,9 +240,6 @@ Open Scope hasn_scope.
     outp = List[String]()
     var cs : List[String] = List[String]()
 
-    val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-    if (new File(loadp).exists && spec)
-      outp ::= "Add LoadPath \"" + loadp + "\"."
     if (spec)
       outp ::= prelude
     var interfs : List[String] = List[String]()

@@ -355,7 +355,7 @@ case class CoqLater (later : () => Unit) extends CoqCallback {
 }
 
 object CoqStartUp extends CoqCallback {
-  private var first : Boolean = true
+  private var initialize : Int = 0
   var fini : Boolean = false
 
   def start () : Unit = {
@@ -374,18 +374,25 @@ object CoqStartUp extends CoqCallback {
     }
   }
 
+  import java.io.File
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqShellReady(m, t) =>
-      	Console.println("dispatch, first is " + first + " fini is " + fini + " in CoqStartUp")
-        if (first) {
+      	Console.println("dispatch, initialize is " + initialize + " fini is " + fini + " in CoqStartUp")
+        val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
+        val lp = new File(loadp).exists
+        if (initialize == 0) {
           DocumentState.setBusy
           CoqTop.writeToCoq("Add LoadPath \"" + EclipseBoilerPlate.getProjectDir + "\".")
-          first = false
+          initialize = 1
+        } else if (initialize == 1 && lp) {
+          DocumentState.setBusy
+          CoqTop.writeToCoq("Add LoadPath \"" + loadp + "\".")
+          initialize = 2
         } else {
           PrintActor.deregister(CoqStartUp)
           PrintActor.register(CoqOutputDispatcher)
-          first = true
+          initialize = 0
           fini = true
           ActionDisabler.enableMaybe
         }
