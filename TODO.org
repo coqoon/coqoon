@@ -112,5 +112,4 @@ if (node.item > 20)
 ** dynamic casts
 
 * bugs
-** green markup sometimes disappears when typing on next line
 ** File -> Open .. select .v crashes

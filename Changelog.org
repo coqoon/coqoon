@@ -1,3 +1,6 @@
+* Kopitiam 0.0.24 [03 May 2012]
+** do not send comments to coq (it syntax checks these)
+** persistent green/yellow coloring
 * Kopitiam 0.0.23 [28 April 2012]
 ** Improved Goal Viewer with scrollbars and size of text fields
 ** catch some exceptions

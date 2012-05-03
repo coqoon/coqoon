@@ -208,7 +208,7 @@ class CoqStepAction extends KCoqAction {
         if (eoc > 0) {
           DocumentState.setBusy
           DocumentState.sendlen = eoc
-          DocumentState.process(-1)
+          DocumentState.process
           val cmd = content.take(eoc).trim
           Console.println("command is (" + eoc + "): " + cmd)
           //CoqProgressMonitor.actor.tell(("START", cmd))
@@ -245,7 +245,8 @@ class CoqStepUntilAction extends KCoqAction {
     Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition + ", docpos is " + DocumentState.position)
     if (DocumentState.position == togo) { } else
     if (DocumentState.position < togo) {
-      DocumentState.process(CoqTop.findPreviousCommand(DocumentState.content, togo - 2))
+      DocumentState.until = CoqTop.findPreviousCommand(DocumentState.content, togo - 2)
+      DocumentState.process
       //CoqProgressMonitor.multistep = true
       DocumentState.reveal = false
       CoqStepNotifier.test = Some((x : Int, y : Int) => y >= togo)
@@ -433,6 +434,7 @@ object CoqStepNotifier extends CoqCallback {
     err = false
     test = None
     DocumentState.reveal = true
+    DocumentState.until = -1
     //CoqProgressMonitor.multistep = false
     //CoqProgressMonitor.actor.tell("FINISHED")
   }
