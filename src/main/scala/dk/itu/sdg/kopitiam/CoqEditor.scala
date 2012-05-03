@@ -235,13 +235,6 @@ object CoqWordDetector extends IWordDetector {
   def isWordPart(character : Char) = isWordStart(character)
 }
 
-object CoqNumDetector extends IWordDetector {
-  def isWordStart(character : Char) =
-    isWordPart(character) || character == '-'
-  def isWordPart(character : Char) =
-    character >= '0' && character <= '9'
-}
-
 import org.eclipse.jface.text.rules.RuleBasedScanner
 import dk.itu.sdg.coqparser.VernacularReserved
 
@@ -259,15 +252,12 @@ object CoqTokenScanner extends RuleBasedScanner with VernacularReserved with Ecl
   private val definerToken : IToken = new Token(new TextAttribute(getPrefColor("coqKeywordFg"), white, 0))
   private val opToken : IToken = new Token(new TextAttribute((0, 0, 30), white, 0))
   private val commentToken : IToken = new Token(new TextAttribute((30, 30, 0), white, ITALIC))
-  private val numToken : IToken = new Token(new TextAttribute(getPrefColor("coqNumFg"), white, 0))
   private val otherToken : IToken = new Token(new TextAttribute(black, white, 0))
 
   private val rules = Seq(
     new MultiLineRule("(*", "*)", commentToken),
     new SingleLineRule("(*", "*)", commentToken)
   )
-
-  private val numRule = new WordRule(CoqNumDetector)
 
   private val wordRule = new WordRule(CoqWordDetector, otherToken)
   for (k <- keyword) wordRule.addWord(k, definerToken)
