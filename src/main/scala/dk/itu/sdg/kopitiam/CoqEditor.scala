@@ -38,10 +38,10 @@ class CoqEditor extends TextEditor with EclipseUtils {
     projViewer.doOperation(ProjectionViewer.TOGGLE)
 
     annotationModel = projViewer.getProjectionAnnotationModel()
-    
+
     val doc = this.getDocumentProvider.getDocument(getEditorInput)
     val outline = CoqJavaDocumentProvider.getOutline(doc)
-    
+
     outline map (_.root) foreach { root =>
       updateFolding(root, doc)
     }
