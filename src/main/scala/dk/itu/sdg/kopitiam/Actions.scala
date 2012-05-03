@@ -64,22 +64,20 @@ abstract class KCoqAction extends KAction {
       DocumentState.undoAll
       DocumentState.activeEditor = acted.asInstanceOf[CoqEditor]
 
-      if (! coqstarted)
-        CoqStartUp.start
-
       val initial =
         if (DocumentState.positionToShell.contains(0))
           DocumentState.positionToShell(0).globalStep
-        else {
-          Console.println("doitH: using 2 instead of registered position, since there is none")
+        else
           2
-        }
-      DocumentState.positionToShell.empty
+      DocumentState.positionToShell.clear
       DocumentState.position = 0
       DocumentState.sendlen = 0
+
       if (CoqOutputDispatcher.goalviewer != null)
         CoqOutputDispatcher.goalviewer.clear
 
+      if (! coqstarted)
+        CoqStartUp.start
       if (coqstarted) {
         DocumentState.setBusy
         PrintActor.deregister(CoqOutputDispatcher)
@@ -275,7 +273,7 @@ class RestartCoqAction extends KAction {
     DocumentState.position = 0
     DocumentState.sendlen = 0
     DocumentState.undoAll
-    DocumentState.positionToShell.empty
+    DocumentState.positionToShell.clear
     EclipseBoilerPlate.unmarkReally
     PrintActor.deregister(CoqOutputDispatcher)
     CoqStartUp.start
