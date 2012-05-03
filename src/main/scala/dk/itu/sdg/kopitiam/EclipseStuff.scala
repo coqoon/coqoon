@@ -356,7 +356,6 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     if (sendlen != 0) {
       if (realundo) {
         realundo = false
-        val bl = new Color(Display.getDefault, new RGB(0, 0, 0))
         val start = scala.math.max(position - sendlen, 0)
         val end = scala.math.min(sendlen + position, content.length)
         //Console.println("undo (start " + start + " send length " + sendlen + " content length " + content.length + " submitting length " + (end - start) + ")")
@@ -381,6 +380,18 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         sendlen = 0
       } else { //just an error
         //Console.println("undo: barf")
+        //kill off process colored thingies
+        val wh = new Color(Display.getDefault, new RGB(255, 255, 255))
+        val txtp = new TextPresentation(new Region(position, position + sendlen), 20)
+        txtp.setDefaultStyleRange(new StyleRange(position, position + sendlen, null, wh))
+        if (activeEditor != null)
+          Display.getDefault.syncExec(
+            new Runnable() {
+              def run() = {
+                activeEditor.getSource.invalidateTextPresentation()
+                activeEditor.getSource.changeTextPresentation(txtp, true)
+              }
+            })
         oldsendlen = sendlen
         sendlen = 0
       }
