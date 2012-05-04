@@ -230,7 +230,7 @@ object EclipseBoilerPlate {
     val marker = file.createMarker(IMarker.PROBLEM)
     marker.setAttribute(IMarker.MESSAGE, text)
     marker.setAttribute(IMarker.LOCATION, file.getName)
-    val commentoff = CoqTop.computeCommentOffset(con.drop(DocumentState.position), spos)
+    val commentoff = CoqTop.computeCommentOffset(con.drop(DocumentState.position), spos - DocumentState.position)
     marker.setAttribute(IMarker.CHAR_START, spos + commentoff)
     marker.setAttribute(IMarker.CHAR_END, epos + commentoff) //for tha whitespace
     marker.setAttribute(IMarker.SEVERITY, severity)
