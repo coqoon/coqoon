@@ -12,6 +12,8 @@ Binary Installation:
 Source Installation:
 * Eclipse SDK (from http://download.eclipse.org/eclipse/downloads/) tested is 3.7
 * Scala IDE (from http://www.scala-ide.org/) tested is Scala IDE 2.1.0 with Scala 2.9.2 (http://scala-ide.org/download/milestone.html)
+* akka-actor.jar into lib_managed (http://akka.io/downloads/) tested is 2.0.1
+* scalatest.jar into lib_managed (http://www.scalatest.org/download) tested is 1.4.1
 * runtime: Coq (from http://coq.inria.fr/download) tested is 8.3pl2
 
 Setup:
