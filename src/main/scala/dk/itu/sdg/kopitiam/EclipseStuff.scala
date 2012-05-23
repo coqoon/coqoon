@@ -427,46 +427,141 @@ import org.eclipse.ui.part.ViewPart
 class GoalViewer extends ViewPart {
   import org.eclipse.swt.widgets.{Composite,Label,Text}
   import org.eclipse.swt.SWT
-  import org.eclipse.swt.layout.{GridData,GridLayout}
-  import org.eclipse.swt.graphics.{Color,RGB}
-  import org.eclipse.swt.widgets.Display
+  import org.eclipse.swt.layout.{FormData,FormLayout,FormAttachment,GridLayout,GridData}
+  import org.eclipse.swt.graphics.{Color,RGB,Rectangle}
+  import org.eclipse.swt.widgets.{Display,Sash,Listener,Event}
 
 
-  var hypos : Text = null
+  var context : Text = null
   var goal : Text = null
-  var othersubs : Text = null
+  var subgoals : Text = null
   var comp : Composite = null
+
+  /*
+   * |------------------------------|        -                      -
+   * | context                      |        | upperc (FormLayout)  | comp (FormLayout)
+   * |------------------------------| sash2  |                      |
+   * | "goal:" | goalc (GridLayout) |        |                      |
+   * |  goal   |                    |        |                      |
+   * |---------------------------------------- sash                 |
+   * | other subgoals:                       | lowerc (GridLayout)  |
+   * |  subgoals                             |                      |
+   * |----------------------------------------                      -
+   */
 
   override def createPartControl (parent : Composite) : Unit = {
     comp = new Composite(parent, SWT.NONE)
-    comp.setLayout(new GridLayout(1, true))
-    hypos = new Text(comp, SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
-    hypos.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true))
-    //hypos.setText("foo\nbar")
-    new Label(comp, SWT.SEPARATOR | SWT.HORIZONTAL).setLayoutData(new GridData(GridData.FILL_HORIZONTAL))
-    goal = new Text(comp, SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
-    goal.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true))
-    //goal.setText("baz")
-    val other = new Label(comp, SWT.READ_ONLY)
+    comp.setLayout(new FormLayout())
+
+    //top level
+    val upperc = new Composite(comp, SWT.NONE)
+    upperc.setLayout(new FormLayout())
+
+    val lowerc = new Composite(comp, SWT.NONE)
+    lowerc.setLayout(new GridLayout(1, true))
+
+    val sash = new Sash(comp, SWT.HORIZONTAL)
+
+    //upperc
+    context = new Text(upperc, SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+
+    val goalc = new Composite(upperc, SWT.NONE)
+    goalc.setLayout(new GridLayout(1, true))
+
+      //goalc
+      val subg = new Label(goalc, SWT.READ_ONLY)
+      subg.setLayoutData(new GridData(GridData.FILL_HORIZONTAL))
+      subg.setText("goal:")
+
+      goal = new Text(goalc, SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+      goal.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true))
+
+    //sash
+    val uppercData = new FormData()
+    uppercData.left = new FormAttachment(0, 0)
+    uppercData.right = new FormAttachment(100, 0)
+    uppercData.top = new FormAttachment(0, 0)
+    uppercData.bottom = new FormAttachment(sash, 0)
+    upperc.setLayoutData(uppercData)
+
+    val lowercData = new FormData()
+    lowercData.left = new FormAttachment(0, 0)
+    lowercData.right = new FormAttachment(100, 0)
+    lowercData.top = new FormAttachment(sash, 0)
+    lowercData.bottom = new FormAttachment(100, 0)
+    lowerc.setLayoutData(lowercData)
+
+    val limit = 20
+    val percent = 50
+    val sashData = new FormData()
+    sashData.left = new FormAttachment(0, 0)
+    sashData.right = new FormAttachment(100, 0)
+    sashData.top = new FormAttachment(percent, 0)
+    sash.setLayoutData(sashData)
+    sash.addListener(SWT.Selection, new Listener () {
+      def handleEvent (e : Event) = {
+        val sashRect : Rectangle = sash.getBounds()
+        val shellRect : Rectangle = comp.getClientArea()
+        val top = shellRect.height - sashRect.height - limit
+        e.y = scala.math.max(scala.math.min(e.y, top), limit)
+        if (e.y != sashRect.y)  {
+          sashData.top = new FormAttachment (0, e.y)
+          comp.layout()
+        }
+      }
+    });
+
+    //lowerc
+    val other = new Label(lowerc, SWT.READ_ONLY)
     other.setLayoutData(new GridData(GridData.FILL_HORIZONTAL))
     other.setText("other subgoals")
-    othersubs = new Text(comp, SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
-    othersubs.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true))
-    //othersubs.setText("buz\nfoobar")
+
+    subgoals = new Text(lowerc, SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+    subgoals.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true))
+
+
+    //sash2
+    val sash2 = new Sash(upperc, SWT.HORIZONTAL)
+
+    val contextData = new FormData()
+    contextData.left = new FormAttachment(0, 0)
+    contextData.right = new FormAttachment(100, 0)
+    contextData.top = new FormAttachment(0, 0)
+    contextData.bottom = new FormAttachment(sash2, 0)
+    context.setLayoutData(contextData)
+
+    val goalcData = new FormData()
+    goalcData.left = new FormAttachment(0, 0)
+    goalcData.right = new FormAttachment(100, 0)
+    goalcData.top = new FormAttachment(sash2, 0)
+    goalcData.bottom = new FormAttachment(100, 0)
+    goalc.setLayoutData(goalcData)
+
+    val limit2 = 20
+    val percent2 = 50
+    val sash2Data = new FormData()
+    sash2Data.left = new FormAttachment(0, 0)
+    sash2Data.right = new FormAttachment(100, 0)
+    sash2Data.top = new FormAttachment(percent2, 0)
+    sash2.setLayoutData(sash2Data)
+    sash2.addListener(SWT.Selection, new Listener () {
+      def handleEvent (e : Event) = {
+        val sashRect : Rectangle = sash2.getBounds()
+        val shellRect : Rectangle = upperc.getClientArea()
+        val top = shellRect.height - sashRect.height - limit
+        e.y = scala.math.max(scala.math.min(e.y, top), limit)
+        if (e.y != sashRect.y)  {
+          sash2Data.top = new FormAttachment (0, e.y)
+          upperc.layout()
+        }
+      }
+    });
+
     CoqOutputDispatcher.goalviewer = this
   }
 
   def clear () : Unit = {
-    Display.getDefault.syncExec(
-      new Runnable() {
-        def run() =
-          if (! comp.isDisposed) {
-            hypos.setText("")
-            goal.setText("")
-            othersubs.setText("")
-            comp.layout
-          }
-        })
+    writeGoal("", "", "")
   }
 
   def writeGoal (assumptions : String, cgoal : String, othergoals : String) : Unit = {
@@ -474,9 +569,9 @@ class GoalViewer extends ViewPart {
       new Runnable() {
         def run() =
           if (! comp.isDisposed) {
-            hypos.setText(assumptions)
+            context.setText(assumptions)
             goal.setText(cgoal)
-            othersubs.setText(othergoals)
+            subgoals.setText(othergoals)
             comp.layout
           }
         })
