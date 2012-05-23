@@ -446,6 +446,10 @@ object CoqOutputDispatcher extends CoqCallback {
 
   var goalviewer : GoalViewer = null
 
+  def stripAndReduce (x : List[String]) : String = {
+    if (x.length > 0) x.map(_.filterNot(_ == '\r')).reduceLeft(_ + "\n" + _) else ""
+  }
+
   override def dispatch (x : CoqResponse) : Unit = {
     //Console.println("received in dispatch " + x)
     x match {
@@ -459,13 +463,13 @@ object CoqOutputDispatcher extends CoqCallback {
       case CoqGoal(n, goals) =>
         //Console.println("outputdispatcher, n is " + n + ", goals:\n" + goals)
         val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
-        val ht = if (hy.length > 0) hy.map(_.filterNot(_ == '\r')).reduceLeft(_ + "\n" + _) else ""
+        val ht = stripAndReduce(hy)
         val subd = res.findIndexOf(_.contains("subgoal "))
         val (g, r) = if (subd > 0) res.splitAt(subd) else (res, List[String]())
-        val gt = if (g.length > 1) g.drop(1).map(_.filterNot(_ == '\r')).reduceLeft(_ + "\n" + _) else ""
+        val gt = if (g.length > 1) stripAndReduce(g.drop(1)) else ""
         val ot = if (r.length > 0) {
           val r2 = r.map(x => { if (x.contains("subgoal ")) x.drop(1) else x })
-          r2.map(_.filterNot(_ == '\r')).reduceLeft(_ + "\n" + _)
+          stripAndReduce(r2)
         } else ""
         if (goalviewer != null)
           goalviewer.writeGoal(ht, gt, ot)
