@@ -464,18 +464,26 @@ object CoqOutputDispatcher extends CoqCallback {
         //Console.println("outputdispatcher, n is " + n + ", goals:\n" + goals)
         val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
         val ht = stripAndReduce(hy)
-        val subd = res.findIndexOf(_.contains("subgoal "))
-        val (g, r) = if (subd > 0) res.splitAt(subd) else (res, List[String]())
-        val gt = if (g.length > 1) stripAndReduce(g.drop(1)) else ""
-        val ot = if (r.length > 0) {
-          val r2 = r.map(x => { if (x.contains("subgoal ")) x.drop(1) else x })
-          stripAndReduce(r2)
-        } else ""
-        if (goalviewer != null)
-          goalviewer.writeGoal(ht, gt, ot)
+        var subgoals : List[String] = List[String]()
+        var index : Int = 0
+        while (index < res.length) {
+          val rr = res.drop(index)
+          val subd = rr.findIndexOf(_.contains("subgoal "))
+          val (g, r) = if (subd > 0) rr.splitAt(subd) else (rr, List[String]())
+          val gt = if (g.length > 1) stripAndReduce(g.drop(1)).trim else ""
+          subgoals = gt :: subgoals
+          if (subd > 0)
+            index = index + subd
+          else
+            index = res.length
+        }
+        if (goalviewer != null) {
+          Console.println("calling writegoal with " + subgoals.reverse)
+          goalviewer.writeGoal(ht, subgoals.reverse)
+        }
       case CoqProofCompleted() =>
         if (goalviewer != null)
-          goalviewer.writeGoal("Proof completed", "", "")
+          goalviewer.writeGoal("Proof completed", List[String]())
       case CoqError(msg) =>
         //TODO: what if Error not found, should come up with a sensible message anyways!
         val mess = msg.findIndexOf(_.startsWith("Error"))

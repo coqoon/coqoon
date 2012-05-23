@@ -425,71 +425,52 @@ object EclipseConsole {
 import org.eclipse.ui.part.ViewPart
 
 class GoalViewer extends ViewPart {
-  import org.eclipse.swt.widgets.{Composite,Label,Text}
+  import org.eclipse.swt.widgets.{Composite,Text}
   import org.eclipse.swt.SWT
-  import org.eclipse.swt.layout.{FormData,FormLayout,FormAttachment,GridLayout,GridData}
+  import org.eclipse.swt.layout.{FormData,FormLayout,FormAttachment}
   import org.eclipse.swt.graphics.{Color,RGB,Rectangle}
-  import org.eclipse.swt.widgets.{Display,Sash,Listener,Event}
+  import org.eclipse.swt.widgets.{Display,Sash,Listener,Event,TabFolder,TabItem}
+//  import org.eclipse.swt.custom.{CTabFolder,CTabItem}
 
 
   var context : Text = null
-  var goal : Text = null
-  var subgoals : Text = null
+  var goals : TabFolder = null
+  var subgoals : List[TabItem] = List[TabItem]()
+  var subgoalTexts : List[Text] = List[Text]()
   var comp : Composite = null
 
   /*
-   * |------------------------------|        -                      -
-   * | context                      |        | upperc (FormLayout)  | comp (FormLayout)
-   * |------------------------------| sash2  |                      |
-   * | "goal:" | goalc (GridLayout) |        |                      |
-   * |  goal   |                    |        |                      |
-   * |---------------------------------------- sash                 |
-   * | other subgoals:                       | lowerc (GridLayout)  |
-   * |  subgoals                             |                      |
-   * |----------------------------------------                      -
+   * |---------------------|       -
+   * | context             |       | comp (FormLayout)
+   * |---------------------| sash  |
+   * | goals (TabFolder)   |       |
+   * |---------------------|       -
    */
 
   override def createPartControl (parent : Composite) : Unit = {
     comp = new Composite(parent, SWT.NONE)
     comp.setLayout(new FormLayout())
 
-    //top level
-    val upperc = new Composite(comp, SWT.NONE)
-    upperc.setLayout(new FormLayout())
+    context = new Text(comp, SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
 
-    val lowerc = new Composite(comp, SWT.NONE)
-    lowerc.setLayout(new GridLayout(1, true))
+    goals = new TabFolder(comp, SWT.NONE)
 
     val sash = new Sash(comp, SWT.HORIZONTAL)
 
-    //upperc
-    context = new Text(upperc, SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
-
-    val goalc = new Composite(upperc, SWT.NONE)
-    goalc.setLayout(new GridLayout(1, true))
-
-      //goalc
-      val subg = new Label(goalc, SWT.READ_ONLY)
-      subg.setLayoutData(new GridData(GridData.FILL_HORIZONTAL))
-      subg.setText("goal:")
-
-      goal = new Text(goalc, SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
-      goal.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true))
-
     //sash
-    val uppercData = new FormData()
-    uppercData.left = new FormAttachment(0, 0)
-    uppercData.right = new FormAttachment(100, 0)
-    uppercData.top = new FormAttachment(0, 0)
-    uppercData.bottom = new FormAttachment(sash, 0)
-    upperc.setLayoutData(uppercData)
+    val contextData = new FormData()
+    contextData.left = new FormAttachment(0, 0)
+    contextData.right = new FormAttachment(100, 0)
+    contextData.top = new FormAttachment(0, 0)
+    contextData.bottom = new FormAttachment(sash, 0)
+    context.setLayoutData(contextData)
 
-    val lowercData = new FormData()
-    lowercData.left = new FormAttachment(0, 0)
-    lowercData.right = new FormAttachment(100, 0)
-    lowercData.top = new FormAttachment(sash, 0)
-    lowercData.bottom = new FormAttachment(100, 0)
-    lowerc.setLayoutData(lowercData)
+    val goalData = new FormData()
+    goalData.left = new FormAttachment(0, 0)
+    goalData.right = new FormAttachment(100, 0)
+    goalData.top = new FormAttachment(sash, 0)
+    goalData.bottom = new FormAttachment(100, 0)
+    goals.setLayoutData(goalData)
 
     val limit = 20
     val percent = 50
@@ -511,67 +492,49 @@ class GoalViewer extends ViewPart {
       }
     });
 
-    //lowerc
-    val other = new Label(lowerc, SWT.READ_ONLY)
-    other.setLayoutData(new GridData(GridData.FILL_HORIZONTAL))
-    other.setText("other subgoals")
-
-    subgoals = new Text(lowerc, SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
-    subgoals.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true))
-
-
-    //sash2
-    val sash2 = new Sash(upperc, SWT.HORIZONTAL)
-
-    val contextData = new FormData()
-    contextData.left = new FormAttachment(0, 0)
-    contextData.right = new FormAttachment(100, 0)
-    contextData.top = new FormAttachment(0, 0)
-    contextData.bottom = new FormAttachment(sash2, 0)
-    context.setLayoutData(contextData)
-
-    val goalcData = new FormData()
-    goalcData.left = new FormAttachment(0, 0)
-    goalcData.right = new FormAttachment(100, 0)
-    goalcData.top = new FormAttachment(sash2, 0)
-    goalcData.bottom = new FormAttachment(100, 0)
-    goalc.setLayoutData(goalcData)
-
-    val limit2 = 20
-    val percent2 = 50
-    val sash2Data = new FormData()
-    sash2Data.left = new FormAttachment(0, 0)
-    sash2Data.right = new FormAttachment(100, 0)
-    sash2Data.top = new FormAttachment(percent2, 0)
-    sash2.setLayoutData(sash2Data)
-    sash2.addListener(SWT.Selection, new Listener () {
-      def handleEvent (e : Event) = {
-        val sashRect : Rectangle = sash2.getBounds()
-        val shellRect : Rectangle = upperc.getClientArea()
-        val top = shellRect.height - sashRect.height - limit
-        e.y = scala.math.max(scala.math.min(e.y, top), limit)
-        if (e.y != sashRect.y)  {
-          sash2Data.top = new FormAttachment (0, e.y)
-          upperc.layout()
-        }
-      }
-    });
-
     CoqOutputDispatcher.goalviewer = this
   }
 
   def clear () : Unit = {
-    writeGoal("", "", "")
+    writeGoal("", List[String]())
   }
 
-  def writeGoal (assumptions : String, cgoal : String, othergoals : String) : Unit = {
+  def writeGoal (assumptions : String, sgoals : List[String]) : Unit = {
     Display.getDefault.syncExec(
       new Runnable() {
         def run() =
           if (! comp.isDisposed) {
             context.setText(assumptions)
-            goal.setText(cgoal)
-            subgoals.setText(othergoals)
+            Console.println("sgoals: " + sgoals.length + " subgoals: " + subgoals.length)
+            if (sgoals.length < subgoals.length) {
+              //drop some, but keep one!
+              val (stay, leave) = subgoals.splitAt(sgoals.length)
+              val (stayT, leaveT) = subgoalTexts.splitAt(sgoals.length)
+              subgoals = stay
+              subgoalTexts = stayT
+              leaveT.foreach(_.setText(""))
+              leaveT.foreach(_.dispose)
+              leave.foreach(_.dispose)
+              goals.reskin(SWT.ALL)
+            } else if (sgoals.length > subgoals.length) {
+              //add some
+              val tomake = sgoals.length - subgoals.length
+              var index : Int = 0
+              while (index < tomake) {
+                val ti = new TabItem(goals, SWT.NONE)
+                subgoals = subgoals ++ List(ti)
+                ti.setText((subgoals.length + index - 1).toString)
+                val te = new Text(goals, SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+                subgoalTexts = subgoalTexts ++ List(te)
+                ti.setControl(te)
+                index = index + 1
+              }
+            }
+            var index : Int = 0
+            while (index < sgoals.length) {
+              subgoalTexts(index).setText(sgoals(index))
+              index = index + 1
+            }
             comp.layout
           }
         })
