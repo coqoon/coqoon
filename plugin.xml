@@ -258,6 +258,12 @@
          point="org.eclipse.ui.menus">
       <menuContribution
             locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
+         <command
+               commandId="Kopitiam.translatetocoq">
+         </command>
+      </menuContribution>
+      <menuContribution
+            locationURI="popup:org.eclipse.ui.navigator.ProjectExplorer#PopupMenu?after=additions">
         <command
         	commandId="Kopitiam.translatetocoq">
        	</command>
