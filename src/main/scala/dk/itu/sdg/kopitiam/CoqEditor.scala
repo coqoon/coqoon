@@ -177,9 +177,9 @@ protected class CoqContentProvider extends ITreeContentProvider {
   }
 }
 
-import org.eclipse.ui.editors.text.FileDocumentProvider
+import org.eclipse.ui.editors.text.TextFileDocumentProvider
 
-object CoqJavaDocumentProvider extends FileDocumentProvider {
+object CoqJavaDocumentProvider extends TextFileDocumentProvider {
   import org.eclipse.jface.text.IDocument
   import dk.itu.sdg.javaparser.JavaAST
   import scala.util.parsing.input.CharArrayReader

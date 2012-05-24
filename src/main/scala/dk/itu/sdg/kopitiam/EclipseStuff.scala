@@ -264,13 +264,30 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       null
   }
 
-  import org.eclipse.ui.IFileEditorInput
-  import org.eclipse.core.resources.IFile
+  import org.eclipse.ui.{IFileEditorInput,IURIEditorInput}
+  import org.eclipse.core.resources.{IFile,IResource,ResourcesPlugin}
+  import org.eclipse.core.runtime.Path
+  import java.net.URI
   def resource () : IFile = {
-    if (activeEditor != null)
-      activeEditor.getEditorInput.asInstanceOf[IFileEditorInput].getFile
-    else
-      null
+    if (activeEditor != null) {
+      val input = activeEditor.getEditorInput
+      if (input.isInstanceOf[IFileEditorInput])
+        input.asInstanceOf[IFileEditorInput].getFile
+      else if (input.isInstanceOf[IURIEditorInput]) {
+        val path = input.asInstanceOf[IURIEditorInput].getURI.getPath
+        val ws = ResourcesPlugin.getWorkspace();
+        val project = ws.getRoot().getProject("External Files");
+        if (!project.exists())
+          project.create(null);
+        if (!project.isOpen())
+          project.open(null);
+        val location = new Path(path);
+        val file = project.getFile(location.lastSegment());
+        if (! file.exists)
+          file.createLink(location, IResource.NONE, null);
+        file
+      } else null
+    } else null
   }
 
   def content () : String = {
