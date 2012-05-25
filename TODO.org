@@ -111,5 +111,3 @@ if (node.item > 20)
 ** array types
 ** dynamic casts
 
-* bugs
-** File -> Open .. select .v crashes
