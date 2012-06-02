@@ -468,9 +468,13 @@ object CoqOutputDispatcher extends CoqCallback {
         var index : Int = 0
         while (index < res.length) {
           val rr = res.drop(index)
-          val subd = rr.findIndexOf(_.contains("subgoal "))
+          //Console.println("index: " + index + " res.length: " + res.length + " list stuff: " + rr)
+          val subd = rr.drop(1).findIndexOf(_.contains("subgoal ")) + 1
+          //Console.println("subd is " + subd)
           val (g, r) = if (subd > 0) rr.splitAt(subd) else (rr, List[String]())
+          //Console.println("g is " + g + " r is " + r)
           val gt = if (g.length > 1) stripAndReduce(g.drop(1)).trim else ""
+          //Console.println("gt " + gt)
           subgoals = gt :: subgoals
           if (subd > 0)
             index = index + subd

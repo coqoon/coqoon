@@ -540,7 +540,7 @@ class GoalViewer extends ViewPart {
               while (index < tomake) {
                 val ti = new TabItem(goals, SWT.NONE)
                 subgoals = subgoals ++ List(ti)
-                ti.setText((subgoals.length + index - 1).toString)
+                ti.setText((subgoals.length - 1).toString)
                 val te = new Text(goals, SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
                 subgoalTexts = subgoalTexts ++ List(te)
                 ti.setControl(te)
