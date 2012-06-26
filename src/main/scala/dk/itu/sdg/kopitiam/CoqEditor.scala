@@ -329,7 +329,7 @@ class CoqDamageRepairer (scanner : ITokenScanner, defaultTextAttribute : TextAtt
     } else
       yellowI = -1
     if (editor != null)
-          Display.getDefault.asyncExec(
+          Display.getDefault.syncExec(
             new Runnable() {
               def run() = {
                 editor.getSource.invalidateTextPresentation

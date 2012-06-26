@@ -402,7 +402,6 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       val end = scala.math.min(sendlen, content.length - position)
       position += end
       sendlen = 0
-      val len = scala.math.min(position, content.length)
       val rev = reveal
       activeEditor.damager.addColors(position, scala.math.max(until - position, sendlen), rev)
     }
