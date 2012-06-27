@@ -67,9 +67,7 @@ abstract class KCoqAction extends KAction {
           DocumentState.positionToShell(0).globalStep
         else
           2
-      DocumentState.positionToShell.clear
-      DocumentState.position = 0
-      DocumentState.sendlen = 0
+      DocumentState.resetState
 
       if (CoqOutputDispatcher.goalviewer != null)
         CoqOutputDispatcher.goalviewer.clear
@@ -173,8 +171,7 @@ class CoqRetractAction extends KCoqAction {
   override def doit () : Unit = {
     DocumentState.setBusy
     PrintActor.deregister(CoqOutputDispatcher)
-    DocumentState.position = 0
-    DocumentState.sendlen = 0
+    DocumentState.resetState
     PrintActor.register(CoqStartUp)
     val shell = CoqState.getShell
     DocumentState.undoAll
@@ -186,7 +183,6 @@ class CoqRetractAction extends KCoqAction {
         Console.println("CoqRetractAction: retracting without position information, using 2")
         2
       }
-    DocumentState.positionToShell.keys.toList.filterNot(_ == 0).foreach(DocumentState.positionToShell.remove(_))
     CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
   }
   override def start () : Boolean = true
@@ -269,10 +265,8 @@ object CoqStepUntilAction extends CoqStepUntilAction { }
 class RestartCoqAction extends KAction {
   override def doit () : Unit = {
     CoqTop.killCoq
-    DocumentState.position = 0
-    DocumentState.sendlen = 0
+    DocumentState.resetState
     DocumentState.undoAll
-    DocumentState.positionToShell.clear
     EclipseBoilerPlate.unmarkReally
     PrintActor.deregister(CoqOutputDispatcher)
     CoqStartUp.start

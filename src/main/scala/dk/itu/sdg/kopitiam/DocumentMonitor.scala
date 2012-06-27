@@ -110,9 +110,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
             Console.println("doitH: using 2 instead of registered position, since there is none")
             2
           }
-        DocumentState.positionToShell.clear
-        DocumentState.position = 0
-        DocumentState.sendlen = 0
+        DocumentState.resetState
         DocumentState.invalidateCoqMarker
         PrintActor.deregister(CoqOutputDispatcher)
         val shell = CoqState.getShell

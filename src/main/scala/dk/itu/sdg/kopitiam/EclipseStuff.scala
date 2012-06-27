@@ -264,6 +264,12 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       null
   }
 
+  def resetState () : Unit = {
+    positionToShell.clear
+    position = 0
+    sendlen = 0
+  }
+
   import org.eclipse.ui.{IFileEditorInput,IURIEditorInput}
   import org.eclipse.core.resources.{IFile,IResource,ResourcesPlugin}
   import org.eclipse.core.runtime.Path
