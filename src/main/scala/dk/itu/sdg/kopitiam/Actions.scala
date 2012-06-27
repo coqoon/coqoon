@@ -58,9 +58,7 @@ abstract class KCoqAction extends KAction {
     if (DocumentState.activeEditor != acted) {
       if (DocumentState.resource != null)
         EclipseBoilerPlate.unmarkReally
-      if (DocumentState.coqmarker != null)
-        DocumentState.coqmarker.delete
-      DocumentState.coqmarker = null
+      DocumentState.invalidateCoqMarker
       DocumentState.undoAll
       DocumentState.activeEditor = acted.asInstanceOf[CoqEditor]
 

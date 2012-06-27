@@ -113,9 +113,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         DocumentState.positionToShell.clear
         DocumentState.position = 0
         DocumentState.sendlen = 0
-        if (DocumentState.coqmarker != null)
-          DocumentState.coqmarker.delete
-        DocumentState.coqmarker = null
+        DocumentState.invalidateCoqMarker
         PrintActor.deregister(CoqOutputDispatcher)
         val shell = CoqState.getShell
         DocumentState.setBusy

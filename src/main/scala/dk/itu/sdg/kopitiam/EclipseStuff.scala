@@ -306,7 +306,13 @@ object DocumentState extends CoqCallback with KopitiamLogger {
 
   import org.eclipse.core.resources.IMarker
   import org.eclipse.core.runtime.CoreException
-  var coqmarker : IMarker = null
+  private var coqmarker : IMarker = null
+
+  def invalidateCoqMarker () : Unit = {
+    if (coqmarker != null)
+      coqmarker.delete
+    coqmarker = null
+  }
 
   var position_ : Int = 0
   def position : Int = position_
@@ -327,8 +333,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     } catch {
       case e : CoreException =>
         Console.println("caught CoreException")
-        coqmarker.delete
-        coqmarker = null
+        invalidateCoqMarker
         position = x
     }
     //Console.println("position updated to " + x)
