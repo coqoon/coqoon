@@ -265,8 +265,13 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   }
 
   def resetState () : Unit = {
+    val value = positionToShell.get(0)
     positionToShell.clear
-    position = 0
+    value match {
+      case Some(x) => positionToShell += 0 -> x
+      case None =>
+    }
+    position_ = 0
     sendlen = 0
   }
 
@@ -353,18 +358,15 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       case CoqShellReady(monoton, token) =>
         if (monoton) {
           commit
-          //Console.println("filling table (" + positionToShell.keys.toList.length + ") [" + position + "]: " + token)
-          positionToShell += position -> token
+          if (positionToShell.get(position) == None) {
+            //Console.println("filling table (" + positionToShell.keys.toList.length + ") [" + position + "]: " + token)
+            positionToShell += position -> token
+          }
         } else
           undo
         _readyForInput = true
       case y =>
     }
-  }
-
-  def undoAll () : Unit = {
-    if (activeEditor != null)
-      activeEditor.damager.addColors(0, 0, false)
   }
 
   var oldsendlen : Int = 0

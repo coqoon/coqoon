@@ -59,15 +59,10 @@ abstract class KCoqAction extends KAction {
       if (DocumentState.resource != null)
         EclipseBoilerPlate.unmarkReally
       DocumentState.invalidateCoqMarker
-      DocumentState.undoAll
-      DocumentState.activeEditor = acted.asInstanceOf[CoqEditor]
-
-      val initial =
-        if (DocumentState.positionToShell.contains(0))
-          DocumentState.positionToShell(0).globalStep
-        else
-          2
       DocumentState.resetState
+      if (DocumentState.activeEditor != null)
+        DocumentState.processUndo
+      DocumentState.activeEditor = acted.asInstanceOf[CoqEditor]
 
       if (CoqOutputDispatcher.goalviewer != null)
         CoqOutputDispatcher.goalviewer.clear
@@ -79,6 +74,7 @@ abstract class KCoqAction extends KAction {
         PrintActor.deregister(CoqOutputDispatcher)
         val shell = CoqState.getShell
         PrintActor.register(CoqStartUp)
+        val initial = DocumentState.positionToShell(0).globalStep
         CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
         while (! CoqStartUp.fini) { }
         CoqStartUp.fini = false
@@ -174,7 +170,7 @@ class CoqRetractAction extends KCoqAction {
     DocumentState.resetState
     PrintActor.register(CoqStartUp)
     val shell = CoqState.getShell
-    DocumentState.undoAll
+    DocumentState.processUndo
     EclipseBoilerPlate.unmarkReally
     val initial =
       if (DocumentState.positionToShell.contains(0))
@@ -266,7 +262,7 @@ class RestartCoqAction extends KAction {
   override def doit () : Unit = {
     CoqTop.killCoq
     DocumentState.resetState
-    DocumentState.undoAll
+    DocumentState.processUndo
     EclipseBoilerPlate.unmarkReally
     PrintActor.deregister(CoqOutputDispatcher)
     CoqStartUp.start
@@ -369,17 +365,22 @@ object CoqStartUp extends CoqCallback {
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqShellReady(m, t) =>
-      	Console.println("dispatch, initialize is " + initialize + " fini is " + fini + " in CoqStartUp")
+      	//Console.println("dispatch, initialize is " + initialize + " fini is " + fini + " in CoqStartUp")
         val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
         val lp = new File(loadp).exists
         if (initialize == 0) {
           DocumentState.setBusy
-          CoqTop.writeToCoq("Add LoadPath \"" + EclipseBoilerPlate.getProjectDir + "\".")
-          initialize = 1
-        } else if (initialize == 1 && lp) {
-          DocumentState.setBusy
-          CoqTop.writeToCoq("Add LoadPath \"" + loadp + "\".")
-          initialize = 2
+          if (lp) {
+            CoqTop.writeToCoq("Add LoadPath \"" + loadp + "\".")
+            initialize = 1
+          } else {
+            CoqTop.writeToCoq("Add LoadPath \"" + EclipseBoilerPlate.getProjectDir + "\".")
+            initialize = 2
+          }
+        } else if (initialize == 1) {
+            DocumentState.setBusy
+            CoqTop.writeToCoq("Add LoadPath \"" + EclipseBoilerPlate.getProjectDir + "\".")
+            initialize = 2
         } else {
           PrintActor.deregister(CoqStartUp)
           PrintActor.register(CoqOutputDispatcher)

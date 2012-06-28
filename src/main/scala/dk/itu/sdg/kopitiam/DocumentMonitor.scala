@@ -103,13 +103,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         DocumentState.activeEditor = null
         if (CoqOutputDispatcher.goalviewer != null)
           CoqOutputDispatcher.goalviewer.clear
-        val initial =
-          if (DocumentState.positionToShell.contains(0))
-            DocumentState.positionToShell(0).globalStep
-          else {
-            Console.println("doitH: using 2 instead of registered position, since there is none")
-            2
-          }
+        val initial = DocumentState.positionToShell(0).globalStep
         DocumentState.resetState
         DocumentState.invalidateCoqMarker
         PrintActor.deregister(CoqOutputDispatcher)
