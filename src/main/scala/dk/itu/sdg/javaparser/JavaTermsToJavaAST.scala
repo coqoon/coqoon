@@ -239,7 +239,7 @@ object FinishAST extends JavaTerms
     body.map {
       case vars : LocalVar => transformLocalVariable(vars)
       case AnyStatement(";") => Nil
-      case SpecStmt(content) => Nil
+      case SpecStmt(content) => JSpecExpression(content) :: Nil
       case expr : AnyExpr => transformAnyExpr(expr) :: Nil
     }.flatten
   }

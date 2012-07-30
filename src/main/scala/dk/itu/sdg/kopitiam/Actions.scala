@@ -306,7 +306,6 @@ class TranslateAction extends KAction {
     Console.println("execute translation!")
     val sel = HandlerUtil.getActiveMenuSelection(ev).asInstanceOf[IStructuredSelection]
     val fe = sel.getFirstElement
-    Console.println("fe is " + fe + " type " + fe.asInstanceOf[AnyRef].getClass)
     if (fe.isInstanceOf[IFile])
       translate(fe.asInstanceOf[IFile])
     else if (fe.isInstanceOf[ICompilationUnit])

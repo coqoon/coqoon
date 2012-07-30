@@ -48,5 +48,5 @@ case class SJBinaryExpression (operation : String, left : SJExpression, right : 
 case class SJUnaryExpression (operation : String, expr : SJExpression) extends SJExpression //different types
 case class SJLiteral (value : String) extends SJExpression //different types: numbers, strings, boolean
 case class SJVariableAccess (variable : String) extends SJExpression
-
+case class SJSpecExpression (e : String) extends SJExpression
 

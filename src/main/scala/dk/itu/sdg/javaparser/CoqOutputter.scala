@@ -165,6 +165,8 @@ trait CoqOutputter extends JavaToSimpleJava {
         Some("(cif " + te + " " + tr + " " + fa + ")")
       case SJWhile(test, body) =>
         Some("(cwhile " + printE(test) + " " + optPrintBody(body.flatMap(x => printStatement(x, locals))) + ")")
+      case SJSpecExpression(content) =>
+        Some("spec: " + content)
     }
   }
 

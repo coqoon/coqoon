@@ -222,6 +222,9 @@ trait JavaToSimpleJava extends KopitiamLogger {
         val (a, i, ls1) = extractHelper(None, y.asInstanceOf[JExpression], fields, ms, ls)
         (i ++ List(SJAssert(a)), ls1)
 
+      case JSpecExpression(content) =>
+        (List(SJSpecExpression(content)), ls)
+
 /*
       //below here there is no real sense
       case JBinaryExpression(op, l, r) =>
