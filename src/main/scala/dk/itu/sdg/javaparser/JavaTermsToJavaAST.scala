@@ -149,6 +149,8 @@ object FinishAST extends JavaTerms
     }.toSet
 
     body.flatMap {
+      case List() ~ SpecStmt(content) => JSpecExpression(content) :: Nil
+      case SpecStmt(content) => JSpecExpression(content) :: Nil
       case BodyDeclaration(mods, x) => transformClassOrInterfaceBody(List(x), outer, transformModifiers(mods))
       case jclass : JClass => transformClassOrInterface(jclass, outer, modifiers) :: Nil
       case jinterface : JInterface => transformClassOrInterface(jinterface, outer, modifiers) :: Nil

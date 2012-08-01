@@ -84,6 +84,8 @@ trait JavaToSimpleJava extends KopitiamLogger {
         assert(m.contains(Final()))
         //we should remember initializer somewhere
         Some(SJFieldDefinition(m, n, t))
+      case JSpecExpression (x) =>
+        Some(SJSpecDefinition(x))
     }), rest)
   }
 
@@ -106,6 +108,8 @@ trait JavaToSimpleJava extends KopitiamLogger {
         Some(SJConstructorDefinition(mods, jtype, targs, nbody, ls1))
       case JBlock(mods, body) =>
         Some(SJBodyBlock(mods, translateBody(body, fs, HashMap(), HashMap())._1))
+      case JSpecExpression(x) =>
+        Some(SJSpecDefinition(x))
     }), rest)
   }
 

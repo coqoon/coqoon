@@ -267,7 +267,8 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
      | rep(modifier) ~ memberDecl ^^ BodyDeclaration
     )
   def memberDecl =
-    ( genericMethodOrConstructorDecl
+    ( specStmt
+     | genericMethodOrConstructorDecl
      | methodOrFieldDecl
      | positioned("void" ~> id ~ voidMethodDeclaratorRest ^^ { case id~MethodDeclarator(parameters, throws, body) => MethodDeclaration(id, "void", parameters, throws, body) })
      | positioned(id ~ constructorDeclaratorRest ^^ { case id~MethodDeclarator(parameters, throws, body) => ConstructorDeclaration(id, parameters, throws, body) })
@@ -303,7 +304,8 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
      | rep(modifier) ~ interfaceMemberDecl
     )
   def interfaceMemberDecl =
-    ( interfaceMethodOrFieldDecl
+    ( specStmt
+     | interfaceMethodOrFieldDecl
      | interfaceGenericMethodDecl
      | "void" ~> id ~ voidInterfaceMethodDeclaratorRest ^^ {
        case (id~MethodDeclarator(parameters, throws, body)) => MethodDeclaration(id, "void", parameters, throws, body)

@@ -26,6 +26,7 @@ case class SJConstructorDefinition (modifiers : Set[JModifier], override val jty
   override val id = "constructor"
 }
 case class SJBodyBlock (modifier : Option[Static], body : List[SJStatement]) extends SJBodyDefinition
+case class SJSpecDefinition (content : String) extends SJBodyDefinition
 
 sealed case class SJArgument (id : String, jtype : String)
 
