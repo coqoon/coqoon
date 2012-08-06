@@ -261,7 +261,6 @@ Open Scope hasn_scope.
         val superms = if (supermethods.length == 0) "" else supermethods.reduceLeft(_ + " " + _)
         val superis = if (interfaces.length == 0) "" else interfaces.reduceLeft(_ + "\n  " + _) + "\n  "
         interfs ::= "Definition " + id + " (C : class) (T : Type) (R : val -> T -> upred heap_alg) " + superms + " " + mmeths + " : spec :=\n  " + superis + mspecs + "."
-      case SJClassDefinition(modifiers, "Coq", supers, inters, body, par, fs) =>
       case SJClassDefinition(modifiers, id, supers, inters, body, par, fs) =>
         //let's hope only a single class and interfaces before that!
         cs ::= id
