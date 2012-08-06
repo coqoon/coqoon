@@ -85,7 +85,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
         //we should remember initializer somewhere
         Some(SJFieldDefinition(m, n, t))
       case JSpecExpression (x) =>
-        Some(SJSpecDefinition(x))
+        Some(ParseSpecification.parse(x))
     }), rest)
   }
 
@@ -109,7 +109,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
       case JBlock(mods, body) =>
         Some(SJBodyBlock(mods, translateBody(body, fs, HashMap(), HashMap())._1))
       case JSpecExpression(x) =>
-        Some(SJSpecDefinition(x))
+        Some(ParseSpecification.parse(x))
     }), rest)
   }
 
@@ -227,7 +227,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
         (i ++ List(SJAssert(a)), ls1)
 
       case JSpecExpression(content) =>
-        (List(SJSpecExpression(content)), ls)
+        (List(ParseSpecification.parse(content)), ls)
 
 /*
       //below here there is no real sense

@@ -8,7 +8,7 @@ sealed abstract class SJDefinition () { val id : String ; val body: List[SJBodyD
 case class SJClassDefinition (modifiers : Set[JModifier], override val id : String, superclass : String, interfaces : List[String], override val body : List[SJBodyDefinition], outerclass : Option[String], fields : HashMap[String, String]) extends SJDefinition
 case class SJInterfaceDefinition (modifiers : Set[JModifier], override val id : String, interfaces : List[String], override val body : List[SJBodyDefinition]) extends SJDefinition
 
-sealed abstract class SJBodyDefinition () { }
+trait SJBodyDefinition
 
 // common interface for methods and constructors
 sealed abstract class SJInvokable() extends SJBodyDefinition {
@@ -26,11 +26,10 @@ case class SJConstructorDefinition (modifiers : Set[JModifier], override val jty
   override val id = "constructor"
 }
 case class SJBodyBlock (modifier : Option[Static], body : List[SJStatement]) extends SJBodyDefinition
-case class SJSpecDefinition (content : String) extends SJBodyDefinition
 
 sealed case class SJArgument (id : String, jtype : String)
 
-sealed abstract class SJStatement
+trait SJStatement
 case class SJAssert (assertion : SJExpression) extends SJStatement
 case class SJWhile (test : SJExpression, body : List[SJStatement]) extends SJStatement
 case class SJConditional (test : SJExpression, consequent : List[SJStatement], alternative : List[SJStatement]) extends SJStatement
@@ -49,5 +48,4 @@ case class SJBinaryExpression (operation : String, left : SJExpression, right : 
 case class SJUnaryExpression (operation : String, expr : SJExpression) extends SJExpression //different types
 case class SJLiteral (value : String) extends SJExpression //different types: numbers, strings, boolean
 case class SJVariableAccess (variable : String) extends SJExpression
-case class SJSpecExpression (e : String) extends SJExpression
 

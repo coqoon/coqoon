@@ -43,7 +43,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         ms ::= name
         Some(("(" + name + " : T " + margs + " -> " + rettype + ")",
             "([A]t : T, C :.: \"" + name + "\" |-> (" +  printArgList("this" :: paras) + ") {{ " + pre + " }}-{{ " + post + " }})"))
-      case SJSpecDefinition(x) => Console.println("interfacemethods of spec: " + x); None
+      case (x : Specification) => Console.println("interfacemethods of spec: " + x.data); None
       case _ => None
     }
     //thus we need to save _1 in ClassTable, don't we?
@@ -166,8 +166,8 @@ trait CoqOutputter extends JavaToSimpleJava {
         Some("(cif " + te + " " + tr + " " + fa + ")")
       case SJWhile(test, body) =>
         Some("(cwhile " + printE(test) + " " + optPrintBody(body.flatMap(x => printStatement(x, locals))) + ")")
-      case SJSpecExpression(content) =>
-        Some("spec: " + content)
+      case (x : Specification) =>
+        Some("spec: " + x.data)
     }
   }
 
@@ -223,7 +223,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         val nam = typ + "_new"
         outp ::= "Definition " + nam + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\")."
         Some(("\"new\"" , nam))
-      case SJSpecDefinition(x) => Console.println("classmethods of spec: " + x); None
+      case (x : Specification) => Console.println("classmethods of spec: " + x.data); None
       case _ => None
     }
   }
