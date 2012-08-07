@@ -167,7 +167,7 @@ trait CoqOutputter extends JavaToSimpleJava {
       case SJWhile(test, body) =>
         Some("(cwhile " + printE(test) + " " + optPrintBody(body.flatMap(x => printStatement(x, locals))) + ")")
       case (x : Specification) =>
-        Some("spec: " + x.data)
+        proofoutput ::= x.data; None
     }
   }
 
@@ -201,19 +201,49 @@ trait CoqOutputter extends JavaToSimpleJava {
     (defi, res)
   }
 
-  def classMethods (body : List[SJBodyDefinition]) : List[Pair[String,String]] = {
+  def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[String,String]] = {
+    var precon : Option[Precondition] = None
+    var postcon : Option[Postcondition] = None
+    var repr : Option[RepresentationPredicate] = None
     body.flatMap {
       case SJMethodDefinition(modifiers, name, typ, params, body, lvars) =>
         //Console.println("starting to print method " + name + " with body " + body)
         val bodyref = name + "_body"
         val args = getArgs(params)
-        val (bodyp, returnvar) = getBody(body, bodyref, lvars)
-        outp ::= bodyp
         val t =
           if (modifiers.contains(Static()))
             args
           else
             "this" :: args
+        var reprname = ""
+        precon match {
+          case Some(pre) => postcon match {
+            case Some(post) =>
+              val reprsignature = repr match {
+                  case Some(x) =>
+                    val sig = x.data.split(":=")(0).split(":").drop(1).map(x => if (x.indexOf(")") != -1) x.substring(0, x.indexOf(")")) else x)
+                    reprname = x.data.split(" ").flatMap(x => if (x == "") None else Some(x)).drop(1).first
+                    sig.toList.mkString(" -> ")
+                  case None => ""
+                }
+              specoutput ::= "Definition " + name + "_spec (Repr : " + reprsignature + """) : spec :=
+  ([A] xs, \"""" + clazz + "\" :.: \"" + name + "\" |-> [" + printArgList(t) + """]
+  {{ """ + pre.data + " }}-{{ " + post.data + "}})."
+            case None => Console.println("pre without post for method " + name);
+          }
+          case None => postcon match {
+            case Some(post) => Console.println("post without pre for method " + name);
+            case None => Console.println("No spec for method " + name);
+          }
+        }
+        precon = None
+        postcon = None
+        proofoutput ::= "Lemma valid_" + name + "_" + clazz + ": |= " + name + "_spec " + reprname + """.
+Proof.
+  unfold """ + name + "_spec" + "; unfold_spec."
+        val (bodyp, returnvar) = getBody(body, bodyref, lvars)
+        proofoutput ::= "Qed."
+        outp ::= bodyp
         outp ::= "Definition " + name + "M := Build_Method (" + printArgList(t) + ") " + bodyref + " " + returnvar + "."
         Some(("\"" + name + "\"", name + "M"))
       case SJConstructorDefinition(modifiers, typ, params, body, lvars) =>
@@ -223,12 +253,25 @@ trait CoqOutputter extends JavaToSimpleJava {
         val nam = typ + "_new"
         outp ::= "Definition " + nam + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\")."
         Some(("\"new\"" , nam))
-      case (x : Specification) => Console.println("classmethods of spec: " + x.data); None
+      case (x : Precondition) => 
+        precon match {
+          case None => precon = Some(x); None
+          case Some(x) => Console.println("wrong! two preconditions for a method"); None
+        }
+      case (x : Postcondition) =>
+        postcon match {
+          case None => postcon = Some(x); None
+          case Some(x) => Console.println("wrong! two postconditions for a method"); None
+        }
+      case (x : RepresentationPredicate) => specoutput ::= x.data; repr = Some(x); None
+      case (x : Specification) => specoutput ::= x.data; None
       case _ => None
     }
   }
 
   private var outp : List[String] = null
+  private var specoutput : List[String] = null
+  private var proofoutput : List[String] = null
 
   private val unique_names : List[String] = List("Opaque unique_method_names.", "Definition unique_method_names := option_proof (search_unique_names Prog).")
 
@@ -240,13 +283,24 @@ Open Scope hasn_scope.
 """
 
 
-  def coqoutput (xs : List[SJDefinition], spec : Boolean, name : String) : List[String] = {
+  def coqoutput (xs : List[SJDefinition], complete : Boolean, name : String) : List[String] = {
     outp = List[String]()
+    specoutput = List[String]()
+    proofoutput = List[String]()
     var cs : List[String] = List[String]()
-
-    if (spec)
+    if (complete)
       outp ::= prelude
     var interfs : List[String] = List[String]()
+    if (complete) {
+      specoutput ::= "\nModule " + name + "_spec."
+      specoutput ::= "Import " + name + "."
+      specoutput ::= "Module Import SC := Tac " + name + "."
+      //can also be done by annotation!
+      specoutput ::= "Open Scope cmd_scope."
+      specoutput ::= "Open Scope spec_scope."
+      specoutput ::= "Open Scope asn_scope."
+      specoutput ::= "Open Scope open_scope."
+    }
     outp ::= "Module " + name + " <: PROGRAM."
     //XXX hardcoded for AMP (list reversal) 11-04-12
     outp ::= """Notation "'eeq_ptrs'" :=
@@ -265,19 +319,15 @@ Open Scope hasn_scope.
         //let's hope only a single class and interfaces before that!
         cs ::= id
         val fields = fs.keys.toList
-        val methods = classMethods(body)
+        val methods = classMethods(body, id)
         outp ::= "Definition " + id + " := Build_Class " + printFiniteSet(fields) + " " + printFiniteMap(methods) + "."
     })
     val classes = printFiniteMap(cs.map(x => ("\"" + x + "\"", x)))
     outp ::= "Definition Prog := Build_Program " + classes + "."
     outp = unique_names ++ outp
     outp ::= "End " + name + "."
-    if (spec) {
-      outp ::= "\nModule " + name + "_spec."
-      outp ::= "Import " + name + "."
-      outp ::= "Module Import SC := Tac " + name + "."
-      outp ::= "End " + name + "_spec."
-    }
+    if (complete)
+      proofoutput ::= "End " + name + "_spec."
 /* if (spec) {
       outp ::= "End " + name + "."
       outp ::= "\nImport " + name + "."
@@ -328,7 +378,7 @@ Open Scope hasn_scope.
       outp = ClassTable.getCoq("TOP") ++ outp
     } */
     outp ::= "" //we need a newline...
-    outp.reverse
+    outp.reverse ++ specoutput.reverse ++ proofoutput.reverse
   }
 
   def printArgList (l : List[String]) : String = {
