@@ -217,6 +217,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         precon match {
           case Some(pre) => postcon match {
             case Some(post) =>
+              specifications ::= name + "_spec"
               specoutput ::= "Definition " + name + """_spec :=
   ([A] xs, """ + "\"" + clazz + "\" :.: \"" + name + "\" |-> [" + printArgListSpec(t) + """]
   {{ """ + pre.data + " }}-{{ " + post.data + " }})."
@@ -229,6 +230,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         }
         precon = None
         postcon = None
+        proofs ::= "valid_" + name + "_" + clazz
         proofoutput ::= "Lemma valid_" + name + "_" + clazz + ": |= " + name + """_spec.
 Proof.
   unfold """ + name + "_spec" + "; unfold_spec."
@@ -262,6 +264,8 @@ Proof.
   private var outp : List[String] = null
   private var specoutput : List[String] = null
   private var proofoutput : List[String] = null
+  private var specifications : List[String] = null
+  private var proofs : List[String] = null
 
   private val unique_names : List[String] = List("Opaque unique_method_names.", "Definition unique_method_names := option_proof (search_unique_names Prog).")
 
@@ -276,6 +280,8 @@ Open Scope hasn_scope.
     outp = List[String]()
     specoutput = List[String]()
     proofoutput = List[String]()
+    specifications = List[String]()
+    proofs = List[String]()
     var cs : List[String] = List[String]()
     if (complete)
       outp ::= prelude
@@ -315,6 +321,11 @@ Open Scope asn_scope.
     outp ::= "Definition Prog := Build_Program " + classes + "."
     outp = unique_names ++ outp
     outp ::= "End " + name + "."
+    specoutput ::= "Definition " + name + "_spec : spec := " + specifications.mkString(""" [/\] """) + "."
+    proofoutput ::= "Lemma valid_" + name + " : |= " + name + """_spec.
+Proof.
+  unfold """ + name + """_spec.
+""" + proofs.foldRight("\n")("  apply " + _ + ".\n" + _) + "Qed."
     if (complete)
       proofoutput ::= "End " + name + "_spec."
 /* if (spec) {
