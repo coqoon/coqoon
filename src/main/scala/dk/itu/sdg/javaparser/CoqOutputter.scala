@@ -204,7 +204,6 @@ trait CoqOutputter extends JavaToSimpleJava {
   def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[String,String]] = {
     var precon : Option[Precondition] = None
     var postcon : Option[Postcondition] = None
-    var repr : Option[RepresentationPredicate] = None
     body.flatMap {
       case SJMethodDefinition(modifiers, name, typ, params, body, lvars) =>
         //Console.println("starting to print method " + name + " with body " + body)
@@ -215,20 +214,12 @@ trait CoqOutputter extends JavaToSimpleJava {
             args
           else
             "this" :: args
-        var reprname = ""
         precon match {
           case Some(pre) => postcon match {
             case Some(post) =>
-              val reprsignature = repr match {
-                  case Some(x) =>
-                    val sig = x.data.split(":=")(0).split(":").drop(1).map(x => if (x.indexOf(")") != -1) x.substring(0, x.indexOf(")")) else x)
-                    reprname = x.data.split(" ").flatMap(x => if (x == "") None else Some(x)).drop(1).first
-                    sig.toList.mkString(" -> ")
-                  case None => ""
-                }
-              specoutput ::= "Definition " + name + "_spec (Repr : " + reprsignature + """) : spec :=
-  ([A] xs, \"""" + clazz + "\" :.: \"" + name + "\" |-> [" + printArgList(t) + """]
-  {{ """ + pre.data + " }}-{{ " + post.data + "}})."
+              specoutput ::= "Definition " + name + """_spec :=
+  ([A] xs, """ + "\"" + clazz + "\" :.: \"" + name + "\" |-> [" + printArgList(t) + """]
+  {{ """ + pre.data + " }}-{{ " + post.data + " }})."
             case None => Console.println("pre without post for method " + name);
           }
           case None => postcon match {
@@ -238,7 +229,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         }
         precon = None
         postcon = None
-        proofoutput ::= "Lemma valid_" + name + "_" + clazz + ": |= " + name + "_spec " + reprname + """.
+        proofoutput ::= "Lemma valid_" + name + "_" + clazz + ": |= " + name + """_spec.
 Proof.
   unfold """ + name + "_spec" + "; unfold_spec."
         val (bodyp, returnvar) = getBody(body, bodyref, lvars)
@@ -263,7 +254,6 @@ Proof.
           case None => postcon = Some(x); None
           case Some(x) => Console.println("wrong! two postconditions for a method"); None
         }
-      case (x : RepresentationPredicate) => specoutput ::= x.data; repr = Some(x); None
       case (x : Specification) => specoutput ::= x.data; None
       case _ => None
     }
