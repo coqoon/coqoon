@@ -272,7 +272,6 @@ Open Scope string_scope.
 Open Scope hasn_scope.
 """
 
-
   def coqoutput (xs : List[SJDefinition], model : String, complete : Boolean, name : String) : List[String] = {
     outp = List[String]()
     specoutput = List[String]()
@@ -281,16 +280,16 @@ Open Scope hasn_scope.
     if (complete)
       outp ::= prelude
     var interfs : List[String] = List[String]()
-    if (complete) {
-      specoutput ::= "\nModule " + name + "_spec."
-      specoutput ::= "Import " + name + "."
-      specoutput ::= "Module Import SC := Tac " + name + "."
-      //can also be done by annotation!
-      specoutput ::= "Open Scope cmd_scope."
-      specoutput ::= "Open Scope spec_scope."
-      specoutput ::= "Open Scope asn_scope."
-      specoutput ::= "Open Scope open_scope."
-    }
+    if (complete)
+      specoutput ::= """
+Module """ + name + """_spec.
+Import """ + name + """.
+Import """ + name + """_model.
+Module Import SC := Tac """ + name + """.
+
+Open Scope spec_scope.
+Open Scope asn_scope.
+"""
     outp ::= "Module " + name + " <: PROGRAM."
     //XXX hardcoded for AMP (list reversal) 11-04-12
     outp ::= """Notation "'eeq_ptrs'" :=
@@ -369,7 +368,7 @@ Open Scope hasn_scope.
     } */
     //now, check whether we have a .v file around with the model which we can source...
     
-    outp.reverse ++ specoutput.reverse ++ List(model) ++ proofoutput.reverse ++ List("")
+    outp.reverse ++ List("") ++ List(model) ++ List("") ++ specoutput.reverse ++ proofoutput.reverse ++ List("")
   }
 
   def printArgList (l : List[String]) : String = {
