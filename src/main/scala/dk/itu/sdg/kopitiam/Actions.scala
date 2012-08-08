@@ -322,13 +322,19 @@ class TranslateAction extends KAction {
       val modelfile = file.getProject.getFile(model)
       Console.println("modelfilename is " + model + " and it exists? " + modelfile.exists)
       val mod : String =
-        if (modelfile.exists)
-          try new java.util.Scanner(modelfile.getContents, "UTF-8").useDelimiter("\\A").next() catch { case e => "" }
-        else
+        if (modelfile.exists) {
+          modelfile.setCharset("UTF-8")
+          try
+            new java.util.Scanner(modelfile.getContents, "UTF-8").useDelimiter("\\A").next() 
+          catch
+            { case e => "" }
+        } else
           ""
       if (trfi.exists)
         trfi.delete(true, false, null)
-      trfi.create(new ByteArrayInputStream(JavaTC.parse(is, mod, nam.substring(0, nam.indexOf(".java"))).getBytes), IResource.NONE, null)
+      trfi.create(null, IResource.NONE, null)
+      trfi.setCharset("UTF-8")
+      trfi.setContents(new ByteArrayInputStream(JavaTC.parse(is, mod, nam.substring(0, nam.indexOf(".java"))).getBytes("UTF-8")), IResource.NONE, null)
     } else
       Console.println("wasn't a java file")
   }
