@@ -273,7 +273,7 @@ Open Scope hasn_scope.
 """
 
 
-  def coqoutput (xs : List[SJDefinition], complete : Boolean, name : String) : List[String] = {
+  def coqoutput (xs : List[SJDefinition], model : String, complete : Boolean, name : String) : List[String] = {
     outp = List[String]()
     specoutput = List[String]()
     proofoutput = List[String]()
@@ -367,8 +367,9 @@ Open Scope hasn_scope.
       outp ::= "End " + name + "_spec."
       outp = ClassTable.getCoq("TOP") ++ outp
     } */
-    outp ::= "" //we need a newline...
-    outp.reverse ++ specoutput.reverse ++ proofoutput.reverse
+    //now, check whether we have a .v file around with the model which we can source...
+    
+    outp.reverse ++ specoutput.reverse ++ List(model) ++ proofoutput.reverse ++ List("")
   }
 
   def printArgList (l : List[String]) : String = {

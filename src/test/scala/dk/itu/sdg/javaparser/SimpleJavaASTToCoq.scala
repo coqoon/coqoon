@@ -15,7 +15,7 @@ class CoqOutputterSpec extends ASTSpec {
 "Definition unique_method_names := option_proof (search_unique_names Prog).",
 "Opaque unique_method_names.",
 "End Foo.", "")
-    FinishAST.coqoutput(tst, false, "Foo") should equal(expected)
+    FinishAST.coqoutput(tst, "", false, "Foo") should equal(expected)
   }
 
   "simple class definition with a field" should "produce some coq definition" in {
@@ -26,7 +26,7 @@ class CoqOutputterSpec extends ASTSpec {
 "Definition unique_method_names := option_proof (search_unique_names Prog).",
 "Opaque unique_method_names.",
 "End Foo.", "")
-    FinishAST.coqoutput(tst, false, "Foo") should equal(expected)
+    FinishAST.coqoutput(tst, "", false, "Foo") should equal(expected)
   }
 
   "simple class definition with two fields" should "produce some coq definition" in {
@@ -37,7 +37,7 @@ class CoqOutputterSpec extends ASTSpec {
 "Definition unique_method_names := option_proof (search_unique_names Prog).",
 "Opaque unique_method_names.",
 "End Foo.", "")
-    FinishAST.coqoutput(tst, false, "Foo") should equal(expected)
+    FinishAST.coqoutput(tst, "", false, "Foo") should equal(expected)
   }
 
   "simple class definition with a method" should "produce some coq definition" in {
@@ -50,7 +50,7 @@ class CoqOutputterSpec extends ASTSpec {
 "Definition unique_method_names := option_proof (search_unique_names Prog).",
 "Opaque unique_method_names.",
 "End Foo.", "")
-    FinishAST.coqoutput(tst, false, "Foo") should equal(expected)
+    FinishAST.coqoutput(tst, "", false, "Foo") should equal(expected)
   }
 
   "simple class definition with a conditional" should "produce some coq definition" in {
@@ -63,7 +63,7 @@ class CoqOutputterSpec extends ASTSpec {
 "Definition unique_method_names := option_proof (search_unique_names Prog).",
 "Opaque unique_method_names.",
 "End Foo.", "")
-    FinishAST.coqoutput(tst, false, "Foo") should equal(expected)
+    FinishAST.coqoutput(tst, "", false, "Foo") should equal(expected)
   }
 
   "simple class definition with a constructor" should "produce some coq definition" in {
@@ -75,7 +75,7 @@ class CoqOutputterSpec extends ASTSpec {
 "Definition unique_method_names := option_proof (search_unique_names Prog).",
 "Opaque unique_method_names.",
 "End Foo.", "")
-    FinishAST.coqoutput(tst, false, "Foo") should equal(expected)
+    FinishAST.coqoutput(tst, "", false, "Foo") should equal(expected)
   }
 
   "cell class" should "produce some coq definition" in {
@@ -91,7 +91,7 @@ class CoqOutputterSpec extends ASTSpec {
 "Definition unique_method_names := option_proof (search_unique_names Prog).",
 "Opaque unique_method_names.",
 "End Cell.", "")
-    FinishAST.coqoutput(tst, false, "Cell") should equal(expected)
+    FinishAST.coqoutput(tst, "", false, "Cell") should equal(expected)
   }
 
   "recell class" should "produce some coq definition" in {
@@ -118,6 +118,6 @@ class CoqOutputterSpec extends ASTSpec {
 "Definition unique_method_names := option_proof (search_unique_names Prog).",
 "Opaque unique_method_names.",
 "End Cell.", "")
-    FinishAST.coqoutput(tst, false, "Cell") should equal(expected)
+    FinishAST.coqoutput(tst, "", false, "Cell") should equal(expected)
   }
 }

@@ -35,16 +35,16 @@ object FinishAST extends JavaTerms
     javaTermsToJavaAST(a).map(translate).flatten
   }
 
-  def doit (a : Any, name : String) : String = {
+  def doit (a : Any, model : String, name : String) : String = {
     val w = doitHelper(a)
-    coqoutput(w, true, name).reduceLeft(_ + "\n\n" + _)
+    coqoutput(w, model, true, name).reduceLeft(_ + "\n" + _)
   }
 
   def doitNoSpec (a : Any, name : String) : (String, String) = {
     val w = doitHelper(a)
-    val re = coqoutput(w, false, name)
-    val prog = re.takeWhile(!_.contains("_spec.\nImport ")).reduceLeft(_ + "\n\n" + _)
-    val spec = re.dropWhile(!_.contains("_spec.\nImport ")).drop(1).mkString("\n\n")
+    val re = coqoutput(w, "", false, name)
+    val prog = re.takeWhile(!_.contains("_spec.\nImport ")).reduceLeft(_ + "\n" + _)
+    val spec = re.dropWhile(!_.contains("_spec.\nImport ")).drop(1).mkString("\n")
     (prog, spec)
   }
 
