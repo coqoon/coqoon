@@ -218,7 +218,7 @@ trait CoqOutputter extends JavaToSimpleJava {
           case Some(pre) => postcon match {
             case Some(post) =>
               specoutput ::= "Definition " + name + """_spec :=
-  ([A] xs, """ + "\"" + clazz + "\" :.: \"" + name + "\" |-> [" + printArgList(t) + """]
+  ([A] xs, """ + "\"" + clazz + "\" :.: \"" + name + "\" |-> [" + printArgListSpec(t) + """]
   {{ """ + pre.data + " }}-{{ " + post.data + " }})."
             case None => Console.println("pre without post for method " + name);
           }
@@ -373,6 +373,10 @@ Open Scope asn_scope.
 
   def printArgList (l : List[String]) : String = {
     l.foldRight("nil")("\"" + _ + "\" :: " + _)
+  }
+
+  def printArgListSpec (l : List[String]) : String = {
+    l.map("\"" + _ + "\"").mkString("; ")
   }
 
   def printFiniteSet (l : List[String]) : String = {
