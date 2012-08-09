@@ -89,8 +89,10 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
       val src = in.source
       var myin = in
       while (! (myin.first.chars == "%" && myin.rest.first.chars == ">"))
-    	myin = myin.drop(1)
-      Success(src.subSequence(pos, myin.offset + 1).toString, myin)
+     	myin = myin.drop(1)
+      val anyt = src.subSequence(pos, src.toString.indexOf("%>", pos)).toString
+      //Console.println("finished with while! " + anyt)
+      Success(anyt, myin)
     }
   }
 
