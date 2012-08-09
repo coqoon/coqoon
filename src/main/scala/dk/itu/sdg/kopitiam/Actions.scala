@@ -317,7 +317,7 @@ class TranslateAction extends KAction {
     val nam = file.getName
     if (nam.endsWith(".java")) {
       val trfi = file.getProject.getFile(nam + ".v") //TODO: find a suitable location!
-      val is = StreamReader(new InputStreamReader(file.getContents))
+      val is = StreamReader(new InputStreamReader(file.getContents, "UTF-8"))
       val model = nam.substring(0, nam.length - 4) + "v"
       val modelfile = file.getProject.getFile(model)
       Console.println("modelfilename is " + model + " and it exists? " + modelfile.exists)
