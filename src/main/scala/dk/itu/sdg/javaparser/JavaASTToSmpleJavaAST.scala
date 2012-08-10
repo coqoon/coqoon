@@ -226,8 +226,11 @@ trait JavaToSimpleJava extends KopitiamLogger {
         val (a, i, ls1) = extractHelper(None, y.asInstanceOf[JExpression], fields, ms, ls)
         (i ++ List(SJAssert(a)), ls1)
 
-      case JSpecExpression(content) =>
-        (List(ParseSpecification.parse(content)), ls)
+      case (x : JSpecExpression)=>
+        Console.println("bla here blubb (" + x.e + "): " + x.pos)
+        val res = ParseSpecification.parse(x.e)
+        res.setPos(x.pos)
+        (List(res), ls)
 
 /*
       //below here there is no real sense

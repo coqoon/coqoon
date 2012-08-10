@@ -2,7 +2,9 @@
 
 package dk.itu.sdg.javaparser
 
-sealed abstract class JStatement { }
+import scala.util.parsing.input.Positional
+
+sealed abstract class JStatement extends Positional { }
 
 case class JClassDefinition (modifiers : Set[JModifier], id : String, superclass : String, interfaces : List[String], body : List[JStatement], outerclass : Option[String]) extends JStatement
 case class JInterfaceDefinition (modifiers : Set[JModifier], id : String, interfaces : List[String], body : List[JStatement]) extends JStatement

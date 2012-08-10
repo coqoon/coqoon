@@ -167,7 +167,8 @@ trait CoqOutputter extends JavaToSimpleJava {
       case SJWhile(test, body) =>
         Some("(cwhile " + printE(test) + " " + optPrintBody(body.flatMap(x => printStatement(x, locals))) + ")")
       case (x : Specification) =>
-        proofoutput ::= x.data; None
+        Console.println("got " + x.data + " at " + x.pos)
+        proofoutput ::= "(* Kopitiam." + x.pos + ". *) " + x.data; None
     }
   }
 

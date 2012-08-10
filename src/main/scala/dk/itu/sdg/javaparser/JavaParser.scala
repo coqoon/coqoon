@@ -4,6 +4,7 @@ import scala.util.parsing.input.Reader
 import scala.util.parsing.combinator.lexical.StdLexical
 import scala.util.parsing.combinator.syntactical.StdTokenParsers
 import scala.util.parsing.combinator.ImplicitConversions
+//import dk.itu.sdg.parsing.LengthPositionParsers
 import scala.util.parsing.input.Positional
 
 // put all the AST generation code in a subclass, where the grammar production accessors are overridden
@@ -143,7 +144,8 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
     )
 
   def statement: Parser[AnyExpr] =
-    (specStmt
+    positioned(
+     ( specStmt
      | block
      | "assert" ~ expression ~ opt(":" ~ expression) <~ ";" ^^ AnyStatement
      | "if" ~> parExpression ~ statement ~ opt("else" ~> statement) ^^ flatten3(Conditional)
@@ -160,6 +162,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
      | expression <~ ";"
      | id ~ ":" ~ statement ^^ AnyStatement
      | ";" ^^ AnyStatement
+     )
     )
 
   def catches = rep1(catchClause ~ block)

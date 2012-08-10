@@ -241,7 +241,11 @@ object FinishAST extends JavaTerms
     body.map {
       case vars : LocalVar => transformLocalVariable(vars)
       case AnyStatement(";") => Nil
-      case SpecStmt(content) => JSpecExpression(content) :: Nil
+      case (x : SpecStmt) =>
+        Console.println("got SpecExpr " + x.e + " at " + x.pos)
+        val newspec = JSpecExpression(x.e)
+        newspec.setPos(x.pos)
+        newspec :: Nil
       case expr : AnyExpr => transformAnyExpr(expr) :: Nil
     }.flatten
   }
