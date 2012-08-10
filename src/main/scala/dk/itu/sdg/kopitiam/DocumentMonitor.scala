@@ -34,7 +34,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       val ed = txt.getEditorInput
       val doc = txt.getDocumentProvider.getDocument(ed)
       val nam = ed.getName
-      if (nam.endsWith(".java") && !EclipseTables.StringToDoc.contains(nam))
+      if (!EclipseTables.StringToDoc.contains(nam))
         EclipseTables.DocToString += doc -> nam
       doc.addDocumentListener(this)
     }
@@ -61,6 +61,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     activateEditor(ed)
   }
 
+  import org.eclipse.ui.texteditor.AbstractTextEditor
   def activateEditor (ed : IWorkbenchPart) : Unit = {
     Console.println("activated: " + ed)
     if (ed.isInstanceOf[CoqEditor]) {
@@ -78,8 +79,14 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         ActionDisabler.enableStart
       } else
         ActionDisabler.enableMaybe
-    } else
-      ActionDisabler.disableAll
+    } else {
+      //not the whole truth
+      //ActionDisabler.disableAll
+      if (ed.isInstanceOf[AbstractTextEditor]) {
+        //hopefully a Java editor!
+        JavaPosition.editor = ed.asInstanceOf[AbstractTextEditor]
+      }
+    }
   }
 
   override def partOpened (part : IWorkbenchPartReference) : Unit =

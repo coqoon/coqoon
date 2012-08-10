@@ -185,6 +185,49 @@ class CoqProgressMonitorImplementation extends Actor {
   }
 }
 */
+
+object JavaPosition {
+  import org.eclipse.ui.texteditor.AbstractTextEditor
+
+  var line : Int = -1
+  var column : Int = -1
+  var editor : AbstractTextEditor = null
+
+  import org.eclipse.jface.text.{ Region, TextPresentation }
+  import org.eclipse.swt.widgets.Display
+  import org.eclipse.swt.custom.StyleRange
+
+  import org.eclipse.swt.graphics.Color
+  def sentColor : Color = {
+    import org.eclipse.jface.preference.PreferenceConverter
+    val store = Activator.getDefault.getPreferenceStore
+    new Color(Display.getDefault, PreferenceConverter.getColor(store, "coqSentBg"))
+  }
+
+  import org.eclipse.jface.text.source.ISourceViewer
+  import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
+  def nextHighlight () {
+    if (line > -1) {
+      Console.println("coloring java code!")
+      val doc = editor.getDocumentProvider.getDocument(editor.getEditorInput)
+      val loff = doc.getLineOffset(line - 1)
+      val finaloff = doc.get.indexOf("%>", loff + column) + 2
+      val txtp = new TextPresentation(new Region(0, finaloff), 20)
+      txtp.setDefaultStyleRange(new StyleRange(0, finaloff, null, sentColor))
+      column = -1
+      line = -1
+      val viewer = editor.asInstanceOf[JavaEditor].getViewer
+      Display.getDefault.syncExec(
+        new Runnable() {
+          def run() = {
+            viewer.invalidateTextPresentation()
+            viewer.changeTextPresentation(txtp, true)
+          }
+        })
+    }
+  }
+}
+
 object EclipseBoilerPlate {
   import org.eclipse.ui.{IWorkbenchWindow,IEditorPart}
   import org.eclipse.ui.texteditor.{ITextEditor,IDocumentProvider,AbstractTextEditor}
@@ -414,8 +457,10 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       //Console.println("commited - and doing some work")
       val end = scala.math.min(sendlen, content.length - position)
       position += end
+      JavaPosition.nextHighlight()
       sendlen = 0
       val rev = reveal
+      //XXX: that's wrong! sendlen is 0!!!!
       activeEditor.damager.addColors(position, scala.math.max(until - position, sendlen), rev)
     }
   }

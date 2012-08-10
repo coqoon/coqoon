@@ -54,7 +54,9 @@ abstract class KCoqAction extends KAction {
   def doitH () : Unit = {
     ActionDisabler.disableAll
     val coqstarted = CoqTop.isStarted
-    val acted = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.getActiveEditor
+    var acted = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.getActiveEditor
+    if (! acted.isInstanceOf[CoqEditor])
+      acted = DocumentState.activeEditor
     if (DocumentState.activeEditor != acted) {
       if (DocumentState.resource != null)
         EclipseBoilerPlate.unmarkReally
@@ -201,6 +203,12 @@ class CoqStepAction extends KCoqAction {
           DocumentState.process
           val cmd = content.take(eoc).trim
           Console.println("command is (" + eoc + "): " + cmd)
+          if (cmd.startsWith("(* Kopitiam.")) {
+            val lines = cmd.split("\\.")
+            Console.println("Java line: " + lines(1) + ":" + lines(2))
+            JavaPosition.line = lines(1).toInt
+            JavaPosition.column = lines(2).toInt
+          }
           //CoqProgressMonitor.actor.tell(("START", cmd))
           CoqTop.writeToCoq(cmd) //sends comments over the line
         }
