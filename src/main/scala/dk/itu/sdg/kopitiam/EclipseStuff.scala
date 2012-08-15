@@ -207,7 +207,7 @@ object JavaPosition {
   import org.eclipse.jface.text.source.ISourceViewer
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   def nextHighlight () {
-    if (line > -1) {
+    if (line > -1 && editor != null) {
       Console.println("coloring java code!")
       val doc = editor.getDocumentProvider.getDocument(editor.getEditorInput)
       val loff = doc.getLineOffset(line - 1)
