@@ -25,3 +25,6 @@ Setup:
 
 Useful links
 http://www.assembla.com/wiki/show/scala-ide/Eclipse_Plugin_Development_using_the_Scala_IDE (especially deployment: check "use class files from workspace"!)
+
+Credits for the name go to Jens Ohlig (http://www.johl.io/). Thanks!
+
