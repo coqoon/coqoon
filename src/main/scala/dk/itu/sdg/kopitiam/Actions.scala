@@ -134,7 +134,7 @@ class CoqUndoAction extends KCoqAction {
       // this also implies that the previous content is not messed up!
       val curshell = CoqState.getShell
       //curshell is head of prevs, so we better have one more thing
-      val prevs = DocumentState.positionToShell.keys.toList.sort(_ > _)
+      val prevs = DocumentState.positionToShell.keys.toList.sortWith(_ > _)
       assert(prevs.length > 0)
       Console.println("working (pos: " + pos + ") on the following keys " + prevs)
       //now we have the current state (curshell): g cs l
@@ -333,7 +333,7 @@ class TranslateAction extends KAction {
         if (modelfile.exists) {
           modelfile.setCharset("UTF-8")
           try
-            new java.util.Scanner(modelfile.getContents, "UTF-8").useDelimiter("\\A").next() 
+            new java.util.Scanner(modelfile.getContents, "UTF-8").useDelimiter("\\A").next()
           catch
             { case e => "" }
         } else
@@ -386,7 +386,7 @@ object CoqStartUp extends CoqCallback {
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqShellReady(m, t) =>
-      	//Console.println("dispatch, initialize is " + initialize + " fini is " + fini + " in CoqStartUp")
+        //Console.println("dispatch, initialize is " + initialize + " fini is " + fini + " in CoqStartUp")
         val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
         val lp = new File(loadp).exists
         if (initialize == 0) {
@@ -476,14 +476,14 @@ object CoqOutputDispatcher extends CoqCallback {
           goalviewer.clear
       case CoqGoal(n, goals) =>
         //Console.println("outputdispatcher, n is " + n + ", goals:\n" + goals)
-        val (hy, res) = goals.splitAt(goals.findIndexOf(_.contains("======")))
+        val (hy, res) = goals.splitAt(goals.indexWhere(_.contains("======")))
         val ht = stripAndReduce(hy)
         var subgoals : List[String] = List[String]()
         var index : Int = 0
         while (index < res.length) {
           val rr = res.drop(index)
           //Console.println("index: " + index + " res.length: " + res.length + " list stuff: " + rr)
-          val subd = rr.drop(1).findIndexOf(_.contains("subgoal ")) + 1
+          val subd = rr.drop(1).indexWhere(_.contains("subgoal ")) + 1
           //Console.println("subd is " + subd)
           val (g, r) = if (subd > 0) rr.splitAt(subd) else (rr, List[String]())
           //Console.println("g is " + g + " r is " + r)
@@ -504,12 +504,12 @@ object CoqOutputDispatcher extends CoqCallback {
           goalviewer.writeGoal("Proof completed", List[String]())
       case CoqError(msg) =>
         //TODO: what if Error not found, should come up with a sensible message anyways!
-        val mess = msg.findIndexOf(_.startsWith("Error"))
+        val mess = msg.indexWhere(_.startsWith("Error"))
         val p = if (mess == -1) {
                   //"Syntax error" for example!
-                  val err = msg.findIndexOf(_.contains("error"))
+                  val err = msg.indexWhere(_.contains("error"))
                   if (err == -1)
-                    msg.drop(msg.findIndexOf(_.contains("^^")))
+                    msg.drop(msg.indexWhere(_.contains("^^")))
                   else
                     msg.drop(err)
                 } else
@@ -517,8 +517,8 @@ object CoqOutputDispatcher extends CoqCallback {
         val ps = p.reduceLeft(_ + "\n" + _)
         if (msg.length > 0 && msg(0).contains("characters")) {
           //msg(0) is: Toplevel input, characters xx-yy
-          val ff = msg(0).drop(msg(0).findIndexOf(_ == 's') + 2).trim
-          val split = ff.findIndexOf(_ == '-')
+          val ff = msg(0).drop(msg(0).indexWhere(_ == 's') + 2).trim
+          val split = ff.indexWhere(_ == '-')
           val pos0 = ff.substring(0, split).toInt
           val pos1 = ff.substring(split + 1, ff.length - 1).toInt
           EclipseBoilerPlate.mark(ps, IMarker.SEVERITY_ERROR, false, pos0, pos1 - pos0)
