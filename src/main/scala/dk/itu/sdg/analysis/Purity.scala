@@ -333,16 +333,17 @@ object Purity {
       } yield mapped)
     }).getOrElse(g.stateOflocalVars)
 
-    val globallyEscapedNodes = (for {
-      node   <- gCallee.globallyEscapedNodes
-      mapped <- mapping(node)
-    } yield mapped).asInstanceOf[Set[EscapedNode]] // TODO: Don't know if this is sound yet.
+// The following does not work in Scala 2.10, probably due to changes in existentials
+//    val globallyEscapedNodes = (for {
+//      node: Node   <- gCallee.globallyEscapedNodes
+//      mapped <- mapping(node)
+//    } yield mapped).asInstanceOf[Set[EscapedNode]] // TODO: Don't know if this is sound yet.
 
     PTGraph(
       insideEdges          = insideEdges ++ g.insideEdges,
       outsideEdges         = outsideEdges ++ g.outsideEdges,
       stateOflocalVars     = newStateOfLocalVars,
-      globallyEscapedNodes = g.globallyEscapedNodes ++ globallyEscapedNodes
+      globallyEscapedNodes = Set.empty //2.10: g.globallyEscapedNodes ++ globallyEscapedNodes
     )
   }
 
@@ -546,30 +547,31 @@ object Purity {
         escapedNodes.exists(ptGraph(state).isReachable(n, _))
       }
 
-      val nodes = (for {
-          v2s <- localVars(state).get(v2)
-        } yield for {
-          v2 <- v2s
-          InsideEdge(`v2`,`f`,n2) <- ptGraph(state).insideEdges
-        } yield n2 ).getOrElse( empty )
+      // The following doesn't work in 2.10, likely due to existential changes
+//      val nodes = (for {
+//          v2s <- localVars(state).get(v2)
+//        } yield for {
+//          v2: Node <- v2s
+//          InsideEdge(`v2`,`f`,n2) <- ptGraph(state).insideEdges
+//        } yield n2 ).getOrElse( empty ).toSet
 
       val b = for { n <- localVars(state).getOrElse(v2, empty) if isEscaped(n) } yield n
 
       if (b.isEmpty ) {
         state.copy(
           result = state.result.copy(
-            pointsToGraph = ptGraph(state).copy( stateOflocalVars = localVars(state).updated(v1, nodes))
+            pointsToGraph = ptGraph(state).copy( stateOflocalVars = localVars(state).updated(v1, Set.empty)) //2.10: nodes))
           )
         )
       } else {
         val outsideNode  = LoadNode(invokable.id+":L"+state.outsideNodeCount + " variable: " + v1)
 
 
-        val outsideEdges = for { n <- b } yield OutsideEdge(n,f,outsideNode)
+        val outsideEdges = Set.empty[OutsideEdge]// 2.10 for { n: Node <- b } yield OutsideEdge(n,f,outsideNode)
 
         state.copy(
           result = state.result.copy(
-            pointsToGraph = ptGraph(state).copy( stateOflocalVars = localVars(state).updated(v1, nodes ++ HashSet(outsideNode)),
+            pointsToGraph = ptGraph(state).copy( stateOflocalVars = localVars(state).updated(v1, /*nodes ++*/ HashSet(outsideNode)),
             outsideEdges  = ptGraph(state).outsideEdges ++ outsideEdges)
           ),
           outsideNodeCount = state.outsideNodeCount + 1
@@ -627,19 +629,23 @@ object Purity {
      */
     def fieldWriteTF(stm: SJStatement, v1: String, f: String, v2: String, state: TFState): TFState = {
 
-      val insideEdges = (for {
-          v1s <- localVars(state).get(v1)
-          v2s <- localVars(state).get(v2)
-        } yield for {
-          v1 <- v1s
-          v2 <- v2s
-        } yield InsideEdge(v1,f,v2)).getOrElse( empty )
+      val insideEdges = Set.empty[InsideEdge]
+// Scala 2.10 issue with changes to existential types
+//        (for {
+//          v1s <- localVars(state).get(v1)
+//          v2s <- localVars(state).get(v2)
+//        } yield for {
+//          v1: Node <- v1s
+//          v2: Node <- v2s
+//        } yield InsideEdge(v1,f,v2)).getOrElse( empty )
 
-      val mods = (for {
-          v1s <- localVars(state).get(v1)
-        } yield for {
-          node <- v1s if !node.isInstanceOf[InsideNode]
-        } yield AbstractField(node,f)).getOrElse( empty )
+      val mods = Set.empty[AbstractField]
+        // Scala 2.10 issue with changes to existential types
+//        (for {
+//          v1s <- localVars(state).get(v1)
+//        } yield for {
+//          node: Node <- v1s if !node.isInstanceOf[InsideNode]
+//        } yield AbstractField(node,f)).getOrElse( empty )
 
       state.copy(
         result = state.result.copy(
