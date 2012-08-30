@@ -380,7 +380,7 @@ Proof.
     } */
     //now, check whether we have a .v file around with the model which we can source...
     
-    outp.reverse ++ List("") ++ List(model) ++ List("") ++ specoutput.reverse ++ proofoutput.reverse ++ List("")
+    List(model) ++ List("") ++ outp.reverse ++ List("") ++ specoutput.reverse ++ proofoutput.reverse ++ List("")
   }
 
   def printArgList (l : List[String]) : String = {
