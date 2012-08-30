@@ -107,11 +107,11 @@ object SentenceFinder {
   private def skipComment(script : String, offset : Int, level : Int = 0) : Option[Int] =
     if (offset + 1 >= script.length) None
     else if (script(offset) == '*' && script(offset + 1) == ')') {
-      if (level < 1) Some(offset + 1)
-      else skipComment(script, offset, level - 1)
+      if (level <= 1) Some(offset + 1)
+      else skipComment(script, offset + 1, level - 1)
     } else if (script(offset) == '(' && script(offset + 1) == '*') {
       skipComment(script, offset + 1, level + 1)
-    } else skipComment(script, offset + 1, level + 1)
+    } else skipComment(script, offset + 1, level)
    
   private def isCommandEnd(script : String, pos : Int) : Boolean =
     pos + 1 < script.length &&
