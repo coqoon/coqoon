@@ -204,17 +204,6 @@ object JavaPosition {
   var column : Int = -1
   var editor : JavaEditor = null
 
-  import org.eclipse.jface.text.{ Region, TextPresentation }
-  import org.eclipse.swt.widgets.Display
-  import org.eclipse.swt.custom.StyleRange
-
-  import org.eclipse.swt.graphics.Color
-  def sentColor : Color = {
-    import org.eclipse.jface.preference.PreferenceConverter
-    val store = Activator.getDefault.getPreferenceStore
-    new Color(Display.getDefault, PreferenceConverter.getColor(store, "coqSentBg"))
-  }
-
   import org.eclipse.jface.text.Position
   import org.eclipse.jface.text.source.Annotation
   def nextHighlight () {

@@ -16,7 +16,7 @@ package dk.itu.sdg.kopitiam
 import org.eclipse.jface.text.IDocumentListener
 import org.eclipse.ui.{IPartListener2,IWindowListener}
 
-object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumentListener {
+object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumentListener with EclipseUtils {
   import org.eclipse.ui.{IWorkbenchPartReference,IWorkbenchPart,IWorkbenchWindow,PlatformUI}
   import org.eclipse.ui.texteditor.ITextEditor
   import org.eclipse.jface.text.DocumentEvent
@@ -101,7 +101,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         val painter = new AnnotationPainter(viewer, access)
         painter.addDrawingStrategy("dk.itu.sdg.kopitiam.ProofDrawingStrategy", new ProofDrawingStrategy)
         painter.addAnnotationType("dk.itu.sdg.kopitiam.proofprocessed", "dk.itu.sdg.kopitiam.ProofDrawingStrategy")
-        painter.setAnnotationTypeColor("dk.itu.sdg.kopitiam.proofprocessed", JavaPosition.sentColor)
+        painter.setAnnotationTypeColor("dk.itu.sdg.kopitiam.proofprocessed", getPrefColor("coqSentBg"))
         Console.println("installed painter " + painter + " is painting? " + painter.isPaintingAnnotations)
         painter.paint(2) //in order to activate it - better idea?
       }
