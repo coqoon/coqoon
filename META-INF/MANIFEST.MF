@@ -17,8 +17,7 @@ Require-Bundle: org.scala-ide.scala.library,
  org.eclipse.jdt.ui;bundle-version="3.6.0",
  org.eclipse.jdt.core;bundle-version="3.6.0",
  org.eclipse.help;bundle-version="3.5.0",
- org.eclipse.ui.views;bundle-version="3.5.0",
- dk.itu.sdg.kopitiamaspects
+ org.eclipse.ui.views;bundle-version="3.5.0"
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ClassPath: lib_managed/akka-actor-2.0.1.jar,

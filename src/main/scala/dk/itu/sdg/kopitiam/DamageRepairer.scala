@@ -16,16 +16,14 @@ object KopitiamDamagerRepairerFactory extends KopitiamDamagerRepairerFactory { }
 import org.eclipse.jface.text.rules.DefaultDamagerRepairer
 
 class KopitiamDamagerRepairer (scanner : ITokenScanner) extends DefaultDamagerRepairer (scanner) {
-  import org.eclipse.ui.editors.text.TextEditor
-  private var editor : TextEditor = null;
+  private var editor : CoqEditor = null; //.:><- sth with getSource...
 
-  def setEditor (e : TextEditor) : Unit = { editor = e }
+  def setEditor (e : CoqEditor) : Unit = { editor = e }
 
   import org.eclipse.swt.graphics.Color
   import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.text.{ ITypedRegion, IRegion, Region, TextPresentation, DocumentEvent }
   import org.eclipse.swt.custom.StyleRange
-  import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
 
   private var greenI : Int = -1
   private var yellowI : Int = -1
@@ -43,26 +41,16 @@ class KopitiamDamagerRepairer (scanner : ITokenScanner) extends DefaultDamagerRe
       yellowI = lengthOfProcessed
     } else
       yellowI = -1
-    if (editor != null) {
-      val viewer =
-        if (editor.isInstanceOf[CoqEditor])
-          editor.asInstanceOf[CoqEditor].getSource
-        else if (editor.isInstanceOf[JavaEditor])
-          editor.asInstanceOf[JavaEditor].getViewer
-        else
-          null
-      Display.getDefault.syncExec(
-        new Runnable() {
-          def run() = {
-            if (viewer != null) {
-              viewer.invalidateTextPresentation
-              viewer.changeTextPresentation(repr, true)
-            }
-            if (reveal)
-              editor.selectAndReveal(lengthOfSent, 0)
-          }
-        })
-    }
+    if (editor != null)
+          Display.getDefault.syncExec(
+            new Runnable() {
+              def run() = {
+                editor.getSource.invalidateTextPresentation
+                editor.getSource.changeTextPresentation(repr, true)
+                if (reveal)
+                  editor.selectAndReveal(lengthOfSent, 0)
+              }
+            })
   }
 
   private def getColor (name : String) : Color = {

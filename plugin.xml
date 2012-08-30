@@ -278,11 +278,5 @@
             name="Coq File">
       </wizard>
    </extension>
-   <extension
-         point="dk.itu.sdg.kopitiamaspects.DamageRepairer">
-      <client
-            class="dk.itu.sdg.kopitiam.KopitiamDamagerRepairerFactory">
-      </client>
-   </extension>
 
 </plugin>
