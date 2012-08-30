@@ -84,7 +84,7 @@ trait CoqOutputter extends JavaToSimpleJava {
     x match {
       case SJBinaryExpression(op, l, r) => exprtotype(l) //assumption: typeof(x op y) == typeof(x) == typeof(y)
       case SJUnaryExpression(op, e)     => exprtotype(e) //assumption: typeof(op x) == typeof(x)
-      case SJLiteral(x)                 => if (x == "null") "Object" else try { x.toInt.toString; "int" } catch { case e => "String" }
+      case SJLiteral(x)                 => if (x == "null") "Object" else try { x.toInt.toString; "int" } catch { case e : Throwable => "String" }
       case SJVariableAccess(v)          => ClassTable.getLocalVar(cname, mname, v)
       case x                            => Console.println("didn't expect to need to convert this expr to a type: " + x); "Object"
     }
@@ -114,7 +114,7 @@ trait CoqOutputter extends JavaToSimpleJava {
           "`" + v
         else
           try { "(" + v.toInt.toString + ":expr)" }
-          catch { case e => "\"" + e + "\"" }
+          catch { case e : Throwable => "\"" + e + "\"" }
     }
   }
 

@@ -63,7 +63,7 @@ object SJTable {
           try Class.forName("java.lang." + name) catch {
             case e : ClassNotFoundException =>
               try Class.forName("java.util." + name) catch {
-                case e =>
+                case e : Throwable =>
                   if (name.contains("<")) //poor Java, no generics at RT
                     getJClass(name.substring(0, name.indexOf("<")))
                   else {

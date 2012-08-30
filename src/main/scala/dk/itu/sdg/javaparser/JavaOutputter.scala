@@ -105,7 +105,7 @@ trait JavaOutputter {
           case "true" => "true"
           case "false" => "false"
           case "null" => "null"
-          case y => try { y.toInt.toString } catch { case e : Exception => "\"" + y + "\"" }
+          case y => try { y.toInt.toString } catch { case e : Throwable => "\"" + y + "\"" }
         }
     }
   }

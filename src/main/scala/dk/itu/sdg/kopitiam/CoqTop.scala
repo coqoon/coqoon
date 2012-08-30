@@ -30,7 +30,7 @@ class BusyStreamReader (input : InputStream) extends Runnable {
         }
       }
     } catch {
-      case e =>
+      case e : Throwable =>
         Console.println("yay, exception! " + e)
         //nothing to do if coq dies
     }

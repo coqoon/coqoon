@@ -335,7 +335,7 @@ class TranslateAction extends KAction {
           try
             new java.util.Scanner(modelfile.getContents, "UTF-8").useDelimiter("\\A").next() 
           catch
-            { case e => "" }
+            { case e : Throwable => "" }
         } else
           ""
       if (trfi.exists)
