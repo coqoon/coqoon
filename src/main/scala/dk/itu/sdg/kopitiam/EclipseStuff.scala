@@ -68,7 +68,7 @@ trait EclipseUtils {
   import org.eclipse.swt.widgets.Display
   import dk.itu.sdg.parsing._
 
-  private def display = Display getCurrent
+  private def display = Display.getCurrent
   def color (r : Int, g : Int, b : Int) = new Color(display, r, g, b)
 
   implicit def pos2eclipsePos (pos : LengthPosition) : Position =
@@ -186,12 +186,23 @@ class CoqProgressMonitorImplementation extends Actor {
 }
 */
 
+import org.eclipse.jface.text.source.AnnotationPainter.IDrawingStrategy
+class ProofDrawingStrategy extends IDrawingStrategy with EclipseUtils {
+  import org.eclipse.jface.text.source.Annotation
+  import org.eclipse.swt.graphics.{GC, Color}
+  import org.eclipse.swt.custom.{StyledText, StyleRange}
+
+  def draw (ann : Annotation, gc : GC, text : StyledText, off : Int, len : Int, color : Color) = {
+    text.replaceStyleRanges(off, len, Array(new StyleRange(off, len, null, getPrefColor("coqSentBg"))))
+  }
+}
+
 object JavaPosition {
-  import org.eclipse.ui.texteditor.AbstractTextEditor
+  import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
 
   var line : Int = -1
   var column : Int = -1
-  var editor : AbstractTextEditor = null
+  var editor : JavaEditor = null
 
   import org.eclipse.jface.text.{ Region, TextPresentation }
   import org.eclipse.swt.widgets.Display
@@ -204,26 +215,22 @@ object JavaPosition {
     new Color(Display.getDefault, PreferenceConverter.getColor(store, "coqSentBg"))
   }
 
-  import org.eclipse.jface.text.source.ISourceViewer
-  import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
+  import org.eclipse.jface.text.Position
+  import org.eclipse.jface.text.source.Annotation
   def nextHighlight () {
     if (line > -1 && editor != null) {
       Console.println("coloring java code!")
-      val doc = editor.getDocumentProvider.getDocument(editor.getEditorInput)
-      val loff = doc.getLineOffset(line - 1)
-      val finaloff = doc.get.indexOf("%>", loff + column) + 2
-      val txtp = new TextPresentation(new Region(0, finaloff), 20)
-      txtp.setDefaultStyleRange(new StyleRange(0, finaloff, null, sentColor))
-      column = -1
-      line = -1
-      val viewer = editor.asInstanceOf[JavaEditor].getViewer
-      Display.getDefault.syncExec(
-        new Runnable() {
-          def run() = {
-            viewer.invalidateTextPresentation()
-            viewer.changeTextPresentation(txtp, true)
-          }
-        })
+
+      val prov = editor.getDocumentProvider
+      val doc = prov.getDocument(editor.getEditorInput)
+      val annmodel = prov.getAnnotationModel(editor.getEditorInput)
+      val sma = new Annotation("dk.itu.sdg.kopitiam.proofprocessed", false, "Proof")
+      val loff = doc.getLineOffset(line - 1) //XXX: bah
+      val finaloff = doc.get.indexOf("%>", loff + column) + 2 //XXX: even more bah
+      Console.println("new annotation at " + loff + " length " + (finaloff - loff))
+      annmodel.connect(doc)
+      annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
+      annmodel.disconnect(doc)
     }
   }
 }

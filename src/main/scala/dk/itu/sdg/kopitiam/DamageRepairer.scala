@@ -5,12 +5,11 @@ package dk.itu.sdg.kopitiam
 import org.eclipse.jface.text.rules.ITokenScanner
 import org.eclipse.jface.text.rules.DefaultDamagerRepairer
 
-class KopitiamDamagerRepairer (scanner : ITokenScanner) extends DefaultDamagerRepairer (scanner) {
+class KopitiamDamagerRepairer (scanner : ITokenScanner) extends DefaultDamagerRepairer (scanner) with EclipseUtils {
   private var editor : CoqEditor = null;
 
   def setEditor (e : CoqEditor) : Unit = { editor = e }
 
-  import org.eclipse.swt.graphics.Color
   import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.text.{ ITypedRegion, IRegion, Region, TextPresentation, DocumentEvent }
   import org.eclipse.swt.custom.StyleRange
@@ -22,12 +21,12 @@ class KopitiamDamagerRepairer (scanner : ITokenScanner) extends DefaultDamagerRe
     val end = lengthOfSent + lengthOfProcessed
     val repr = new TextPresentation(new Region(0, end), end + 1)
     if (lengthOfSent > 0) {
-      repr.addStyleRange(new StyleRange(0, lengthOfSent, null, getColor("coqSentBg")))
+      repr.addStyleRange(new StyleRange(0, lengthOfSent, null, getPrefColor("coqSentBg")))
       greenI = lengthOfSent
     } else
       greenI = -1
     if (lengthOfProcessed > 0) {
-      repr.addStyleRange(new StyleRange(lengthOfSent, lengthOfProcessed, null, getColor("coqSentProcessBg")))
+      repr.addStyleRange(new StyleRange(lengthOfSent, lengthOfProcessed, null, getPrefColor("coqSentProcessBg")))
       yellowI = lengthOfProcessed
     } else
       yellowI = -1
@@ -43,12 +42,6 @@ class KopitiamDamagerRepairer (scanner : ITokenScanner) extends DefaultDamagerRe
             })
   }
 
-  private def getColor (name : String) : Color = {
-    import org.eclipse.jface.preference.PreferenceConverter
-    val store = Activator.getDefault.getPreferenceStore
-    new Color(Display.getDefault, PreferenceConverter.getColor(store, name))
-  }
-
   override def createPresentation (pres : TextPresentation, region : ITypedRegion) : Unit = {
     //Console.println("creating presentation regionoff " + region.getOffset + " len " + region.getLength + "(pres " + pres.getExtent.getOffset + " len " + pres.getExtent.getLength + ")")
     super.createPresentation(pres, region)
@@ -56,13 +49,13 @@ class KopitiamDamagerRepairer (scanner : ITokenScanner) extends DefaultDamagerRe
       val realstart = region.getOffset
       val reallen = scala.math.min(greenI - region.getOffset, region.getLength)
       //Console.println("green from " + realstart + " length " + reallen)
-      pres.mergeStyleRange(new StyleRange(realstart, reallen, null, getColor("coqSentBg")))
+      pres.mergeStyleRange(new StyleRange(realstart, reallen, null, getPrefColor("coqSentBg")))
     }
     if (yellowI > 0 && region.getOffset + region.getLength >= greenI) {
       val realstart = scala.math.max(greenI - region.getOffset, region.getOffset)
       val reallen =  scala.math.min(yellowI - region.getOffset, region.getLength)
       //Console.println("yellow from " + realstart + " length " + reallen)
-      pres.mergeStyleRange(new StyleRange(realstart, reallen, null, getColor("coqSentProcessBg")))
+      pres.mergeStyleRange(new StyleRange(realstart, reallen, null, getPrefColor("coqSentProcessBg")))
     }
   }
 }

@@ -279,4 +279,11 @@
       </wizard>
    </extension>
 
+   <extension
+         point="org.eclipse.ui.editors.annotationTypes">
+      <type
+            name="dk.itu.sdg.kopitiam.proofprocessed">
+      </type>
+   </extension>
+
 </plugin>

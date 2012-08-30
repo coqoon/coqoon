@@ -62,31 +62,53 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   }
 
   import org.eclipse.ui.texteditor.AbstractTextEditor
+  def maybeInsert (ed : AbstractTextEditor) : Boolean = {
+    val edi = ed.getEditorInput
+    val nam = edi.getName
+    val doc = ed.getDocumentProvider.getDocument(edi)
+    if (! EclipseTables.StringToDoc.contains(nam)) {
+      Console.println("inserted " + nam + " into String2Doc table")
+      EclipseTables.StringToDoc += nam -> doc
+      return true
+    }
+    return false
+  }
+
+  import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
+  import org.eclipse.jface.text.source.{AnnotationPainter, IAnnotationAccess}
+  import org.eclipse.jface.text.source.Annotation
   def activateEditor (ed : IWorkbenchPart) : Unit = {
     Console.println("activated: " + ed)
     if (ed.isInstanceOf[CoqEditor]) {
       val txt = ed.asInstanceOf[CoqEditor]
-      val edi = txt.getEditorInput
-      val nam = edi.getName
-      val doc = txt.getDocumentProvider.getDocument(edi)
-      if (! EclipseTables.StringToDoc.contains(nam)) {
-        Console.println("inserted " + nam + " into String2Doc table")
-        EclipseTables.StringToDoc += nam -> doc
-      }
+      maybeInsert(txt)
       if (DocumentState.activeEditor != ed) {
         //Console.println("part activated " + ed)
         ActionDisabler.disableAll
         ActionDisabler.enableStart
       } else
         ActionDisabler.enableMaybe
-    } else {
-      //not the whole truth
-      //ActionDisabler.disableAll
-      if (ed.isInstanceOf[AbstractTextEditor]) {
-        //hopefully a Java editor!
-        JavaPosition.editor = ed.asInstanceOf[AbstractTextEditor]
+    } else if (ed.isInstanceOf[JavaEditor]) {
+      Console.println("installing painter to " + ed)
+      val txt = ed.asInstanceOf[JavaEditor]
+      if (maybeInsert(txt)) {
+        val viewer = txt.getViewer
+        val access = new IAnnotationAccess () {
+          def getType (ann : Annotation) : Object = ann.getType
+          def isMultiLine (ann : Annotation) : Boolean = true
+          def isTemporary (ann : Annotation) : Boolean = true
+        }
+        val painter = new AnnotationPainter(viewer, access)
+        painter.addDrawingStrategy("dk.itu.sdg.kopitiam.ProofDrawingStrategy", new ProofDrawingStrategy)
+        painter.addAnnotationType("dk.itu.sdg.kopitiam.proofprocessed", "dk.itu.sdg.kopitiam.ProofDrawingStrategy")
+        painter.setAnnotationTypeColor("dk.itu.sdg.kopitiam.proofprocessed", JavaPosition.sentColor)
+        Console.println("installed painter " + painter + " is painting? " + painter.isPaintingAnnotations)
+        painter.paint(2) //in order to activate it - better idea?
       }
-    }
+      if (JavaPosition.editor != ed)
+        JavaPosition.editor = ed.asInstanceOf[JavaEditor]
+    } else
+      ActionDisabler.disableAll
   }
 
   override def partOpened (part : IWorkbenchPartReference) : Unit =
