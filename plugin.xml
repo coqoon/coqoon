@@ -282,7 +282,13 @@
    <extension
          point="org.eclipse.ui.editors.annotationTypes">
       <type
-            name="dk.itu.sdg.kopitiam.proofprocessed">
+            name="dk.itu.sdg.kopitiam.processed">
+      </type>
+   </extension>
+   <extension
+         point="org.eclipse.ui.editors.annotationTypes">
+      <type
+            name="dk.itu.sdg.kopitiam.processing">
       </type>
    </extension>
 

@@ -193,7 +193,14 @@ class ProofDrawingStrategy extends IDrawingStrategy with EclipseUtils {
   import org.eclipse.swt.custom.{StyledText, StyleRange}
 
   def draw (ann : Annotation, gc : GC, text : StyledText, off : Int, len : Int, color : Color) = {
-    text.replaceStyleRanges(off, len, Array(new StyleRange(off, len, null, getPrefColor("coqSentBg"))))
+    val col =
+      if (ann.getType == "dk.itu.sdg.kopitiam.processed")
+        getPrefColor("coqSentBg")
+      else if (ann.getType == "dk.itu.sdg.kopitiam.processing")
+        getPrefColor("coqSentProcessBg")
+      else
+        null
+    text.replaceStyleRanges(off, len, Array(new StyleRange(off, len, null, col)))
   }
 }
 
@@ -213,7 +220,7 @@ object JavaPosition {
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
-      val sma = new Annotation("dk.itu.sdg.kopitiam.proofprocessed", false, "Proof")
+      val sma = new Annotation("dk.itu.sdg.kopitiam.processed", false, "Proof")
       val loff = doc.getLineOffset(line - 1) //XXX: bah
       val finaloff = doc.get.indexOf("%>", loff + column) + 2 //XXX: even more bah
       Console.println("new annotation at " + loff + " length " + (finaloff - loff))
@@ -415,14 +422,22 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   var reveal : Boolean = true
   var autoreveal : Boolean = false
 
+  import org.eclipse.swt.widgets.Display
   private def undo () : Unit = {
     //Console.println("undo (@" + position + ", sendlen: " + sendlen + ") real: " + realundo)
     if (sendlen != 0) {
       if (realundo) {
         val start = scala.math.max(position - sendlen, 0)
         realundo = false
-        val rev = reveal
-        activeEditor.damager.addColors(start, 0, rev)
+        activeEditor.addAnnotations(start, 0)
+        activeEditor.invalidate
+        if (reveal)
+          Display.getDefault.syncExec(
+            new Runnable() {
+              def run() = {
+                activeEditor.selectAndReveal(start, 0)
+              }
+            })
         if (autoreveal) {
           reveal = true
           autoreveal = false
@@ -432,7 +447,8 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       } else { //just an error
         //Console.println("undo: barf")
         //kill off process colored thingies
-        activeEditor.damager.addColors(position, 0, false)
+        activeEditor.addAnnotations(position, 0)
+        activeEditor.invalidate
         oldsendlen = sendlen
         sendlen = 0
       }
@@ -440,11 +456,12 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   }
 
   def process () : Unit = {
-    activeEditor.damager.addColors(position, scala.math.max(until - position, sendlen), false)
+    activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
   }
 
   def processUndo () : Unit = {
-    activeEditor.damager.addColors(position, 0, false)
+    activeEditor.addAnnotations(position, 0)
+    activeEditor.invalidate
   }
 
   private def commit () : Unit = {
@@ -455,9 +472,15 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       position += end
       JavaPosition.nextHighlight()
       sendlen = 0
-      val rev = reveal
       //XXX: that's wrong! sendlen is 0!!!!
-      activeEditor.damager.addColors(position, scala.math.max(until - position, sendlen), rev)
+      activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
+      if (reveal)
+        Display.getDefault.syncExec(
+          new Runnable() {
+            def run() = {
+              activeEditor.selectAndReveal(position, 0)
+            }
+          })
     }
   }
 }

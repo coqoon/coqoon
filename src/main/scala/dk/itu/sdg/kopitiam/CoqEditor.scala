@@ -14,7 +14,6 @@ class CoqEditor extends TextEditor with EclipseUtils {
   import org.eclipse.jface.text.source.projection.{ProjectionAnnotation, ProjectionAnnotationModel}
 
   var annotationModel : ProjectionAnnotationModel = null
-  var damager : KopitiamDamagerRepairer = null
 
   override protected def initializeEditor () : Unit = {
     //Console.println("initializeEditor was called")
@@ -26,10 +25,12 @@ class CoqEditor extends TextEditor with EclipseUtils {
     //Console.println(" - initializeEditor called super")
   }
 
-  override def createPartControl (parent : Composite) : Unit = {
+  private var parent : Composite = null
+  override def createPartControl (par : Composite) : Unit = {
     import org.eclipse.jface.text.source.projection.{ProjectionSupport, ProjectionViewer}
-    super.createPartControl(parent)
+    super.createPartControl(par)
 
+    parent = par
     //Create the necessary infrastructure for code folding
     val projViewer : ProjectionViewer = getSourceViewer.asInstanceOf[ProjectionViewer]
     val projectionSupport = new ProjectionSupport(projViewer, getAnnotationAccess(), getSharedColors())
@@ -54,6 +55,37 @@ class CoqEditor extends TextEditor with EclipseUtils {
     val viewer : ISourceViewer = new ProjectionViewer(parent, ruler, getOverviewRuler(), isOverviewRulerVisible(), styles)
     getSourceViewerDecorationSupport(viewer)
     viewer
+  }
+
+  import org.eclipse.jface.text.source.Annotation
+  import org.eclipse.jface.text.Position
+  import org.eclipse.swt.widgets.Display
+  def addAnnotations (first : Int, second : Int) : Unit = {
+    val provider = getDocumentProvider
+    val doc = provider.getDocument(getEditorInput)
+    val annmodel = provider.getAnnotationModel(getEditorInput)
+    annmodel.connect(doc)
+    val anniter = annmodel.getAnnotationIterator
+    while (anniter.hasNext) {
+      val ann = anniter.next.asInstanceOf[Annotation]
+      if (ann.getType == "dk.itu.sdg.kopitiam.processed")
+        annmodel.removeAnnotation(ann)
+      if (ann.getType == "dk.itu.sdg.kopitiam.processing")
+        annmodel.removeAnnotation(ann)
+    }
+    val ann = new Annotation("dk.itu.sdg.kopitiam.processed", false, "Processed Proof")
+    annmodel.addAnnotation(ann, new Position(0, first))
+    if (second > 0) {
+      val ann2 = new Annotation("dk.itu.sdg.kopitiam.processing", false, "Processing Proof")
+      annmodel.addAnnotation(ann2, new Position(first, second))
+    }
+    annmodel.disconnect(doc)
+  }
+
+  def invalidate () : Unit = {
+    Display.getDefault.asyncExec(
+      new Runnable() {
+        def run() = { getSourceViewer.invalidateTextPresentation }})
   }
 
   def getSource () : ISourceViewer = {
@@ -331,12 +363,10 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
   override def getPresentationReconciler (v : ISourceViewer) : IPresentationReconciler = {
     val pr = new PresentationReconciler
     //println("About to create damager/repairer")
-    val ddr = new KopitiamDamagerRepairer(CoqTokenScanner)
-    ddr.setEditor(editor)
+    val ddr = new DefaultDamagerRepairer(CoqTokenScanner)
     //println("Created damager/repairer successfully")
     pr.setDamager(ddr, IDocument.DEFAULT_CONTENT_TYPE)
     pr.setRepairer(ddr, IDocument.DEFAULT_CONTENT_TYPE)
-    editor.damager = ddr
     pr
   }
 }

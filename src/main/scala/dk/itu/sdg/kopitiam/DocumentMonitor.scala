@@ -62,26 +62,38 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   }
 
   import org.eclipse.ui.texteditor.AbstractTextEditor
-  def maybeInsert (ed : AbstractTextEditor) : Boolean = {
+  import org.eclipse.jface.text.source.{AnnotationPainter, IAnnotationAccess, Annotation, ISourceViewer}
+  def maybeInsert (ed : AbstractTextEditor, viewer : ISourceViewer) : Unit = {
     val edi = ed.getEditorInput
     val nam = edi.getName
     val doc = ed.getDocumentProvider.getDocument(edi)
     if (! EclipseTables.StringToDoc.contains(nam)) {
       Console.println("inserted " + nam + " into String2Doc table")
       EclipseTables.StringToDoc += nam -> doc
-      return true
+
+      //install painter!
+      val access = new IAnnotationAccess () {
+        def getType (ann : Annotation) : Object = ann.getType
+        def isMultiLine (ann : Annotation) : Boolean = true
+        def isTemporary (ann : Annotation) : Boolean = true
+      }
+      val painter = new AnnotationPainter(viewer, access)
+      painter.addDrawingStrategy("dk.itu.sdg.kopitiam.ProofDrawingStrategy", new ProofDrawingStrategy)
+      painter.addAnnotationType("dk.itu.sdg.kopitiam.processed", "dk.itu.sdg.kopitiam.ProofDrawingStrategy")
+      painter.addAnnotationType("dk.itu.sdg.kopitiam.processing", "dk.itu.sdg.kopitiam.ProofDrawingStrategy")
+      painter.setAnnotationTypeColor("dk.itu.sdg.kopitiam.processed", getPrefColor("coqSentBg"))
+      painter.setAnnotationTypeColor("dk.itu.sdg.kopitiam.processing", getPrefColor("coqSentProcessBg"))
+      Console.println("installed painter " + painter + " is painting? " + painter.isPaintingAnnotations)
+      painter.paint(2) //in order to activate it - better idea?
     }
-    return false
   }
 
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
-  import org.eclipse.jface.text.source.{AnnotationPainter, IAnnotationAccess}
-  import org.eclipse.jface.text.source.Annotation
   def activateEditor (ed : IWorkbenchPart) : Unit = {
     Console.println("activated: " + ed)
     if (ed.isInstanceOf[CoqEditor]) {
       val txt = ed.asInstanceOf[CoqEditor]
-      maybeInsert(txt)
+      maybeInsert(txt, txt.getSource)
       if (DocumentState.activeEditor != ed) {
         //Console.println("part activated " + ed)
         ActionDisabler.disableAll
@@ -91,20 +103,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     } else if (ed.isInstanceOf[JavaEditor]) {
       Console.println("installing painter to " + ed)
       val txt = ed.asInstanceOf[JavaEditor]
-      if (maybeInsert(txt)) {
-        val viewer = txt.getViewer
-        val access = new IAnnotationAccess () {
-          def getType (ann : Annotation) : Object = ann.getType
-          def isMultiLine (ann : Annotation) : Boolean = true
-          def isTemporary (ann : Annotation) : Boolean = true
-        }
-        val painter = new AnnotationPainter(viewer, access)
-        painter.addDrawingStrategy("dk.itu.sdg.kopitiam.ProofDrawingStrategy", new ProofDrawingStrategy)
-        painter.addAnnotationType("dk.itu.sdg.kopitiam.proofprocessed", "dk.itu.sdg.kopitiam.ProofDrawingStrategy")
-        painter.setAnnotationTypeColor("dk.itu.sdg.kopitiam.proofprocessed", getPrefColor("coqSentBg"))
-        Console.println("installed painter " + painter + " is painting? " + painter.isPaintingAnnotations)
-        painter.paint(2) //in order to activate it - better idea?
-      }
+      maybeInsert(txt, txt.getViewer)
       if (JavaPosition.editor != ed)
         JavaPosition.editor = ed.asInstanceOf[JavaEditor]
     } else
