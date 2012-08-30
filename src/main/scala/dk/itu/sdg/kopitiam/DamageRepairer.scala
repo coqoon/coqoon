@@ -3,20 +3,10 @@
 package dk.itu.sdg.kopitiam
 
 import org.eclipse.jface.text.rules.ITokenScanner
-import dk.itu.sdg.kopitiamaspects.DamagerRepairerFactoryInterface
-
-class KopitiamDamagerRepairerFactory extends DamagerRepairerFactoryInterface {
-  override def newDamagerRepairer (scanner : ITokenScanner) : KopitiamDamagerRepairer = {
-    new KopitiamDamagerRepairer(CoqTokenScanner)
-  }
-}
-
-object KopitiamDamagerRepairerFactory extends KopitiamDamagerRepairerFactory { }
-
 import org.eclipse.jface.text.rules.DefaultDamagerRepairer
 
 class KopitiamDamagerRepairer (scanner : ITokenScanner) extends DefaultDamagerRepairer (scanner) {
-  private var editor : CoqEditor = null; //.:><- sth with getSource...
+  private var editor : CoqEditor = null;
 
   def setEditor (e : CoqEditor) : Unit = { editor = e }
 
