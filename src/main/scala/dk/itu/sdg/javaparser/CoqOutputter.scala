@@ -165,13 +165,13 @@ trait CoqOutputter extends JavaToSimpleJava {
         Some("(cif " + te + " " + tr + " " + fa + ")")
       case SJWhile(test, body) =>
         Some("(cwhile " + printE(test) + " " + optPrintBody(body.flatMap(x => printStatement(x, locals))) + ")")
-      case (x : Specification) =>
-        Console.println("got " + x.data + " at " + x.pos)
-        proofoutput ::= "(* Kopitiam." + x.pos + ". *) " + x.data; None
       case Loopinvariant(x) =>
         proofoutput ::= "forward (" + x + ")"; None
       case Frame(x) =>
         proofoutput ::= "(" + x + "). "; None
+      case (x : Specification) =>
+        Console.println("got " + x.data + " at " + x.pos)
+        proofoutput ::= "(* Kopitiam." + x.pos + ". *) " + x.data; None
     }
   }
 
