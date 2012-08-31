@@ -1,7 +1,6 @@
 /* (c) 2010-2011 Hannes Mehnert */
 
 package dk.itu.sdg.javaparser
-import dk.itu.sdg.kopitiam.Activator
 import java.io.File
 
 trait CoqOutputter extends JavaToSimpleJava {
