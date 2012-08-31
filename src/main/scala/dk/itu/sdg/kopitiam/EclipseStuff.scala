@@ -88,13 +88,70 @@ trait EclipseUtils {
   }
 }
 
+class CoqJavaProject (basename : String) {
+  //foo -> foo.java [Java], foo.v [Model] ~> foo.java.v [Complete]
+  import scala.collection.mutable.HashMap
+  import org.eclipse.jface.text.IDocument
+
+  var javaSource : Option[IDocument] = None
+  var coqModel : Option[IDocument] = None
+  var coqSource : Option[IDocument] = None
+  var modelNewerThanSource : Boolean = false
+  var javaNewerThanSource : Boolean = false
+
+  //def -> offset + [length1, .., lengthn]
+  val javaOffsets : HashMap[String, Pair[Int, List[Int]]] =
+    new HashMap[String, Pair[Int, List[Int]]]()
+
+  def gotClosed (doc : IDocument) : Unit = {
+    javaSource match {
+      case Some(d) => if (d == doc) javaSource = None
+      case _ =>
+    }
+    coqModel match {
+      case Some(d) => if (d == doc) coqModel = None
+      case _ =>
+    }
+    coqSource match {
+      case Some(d) => if (d == doc) coqSource = None
+      case _ =>
+    }
+  }
+
+  def setDocument (doc : IDocument, name : String) : Unit = {
+    if (name.equals(basename + ".java")) {
+      assert(javaSource == None)
+      javaSource = Some(doc)
+    } else if (name.equals(basename + ".v")) {
+      assert(coqModel == None)
+      coqModel = Some(doc)
+    } else if (name.equals(basename + ".java.v")) {
+      assert(coqSource == None)
+      coqSource = Some(doc)
+    } else
+      Console.println("huh? " + name)
+  }
+
+  private def optEq (x : Option[IDocument], y : IDocument) : Boolean = {
+    x match {
+      case Some(x2) => x2 == y
+      case _ => false
+    }
+  }
+
+  def isJava (doc : IDocument) : Boolean = { optEq(javaSource, doc) }
+  def isCoqModel (doc : IDocument) : Boolean = { optEq(coqModel, doc) }
+  def isCoqSource (doc : IDocument) : Boolean = { optEq(coqSource, doc) }
+}
+
 object EclipseTables {
   import scala.collection.mutable.HashMap
   import org.eclipse.jface.text.IDocument
 
-  val DocToString = new HashMap[IDocument,String]()
-  val StringToDoc = new HashMap[String,IDocument]()
+  val DocToProject = new HashMap[IDocument, CoqJavaProject]()
+  val StringToProject = new HashMap[String, CoqJavaProject]()
 }
+
 /*
 import akka.actor._
 class MyTimer extends Actor {

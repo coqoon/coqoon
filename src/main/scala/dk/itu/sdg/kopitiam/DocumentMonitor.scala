@@ -31,11 +31,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   def handlePart (t : IWorkbenchPart) : Unit = {
     if (t.isInstanceOf[ITextEditor]) {
       val txt = t.asInstanceOf[ITextEditor]
-      val ed = txt.getEditorInput
-      val doc = txt.getDocumentProvider.getDocument(ed)
-      val nam = ed.getName
-      if (!EclipseTables.StringToDoc.contains(nam))
-        EclipseTables.DocToString += doc -> nam
+      val doc = txt.getDocumentProvider.getDocument(txt.getEditorInput)
       doc.addDocumentListener(this)
     }
   }
@@ -61,15 +57,18 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     activateEditor(ed)
   }
 
-  import org.eclipse.ui.texteditor.AbstractTextEditor
   import org.eclipse.jface.text.source.{AnnotationPainter, IAnnotationAccess, Annotation, ISourceViewer}
-  def maybeInsert (ed : AbstractTextEditor, viewer : ISourceViewer) : Unit = {
+  def maybeInsert (ed : ITextEditor, viewer : ISourceViewer) : Unit = {
     val edi = ed.getEditorInput
     val nam = edi.getName
     val doc = ed.getDocumentProvider.getDocument(edi)
-    if (! EclipseTables.StringToDoc.contains(nam)) {
-      Console.println("inserted " + nam + " into String2Doc table")
-      EclipseTables.StringToDoc += nam -> doc
+    if (! EclipseTables.DocToProject.contains(doc)) {
+      val basename = nam.split("\\.")(0)
+      val proj = EclipseTables.StringToProject.getOrElse(basename, { val p = new CoqJavaProject(basename); EclipseTables.StringToProject += basename -> p; Console.println("....instantiated new project...."); p })
+      proj.setDocument(doc, nam)
+
+      Console.println("inserted " + nam + " into DocToProject table")
+      EclipseTables.DocToProject += doc -> proj
 
       //install painter!
       val access = new IAnnotationAccess () {
@@ -120,13 +119,11 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     val p = part.getPart(false)
     if (p.isInstanceOf[ITextEditor]) {
       val txt = p.asInstanceOf[ITextEditor]
-      val ed = txt.getEditorInput
-      val nam = ed.getName
-      val doc = txt.getDocumentProvider.getDocument(ed)
-      if (EclipseTables.DocToString.contains(doc))
-        EclipseTables.DocToString.remove(doc)
-      if (EclipseTables.StringToDoc.contains(nam))
-        EclipseTables.StringToDoc.remove(nam)
+      val doc = txt.getDocumentProvider.getDocument(txt.getEditorInput)
+      if (EclipseTables.DocToProject.contains(doc)) {
+        EclipseTables.DocToProject(doc).gotClosed(doc)
+        EclipseTables.DocToProject.remove(doc)
+      }
       if (p == DocumentState.activeEditor) {
         DocumentState.activeEditor = null
         if (CoqOutputDispatcher.goalviewer != null)
@@ -153,15 +150,25 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   override def documentChanged (event : DocumentEvent) : Unit = {
     val doc = event.getDocument
     //Console.println("doc " + doc + " changed [@" + event.getOffset + "], len: " + event.getLength)
-    if (EclipseTables.DocToString.contains(doc)) {
-      val docstring = EclipseTables.DocToString(doc)
-      Console.println("I know it's " + docstring + " you changed")
-      if (EclipseTables.StringToDoc.contains(docstring + ".v")) {
-        val coq = EclipseTables.StringToDoc(docstring + ".v")
-        val java = doc.get
-        Console.println("found coq buffer for same file!")
-        //CoqJavaDocumentProvider.updateCoqCode(coq, java, docstring.substring(0, docstring.indexOf(".java")))
+    if (EclipseTables.DocToProject.contains(doc)) {
+      val proj = EclipseTables.DocToProject(doc)
+      if (proj.isJava(doc)) {
+        proj.coqSource match {
+          case Some(d) => Console.println("found coq buffer of same project!")
+          case None => Console.println("no coq buffer yet")
+          //CoqJavaDocumentProvider.updateCoqCode(coq, java, docstring.substring(0, docstring.indexOf(".java")))
+        }
+        proj.javaNewerThanSource = true
       }
+      if (proj.isCoqModel(doc)) {
+        proj.coqSource match {
+          case Some(d) => Console.println("found coq source for model you're editing")
+          case None => Console.println("no generated coq source yet")
+        }
+        proj.modelNewerThanSource = true
+      }
+      if (proj.isCoqSource(doc))
+        Console.println("oh noez, someone edited the generated code")
     }
     if (DocumentState.activeDocument == doc) {
       val txt = DocumentState.content
