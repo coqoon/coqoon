@@ -35,18 +35,21 @@ class SJTableTestSpec extends FlatSpec with ShouldMatchers {
   }
 
   "Populated Table" should "be populated with 1 class" in {
+    SJTable.reset //for safety!
     populate
     SJTable.ct.size should equal(1)
     SJTable.reset //for safety!
   }
 
   "Populated Table" should "contain Foo" in {
+    SJTable.reset //for safety!
     populate
     SJTable.getClass("Foo") should equal(cl1)
     SJTable.reset //for safety!
   }
 
   "Populated Table" should "not contain Bar" in {
+    SJTable.reset //for safety!
     populate
     val thr = intercept[AssertionError] {
       SJTable.getClass("Bar")
@@ -56,42 +59,49 @@ class SJTableTestSpec extends FlatSpec with ShouldMatchers {
   }
 
   "Populated Table" should "not contain a constructor" in {
+    SJTable.reset //for safety!
     populate
     SJTable.getConstructor("Foo") should equal(None)
     SJTable.reset //for safety!
   }
 
   "Populated Table" should "not contain m3" in {
+    SJTable.reset //for safety!
     populate
     SJTable.getMethodInClass("Foo", "m3") should equal(None)
     SJTable.reset //for safety!
   }
 
   "Populated Table" should "contain m1" in {
+    SJTable.reset //for safety!
     populate
     SJTable.getMethodInClass("Foo", "m1") should equal(Some(m1))
     SJTable.reset //for safety!
   }
 
   "Populated Table" should "contain m2" in {
+    SJTable.reset //for safety!
     populate
     SJTable.getMethodInClass("Foo", "m2") should equal(Some(m2))
     SJTable.reset //for safety!
   }
 
   "Populated Table" should "return right type for m1" in {
+    SJTable.reset //for safety!
     populate
     SJTable.getMethodTypeOfClass("Foo", "m1") should equal("void")
     SJTable.reset //for safety!
   }
 
   "Populated Table" should "return right type for m2" in {
+    SJTable.reset //for safety!
     populate
     SJTable.getMethodTypeOfClass("Foo", "m2") should equal("int")
     SJTable.reset //for safety!
   }
 
   "Populated Table" should "return right type for m3" in {
+    SJTable.reset //for safety!
     //that's actually unpleasant
     populate
     SJTable.getMethodTypeOfClass("Foo", "m3") should equal("")
