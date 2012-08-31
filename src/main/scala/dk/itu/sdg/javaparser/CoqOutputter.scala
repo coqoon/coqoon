@@ -168,6 +168,10 @@ trait CoqOutputter extends JavaToSimpleJava {
       case (x : Specification) =>
         Console.println("got " + x.data + " at " + x.pos)
         proofoutput ::= "(* Kopitiam." + x.pos + ". *) " + x.data; None
+      case Loopinvariant(x) =>
+        proofoutput ::= "forward (" + x + ")"; None
+      case Frame(x) =>
+        proofoutput ::= "(" + x + "). "; None
     }
   }
 
