@@ -369,7 +369,7 @@ object OutlineBuilder {
 /**
  * Simple test app for sentence splitting and parsing
  */
-object TestSentences extends Application with SentenceParser {
+object TestSentences extends App with SentenceParser {
   def read(filename : String) = scala.io.Source.fromFile(filename).mkString
   
   def test() : Unit = {

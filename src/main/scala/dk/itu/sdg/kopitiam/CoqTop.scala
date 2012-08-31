@@ -366,7 +366,7 @@ object Outputter extends CoqCallback {
   }
 }
 
-object Main extends Application {
+object Main extends App {
   import java.io.{File,FileInputStream,InputStreamReader,BufferedReader}
 
   override def main (args : Array[String]) = {

@@ -10,7 +10,7 @@ import scala.util.parsing.combinator.lexical.StdLexical
 
 import scala.util.matching.Regex
 import scala.util.parsing.input._
-import scala.util.parsing.syntax._
+import scala.util.parsing.combinator.syntactical._
 import scala.collection.immutable.PagedSeq
 import scala.util.parsing.input.CharArrayReader.EofCh
 

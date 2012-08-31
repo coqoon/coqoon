@@ -343,7 +343,7 @@ class VernacularLexer extends Lexical with VernacularReserved with CoqTokens wit
   def token = ident | accessIdent | num | string | delim
 }
 
-object TestLexer extends VernacularLexer with Application {
+object TestLexer extends VernacularLexer with App {
   def test () : Unit = {
     print("> ")
     val input = Console.readLine()
@@ -775,7 +775,7 @@ trait VernacularParser extends LengthPositionParsers with TokenParsers with Vern
   }
 }
 
-object TestParser extends VernacularParser with Application {
+object TestParser extends VernacularParser with App {
 
   import scala.util.parsing.input.Reader
   def parse (in : Reader[Char]) : Unit = {

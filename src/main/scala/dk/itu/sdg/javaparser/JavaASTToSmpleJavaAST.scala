@@ -198,7 +198,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
 
       case JCall(receiver, name, args) =>
         val (ra, ri, ls0) = extractHelper(None, receiver, fields, ms, ls)
-        var j : Integer = 0
+        var j : Int = 0
         var newa : List[SJExpression] = List[SJExpression]()
         var lsprime = ls0
         var is : List[SJStatement] = List[SJStatement]()
@@ -244,7 +244,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
         (vis ++ List(SJUnaryExpression(op, va)), ls0)
 
       case JNewExpression(name, args) =>
-        var j : Integer = 0
+        var j : Int = 0
         var newa : List[SJExpression] = List[SJExpression]()
         var lsprime = ls
         var is : List[SJStatement] = List[SJStatement]()
@@ -373,7 +373,7 @@ trait JavaToSimpleJava extends KopitiamLogger {
     var as : List[SJExpression] = List[SJExpression]()
     var ls : HashMap[String, String] = locals
     var is : List[SJStatement] = List[SJStatement]()
-    var j : Integer = 0
+    var j : Int = 0
     while (j < args.length) {
       val (a, i, l) = extractHelper(None, args(0), fields, ms, ls)
       as ::= a
