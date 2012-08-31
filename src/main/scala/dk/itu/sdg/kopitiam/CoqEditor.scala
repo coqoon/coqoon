@@ -381,7 +381,6 @@ class CoqContentAssistantProcessor extends IContentAssistProcessor with CoqCallb
   import java.text.MessageFormat
   import scala.collection.mutable.ArrayBuffer
 
-  //TODO: Need to find hook for when coq is restarted and clear dynamicCompletions
   private val dynamicCompletions = new ArrayBuffer[String]
   private val staticCompletions = Array("apply","assumption","compute","destruct","induction","intros","reflexivity","rewrite","simpl","unfold")
 
@@ -427,17 +426,17 @@ class CoqContentAssistantProcessor extends IContentAssistProcessor with CoqCallb
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqTheoremDefined(t) =>
-        {
-          println("ContentAssist - Adding theorem: "+ t);
-          dynamicCompletions += t
-        }
+        println("ContentAssist - Adding theorem: "+ t);
+        dynamicCompletions += t
       case CoqSearchResult(x) =>
-        {
-          if ( !dynamicCompletions.contains(x) )
-            println("ContentAssist - Adding search-result: "+ x);
-            dynamicCompletions += x
+        if (!dynamicCompletions.contains(x)) {
+          println("ContentAssist - Adding search-result: "+ x);
+          dynamicCompletions += x
         }
-      case _ => ()
+      case CoqShellReady(m, token) =>
+        if (token.globalStep == 1)
+          dynamicCompletions.clear
+      case _ =>
     }
   }
 }
