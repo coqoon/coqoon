@@ -534,6 +534,7 @@ object CoqOutputDispatcher extends CoqCallback {
         EclipseConsole.out.println("Variable " + v + " assumed")
       case CoqTheoremDefined(t) =>
         EclipseConsole.out.println("Theorem " + t + " defined")
+      case CoqSearchResult(n) => ()
       case CoqUnknown(x) =>
         EclipseConsole.out.println(x)
     }
