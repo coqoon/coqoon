@@ -159,6 +159,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
           //CoqJavaDocumentProvider.updateCoqCode(coq, java, docstring.substring(0, docstring.indexOf(".java")))
         }
         proj.javaNewerThanSource = true
+        //find out whether we modified inside <% or program code!
       }
       if (proj.isCoqModel(doc)) {
         proj.coqSource match {
