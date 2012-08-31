@@ -133,7 +133,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
           CoqOutputDispatcher.goalviewer.clear
         val initial = DocumentState.positionToShell(0).globalStep
         DocumentState.resetState
-        DocumentState.invalidateCoqMarker
         PrintActor.deregister(CoqOutputDispatcher)
         val shell = CoqState.getShell
         DocumentState.setBusy

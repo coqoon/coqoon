@@ -319,6 +319,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     }
     position_ = 0
     sendlen = 0
+    invalidateCoqMarker
   }
 
   import org.eclipse.ui.{IFileEditorInput,IURIEditorInput}
