@@ -35,14 +35,16 @@ object FinishAST extends JavaTerms
     javaTermsToJavaAST(a).map(translate).flatten
   }
 
-  def doit (a : Any, model : String, name : String) : String = {
+  import scala.util.parsing.input.Position
+  def doit (a : Any, model : String, name : String) : Pair[String,List[Pair[String, Pair[Position, List[Position]]]]] = {
     val w = doitHelper(a)
-    coqoutput(w, model, true, name).reduceLeft(_ + "\n" + _)
+    val (r, offs) = coqoutput(w, model, true, name)
+    (r.reduceLeft(_ + "\n" + _), offs)
   }
 
   def doitNoSpec (a : Any, name : String) : (String, String) = {
     val w = doitHelper(a)
-    val re = coqoutput(w, "", false, name)
+    val (re, offs) = coqoutput(w, "", false, name)
     val prog = re.takeWhile(!_.contains("_spec.\nImport ")).reduceLeft(_ + "\n" + _)
     val spec = re.dropWhile(!_.contains("_spec.\nImport ")).drop(1).mkString("\n")
     (prog, spec)
@@ -253,7 +255,6 @@ object FinishAST extends JavaTerms
       case vars : LocalVar => transformLocalVariable(vars)
       case AnyStatement(";") => Nil
       case (x : SpecStmt) =>
-        Console.println("got SpecExpr " + x.e + " at " + x.pos)
         val newspec = JSpecExpression(x.e)
         newspec.setPos(x.pos)
         newspec :: Nil

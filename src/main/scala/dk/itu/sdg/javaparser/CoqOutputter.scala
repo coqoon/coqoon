@@ -5,6 +5,7 @@ import java.io.File
 
 trait CoqOutputter extends JavaToSimpleJava {
   import scala.collection.immutable.HashMap
+  import scala.util.parsing.input.Position
 
   def getArgs (x : List[SJArgument]) : List[String] = {
     x.map(_.id)
@@ -165,12 +166,13 @@ trait CoqOutputter extends JavaToSimpleJava {
         Some("(cif " + te + " " + tr + " " + fa + ")")
       case SJWhile(test, body) =>
         Some("(cwhile " + printE(test) + " " + optPrintBody(body.flatMap(x => printStatement(x, locals))) + ")")
-      case Loopinvariant(x) =>
+      case y@Loopinvariant(x) =>
+        lengths ::= y.pos
         proofoutput ::= "forward (" + x + ")"; None
       case Frame(x) =>
         proofoutput ::= "(" + x + "). "; None
       case x : Specification =>
-        Console.println("got " + x.data + " at " + x.pos)
+        lengths ::= x.pos
         proofoutput ::= "(* Kopitiam." + x.pos + ". *) " + x.data; None
     }
   }
@@ -205,11 +207,11 @@ trait CoqOutputter extends JavaToSimpleJava {
     (defi, res)
   }
 
-  def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[String,String]] = {
+  def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[Pair[String,String],Pair[Position,List[Position]]]] = {
     var precon : Option[Precondition] = None
     var postcon : Option[Postcondition] = None
     body.flatMap {
-      case SJMethodDefinition(modifiers, name, typ, params, body, lvars) =>
+      case x@SJMethodDefinition(modifiers, name, typ, params, body, lvars) =>
         //Console.println("starting to print method " + name + " with body " + body)
         val bodyref = name + "_body"
         val args = getArgs(params)
@@ -240,16 +242,20 @@ Proof.
   unfold """ + name + "_spec" + "; unfold_spec."
         val (bodyp, returnvar) = getBody(body, bodyref, lvars)
         proofoutput ::= "Qed."
+        val ls = lengths.reverse
+        lengths = List[Position]()
         outp ::= bodyp
         outp ::= "Definition " + name + "M := Build_Method (" + printArgList(t) + ") " + bodyref + " " + returnvar + "."
-        Some(("\"" + name + "\"", name + "M"))
-      case SJConstructorDefinition(modifiers, typ, params, body, lvars) =>
+        Some((("\"" + name + "\"", name + "M"), (x.pos, ls)))
+      case x@SJConstructorDefinition(modifiers, typ, params, body, lvars) =>
         val args = getArgs(params)
         val bodi = body.flatMap(x => printStatement(x, lvars))
         val bodip = printBody("(calloc \"this\" \"" + typ + "\")" :: bodi)
         val nam = typ + "_new"
+        val ls = lengths.reverse
+        lengths = List[Position]()
         outp ::= "Definition " + nam + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\")."
-        Some(("\"new\"" , nam))
+        Some((("\"new\"" , nam), (x.pos, ls)))
       case x : Precondition => 
         precon match {
           case None => precon = Some(x); None
@@ -270,6 +276,7 @@ Proof.
   private var proofoutput : List[String] = null
   private var specifications : List[String] = null
   private var proofs : List[String] = null
+  private var lengths : List[Position] = null
 
   private val unique_names : List[String] = List("Opaque unique_method_names.", "Definition unique_method_names := option_proof (search_unique_names Prog).")
 
@@ -280,12 +287,14 @@ Open Scope string_scope.
 Open Scope hasn_scope.
 """
 
-  def coqoutput (xs : List[SJDefinition], model : String, complete : Boolean, name : String) : List[String] = {
+  def coqoutput (xs : List[SJDefinition], model : String, complete : Boolean, name : String) : Pair[List[String], List[Pair[String, Pair[Position, List[Position]]]]] = {
     outp = List[String]()
     specoutput = List[String]()
     proofoutput = List[String]()
     specifications = List[String]()
     proofs = List[String]()
+    lengths = List[Position]()
+    var offs = List[Pair[String, Pair[Position,List[Position]]]]()
     var cs : List[String] = List[String]()
     if (complete)
       outp ::= prelude
@@ -319,7 +328,9 @@ Open Scope asn_scope.
         cs ::= id
         val fields = fs.keys.toList
         val methods = classMethods(body, id)
-        outp ::= "Definition " + id + " := Build_Class " + printFiniteSet(fields) + " " + printFiniteMap(methods) + "."
+        offs ++= methods.map(x => (x._1._1, x._2))
+        Console.println("offs for class " + id + " are: " + offs)
+        outp ::= "Definition " + id + " := Build_Class " + printFiniteSet(fields) + " " + printFiniteMap(methods.map(_._1)) + "."
     })
     val classes = printFiniteMap(cs.map(x => ("\"" + x + "\"", x)))
     outp ::= "Definition Prog := Build_Program " + classes + "."
@@ -383,7 +394,7 @@ Proof.
     } */
     //now, check whether we have a .v file around with the model which we can source...
     
-    List(model) ++ List("") ++ outp.reverse ++ List("") ++ specoutput.reverse ++ proofoutput.reverse ++ List("")
+    (List(model) ++ List("") ++ outp.reverse ++ List("") ++ specoutput.reverse ++ proofoutput.reverse ++ List(""), offs)
   }
 
   def printArgList (l : List[String]) : String = {

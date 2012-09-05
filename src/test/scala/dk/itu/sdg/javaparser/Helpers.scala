@@ -33,6 +33,7 @@ trait ASTSpec extends FlatSpec with ShouldMatchers with JavaAST {
 
   def getCoqOutputFromFile (classfile : String, name : String) : List[String] = {
     val parsed = getASTbyParsingFileNamed(classfile)
-    FinishAST.coqoutput(parsed, "", false, name)
+    val (p, r) = FinishAST.coqoutput(parsed, "", false, name)
+    p
   }
 }

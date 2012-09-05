@@ -233,7 +233,6 @@ trait JavaToSimpleJava extends KopitiamLogger {
         (i ++ List(SJAssert(a)), ls1)
 
       case (x : JSpecExpression)=>
-        Console.println("bla here blubb (" + x.e + "): " + x.pos)
         val res = ParseSpecification.parse(x.e)
         res.setPos(x.pos)
         (List(res), ls)

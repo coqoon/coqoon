@@ -92,6 +92,7 @@ class CoqJavaProject (basename : String) {
   //foo -> foo.java [Java], foo.v [Model] ~> foo.java.v [Complete]
   import scala.collection.mutable.HashMap
   import org.eclipse.jface.text.IDocument
+  import scala.util.parsing.input.Position
 
   var javaSource : Option[IDocument] = None
   var coqModel : Option[IDocument] = None
@@ -100,8 +101,8 @@ class CoqJavaProject (basename : String) {
   var javaNewerThanSource : Boolean = false
 
   //def -> offset + [length1, .., lengthn]
-  val javaOffsets : HashMap[String, Pair[Int, List[Int]]] =
-    new HashMap[String, Pair[Int, List[Int]]]()
+  val javaOffsets : HashMap[String, Pair[Position, List[Position]]] =
+    new HashMap[String, Pair[Position, List[Position]]]()
 
   def gotClosed (doc : IDocument) : Unit = {
     javaSource match {
