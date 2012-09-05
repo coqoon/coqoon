@@ -46,7 +46,7 @@ trait Expression extends ImplicitConversions
 
   def conditionalExpression: Parser[Any] = logicalOrExpression ~ opt("?" ~> assignmentExpression ~ ":" ~ conditionalExpression) ^^ {
     case x~None => x
-    case (x:AnyExpr)~Some((y:AnyExpr)~":"~(z:AnyExpr)) => Conditional(ParExpr(x), y, Some(z))
+    case (x : AnyExpr)~Some((y : AnyExpr)~":"~(z : AnyExpr)) => Conditional(ParExpr(x), y, Some(z))
   }
 
   def logicalOrExpression: Parser[Any] = logicalAndExpression ~ rep("||" ~ logicalAndExpression) ^^ {

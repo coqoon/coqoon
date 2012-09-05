@@ -76,10 +76,12 @@ trait JavaToSimpleJava extends KopitiamLogger {
     var rest = List[JStatement]()
     (body.flatMap(x => x match {
       case (x : JInterfaceDefinition) => rest ::= x; None
-      case JMethodDefinition (m, n, t, a, b) =>
+      case y@JMethodDefinition (m, n, t, a, b) =>
         assert(b.length == 0)
         val (x, l) = tArgs(a, HashMap[String, String]())
-        Some(SJMethodDefinition(m, n, t, x, List(), l))
+        val meth = SJMethodDefinition(m, n, t, x, List(), l)
+        meth.setPos(y.pos)
+        Some(meth)
       case JFieldDefinition (m, n, t, i) =>
         assert(m.contains(Final()))
         //we should remember initializer somewhere
@@ -98,14 +100,18 @@ trait JavaToSimpleJava extends KopitiamLogger {
       case (x : JClassDefinition) => rest ::= x; None //only true for static inner classes, others need ptr to class (not in context here :/)
       case (x : JInterfaceDefinition) => rest ::= x; None
       case JFieldDefinition(mods, name, jtype, init) => Some(SJFieldDefinition(mods, name, jtype))
-      case JMethodDefinition(mods, name, jtype, args, body) =>
+      case x@JMethodDefinition(mods, name, jtype, args, body) =>
         val (targs, ls0) = tArgs(args, locals)
         val (nbody, ls1) = translateBody(body, fs, ms, ls0)
-        Some(SJMethodDefinition(mods, name, jtype, targs, nbody, ls1))
-      case JConstructorDefinition(mods, jtype, args, body) =>
+        val meth = SJMethodDefinition(mods, name, jtype, targs, nbody, ls1)
+        meth.setPos(x.pos)
+        Some(meth)
+      case x@JConstructorDefinition(mods, jtype, args, body) =>
         val (targs, ls0) = tArgs(args, locals)
         val (nbody, ls1) = translateCBody(body, fields, fs, ms, ls0)
-        Some(SJConstructorDefinition(mods, jtype, targs, nbody, ls1))
+        val cons = SJConstructorDefinition(mods, jtype, targs, nbody, ls1)
+        cons.setPos(x.pos)
+        Some(cons)
       case JBlock(mods, body) =>
         Some(SJBodyBlock(mods, translateBody(body, fs, HashMap(), HashMap())._1))
       case JSpecExpression(x) =>

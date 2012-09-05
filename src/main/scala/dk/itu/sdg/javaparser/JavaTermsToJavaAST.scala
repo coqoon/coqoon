@@ -149,19 +149,25 @@ object FinishAST extends JavaTerms
     }.toSet
 
     body.flatMap {
-      case List() ~ SpecStmt(content) => JSpecExpression(content) :: Nil
-      case SpecStmt(content) => JSpecExpression(content) :: Nil
+      case List() ~ (x@SpecStmt(content)) =>
+        val r = JSpecExpression(content)
+        r.setPos(x.pos)
+        r :: Nil
+      case x@SpecStmt(content) =>
+        val r = JSpecExpression(content)
+        r.setPos(x.pos)
+        r :: Nil
       case BodyDeclaration(mods, x) => transformClassOrInterfaceBody(List(x), outer, transformModifiers(mods))
       case jclass : JClass => transformClassOrInterface(jclass, outer, modifiers) :: Nil
       case jinterface : JInterface => transformClassOrInterface(jinterface, outer, modifiers) :: Nil
       case jmethod : MethodDeclaration => transformMethodDeclaration(jmethod, modifiers) :: Nil
       case jconstructor : ConstructorDeclaration => transformConstructor(jconstructor, modifiers) :: Nil
       case jfield : FieldDeclaration => transformFieldDeclaration(jfield, modifiers) :: Nil
-      case xs: List[Any] => xs.flatMap( (x: Any) => transformClassOrInterfaceBody(List(x), outer, modifiers) )
+      case xs: List[Any] => xs.flatMap( (x : Any) => transformClassOrInterfaceBody(List(x), outer, modifiers) )
       // TODO: It should be possible to remove these by improving the parser so they're turned into BodyDeclaration's
       case (ys: List[Modifier]) ~ (i : JInterface) => transformClassOrInterface(i, outer, transformModifiers(ys)) :: Nil
       case Some("static") ~ (x : Block) => transformBlock(x, Some(Static())) :: Nil
-      case y ~ (x: MethodDeclaration) => transformMethodDeclaration(x, modifiers) :: Nil
+      case y ~ (x : MethodDeclaration) => transformMethodDeclaration(x, modifiers) :: Nil
       case ";" => Nil
       case x => throw new Exception("Can't have the following in a class/interface body "+x)
     }
@@ -176,7 +182,10 @@ object FinishAST extends JavaTerms
    */
   def transformMethodDeclaration (method : MethodDeclaration, modifiers : Set[JModifier]) : JMethodDefinition = {
     val (mid, args, body) = extractMethodOrConstructorInfo(method)
-    JMethodDefinition(modifiers, mid, unpackR(method.jtype), args, body)
+    val res = JMethodDefinition(modifiers, mid, unpackR(method.jtype), args, body)
+    Console.println("transforming method at " + method.pos)
+    res.setPos(method.pos)
+    res
   }
 
   /*
@@ -184,7 +193,9 @@ object FinishAST extends JavaTerms
    */
   def transformConstructor (constructor : ConstructorDeclaration, modifiers : Set[JModifier] = Set()) : JConstructorDefinition = {
     val (mid, args, body) = extractMethodOrConstructorInfo(constructor)
-    JConstructorDefinition(modifiers, mid, args, body)
+    val r = JConstructorDefinition(modifiers, mid, args, body)
+    r.setPos(constructor.pos)
+    r
   }
 
   /*

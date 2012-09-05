@@ -42,7 +42,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         ms ::= name
         Some(("(" + name + " : T " + margs + " -> " + rettype + ")",
             "([A]t : T, C :.: \"" + name + "\" |-> (" +  printArgList("this" :: paras) + ") {{ " + pre + " }}-{{ " + post + " }})"))
-      case (x : Specification) => Console.println("interfacemethods of spec: " + x.data); None
+      case x : Specification => Console.println("interfacemethods of spec: " + x.data); None
       case _ => None
     }
     //thus we need to save _1 in ClassTable, don't we?
@@ -169,7 +169,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         proofoutput ::= "forward (" + x + ")"; None
       case Frame(x) =>
         proofoutput ::= "(" + x + "). "; None
-      case (x : Specification) =>
+      case x : Specification =>
         Console.println("got " + x.data + " at " + x.pos)
         proofoutput ::= "(* Kopitiam." + x.pos + ". *) " + x.data; None
     }
@@ -250,17 +250,17 @@ Proof.
         val nam = typ + "_new"
         outp ::= "Definition " + nam + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\")."
         Some(("\"new\"" , nam))
-      case (x : Precondition) => 
+      case x : Precondition => 
         precon match {
           case None => precon = Some(x); None
           case Some(x) => Console.println("wrong! two preconditions for a method"); None
         }
-      case (x : Postcondition) =>
+      case x : Postcondition =>
         postcon match {
           case None => postcon = Some(x); None
           case Some(x) => Console.println("wrong! two postconditions for a method"); None
         }
-      case (x : Specification) => specoutput ::= x.data; None
+      case x : Specification => specoutput ::= x.data; None
       case _ => None
     }
   }
