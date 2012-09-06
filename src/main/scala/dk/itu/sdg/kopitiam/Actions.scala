@@ -341,7 +341,7 @@ class ProofMethodAction extends KEditorAction {
     // g: set JavaPosition active
     CoqStepNotifier.later = Some(() => {
       JavaPosition.active = true
-      JavaPosition.nextHighlight
+      JavaPosition.reAnnotate(false, false)
     })
   }
   override def doit () : Unit = { }

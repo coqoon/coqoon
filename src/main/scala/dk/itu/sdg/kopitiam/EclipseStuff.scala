@@ -272,30 +272,107 @@ object JavaPosition {
 
   import org.eclipse.jface.text.Position
   import org.eclipse.jface.text.source.Annotation
-  def nextHighlight () {
+
+  var processed : Option[Annotation] = None
+  var processing : Option[Annotation] = None
+
+  def retract () : Unit = {
+    if (editor != null && active) {
+      active = false
+      index = -1
+      name = ""
+      val prov = editor.getDocumentProvider
+      val doc = prov.getDocument(editor.getEditorInput)
+      val annmodel = prov.getAnnotationModel(editor.getEditorInput)
+      annmodel.connect(doc)
+      processed match {
+        case Some(x) => annmodel.removeAnnotation(x)
+        case None =>
+      }
+      processed = None
+      processing match {
+        case Some(x) => annmodel.removeAnnotation(x)
+        case None =>
+      }
+      processing = None
+      annmodel.disconnect(doc)
+    }
+  }
+
+  def getPos (i : Int, elements : Pair[scala.util.parsing.input.Position, List[scala.util.parsing.input.Position]]) : Int = {
+    if (i == -1)
+      elements._1.line
+    else if (elements._2.length == i)
+      elements._2(i - 1).line + 2
+    else
+      elements._2(i).line
+  }
+
+  import org.eclipse.swt.widgets.Display
+  def reAnnotate (proc : Boolean, undo : Boolean) : Unit = {
+    //4 cases:
+    // #t #f =>                  remove nothing, mark yellow
+    // #t #t => problem marker - remove yellow, mark nothing
+    // #f #t => real undo -      remove last green, remark green
+    // #f #f => processed!       remove yellow & green, mark green
     if (editor != null && active) {
       Console.println("coloring java code! " + name)
-      
+
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
       val proj = EclipseTables.DocToProject(doc)
       val pos =
-        if (index == -1)
-          proj.javaOffsets(name)._1
+        if (!proc)
+          getPos(-1, proj.javaOffsets(name))
         else
-          proj.javaOffsets(name)._2(index)
-      index = index + 1
-      val nextpos : Int =
-        if (proj.javaOffsets(name)._2.length == index)
-          pos.line + 2
+          getPos(index, proj.javaOffsets(name))
+      val npos =
+        if (undo)
+          index - 1
         else
-          proj.javaOffsets(name)._2(index).line
+          index + 1
+      if (!proc)
+        index = npos
+      val nextpos : Int = getPos(npos, proj.javaOffsets(name))
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
-      val sma = new Annotation("dk.itu.sdg.kopitiam.processed", false, "Proof")
-      val loff = doc.getLineOffset(pos.line - 1) //XXX: bah
-      val finaloff = doc.getLineOffset(nextpos - 1) - 1
       annmodel.connect(doc)
-      annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
+      if ((proc && undo) || (!proc && !undo)) {
+        processing match {
+          case Some(x) => annmodel.removeAnnotation(x)
+          case None =>
+        }
+        processing = None
+      }
+      if ((!proc && undo) || (!proc && !undo)) {
+        processed match {
+          case Some(x) => {
+            annmodel.removeAnnotation(x)
+            if (undo)
+              Display.getDefault.asyncExec(
+                new Runnable() {
+                  def run() = { editor.getViewer.invalidateTextPresentation }})
+          }
+          case None =>
+        }
+        processed = None
+      }
+      
+      val txt =
+        if (proc)
+          "dk.itu.sdg.kopitiam.processing"
+        else
+          "dk.itu.sdg.kopitiam.processed"
+      val sma = new Annotation(txt, false, "Proof")
+
+      val loff = doc.getLineOffset(pos - 1) //XXX: bah
+      val finaloff = doc.getLineOffset(nextpos - 1) - 1
+      if (! (proc && undo)) {
+        annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
+        if (proc)
+          processing = Some(sma)
+        else
+          processed = Some(sma)
+      }
       annmodel.disconnect(doc)
     }
   }
@@ -515,6 +592,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         }
         position = start
         sendlen = 0
+        JavaPosition.reAnnotate(false, true)
       } else { //just an error
         //Console.println("undo: barf")
         //kill off process colored thingies
@@ -522,17 +600,23 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         activeEditor.invalidate
         oldsendlen = sendlen
         sendlen = 0
+        JavaPosition.reAnnotate(true, true)
       }
     }
   }
 
   def process () : Unit = {
     activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
+    JavaPosition.reAnnotate(true, false)
   }
 
   def processUndo () : Unit = {
     activeEditor.addAnnotations(position, 0)
     activeEditor.invalidate
+    if (position == 0)
+      JavaPosition.retract
+    else
+      JavaPosition.reAnnotate(true, true)
   }
 
   private def commit () : Unit = {
@@ -541,7 +625,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       //Console.println("commited - and doing some work")
       val end = scala.math.min(sendlen, content.length - position)
       position += end
-      JavaPosition.nextHighlight()
+      JavaPosition.reAnnotate(false, false)
       sendlen = 0
       //XXX: that's wrong! sendlen is 0!!!!
       activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
