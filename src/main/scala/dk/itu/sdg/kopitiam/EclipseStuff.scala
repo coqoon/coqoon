@@ -90,7 +90,7 @@ trait EclipseUtils {
 
 class CoqJavaProject (basename : String) {
   //foo -> foo.java [Java], foo.v [Model] ~> foo.java.v [Complete]
-  import scala.collection.mutable.HashMap
+  import scala.collection.immutable.HashMap
   import org.eclipse.jface.text.IDocument
   import scala.util.parsing.input.Position
 
@@ -101,7 +101,7 @@ class CoqJavaProject (basename : String) {
   var javaNewerThanSource : Boolean = false
 
   //def -> offset + [length1, .., lengthn]
-  val javaOffsets : HashMap[String, Pair[Position, List[Position]]] =
+  var javaOffsets : HashMap[String, Pair[Position, List[Position]]] =
     new HashMap[String, Pair[Position, List[Position]]]()
 
   def gotClosed (doc : IDocument) : Unit = {
@@ -265,23 +265,35 @@ class ProofDrawingStrategy extends IDrawingStrategy with EclipseUtils {
 object JavaPosition {
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
 
-  var line : Int = -1
-  var column : Int = -1
   var editor : JavaEditor = null
+  var index : Int = -1
+  var name : String = ""
+  var active : Boolean = false
 
   import org.eclipse.jface.text.Position
   import org.eclipse.jface.text.source.Annotation
   def nextHighlight () {
-    if (line > -1 && editor != null) {
-      Console.println("coloring java code!")
-
+    if (editor != null && active) {
+      Console.println("coloring java code! " + name)
+      
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
+      val proj = EclipseTables.DocToProject(doc)
+      val pos =
+        if (index == -1)
+          proj.javaOffsets(name)._1
+        else
+          proj.javaOffsets(name)._2(index)
+      index = index + 1
+      val nextpos : Int =
+        if (proj.javaOffsets(name)._2.length == index)
+          pos.line + 2
+        else
+          proj.javaOffsets(name)._2(index).line
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
       val sma = new Annotation("dk.itu.sdg.kopitiam.processed", false, "Proof")
-      val loff = doc.getLineOffset(line - 1) //XXX: bah
-      val finaloff = doc.get.indexOf("%>", loff + column) + 2 //XXX: even more bah
-      Console.println("new annotation at " + loff + " length " + (finaloff - loff))
+      val loff = doc.getLineOffset(pos.line - 1) //XXX: bah
+      val finaloff = doc.getLineOffset(nextpos - 1) - 1
       annmodel.connect(doc)
       annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
       annmodel.disconnect(doc)

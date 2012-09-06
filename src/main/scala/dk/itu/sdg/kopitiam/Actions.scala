@@ -29,6 +29,17 @@ abstract class KAction extends IWorkbenchWindowActionDelegate with IHandler {
   def doit () : Unit
 }
 
+import org.eclipse.ui.IEditorActionDelegate
+abstract class KEditorAction extends KAction with IEditorActionDelegate {
+  import org.eclipse.ui.IEditorPart
+  import org.eclipse.jface.action.IAction
+  var editor : IEditorPart = null
+
+  override def setActiveEditor (a : IAction, t : IEditorPart) : Unit = {
+    editor = t
+  }
+}
+
 abstract class KCoqAction extends KAction {
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.viewers.ISelection
@@ -202,12 +213,6 @@ class CoqStepAction extends KCoqAction {
           DocumentState.process
           val cmd = content.take(eoc).trim
           Console.println("command is (" + eoc + "): " + cmd)
-          if (cmd.startsWith("(* Kopitiam.")) {
-            val lines = cmd.split("\\.")
-            Console.println("Java line: " + lines(1) + ":" + lines(2))
-            JavaPosition.line = lines(1).toInt
-            JavaPosition.column = lines(2).toInt
-          }
           //CoqProgressMonitor.actor.tell(("START", cmd))
           CoqTop.writeToCoq(cmd) //sends comments over the line
         }
@@ -296,7 +301,54 @@ class CoqRefreshAction extends KCoqAction {
 }
 object CoqRefreshAction extends CoqRefreshAction { }
 
-class TranslateAction extends KAction {
+class ProofMethodAction extends KEditorAction {
+  import org.eclipse.jface.action.IAction
+  import org.eclipse.jface.text.ITextSelection
+  import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
+  override def run (a : IAction) : Unit = {
+    //plan:
+    // a: get project
+    val edi : JavaEditor = editor.asInstanceOf[JavaEditor]
+    val prov = edi.getDocumentProvider
+    val doc = prov.getDocument(edi.getEditorInput)
+    val proj = EclipseTables.DocToProject(doc)
+    // b: if outdated .java.v (or not there): translate and openEditor (and activate JavaEditor)
+    if (proj.modelNewerThanSource)
+      Console.println("ouch, need to retract and redo model!!!!")
+    if (proj.javaNewerThanSource)
+      Console.println("java changed in between.... need to retranslate")
+    // c: find method name in java buffer
+    val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
+    val sl = selection.getStartLine
+    val soff = doc.getLineOffset(sl)
+    val slen = doc.getLineLength(sl)
+    val line = doc.get(soff, slen)
+    val arr = line.split("\\(")(0).split(" ")
+    val nam = arr(arr.length - 1)
+    // d: find lemma in .java.v buffer
+    val coqdoc = proj.coqSource.getOrElse(null)
+    if (coqdoc == null)
+      Console.println("coqdoc turned out to be null. how could that happen?")
+    val content = coqdoc.get
+    val off = content.indexOf("valid_" + nam)
+    val realoff = content.indexOf("unfold_spec.", off) + 13
+    Console.println("going till " + realoff + " in coq buffer")
+    // e: set name in JavaPosition
+    JavaPosition.name = nam
+    // f: step until method lemma
+    DocumentState.activeEditor.selectAndReveal(realoff, 0)
+    CoqStepUntilAction.doit
+    // g: set JavaPosition active
+    CoqStepNotifier.later = Some(() => {
+      JavaPosition.active = true
+      JavaPosition.nextHighlight
+    })
+  }
+  override def doit () : Unit = { }
+}
+object ProofMethodAction extends ProofMethodAction { }
+
+class TranslateAction extends KEditorAction {
   import org.eclipse.ui.handlers.HandlerUtil
   import org.eclipse.jface.viewers.IStructuredSelection
   import org.eclipse.jdt.core.ICompilationUnit
@@ -330,7 +382,6 @@ class TranslateAction extends KAction {
       Console.println("modelfilename is " + model + " and it exists? " + modelfile.exists)
       val mod : String =
         if (modelfile.exists) {
-          modelfile.setCharset("UTF-8", null)
           try
             new java.util.Scanner(modelfile.getContents, "UTF-8").useDelimiter("\\A").next() 
           catch
@@ -344,7 +395,7 @@ class TranslateAction extends KAction {
       val (con, off) = JavaTC.parse(is, mod, nam.substring(0, nam.indexOf(".java")))
       trfi.setContents(new ByteArrayInputStream(con.getBytes("UTF-8")), IResource.NONE, null)
       val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
-      off.map(x => proj.javaOffsets += x._1 -> x._2)
+      off.map(x => proj.javaOffsets = proj.javaOffsets + (x._1 -> x._2))
     } else
       Console.println("wasn't a java file")
   }
@@ -419,6 +470,7 @@ object CoqStartUp extends CoqCallback {
 object CoqStepNotifier extends CoqCallback {
   var err : Boolean = false
   var test : Option[(Int, Int) => Boolean] = None
+  var later : Option[() => Unit] = None
 
   import org.eclipse.swt.widgets.Display
 
@@ -451,6 +503,11 @@ object CoqStepNotifier extends CoqCallback {
     test = None
     DocumentState.reveal = true
     DocumentState.until = -1
+    later match {
+      case Some(x) => x()
+      case None =>
+    }
+    later = None
     //CoqProgressMonitor.multistep = false
     //CoqProgressMonitor.actor.tell("FINISHED")
   }

@@ -94,13 +94,11 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       val txt = ed.asInstanceOf[CoqEditor]
       maybeInsert(txt, txt.getSource)
       if (DocumentState.activeEditor != ed) {
-        //Console.println("part activated " + ed)
         ActionDisabler.disableAll
         ActionDisabler.enableStart
       } else
         ActionDisabler.enableMaybe
     } else if (ed.isInstanceOf[JavaEditor]) {
-      Console.println("installing painter to " + ed)
       val txt = ed.asInstanceOf[JavaEditor]
       maybeInsert(txt, txt.getViewer)
       if (JavaPosition.editor != ed)

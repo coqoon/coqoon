@@ -173,7 +173,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         proofoutput ::= "(" + x + "). "; None
       case x : Specification =>
         lengths ::= x.pos
-        proofoutput ::= "(* Kopitiam." + x.pos + ". *) " + x.data; None
+        proofoutput ::= x.data; None
     }
   }
 
@@ -207,7 +207,7 @@ trait CoqOutputter extends JavaToSimpleJava {
     (defi, res)
   }
 
-  def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[Pair[String,String],Pair[Position,List[Position]]]] = {
+  def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[Pair[String,String],Pair[String,Pair[Position,List[Position]]]]] = {
     var precon : Option[Precondition] = None
     var postcon : Option[Postcondition] = None
     body.flatMap {
@@ -246,7 +246,7 @@ Proof.
         lengths = List[Position]()
         outp ::= bodyp
         outp ::= "Definition " + name + "M := Build_Method (" + printArgList(t) + ") " + bodyref + " " + returnvar + "."
-        Some((("\"" + name + "\"", name + "M"), (x.pos, ls)))
+        Some((("\"" + name + "\"", name + "M"), (name, (x.pos, ls))))
       case x@SJConstructorDefinition(modifiers, typ, params, body, lvars) =>
         val args = getArgs(params)
         val bodi = body.flatMap(x => printStatement(x, lvars))
@@ -255,7 +255,7 @@ Proof.
         val ls = lengths.reverse
         lengths = List[Position]()
         outp ::= "Definition " + nam + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\")."
-        Some((("\"new\"" , nam), (x.pos, ls)))
+        Some((("\"new\"" , nam), (nam, (x.pos, ls))))
       case x : Precondition => 
         precon match {
           case None => precon = Some(x); None
@@ -328,8 +328,7 @@ Open Scope asn_scope.
         cs ::= id
         val fields = fs.keys.toList
         val methods = classMethods(body, id)
-        offs ++= methods.map(x => (x._1._1, x._2))
-        Console.println("offs for class " + id + " are: " + offs)
+        offs ++= methods.map(_._2)
         outp ::= "Definition " + id + " := Build_Class " + printFiniteSet(fields) + " " + printFiniteMap(methods.map(_._1)) + "."
     })
     val classes = printFiniteMap(cs.map(x => ("\"" + x + "\"", x)))
