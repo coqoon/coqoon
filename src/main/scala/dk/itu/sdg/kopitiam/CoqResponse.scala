@@ -26,7 +26,6 @@ object ParseCoqResponse {
   private val Erro = """(Error:|Toplevel input,)(.*)""".r
   private val Sear = (ident + """:.*""").r
 
-  //FIX: Platform-independent line-separator instead of hardcoded "\n"
   private val LineSeparator = System.getProperty("line.separator");
   
   def parse (s : String) : CoqResponse = {

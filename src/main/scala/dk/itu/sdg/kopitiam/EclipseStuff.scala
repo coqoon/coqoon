@@ -262,7 +262,7 @@ class ProofDrawingStrategy extends IDrawingStrategy with EclipseUtils {
   }
 }
 
-object JavaPosition {
+object JavaPosition extends CoqCallback {
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
 
   var editor : JavaEditor = null
@@ -275,6 +275,50 @@ object JavaPosition {
 
   var processed : Option[Annotation] = None
   var processing : Option[Annotation] = None
+
+  import org.eclipse.ui.IFileEditorInput
+  import org.eclipse.core.resources.IMarker
+  override def dispatch (x : CoqResponse) : Unit = {
+    x match {
+      case CoqProofCompleted() =>
+        if (editor != null && active) {
+          Console.println("got proof completed")
+          val prov = editor.getDocumentProvider
+          val doc = prov.getDocument(editor.getEditorInput)
+          val proj = EclipseTables.DocToProject(doc)
+          if (proj.javaOffsets(name)._2.length == index) {
+            //send Qed over the wire
+            while (! DocumentState.readyForInput) { } //XXX: bad busy loop
+            active = false //to prevent catches down there
+            CoqStepAction.doit()
+          }
+        }
+      case CoqTheoremDefined(x) =>
+        if (editor != null && x.startsWith("valid_" + name)) {
+          val file = editor.getEditorInput
+          if (file.isInstanceOf[IFileEditorInput]) {
+            val rfile = file.asInstanceOf[IFileEditorInput].getFile
+            val prov = editor.getDocumentProvider
+            val doc = prov.getDocument(editor.getEditorInput)
+            val proj = EclipseTables.DocToProject(doc)
+            val locs = proj.javaOffsets(name)
+            val spos = doc.getLineOffset(locs._1.line - 1)
+            val epos = doc.getLineOffset(locs._2(locs._2.length - 1).line + 2 - 1) - 1
+            val mark = rfile.createMarker(IMarker.PROBLEM) //XXX: custom!
+            mark.setAttribute(IMarker.MESSAGE, "Method proven")
+            mark.setAttribute(IMarker.LOCATION, rfile.getName)
+            mark.setAttribute(IMarker.CHAR_START, spos)
+            mark.setAttribute(IMarker.CHAR_END, epos)
+            mark.setAttribute(IMarker.TRANSIENT, true)
+//            mark.setAttribute(IMarker.SEVERITY, )
+          } else
+            Console.println("no fileeditorinput " + file)
+          active = true //to force the retract
+          retract
+        }
+      case x =>
+    }
+  }
 
   def retract () : Unit = {
     if (editor != null && active) {
@@ -296,6 +340,7 @@ object JavaPosition {
       }
       processing = None
       annmodel.disconnect(doc)
+      PrintActor.deregister(JavaPosition)
     }
   }
 
@@ -316,8 +361,6 @@ object JavaPosition {
     // #f #t => real undo -      remove last green, remark green
     // #f #f => processed!       remove yellow & green, mark green
     if (editor != null && active) {
-      Console.println("coloring java code! " + name)
-
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
       val proj = EclipseTables.DocToProject(doc)
@@ -753,7 +796,7 @@ class GoalViewer extends ViewPart {
         def run() =
           if (! comp.isDisposed) {
             context.setText(assumptions)
-            Console.println("sgoals: " + sgoals.length + " subgoals: " + subgoals.length)
+            //Console.println("sgoals: " + sgoals.length + " subgoals: " + subgoals.length)
             if (sgoals.length < subgoals.length) {
               //drop some, but keep one!
               val (stay, leave) = subgoals.splitAt(sgoals.length)

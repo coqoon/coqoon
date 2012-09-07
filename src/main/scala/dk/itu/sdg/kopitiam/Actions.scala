@@ -201,7 +201,6 @@ object CoqRetractAction extends CoqRetractAction { }
 class CoqStepAction extends KCoqAction {
   override def doit () : Unit = {
     if (DocumentState.readyForInput) {
-      //Console.println("run called, sending a command")
       val con = DocumentState.content
       val content = con.drop(DocumentState.position)
       if (content.length > 0) {
@@ -317,13 +316,17 @@ class ProofMethodAction extends KEditorAction {
       Console.println("ouch, need to retract and redo model!!!!")
     if (proj.javaNewerThanSource)
       Console.println("java changed in between.... need to retranslate")
+    if (proj.coqSource == None)
+      Console.println("no coqSource for this project")
     // c: find method name in java buffer
     val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
     val sl = selection.getStartLine
     val soff = doc.getLineOffset(sl)
     val slen = doc.getLineLength(sl)
     val line = doc.get(soff, slen)
-    val arr = line.split("\\(")(0).split(" ")
+    val marr = line.split("\\(")
+    assert(marr.length == 2)
+    val arr = marr(0).split(" ")
     val nam = arr(arr.length - 1)
     // d: find lemma in .java.v buffer
     val coqdoc = proj.coqSource.getOrElse(null)
@@ -331,6 +334,8 @@ class ProofMethodAction extends KEditorAction {
       Console.println("coqdoc turned out to be null. how could that happen?")
     val content = coqdoc.get
     val off = content.indexOf("valid_" + nam)
+    if (off == -1)
+      Console.println("couldn't find validity lemma for " + nam + " - maybe not a method?")
     val realoff = content.indexOf("unfold_spec.", off) + 13
     Console.println("going till " + realoff + " in coq buffer")
     // e: set name in JavaPosition
@@ -342,6 +347,7 @@ class ProofMethodAction extends KEditorAction {
     CoqStepNotifier.later = Some(() => {
       JavaPosition.active = true
       JavaPosition.reAnnotate(false, false)
+      PrintActor.register(JavaPosition)
     })
   }
   override def doit () : Unit = { }
@@ -555,7 +561,7 @@ object CoqOutputDispatcher extends CoqCallback {
             index = res.length
         }
         if (goalviewer != null) {
-          Console.println("calling writegoal with " + subgoals.reverse)
+          //Console.println("calling writegoal with " + subgoals.reverse)
           goalviewer.writeGoal(ht, subgoals.reverse)
         }
       case CoqProofCompleted() =>
