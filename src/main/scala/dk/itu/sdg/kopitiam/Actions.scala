@@ -304,6 +304,8 @@ class ProofMethodAction extends KEditorAction {
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.text.ITextSelection
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
+  import org.eclipse.ui.{IFileEditorInput, PlatformUI}
+  import org.eclipse.ui.part.FileEditorInput
   override def run (a : IAction) : Unit = {
     //plan:
     // a: get project
@@ -318,13 +320,18 @@ class ProofMethodAction extends KEditorAction {
       Console.println("java changed in between.... need to retranslate")
     if (proj.coqSource == None) {
       Console.println("no coqSource for this project")
-//      val fei = editor.getEditorInput
-//      if (fei.isInstanceOf[IFileEditorInput]) {
-//        val file = file.asInstanceOf[IFileEditorInput].getFile
-//        TranslateAction.translate(file)
-//      }
-      //how to get IWorkbenchPage? how an IEditorInput?
-      //IWorkbenchPage.openEditor(IEditorInput input, String editorId)
+      val fei = editor.getEditorInput
+      if (fei.isInstanceOf[IFileEditorInput]) {
+        val file = fei.asInstanceOf[IFileEditorInput].getFile
+        val coqfile = TranslateAction.translate(file)
+        if (coqfile != null) {
+          val fei = new FileEditorInput(coqfile)
+          val wbp = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage
+          wbp.openEditor(fei, "kopitiam.CoqEditor")
+          Console.println("opened editor!!!")
+          CoqStepAction.doitH()
+        }
+      }
     }
     // c: find method name in java buffer
     val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
@@ -386,7 +393,7 @@ class TranslateAction extends KAction {
     null
   }
 
-  def translate (file : IFile) : Unit = {
+  def translate (file : IFile) : IFile = {
     val nam = file.getName
     if (nam.endsWith(".java")) {
       val trfi = file.getProject.getFile(nam + ".v") //TODO: find a suitable location!
@@ -410,8 +417,11 @@ class TranslateAction extends KAction {
       trfi.setContents(new ByteArrayInputStream(con.getBytes("UTF-8")), IResource.NONE, null)
       val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
       off.map(x => proj.javaOffsets = proj.javaOffsets + (x._1 -> x._2))
-    } else
+      trfi
+    } else {
       Console.println("wasn't a java file")
+      null
+    }
   }
 
   override def doit () : Unit = ()
