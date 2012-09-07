@@ -320,6 +320,7 @@ object JavaPosition extends CoqCallback {
     }
   }
 
+  import org.eclipse.swt.widgets.Display
   def retract () : Unit = {
     if (editor != null && active) {
       active = false
@@ -341,6 +342,9 @@ object JavaPosition extends CoqCallback {
       processing = None
       annmodel.disconnect(doc)
       PrintActor.deregister(JavaPosition)
+      Display.getDefault.asyncExec(
+        new Runnable() {
+          def run() = { editor.getViewer.invalidateTextPresentation }})
     }
   }
 
@@ -353,7 +357,6 @@ object JavaPosition extends CoqCallback {
       elements._2(i).line
   }
 
-  import org.eclipse.swt.widgets.Display
   def reAnnotate (proc : Boolean, undo : Boolean) : Unit = {
     //4 cases:
     // #t #f =>                  remove nothing, mark yellow

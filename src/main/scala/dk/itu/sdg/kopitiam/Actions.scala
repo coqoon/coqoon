@@ -316,8 +316,16 @@ class ProofMethodAction extends KEditorAction {
       Console.println("ouch, need to retract and redo model!!!!")
     if (proj.javaNewerThanSource)
       Console.println("java changed in between.... need to retranslate")
-    if (proj.coqSource == None)
+    if (proj.coqSource == None) {
       Console.println("no coqSource for this project")
+//      val fei = editor.getEditorInput
+//      if (fei.isInstanceOf[IFileEditorInput]) {
+//        val file = file.asInstanceOf[IFileEditorInput].getFile
+//        TranslateAction.translate(file)
+//      }
+      //how to get IWorkbenchPage? how an IEditorInput?
+      //IWorkbenchPage.openEditor(IEditorInput input, String editorId)
+    }
     // c: find method name in java buffer
     val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
     val sl = selection.getStartLine
@@ -331,7 +339,7 @@ class ProofMethodAction extends KEditorAction {
     // d: find lemma in .java.v buffer
     val coqdoc = proj.coqSource.getOrElse(null)
     if (coqdoc == null)
-      Console.println("coqdoc turned out to be null. how could that happen?")
+      Console.println("coqsource turned out to be null. how could that happen?")
     val content = coqdoc.get
     val off = content.indexOf("valid_" + nam)
     if (off == -1)
@@ -354,7 +362,7 @@ class ProofMethodAction extends KEditorAction {
 }
 object ProofMethodAction extends ProofMethodAction { }
 
-class TranslateAction extends KEditorAction {
+class TranslateAction extends KAction {
   import org.eclipse.ui.handlers.HandlerUtil
   import org.eclipse.jface.viewers.IStructuredSelection
   import org.eclipse.jdt.core.ICompilationUnit
