@@ -300,7 +300,7 @@ class CoqRefreshAction extends KCoqAction {
 }
 object CoqRefreshAction extends CoqRefreshAction { }
 
-class ProofMethodAction extends KEditorAction {
+class ProveMethodAction extends KEditorAction {
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.text.ITextSelection
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
@@ -367,7 +367,7 @@ class ProofMethodAction extends KEditorAction {
   }
   override def doit () : Unit = { }
 }
-object ProofMethodAction extends ProofMethodAction { }
+object ProveMethodAction extends ProveMethodAction { }
 
 class TranslateAction extends KAction {
   import org.eclipse.ui.handlers.HandlerUtil
