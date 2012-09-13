@@ -92,7 +92,7 @@ class CoqJavaProject (basename : String) {
   //foo -> foo.java [Java], foo.v [Model] ~> foo.java.v [Complete]
   import scala.collection.immutable.HashMap
   import org.eclipse.jface.text.IDocument
-  import scala.util.parsing.input.Position
+  import dk.itu.sdg.parsing.LengthPosition
 
   var javaSource : Option[IDocument] = None
   var coqModel : Option[IDocument] = None
@@ -101,8 +101,8 @@ class CoqJavaProject (basename : String) {
   var javaNewerThanSource : Boolean = false
 
   //def -> offset + [length1, .., lengthn]
-  var javaOffsets : HashMap[String, Pair[Position, List[Position]]] =
-    new HashMap[String, Pair[Position, List[Position]]]()
+  var javaOffsets : HashMap[String, Pair[LengthPosition, List[LengthPosition]]] =
+    new HashMap[String, Pair[LengthPosition, List[LengthPosition]]]()
 
   def gotClosed (doc : IDocument) : Unit = {
     javaSource match {
@@ -302,8 +302,9 @@ object JavaPosition extends CoqCallback {
             val doc = prov.getDocument(editor.getEditorInput)
             val proj = EclipseTables.DocToProject(doc)
             val locs = proj.javaOffsets(name)
-            val spos = doc.getLineOffset(locs._1.line - 1)
-            val epos = doc.getLineOffset(locs._2(locs._2.length - 1).line + 2 - 1) - 1
+            val spos = locs._1.offset
+            val ll = locs._2(locs._2.length - 1)
+            val epos = ll.offset + ll.length + 2
             val mark = rfile.createMarker(IMarker.PROBLEM) //XXX: custom!
             mark.setAttribute(IMarker.MESSAGE, "Method proven")
             mark.setAttribute(IMarker.LOCATION, rfile.getName)
@@ -348,13 +349,14 @@ object JavaPosition extends CoqCallback {
     }
   }
 
-  def getPos (i : Int, elements : Pair[scala.util.parsing.input.Position, List[scala.util.parsing.input.Position]]) : Int = {
+  import dk.itu.sdg.parsing.LengthPosition
+  def getPos (i : Int, elements : Pair[LengthPosition, List[LengthPosition]]) : LengthPosition = {
     if (i == -1)
-      elements._1.line
+      elements._1
     else if (elements._2.length == i)
-      elements._2(i - 1).line + 2
+      elements._2(i - 1)
     else
-      elements._2(i).line
+      elements._2(i)
   }
 
   def reAnnotate (proc : Boolean, undo : Boolean) : Unit = {
@@ -379,7 +381,7 @@ object JavaPosition extends CoqCallback {
           index + 1
       if (!proc)
         index = npos
-      val nextpos : Int = getPos(npos, proj.javaOffsets(name))
+      val nextpos = getPos(npos, proj.javaOffsets(name))
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
       annmodel.connect(doc)
       if ((proc && undo) || (!proc && !undo)) {
@@ -410,10 +412,10 @@ object JavaPosition extends CoqCallback {
           "dk.itu.sdg.kopitiam.processed"
       val sma = new Annotation(txt, false, "Proof")
 
-      val loff = doc.getLineOffset(pos - 1) //XXX: bah
-      val finaloff = doc.getLineOffset(nextpos - 1) - 1
+      //val loff = doc.getLineOffset(pos - 1) //XXX: bah
+      //val finaloff = doc.getLineOffset(nextpos - 1) - 1
       if (! (proc && undo)) {
-        annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
+        annmodel.addAnnotation(sma, new Position(pos.offset, nextpos.offset + nextpos.length - pos.offset))
         if (proc)
           processing = Some(sma)
         else

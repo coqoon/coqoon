@@ -5,7 +5,7 @@ import java.io.File
 
 trait CoqOutputter extends JavaToSimpleJava {
   import scala.collection.immutable.HashMap
-  import scala.util.parsing.input.Position
+  import dk.itu.sdg.parsing.LengthPosition
 
   def getArgs (x : List[SJArgument]) : List[String] = {
     x.map(_.id)
@@ -167,11 +167,13 @@ trait CoqOutputter extends JavaToSimpleJava {
       case SJWhile(test, body) =>
         Some("(cwhile " + printE(test) + " " + optPrintBody(body.flatMap(x => printStatement(x, locals))) + ")")
       case y@Loopinvariant(x) =>
+        Console.println("new invariant at offset " + y.pos.offset + " length " + y.pos.length)
         lengths ::= y.pos
         proofoutput ::= "forward (" + x + ")"; None
       case Frame(x) =>
         proofoutput ::= "(" + x + "). "; None
       case x : Specification =>
+        Console.println("new spec at offset " + x.pos.offset + " length " + x.pos.length)
         lengths ::= x.pos
         proofoutput ::= x.data; None
     }
@@ -207,7 +209,7 @@ trait CoqOutputter extends JavaToSimpleJava {
     (defi, res)
   }
 
-  def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[Pair[String,String],Pair[String,Pair[Position,List[Position]]]]] = {
+  def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[Pair[String,String],Pair[String,Pair[LengthPosition,List[LengthPosition]]]]] = {
     var precon : Option[Precondition] = None
     var postcon : Option[Postcondition] = None
     body.flatMap {
@@ -243,9 +245,10 @@ Proof.
         val (bodyp, returnvar) = getBody(body, bodyref, lvars)
         proofoutput ::= "Qed."
         val ls = lengths.reverse
-        lengths = List[Position]()
+        lengths = List[LengthPosition]()
         outp ::= bodyp
         outp ::= "Definition " + name + "M := Build_Method (" + printArgList(t) + ") " + bodyref + " " + returnvar + "."
+        Console.println("method at " + x.pos.offset + " length is " + x.pos.length)
         Some((("\"" + name + "\"", name + "M"), (name, (x.pos, ls))))
       case x@SJConstructorDefinition(modifiers, typ, params, body, lvars) =>
         val args = getArgs(params)
@@ -253,7 +256,7 @@ Proof.
         val bodip = printBody("(calloc \"this\" \"" + typ + "\")" :: bodi)
         val nam = typ + "_new"
         val ls = lengths.reverse
-        lengths = List[Position]()
+        lengths = List[LengthPosition]()
         outp ::= "Definition " + nam + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\")."
         Some((("\"new\"" , nam), (nam, (x.pos, ls))))
       case x : Precondition => 
@@ -276,7 +279,7 @@ Proof.
   private var proofoutput : List[String] = null
   private var specifications : List[String] = null
   private var proofs : List[String] = null
-  private var lengths : List[Position] = null
+  private var lengths : List[LengthPosition] = null
 
   private val unique_names : List[String] = List("Opaque unique_method_names.", "Definition unique_method_names := option_proof (search_unique_names Prog).")
 
@@ -287,14 +290,14 @@ Open Scope string_scope.
 Open Scope hasn_scope.
 """
 
-  def coqoutput (xs : List[SJDefinition], model : String, complete : Boolean, name : String) : Pair[List[String], List[Pair[String, Pair[Position, List[Position]]]]] = {
+  def coqoutput (xs : List[SJDefinition], model : String, complete : Boolean, name : String) : Pair[List[String], List[Pair[String, Pair[LengthPosition, List[LengthPosition]]]]] = {
     outp = List[String]()
     specoutput = List[String]()
     proofoutput = List[String]()
     specifications = List[String]()
     proofs = List[String]()
-    lengths = List[Position]()
-    var offs = List[Pair[String, Pair[Position,List[Position]]]]()
+    lengths = List[LengthPosition]()
+    var offs = List[Pair[String, Pair[LengthPosition,List[LengthPosition]]]]()
     var cs : List[String] = List[String]()
     if (complete)
       outp ::= prelude

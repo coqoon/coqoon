@@ -2,9 +2,9 @@
 
 package dk.itu.sdg.javaparser
 
-import scala.util.parsing.input.Positional
+import dk.itu.sdg.parsing.LengthPositional
 
-sealed abstract class JStatement extends Positional { }
+sealed abstract class JStatement extends LengthPositional { }
 
 case class JClassDefinition (modifiers : Set[JModifier], id : String, superclass : String, interfaces : List[String], body : List[JStatement], outerclass : Option[String]) extends JStatement
 case class JInterfaceDefinition (modifiers : Set[JModifier], id : String, interfaces : List[String], body : List[JStatement]) extends JStatement
@@ -39,9 +39,10 @@ case class JFieldAccess (variable : JExpression, field : String) extends JExpres
 case class JSpecExpression (e : String) extends JExpression
 
 trait JavaAST extends JavaParser { // with CoqOutputter {
+  import dk.itu.sdg.parsing.LengthPosition
   import scala.util.parsing.input._
 
-  def parse(r: Reader[Char], model : String, name : String) : Pair[String,List[Pair[String, Pair[Position,List[Position]]]]] = {
+  def parse(r: Reader[Char], model : String, name : String) : Pair[String,List[Pair[String, Pair[LengthPosition,List[LengthPosition]]]]] = {
     FinishAST.doit(parseH(r), model, name)
   }
 

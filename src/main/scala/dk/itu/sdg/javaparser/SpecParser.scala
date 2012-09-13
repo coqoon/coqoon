@@ -2,9 +2,9 @@
 
 package dk.itu.sdg.javaparser
 
-import scala.util.parsing.input.Positional
+import dk.itu.sdg.parsing.LengthPositional
 
-sealed abstract class Specification () extends SJExpression with SJBodyDefinition with Positional {
+sealed abstract class Specification () extends SJExpression with SJBodyDefinition with LengthPositional {
   val data : String
 }
 

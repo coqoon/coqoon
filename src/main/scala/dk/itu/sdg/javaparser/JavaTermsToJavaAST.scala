@@ -35,8 +35,8 @@ object FinishAST extends JavaTerms
     javaTermsToJavaAST(a).map(translate).flatten
   }
 
-  import scala.util.parsing.input.Position
-  def doit (a : Any, model : String, name : String) : Pair[String,List[Pair[String, Pair[Position, List[Position]]]]] = {
+  import dk.itu.sdg.parsing.LengthPosition
+  def doit (a : Any, model : String, name : String) : Pair[String,List[Pair[String, Pair[LengthPosition, List[LengthPosition]]]]] = {
     val w = doitHelper(a)
     val (r, offs) = coqoutput(w, model, true, name)
     (r.reduceLeft(_ + "\n" + _), offs)
