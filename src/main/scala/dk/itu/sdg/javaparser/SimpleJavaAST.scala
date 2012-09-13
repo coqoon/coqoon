@@ -3,13 +3,13 @@
 package dk.itu.sdg.javaparser
 
 import scala.collection.immutable.HashMap
-import dk.itu.sdg.parsing.LengthPositional
+import scala.util.parsing.input.Positional
 
 sealed abstract class SJDefinition () { val id : String ; val body: List[SJBodyDefinition] }
 case class SJClassDefinition (modifiers : Set[JModifier], override val id : String, superclass : String, interfaces : List[String], override val body : List[SJBodyDefinition], outerclass : Option[String], fields : HashMap[String, String]) extends SJDefinition
 case class SJInterfaceDefinition (modifiers : Set[JModifier], override val id : String, interfaces : List[String], override val body : List[SJBodyDefinition]) extends SJDefinition
 
-trait SJBodyDefinition extends LengthPositional
+trait SJBodyDefinition extends Positional
 
 // common interface for methods and constructors
 sealed abstract class SJInvokable() extends SJBodyDefinition {

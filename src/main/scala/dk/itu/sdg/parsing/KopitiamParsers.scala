@@ -31,12 +31,7 @@ case class RegionPosition (offset : Int, length : Int) extends LengthPosition {
 trait LengthPositional {
   var pos : LengthPosition = NoLengthPosition
 
-  def setPos (newpos : LengthPosition) : this.type = {
-    this.pos = newpos
-    this
-  }
-
-  def setPos (off : Int, len : Int) : this.type = {
+  def setPos (off : Int, len : Int) : this.type= {
     if (this.pos == NoLengthPosition) {
       this.pos = RegionPosition(off, len)
       this

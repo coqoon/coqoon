@@ -4,7 +4,7 @@ import scala.util.parsing.input.Reader
 import scala.util.parsing.combinator.lexical.StdLexical
 import scala.util.parsing.combinator.syntactical.StdTokenParsers
 import scala.util.parsing.combinator.ImplicitConversions
-import dk.itu.sdg.parsing.LengthPositionParsers
+import scala.util.parsing.input.Positional
 
 // put all the AST generation code in a subclass, where the grammar production accessors are overridden
 
@@ -27,7 +27,7 @@ import dk.itu.sdg.parsing.LengthPositionParsers
  *
  */
 
-trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms with Expression with LengthPositionParsers
+trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms with Expression
 {
   type Tokens = JavaLexer
   val lexical = new JavaLexer
@@ -143,7 +143,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
     )
 
   def statement: Parser[AnyExpr] =
-    lengthPositioned(
+    positioned(
      ( specStmt
      | block
      | "assert" ~ expression ~ opt(":" ~ expression) <~ ";" ^^ AnyStatement
@@ -225,7 +225,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
     )
 
   // p593
-  def normalClassDeclaration = lengthPositioned("class" ~> id ~ opt(typeParameters) ~ opt("extends" ~> jtype) ~
+  def normalClassDeclaration = positioned("class" ~> id ~ opt(typeParameters) ~ opt("extends" ~> jtype) ~
     opt("implements" ~> typeList) ~ classBody ^^ flatten5(JClass))
   def typeParameters = "<" ~> rep1sep(typeParameter, ",") <~ ">"
   def typeParameter = id ~ opt("extends" ~> bound)
@@ -274,8 +274,8 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
     ( specStmt
      | genericMethodOrConstructorDecl
      | methodOrFieldDecl
-     | lengthPositioned("void" ~> id ~ voidMethodDeclaratorRest ^^ { case id~MethodDeclarator(parameters, throws, body) => MethodDeclaration(id, "void", parameters, throws, body) })
-     | lengthPositioned(id ~ constructorDeclaratorRest ^^ { case id~MethodDeclarator(parameters, throws, body) => ConstructorDeclaration(id, parameters, throws, body) })
+     | positioned("void" ~> id ~ voidMethodDeclaratorRest ^^ { case id~MethodDeclarator(parameters, throws, body) => MethodDeclaration(id, "void", parameters, throws, body) })
+     | positioned(id ~ constructorDeclaratorRest ^^ { case id~MethodDeclarator(parameters, throws, body) => ConstructorDeclaration(id, parameters, throws, body) })
      | interfaceDeclaration
      | classDeclaration
     )
@@ -314,13 +314,13 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
     ( specStmt
      | interfaceMethodOrFieldDecl
      | interfaceGenericMethodDecl
-     | lengthPositioned("void" ~> id ~ voidInterfaceMethodDeclaratorRest ^^ {
+     | positioned("void" ~> id ~ voidInterfaceMethodDeclaratorRest ^^ {
        case (id~MethodDeclarator(parameters, throws, body)) => MethodDeclaration(id, "void", parameters, throws, body)
      })
      | interfaceDeclaration
      | classDeclaration
     )
-  def interfaceMethodOrFieldDecl = lengthPositioned(jtype ~ id ~ interfaceMethodOrFieldRest ^^ {
+  def interfaceMethodOrFieldDecl = positioned(jtype ~ id ~ interfaceMethodOrFieldRest ^^ {
     case (jtype~id)~MethodDeclarator(parameters, throws, body) => MethodDeclaration(id, jtype, parameters, throws, body)
     case (jtype~id)~initializer => FieldDeclaration(id, jtype, initializer)
   })
@@ -328,16 +328,16 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
     ( constantDeclaratorRest <~ ";"
      | interfaceMethodDeclaratorRest
     )
-  def methodDeclaratorRest = lengthPositioned(formalParameterList ~ rep(braces) ~ throwsClause ~ (methodBody | ";") ^^ { case ((arg~br)~throws)~body => MethodDeclarator(arg, throws, body) })
-  def voidMethodDeclaratorRest = lengthPositioned(formalParameterList ~ throwsClause ~ (methodBody | ";") ^^ { case (arg~throws)~body => MethodDeclarator(arg, throws, body) })
-  def interfaceMethodDeclaratorRest = lengthPositioned(formalParameterList ~ rep(braces) ~ throwsClause ~ ";" ^^ { case ((arg~br)~throws)~";" => MethodDeclarator(arg, throws, None) })
+  def methodDeclaratorRest = positioned(formalParameterList ~ rep(braces) ~ throwsClause ~ (methodBody | ";") ^^ { case ((arg~br)~throws)~body => MethodDeclarator(arg, throws, body) })
+  def voidMethodDeclaratorRest = positioned(formalParameterList ~ throwsClause ~ (methodBody | ";") ^^ { case (arg~throws)~body => MethodDeclarator(arg, throws, body) })
+  def interfaceMethodDeclaratorRest = positioned(formalParameterList ~ rep(braces) ~ throwsClause ~ ";" ^^ { case ((arg~br)~throws)~";" => MethodDeclarator(arg, throws, None) })
   def interfaceGenericMethodDecl = typeParameters ~ (jtype | "void") ~ id ~ interfaceMethodDeclaratorRest
-  def voidInterfaceMethodDeclaratorRest = lengthPositioned(formalParameterList ~ rep(braces) ~ throwsClause <~ ";" ^^ { case (arg~br)~throws => MethodDeclarator(arg, throws, None) })
+  def voidInterfaceMethodDeclaratorRest = positioned(formalParameterList ~ rep(braces) ~ throwsClause <~ ";" ^^ { case (arg~br)~throws => MethodDeclarator(arg, throws, None) })
 
   def throwsClause = optl("throws" ~> qualifiedIdList) ^^ { x => x.map(Throws) }
 
   // p596
-  def constructorDeclaratorRest = lengthPositioned(formalParameterList ~ throwsClause ~ methodBody ^^ MethodDeclarator)
+  def constructorDeclaratorRest = positioned(formalParameterList ~ throwsClause ~ methodBody ^^ MethodDeclarator)
   def methodBody = block
 
   // option parser that results in boolean
