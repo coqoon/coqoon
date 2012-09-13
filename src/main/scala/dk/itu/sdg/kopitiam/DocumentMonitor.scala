@@ -154,7 +154,17 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         proj.coqSource match {
           case Some(d) => Console.println("found coq buffer of same project!")
           case None => Console.println("no coq buffer yet")
-          //CoqJavaDocumentProvider.updateCoqCode(coq, java, docstring.substring(0, docstring.indexOf(".java")))
+        }
+        val content = doc.get
+        val off = event.getOffset - event.getLength
+        val p1 = content.lastIndexOf("<%", off)
+        val p2 = content.lastIndexOf("%>", off)
+        if (p1 > p2) {
+          val p3 = content.indexOf("%>", off)
+          val p4 = content.indexOf("<%", off)
+          if (p4 > p3 || p4 == -1) {
+            Console.println("inside proof script!, now: " + content.drop(p1).substring(0, p3 - p1 + 2))
+          }
         }
         proj.javaNewerThanSource = true
         //find out whether we modified inside <% or program code!
