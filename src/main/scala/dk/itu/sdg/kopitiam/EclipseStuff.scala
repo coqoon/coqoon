@@ -437,8 +437,33 @@ object EclipseBoilerPlate {
     sel.getOffset
   }
 
+  import org.eclipse.ui.{IFileEditorInput, PlatformUI}
+  import org.eclipse.core.resources.IResource
   def getProjectDir () : String = {
-    DocumentState.resource.getProject.getLocation.toOSString
+    val editor =
+      if (DocumentState.activeEditor != null)
+        DocumentState.activeEditor
+      else if (JavaPosition.editor != null)
+        JavaPosition.editor
+      else {
+        Console.println("no active editor")
+        null
+      }
+    if (editor != null) {
+      val input = editor.getEditorInput
+      val res : Option[IResource] =
+        if (input.isInstanceOf[IFileEditorInput])
+          Some(input.asInstanceOf[IFileEditorInput].getFile)
+        else
+          None
+      res match {
+        case Some(r) => r.getProject.getLocation.toOSString
+        case None =>
+          Console.println("shouldn't happen - trying to get ProjectDir from " + input + ", which is not an IFileEditorInput")
+          ""
+      }
+    } else
+      ""
   }
 
   import org.eclipse.swt.widgets.Display
@@ -454,40 +479,48 @@ object EclipseBoilerPlate {
   import org.eclipse.core.resources.{IMarker, IResource}
 
   def mark (text : String, severity : Int = IMarker.SEVERITY_ERROR, advance : Boolean = false, off : Int = 0, len : Int = 0) : Unit = {
-    val file = DocumentState.resource
-    var spos = if (advance) DocumentState.sendlen + DocumentState.position + 1 else DocumentState.position + 1
-    val con = DocumentState.content
-    while ((con(spos) == '\n' || con(spos) == ' ' || con(spos) == '\t') && spos < con.length)
-      spos += 1
-    spos += off
-    val epos = if (advance)
-                 spos + 1
-               else if (len > 0)
-                 spos + len
-               else
-                 DocumentState.position + DocumentState.oldsendlen - 1
-    val marker = file.createMarker(IMarker.PROBLEM)
-    marker.setAttribute(IMarker.MESSAGE, text)
-    marker.setAttribute(IMarker.LOCATION, file.getName)
-    val commentoff = CoqTop.computeCommentOffset(con.drop(DocumentState.position), spos - DocumentState.position)
-    marker.setAttribute(IMarker.CHAR_START, spos + commentoff)
-    marker.setAttribute(IMarker.CHAR_END, epos + commentoff) //for tha whitespace
-    marker.setAttribute(IMarker.SEVERITY, severity)
-    marker.setAttribute(IMarker.TRANSIENT, true)
+    if (DocumentState.activeEditor != null) {
+      val file = DocumentState.resource
+      var spos = if (advance) DocumentState.sendlen + DocumentState.position + 1 else DocumentState.position + 1
+      val con = DocumentState.content
+      while ((con(spos) == '\n' || con(spos) == ' ' || con(spos) == '\t') && spos < con.length)
+        spos += 1
+      spos += off
+      val epos =
+        if (advance)
+          spos + 1
+        else if (len > 0)
+          spos + len
+        else
+          DocumentState.position + DocumentState.oldsendlen - 1
+      val marker = file.createMarker(IMarker.PROBLEM)
+      marker.setAttribute(IMarker.MESSAGE, text)
+      marker.setAttribute(IMarker.LOCATION, file.getName)
+      val commentoff = CoqTop.computeCommentOffset(con.drop(DocumentState.position), spos - DocumentState.position)
+      marker.setAttribute(IMarker.CHAR_START, spos + commentoff)
+      marker.setAttribute(IMarker.CHAR_END, epos + commentoff) //for tha whitespace
+      marker.setAttribute(IMarker.SEVERITY, severity)
+      marker.setAttribute(IMarker.TRANSIENT, true)
+    }
   }
 
   def unmarkReally () : Unit = {
-    DocumentState.resource.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
+    if (DocumentState.activeEditor != null)
+      DocumentState.resource.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
   }
 
   def unmark () : Unit = {
-    val marks = DocumentState.resource.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
-    marks.foreach(x => if (x.getAttribute(IMarker.SEVERITY, 0) == IMarker.SEVERITY_ERROR) x.delete)
+    if (DocumentState.activeEditor != null) {
+      val marks = DocumentState.resource.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
+      marks.foreach(x => if (x.getAttribute(IMarker.SEVERITY, 0) == IMarker.SEVERITY_ERROR) x.delete)
+    }
   }
 
   def maybeunmark (until : Int) : Unit = {
-    val marks = DocumentState.resource.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
-    marks.foreach(x => if (x.getAttribute(IMarker.CHAR_START, 0) < until && x.getAttribute(IMarker.SEVERITY, 0) == IMarker.SEVERITY_ERROR) x.delete)
+    if (DocumentState.activeEditor != null) {
+      val marks = DocumentState.resource.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
+      marks.foreach(x => if (x.getAttribute(IMarker.CHAR_START, 0) < until && x.getAttribute(IMarker.SEVERITY, 0) == IMarker.SEVERITY_ERROR) x.delete)
+    }
   }
 }
 
@@ -541,11 +574,17 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     } else null
   }
 
+  var _content : Option[String] = None
+
   def content () : String = {
-    if (activeEditor != null)
-      activeDocument.get
-    else
-      "  " //such that ctrl-n works initially...
+    _content match {
+      case None =>
+        if (activeEditor != null)
+          _content = Some(activeDocument.get)
+        _content.getOrElse("  ") //not happy with this hack
+      case Some(x) =>
+        x
+    }
   }
 
   import scala.collection.mutable.HashMap
@@ -568,25 +607,28 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   var position_ : Int = 0
   def position : Int = position_
   def position_= (x : Int) {
-    //Console.println("new pos is " + x + " (old was " + position_ + ")");
-    if (coqmarker == null) {
-      val file = resource
-      coqmarker = file.createMarker(IMarker.BOOKMARK)
-      coqmarker.setAttribute(IMarker.MESSAGE, "coq position")
-      coqmarker.setAttribute(IMarker.LOCATION, file.getName)
-      coqmarker.setAttribute(IMarker.TRANSIENT, true)
-      coqmarker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO)
-    }
-    try {
-      coqmarker.setAttribute(IMarker.CHAR_START, x)
-      coqmarker.setAttribute(IMarker.CHAR_END, x - 1) //at dot, not whitespace
+    if (activeEditor != null) {
+      //Console.println("new pos is " + x + " (old was " + position_ + ")");
+      if (coqmarker == null) {
+        val file = resource
+        coqmarker = file.createMarker(IMarker.BOOKMARK)
+        coqmarker.setAttribute(IMarker.MESSAGE, "coq position")
+        coqmarker.setAttribute(IMarker.LOCATION, file.getName)
+        coqmarker.setAttribute(IMarker.TRANSIENT, true)
+        coqmarker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO)
+      }
+      try {
+        coqmarker.setAttribute(IMarker.CHAR_START, x)
+        coqmarker.setAttribute(IMarker.CHAR_END, x - 1) //at dot, not whitespace
+        position_ = x
+      } catch {
+        case e : CoreException =>
+          Console.println("caught CoreException")
+          invalidateCoqMarker
+          position = x
+      }
+    } else
       position_ = x
-    } catch {
-      case e : CoreException =>
-        Console.println("caught CoreException")
-        invalidateCoqMarker
-        position = x
-    }
     //Console.println("position updated to " + x)
   }
 
@@ -623,15 +665,17 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       if (realundo) {
         val start = scala.math.max(position - sendlen, 0)
         realundo = false
-        activeEditor.addAnnotations(start, 0)
-        activeEditor.invalidate
-        if (reveal)
-          Display.getDefault.syncExec(
-            new Runnable() {
-              def run() = {
-                activeEditor.selectAndReveal(start, 0)
-              }
-            })
+        if (activeEditor != null) {
+          activeEditor.addAnnotations(start, 0)
+          activeEditor.invalidate
+          if (reveal)
+            Display.getDefault.syncExec(
+              new Runnable() {
+                def run() = {
+                  activeEditor.selectAndReveal(start, 0)
+                }
+              })
+        }
         if (autoreveal) {
           reveal = true
           autoreveal = false
@@ -642,8 +686,10 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       } else { //just an error
         //Console.println("undo: barf")
         //kill off process colored thingies
-        activeEditor.addAnnotations(position, 0)
-        activeEditor.invalidate
+        if (activeEditor != null) {
+          activeEditor.addAnnotations(position, 0)
+          activeEditor.invalidate
+        }
         oldsendlen = sendlen
         sendlen = 0
         JavaPosition.reAnnotate(true, true)
@@ -652,13 +698,16 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   }
 
   def process () : Unit = {
-    activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
+    if (activeEditor != null)
+      activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
     JavaPosition.reAnnotate(true, false)
   }
 
   def processUndo () : Unit = {
-    activeEditor.addAnnotations(position, 0)
-    activeEditor.invalidate
+    if (activeEditor != null) {
+      activeEditor.addAnnotations(position, 0)
+      activeEditor.invalidate
+    }
     if (position == 0)
       JavaPosition.retract
     else
@@ -674,14 +723,16 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       JavaPosition.reAnnotate(false, false)
       sendlen = 0
       //XXX: that's wrong! sendlen is 0!!!!
-      activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
-      if (reveal)
-        Display.getDefault.syncExec(
-          new Runnable() {
-            def run() = {
-              activeEditor.selectAndReveal(position, 0)
-            }
-          })
+      if (activeEditor != null) {
+        activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
+        if (reveal)
+          Display.getDefault.syncExec(
+            new Runnable() {
+              def run() = {
+                activeEditor.selectAndReveal(position, 0)
+              }
+            })
+      }
     }
   }
 }

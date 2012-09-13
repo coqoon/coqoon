@@ -170,7 +170,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         Console.println("oh noez, someone edited the generated code")
     }
     if (DocumentState.activeDocument == doc) {
-      val txt = DocumentState.content
+      DocumentState._content = None
       val off = event.getOffset
       if (off < DocumentState.position) {
         //retract to before

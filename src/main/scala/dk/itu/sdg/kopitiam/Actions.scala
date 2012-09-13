@@ -66,9 +66,7 @@ abstract class KCoqAction extends KAction {
     ActionDisabler.disableAll
     val coqstarted = CoqTop.isStarted
     var acted = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.getActiveEditor
-    if (! acted.isInstanceOf[CoqEditor])
-      acted = DocumentState.activeEditor
-    if (DocumentState.activeEditor != acted) {
+    if (DocumentState.activeEditor != acted && acted.isInstanceOf[CoqEditor]) {
       if (DocumentState.resource != null)
         EclipseBoilerPlate.unmarkReally
       DocumentState.resetState
@@ -200,6 +198,7 @@ object CoqRetractAction extends CoqRetractAction { }
 
 class CoqStepAction extends KCoqAction {
   override def doit () : Unit = {
+    Console.println("CoqStepAction.doit called, ready? " + DocumentState.readyForInput)
     if (DocumentState.readyForInput) {
       val con = DocumentState.content
       val content = con.drop(DocumentState.position)
@@ -241,9 +240,14 @@ class CoqStepUntilAction extends KCoqAction {
   import org.eclipse.swt.widgets.Display
 
   override def doit () : Unit = {
-    val togo = CoqTop.findNextCommand(DocumentState.content.drop(EclipseBoilerPlate.getCaretPosition)) + EclipseBoilerPlate.getCaretPosition
+    val cursor = EclipseBoilerPlate.getCaretPosition
+    reallydoit(cursor)
+  }
+
+  def reallydoit (cursor : Int) : Unit = {
+    val togo = CoqTop.findNextCommand(DocumentState.content.drop(cursor)) + cursor
+    Console.println("reallydoit: togo is " + togo + ", cursor is " + cursor + ", docpos is " + DocumentState.position)
     //doesn't work reliable when inside a comment
-    Console.println("togo is " + togo + ", curpos is " + EclipseBoilerPlate.getCaretPosition + ", docpos is " + DocumentState.position)
     if (DocumentState.position == togo) { } else
     if (DocumentState.position < togo) {
       DocumentState.until = CoqTop.findPreviousCommand(DocumentState.content, togo - 2)
@@ -261,7 +265,7 @@ class CoqStepUntilAction extends KCoqAction {
           new Runnable() {
             def run() = CoqStepUntilAction.doit
           })))
-      CoqUndoAction.doitReally(EclipseBoilerPlate.getCaretPosition)
+      CoqUndoAction.doitReally(cursor)
     }
   }
   override def start () : Boolean = false
@@ -323,14 +327,12 @@ class ProveMethodAction extends KEditorAction {
       val fei = editor.getEditorInput
       if (fei.isInstanceOf[IFileEditorInput]) {
         val file = fei.asInstanceOf[IFileEditorInput].getFile
-        val coqfile = TranslateAction.translate(file)
-        if (coqfile != null) {
-          val fei = new FileEditorInput(coqfile)
-          val wbp = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage
-          wbp.openEditor(fei, "kopitiam.CoqEditor")
-          Console.println("opened editor!!!")
-          CoqStepAction.doitH()
+        val coqstring = TranslateAction.translate(file)
+        coqstring match {
+          case None => Console.println("do not proceed")
+          case Some(x) => DocumentState._content = coqstring
         }
+        CoqStepAction.doitH()
       }
     }
     // c: find method name in java buffer
@@ -344,20 +346,16 @@ class ProveMethodAction extends KEditorAction {
     val arr = marr(0).split(" ")
     val nam = arr(arr.length - 1)
     // d: find lemma in .java.v buffer
-    val coqdoc = proj.coqSource.getOrElse(null)
-    if (coqdoc == null)
-      Console.println("coqsource turned out to be null. how could that happen?")
-    val content = coqdoc.get
-    val off = content.indexOf("valid_" + nam)
+    val cont = DocumentState.content
+    val off = cont.indexOf("valid_" + nam)
     if (off == -1)
       Console.println("couldn't find validity lemma for " + nam + " - maybe not a method?")
-    val realoff = content.indexOf("unfold_spec.", off) + 13
+    val realoff = cont.indexOf("unfold_spec.", off) + 13
     Console.println("going till " + realoff + " in coq buffer")
     // e: set name in JavaPosition
     JavaPosition.name = nam
     // f: step until method lemma
-    DocumentState.activeEditor.selectAndReveal(realoff, 0)
-    CoqStepUntilAction.doit
+    CoqStepUntilAction.reallydoit(realoff)
     // g: set JavaPosition active
     CoqStepNotifier.later = Some(() => {
       JavaPosition.active = true
@@ -393,7 +391,7 @@ class TranslateAction extends KAction {
     null
   }
 
-  def translate (file : IFile) : IFile = {
+  def translate (file : IFile) : Option[String] = {
     val nam = file.getName
     if (nam.endsWith(".java")) {
       val trfi = file.getProject.getFile(nam + ".v") //TODO: find a suitable location!
@@ -417,10 +415,10 @@ class TranslateAction extends KAction {
       trfi.setContents(new ByteArrayInputStream(con.getBytes("UTF-8")), IResource.NONE, null)
       val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
       off.map(x => proj.javaOffsets = proj.javaOffsets + (x._1 -> x._2))
-      trfi
+      Some(con)
     } else {
       Console.println("wasn't a java file")
-      null
+      None
     }
   }
 
