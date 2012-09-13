@@ -414,7 +414,11 @@ class TranslateAction extends KAction {
       val (con, off) = JavaTC.parse(is, mod, nam.substring(0, nam.indexOf(".java")))
       trfi.setContents(new ByteArrayInputStream(con.getBytes("UTF-8")), IResource.NONE, null)
       val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
-      off.map(x => proj.javaOffsets = proj.javaOffsets + (x._1 -> x._2))
+      proj.proofOffset = off._1
+      off._2.map(x => {
+        proj.javaOffsets = proj.javaOffsets + (x._1._1 -> x._1._2)
+        proj.coqOffsets = proj.coqOffsets + (x._1._1 -> x._2)
+      })
       Some(con)
     } else {
       Console.println("wasn't a java file")

@@ -163,6 +163,26 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
           val p3 = content.indexOf("%>", off)
           val p4 = content.indexOf("<%", off)
           if (p4 > p3 || p4 == -1) {
+            val l = doc.getLineOfOffset(p1) + 1
+            for (x <- proj.javaOffsets.keys) {
+              var i : Int = 0
+              for (p <- proj.javaOffsets(x)._2) {
+                Console.println("checking " + l + " against " + p.line + " in " + x)
+                i = i + 1
+                if (l == p.line) {
+                  Console.println("found something! excited! " + x + " i is " + i)
+                  val coqp = proj.coqOffsets(x)._2(i)
+                  val coqoff = coqp._1 + proj.proofOffset
+                  Console.println("offset into coq buffer: " + coqoff + " con: " + DocumentState.content.drop(coqoff).take(coqp._2))
+                  //what we want is:
+                  // DocumentState._content = Some(DocumentState.content.take(coqoff) + content.drop(p1 + 2).substring(0, p3 - p1 + 2) + DocumentState.content.drop(coqoff + event.getLength)
+                  //update the coqOffsets table
+                  //update the javaOffsets table (only if newline)
+                  //if there's a file or editor, rewrite that as well!
+                  //we might need to backtrace in coq + java!
+                }
+              }
+            }
             Console.println("inside proof script!, now: " + content.drop(p1).substring(0, p3 - p1 + 2))
           }
         }

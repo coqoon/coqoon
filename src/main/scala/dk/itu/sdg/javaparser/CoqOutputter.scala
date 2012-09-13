@@ -168,11 +168,17 @@ trait CoqOutputter extends JavaToSimpleJava {
         Some("(cwhile " + printE(test) + " " + optPrintBody(body.flatMap(x => printStatement(x, locals))) + ")")
       case y@Loopinvariant(x) =>
         lengths ::= y.pos
-        proofoutput ::= "forward (" + x + ")"; None
+        val con = "forward (" + x + ")"
+        coqlengths ::= (proofoutput.reduceLeft(_ + "\n" + _).length, con.length)
+        proofoutput ::= con; None
       case Frame(x) =>
-        proofoutput ::= "(" + x + "). "; None
+        val con = "(" + x + "). "
+        val fstl = coqlengths.head
+        coqlengths = (fstl._1, fstl._2 + con.length) :: coqlengths.tail
+        proofoutput ::= con; None
       case x : Specification =>
         lengths ::= x.pos
+        coqlengths ::= (proofoutput.reduceLeft(_ + "\n" + _).length, x.data.length)
         proofoutput ::= x.data; None
     }
   }
@@ -207,7 +213,7 @@ trait CoqOutputter extends JavaToSimpleJava {
     (defi, res)
   }
 
-  def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[Pair[String,String],Pair[String,Pair[Position,List[Position]]]]] = {
+  def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[Pair[String,String],Pair[Pair[String,Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]]]] = {
     var precon : Option[Precondition] = None
     var postcon : Option[Postcondition] = None
     body.flatMap {
@@ -240,22 +246,27 @@ trait CoqOutputter extends JavaToSimpleJava {
         proofoutput ::= "Lemma valid_" + name + "_" + clazz + ": |= " + name + """_spec.
 Proof.
   unfold """ + name + "_spec" + "; unfold_spec."
+        val fst = proofoutput.reduceLeft(_ + "\n" + _).length
         val (bodyp, returnvar) = getBody(body, bodyref, lvars)
         proofoutput ::= "Qed."
         val ls = lengths.reverse
+        val cl = coqlengths.reverse
         lengths = List[Position]()
+        coqlengths = List[Pair[Int,Int]]()
         outp ::= bodyp
         outp ::= "Definition " + name + "M := Build_Method (" + printArgList(t) + ") " + bodyref + " " + returnvar + "."
-        Some((("\"" + name + "\"", name + "M"), (name, (x.pos, ls))))
+        Some((("\"" + name + "\"", name + "M"), ((name, (x.pos, ls)), (fst, cl))))
       case x@SJConstructorDefinition(modifiers, typ, params, body, lvars) =>
         val args = getArgs(params)
         val bodi = body.flatMap(x => printStatement(x, lvars))
         val bodip = printBody("(calloc \"this\" \"" + typ + "\")" :: bodi)
         val nam = typ + "_new"
         val ls = lengths.reverse
+        val cl = coqlengths.reverse
         lengths = List[Position]()
+        coqlengths = List[Pair[Int,Int]]()
         outp ::= "Definition " + nam + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\")."
-        Some((("\"new\"" , nam), (nam, (x.pos, ls))))
+        Some((("\"new\"" , nam), ((nam, (x.pos, ls)), (0, cl))))
       case x : Precondition => 
         precon match {
           case None => precon = Some(x); None
@@ -277,6 +288,7 @@ Proof.
   private var specifications : List[String] = null
   private var proofs : List[String] = null
   private var lengths : List[Position] = null
+  private var coqlengths : List[Pair[Int,Int]] = null
 
   private val unique_names : List[String] = List("Opaque unique_method_names.", "Definition unique_method_names := option_proof (search_unique_names Prog).")
 
@@ -287,14 +299,15 @@ Open Scope string_scope.
 Open Scope hasn_scope.
 """
 
-  def coqoutput (xs : List[SJDefinition], model : String, complete : Boolean, name : String) : Pair[List[String], List[Pair[String, Pair[Position, List[Position]]]]] = {
+  def coqoutput (xs : List[SJDefinition], model : String, complete : Boolean, name : String) : Pair[List[String], Pair[Int, List[Pair[Pair[String, Pair[Position, List[Position]]],Pair[Int,List[Pair[Int,Int]]]]]]] = {
     outp = List[String]()
     specoutput = List[String]()
     proofoutput = List[String]()
     specifications = List[String]()
     proofs = List[String]()
     lengths = List[Position]()
-    var offs = List[Pair[String, Pair[Position,List[Position]]]]()
+    coqlengths = List[Pair[Int,Int]]()
+    var offs = List[Pair[Pair[String, Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]]]()
     var cs : List[String] = List[String]()
     if (complete)
       outp ::= prelude
@@ -392,8 +405,8 @@ Proof.
       outp = ClassTable.getCoq("TOP") ++ outp
     } */
     //now, check whether we have a .v file around with the model which we can source...
-    
-    (List(model) ++ List("") ++ outp.reverse ++ List("") ++ specoutput.reverse ++ proofoutput.reverse ++ List(""), offs)
+    val prefix = List(model) ++ List("") ++ outp.reverse ++ List("") ++ specoutput.reverse
+    (prefix ++ proofoutput.reverse ++ List(""), (prefix.reduceLeft(_ + "\n" + _).length + 2, offs))
   }
 
   def printArgList (l : List[String]) : String = {

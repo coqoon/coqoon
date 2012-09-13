@@ -103,6 +103,10 @@ class CoqJavaProject (basename : String) {
   //def -> offset + [length1, .., lengthn]
   var javaOffsets : HashMap[String, Pair[Position, List[Position]]] =
     new HashMap[String, Pair[Position, List[Position]]]()
+  var coqOffsets : HashMap[String, Pair[Int, List[Pair[Int,Int]]]] =
+    new HashMap[String, Pair[Int, List[Pair[Int,Int]]]]()
+  var proofOffset : Int = 0
+
 
   def gotClosed (doc : IDocument) : Unit = {
     javaSource match {

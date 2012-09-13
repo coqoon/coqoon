@@ -41,7 +41,7 @@ case class JSpecExpression (e : String) extends JExpression
 trait JavaAST extends JavaParser { // with CoqOutputter {
   import scala.util.parsing.input._
 
-  def parse(r: Reader[Char], model : String, name : String) : Pair[String,List[Pair[String, Pair[Position,List[Position]]]]] = {
+  def parse(r: Reader[Char], model : String, name : String) : Pair[String,Pair[Int, List[Pair[Pair[String, Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]]]]] = {
     FinishAST.doit(parseH(r), model, name)
   }
 
