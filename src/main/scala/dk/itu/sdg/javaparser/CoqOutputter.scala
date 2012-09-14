@@ -166,15 +166,10 @@ trait CoqOutputter extends JavaToSimpleJava {
         Some("(cif " + te + " " + tr + " " + fa + ")")
       case SJWhile(test, body) =>
         Some("(cwhile " + printE(test) + " " + optPrintBody(body.flatMap(x => printStatement(x, locals))) + ")")
-      case y@Loopinvariant(x) =>
+      case y@Loopinvariant(i, f) =>
         lengths ::= y.pos
-        val con = "forward (" + x + ")"
+        val con = "forward (" + i + ") (" + f + ")."
         coqlengths ::= (proofoutput.reduceLeft(_ + "\n" + _).length, con.length)
-        proofoutput ::= con; None
-      case Frame(x) =>
-        val con = "(" + x + "). "
-        val fstl = coqlengths.head
-        coqlengths = (fstl._1, fstl._2 + con.length) :: coqlengths.tail
         proofoutput ::= con; None
       case x : Specification =>
         lengths ::= x.pos
