@@ -14,7 +14,7 @@ object WarningOutputter extends CoqCallback {
   var readyfortest : Boolean = false
   var lasttokens : Option[CoqShellTokens] = None
   var warnings : List[String] = List()
-  var errors : List[List[String]] = List()
+  var errors : List[String] = List()
 
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
@@ -23,7 +23,7 @@ object WarningOutputter extends CoqCallback {
         if (gl == 5 && loc == 0)
           readyfortest = true
       case CoqWarning(x) => warnings ::= x
-      case CoqError(x) => errors ::= x
+      case CoqError(x, s, l) => errors ::= x
       case y => Console.println("received " + y)
     }
   }
@@ -66,7 +66,7 @@ trait CoqSpec extends ASTSpec with BeforeAndAfterAll with BeforeAndAfterEach {
     CoqTop.writeToCoq("Backtrack 5 0 " + btlen + ".")
   }
 
-  def runCoq (classfile : String, name : String) : Option[(List[String], List[List[String]])] = {
+  def runCoq (classfile : String, name : String) : Option[(List[String], List[String])] = {
     //wait for coq to be ready!
     if (!runTest)
       return None

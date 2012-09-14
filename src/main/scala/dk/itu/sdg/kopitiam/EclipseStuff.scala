@@ -280,6 +280,16 @@ object JavaPosition extends CoqCallback {
   var processed : Option[Annotation] = None
   var processing : Option[Annotation] = None
 
+  import org.eclipse.jface.text.IDocument
+  def getDoc () : IDocument = {
+    val prov = editor.getDocumentProvider
+    prov.getDocument(editor.getEditorInput)
+  }
+
+  def getProj () : CoqJavaProject = {
+    EclipseTables.DocToProject(getDoc)
+  }
+
   import org.eclipse.ui.IFileEditorInput
   import org.eclipse.core.resources.IMarker
   override def dispatch (x : CoqResponse) : Unit = {
@@ -287,9 +297,7 @@ object JavaPosition extends CoqCallback {
       case CoqProofCompleted() =>
         if (editor != null && active) {
           Console.println("got proof completed")
-          val prov = editor.getDocumentProvider
-          val doc = prov.getDocument(editor.getEditorInput)
-          val proj = EclipseTables.DocToProject(doc)
+          val proj = getProj
           if (proj.javaOffsets(name)._2.length == index) {
             //send Qed over the wire
             while (! DocumentState.readyForInput) { } //XXX: bad busy loop
@@ -299,29 +307,49 @@ object JavaPosition extends CoqCallback {
         }
       case CoqTheoremDefined(x) =>
         if (editor != null && x.startsWith("valid_" + name)) {
-          val file = editor.getEditorInput
-          if (file.isInstanceOf[IFileEditorInput]) {
-            val rfile = file.asInstanceOf[IFileEditorInput].getFile
-            val prov = editor.getDocumentProvider
-            val doc = prov.getDocument(editor.getEditorInput)
-            val proj = EclipseTables.DocToProject(doc)
-            val locs = proj.javaOffsets(name)
-            val spos = doc.getLineOffset(locs._1.line - 1)
-            val epos = doc.getLineOffset(locs._2(locs._2.length - 1).line + 2 - 1) - 1
-            val mark = rfile.createMarker(IMarker.PROBLEM) //XXX: custom!
-            mark.setAttribute(IMarker.MESSAGE, "Method proven")
-            mark.setAttribute(IMarker.LOCATION, rfile.getName)
-            mark.setAttribute(IMarker.CHAR_START, spos)
-            mark.setAttribute(IMarker.CHAR_END, epos)
-            mark.setAttribute(IMarker.TRANSIENT, true)
-//            mark.setAttribute(IMarker.SEVERITY, )
-          } else
-            Console.println("no fileeditorinput " + file)
+          val doc = getDoc
+          val locs = getProj.javaOffsets(name)
+          val spos = doc.getLineOffset(locs._1.line - 1)
+          val epos = doc.getLineOffset(locs._2(locs._2.length - 1).line + 2 - 1) - 1
+          mark("Method proven", spos, epos - spos, IMarker.PROBLEM, IMarker.SEVERITY_INFO) //XXX: custom!
           active = true //to force the retract
           retract
         }
+      case CoqError(m, s, l) =>
+        if (editor != null && active) {
+          val doc = getDoc
+          val javapos = getProj.javaOffsets(name)._2(index)
+          val soff = doc.getLineOffset(javapos.line - 1)
+          val star = s + soff + javapos.column + 2 //<%
+          mark(m, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+        }
       case x =>
     }
+  }
+
+  var markers : List[IMarker] = List[IMarker]()
+
+  def unmark () : Unit = {
+    if (editor != null && active) {
+      markers.foreach(_.delete)
+      markers = List[IMarker]()
+    }
+  }
+
+  def mark (message : String, spos : Int, len : Int, typ : String, severity : Int) : Unit = {
+    val file = editor.getEditorInput
+    if (file.isInstanceOf[IFileEditorInput]) {
+      val rfile = file.asInstanceOf[IFileEditorInput].getFile
+      val mark = rfile.createMarker(typ)
+      mark.setAttribute(IMarker.MESSAGE, message)
+      mark.setAttribute(IMarker.LOCATION, rfile.getName)
+      mark.setAttribute(IMarker.CHAR_START, spos)
+      mark.setAttribute(IMarker.CHAR_END, spos + len)
+      mark.setAttribute(IMarker.TRANSIENT, true)
+      mark.setAttribute(IMarker.SEVERITY, severity)
+      markers ::= mark
+    } else
+      Console.println("no fileeditorinput " + file)
   }
 
   import org.eclipse.swt.widgets.Display

@@ -162,6 +162,7 @@ class CoqUndoAction extends KCoqAction {
       val ctxdrop = curshell.context.length - prevshell.context.length
       DocumentState.realundo = true
       EclipseBoilerPlate.unmarkReally
+      JavaPosition.unmark
       DocumentState.sendlen = DocumentState.position - prevs(i)
       prevs.take(i).foreach(DocumentState.positionToShell.remove(_))
       assert(DocumentState.positionToShell.contains(0) == true)
@@ -182,6 +183,7 @@ class CoqRetractAction extends KCoqAction {
     val shell = CoqState.getShell
     DocumentState.processUndo
     EclipseBoilerPlate.unmarkReally
+    JavaPosition.unmark
     val initial =
       if (DocumentState.positionToShell.contains(0))
         DocumentState.positionToShell(0).globalStep
@@ -279,6 +281,7 @@ class RestartCoqAction extends KAction {
     DocumentState.resetState
     DocumentState.processUndo
     EclipseBoilerPlate.unmarkReally
+    JavaPosition.unmark
     PrintActor.deregister(CoqOutputDispatcher)
     CoqStartUp.start
   }
@@ -502,7 +505,7 @@ object CoqStepNotifier extends CoqCallback {
 
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
-      case CoqError(m) => err = true
+      case CoqError(m, s, l) => err = true
       case CoqUserInterrupt() => err = true
       case CoqShellReady(monoton, tokens) =>
         if (err)
@@ -554,8 +557,10 @@ object CoqOutputDispatcher extends CoqCallback {
     x match {
       case CoqShellReady(monoton, token) =>
         //CoqProgressMonitor.actor.tell("FINISHED")
-        if (monoton)
+        if (monoton) {
           EclipseBoilerPlate.unmark
+          JavaPosition.unmark
+        }
         ActionDisabler.enableMaybe
         if (!monoton && token.context.length == 0 && goalviewer != null)
           goalviewer.clear
@@ -587,29 +592,12 @@ object CoqOutputDispatcher extends CoqCallback {
       case CoqProofCompleted() =>
         if (goalviewer != null)
           goalviewer.writeGoal("Proof completed", List[String]())
-      case CoqError(msg) =>
-        //TODO: what if Error not found, should come up with a sensible message anyways!
-        val mess = msg.indexWhere(_.startsWith("Error"))
-        val p = if (mess == -1) {
-                  //"Syntax error" for example!
-                  val err = msg.indexWhere(_.contains("error"))
-                  if (err == -1)
-                    msg.drop(msg.indexWhere(_.contains("^^")))
-                  else
-                    msg.drop(err)
-                } else
-                  msg.drop(mess)
-        val ps = p.reduceLeft(_ + "\n" + _)
-        if (msg.length > 0 && msg(0).contains("characters")) {
-          //msg(0) is: Toplevel input, characters xx-yy
-          val ff = msg(0).drop(msg(0).indexWhere(_ == 's') + 2).trim
-          val split = ff.indexWhere(_ == '-')
-          val pos0 = ff.substring(0, split).toInt
-          val pos1 = ff.substring(split + 1, ff.length - 1).toInt
-          EclipseBoilerPlate.mark(ps, IMarker.SEVERITY_ERROR, false, pos0, pos1 - pos0)
-        } else
-          EclipseBoilerPlate.mark(ps)
-        EclipseConsole.out.println("Error: " + msg.reduceLeft(_ + "\n" + _))
+      case CoqError(msg, start, len) =>
+        if (len != 0)
+          EclipseBoilerPlate.mark(msg, IMarker.SEVERITY_ERROR, false, start, len)
+        else
+          EclipseBoilerPlate.mark(msg)
+        EclipseConsole.out.println("Error: " + msg)
       case CoqWarning(msg) =>
         EclipseBoilerPlate.mark(msg, IMarker.SEVERITY_WARNING, true)
         EclipseConsole.out.println("Warning: " + msg)

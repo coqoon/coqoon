@@ -188,7 +188,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                   Console.println("new coq buffer: " + newc.drop(coqoff - 10).take(coqp._2 + 20))
                   offc = (coqp._1, ncon.length - coqp._2)
                   DocumentState._content = Some(newc)
-                  //update the coqOffsets table
                   //update the javaOffsets table (only if newline)
                   //if there's a file or editor, rewrite that as well!
                   // -> maybe do that on ctrl + s in the java buffer?!?

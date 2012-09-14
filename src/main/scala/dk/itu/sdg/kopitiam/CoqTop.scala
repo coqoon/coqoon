@@ -360,7 +360,7 @@ object Outputter extends CoqCallback {
       case CoqProofCompleted() =>
       case CoqTheoremDefined(n) =>
       case CoqVariablesAssumed(n) =>
-      case CoqError(m) => Console.println("error " + m)
+      case CoqError(m, s, l) => Console.println("error " + m)
       case x => //Console.println("received " + x)
     }
   }
