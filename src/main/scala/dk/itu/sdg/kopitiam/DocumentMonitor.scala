@@ -164,26 +164,62 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
           val p4 = content.indexOf("<%", off)
           if (p4 > p3 || p4 == -1) {
             val l = doc.getLineOfOffset(p1) + 1
+            var offc : Pair[Int, Int] = (0, 0)
             for (x <- proj.javaOffsets.keys) {
               var i : Int = 0
               for (p <- proj.javaOffsets(x)._2) {
                 Console.println("checking " + l + " against " + p.line + " in " + x)
-                i = i + 1
                 if (l == p.line) {
                   Console.println("found something! excited! " + x + " i is " + i)
                   val coqp = proj.coqOffsets(x)._2(i)
                   val coqoff = coqp._1 + proj.proofOffset
                   Console.println("offset into coq buffer: " + coqoff + " con: " + DocumentState.content.drop(coqoff).take(coqp._2))
-                  //what we want is:
-                  // DocumentState._content = Some(DocumentState.content.take(coqoff) + content.drop(p1 + 2).substring(0, p3 - p1 + 2) + DocumentState.content.drop(coqoff + event.getLength)
+                  val nncon = content.drop(p1 + 2).substring(0, p3 - p1 - 2).trim
+                  val ncon =
+                    if (nncon.startsWith("invariant")) {
+                      val vals = nncon.drop(10).trim.split("frame:")
+                      assert(vals.length == 2)
+                      "forward (" + vals(0).trim + ") (" + vals(1).trim + ")."
+                    } else
+                      nncon
+                  Console.println("new content: " + ncon)
+                  val oldc = DocumentState._content.getOrElse("")
+                  val newc = oldc.take(coqoff) + ncon + oldc.drop(coqoff + coqp._2)
+                  Console.println("new coq buffer: " + newc.drop(coqoff - 10).take(coqp._2 + 20))
+                  offc = (coqp._1, ncon.length - coqp._2)
+                  DocumentState._content = Some(newc)
                   //update the coqOffsets table
                   //update the javaOffsets table (only if newline)
                   //if there's a file or editor, rewrite that as well!
-                  //we might need to backtrace in coq + java!
+                  // -> maybe do that on ctrl + s in the java buffer?!?
+                  //we might need to backtrack in coq + java!
                 }
+                i = i + 1
               }
             }
-            Console.println("inside proof script!, now: " + content.drop(p1).substring(0, p3 - p1 + 2))
+            if (offc != (0, 0))
+              for (x <- proj.coqOffsets.keys) {
+                val n1 =
+                  if (proj.coqOffsets(x)._1 > offc._1) {
+                    Console.println("updated for " + x + ": from " + proj.coqOffsets(x)._1 + " to " + (proj.coqOffsets(x)._1 + offc._2))
+                    proj.coqOffsets(x)._1 + offc._2
+                  } else
+                    proj.coqOffsets(x)._1
+                val n2 = proj.coqOffsets(x)._2.map(p => {
+                  if (p._1 > offc._1) {
+                    val n = (p._1 + offc._2, p._2)
+                    Console.println("up: " + p + " -> " + n)
+                    n
+                  } else if (p._1 == offc._1) {
+                    val n = (p._1, p._2 + offc._2)
+                    Console.println("up: " + p + " -> " + n)
+                    n
+                  } else
+                    p
+                })
+                proj.coqOffsets = proj.coqOffsets + (x -> (n1, n2))
+              }
+            Console.println("inside proof script!, now: " + content.drop(p1 + 2).substring(0, p3 - p1 - 2).trim)
           }
         }
         proj.javaNewerThanSource = true
