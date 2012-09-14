@@ -321,12 +321,21 @@ class ProveMethodAction extends KEditorAction {
     val doc = prov.getDocument(edi.getEditorInput)
     val proj = EclipseTables.DocToProject(doc)
     // b: if outdated .java.v (or not there): translate and openEditor (and activate JavaEditor)
-    if (proj.modelNewerThanSource)
-      Console.println("ouch, need to retract and redo model!!!!")
-    if (proj.javaNewerThanSource)
-      Console.println("java changed in between.... need to retranslate")
-    if (proj.coqSource == None) {
-      Console.println("no coqSource for this project")
+    if (proj.modelNewerThanSource) {
+      Console.println("retracting and redoing model!!!!")
+      proj.coqModel match {
+        case None => Console.println("arrrrg, didn't expect that") //XXX: might happen is model modified, and then editor closed...
+        case Some(x) =>
+          val newm = x.get
+          val news = newm + "\n" + DocumentState._content.drop(proj.modelLength)
+          DocumentState._content = Some(news)
+          proj.modelLength = newm.length
+          //I should retract here! (in case JavaPosition is active and running..)
+      }
+      proj.modelNewerThanSource = false
+    }
+    if (proj.javaNewerThanSource || proj.coqSource == None) {
+      Console.println("java changed in between.... need to retranslate (or it was never translated)")
       val fei = editor.getEditorInput
       if (fei.isInstanceOf[IFileEditorInput]) {
         val file = fei.asInstanceOf[IFileEditorInput].getFile
@@ -337,6 +346,7 @@ class ProveMethodAction extends KEditorAction {
         }
         CoqStepAction.doitH()
       }
+      proj.javaNewerThanSource = false
     }
     // c: find method name in java buffer
     val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
@@ -413,7 +423,8 @@ class TranslateAction extends KAction {
       val (con, off) = JavaTC.parse(is, mod, nam.substring(0, nam.indexOf(".java")))
       trfi.setContents(new ByteArrayInputStream(con.getBytes("UTF-8")), IResource.NONE, null)
       val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
-      proj.proofOffset = off._1
+      proj.proofOffset = off._1._2
+      proj.modelLength = off._1._1
       off._2.map(x => {
         proj.javaOffsets = proj.javaOffsets + (x._1._1 -> x._1._2)
         proj.coqOffsets = proj.coqOffsets + (x._1._1 -> x._2)

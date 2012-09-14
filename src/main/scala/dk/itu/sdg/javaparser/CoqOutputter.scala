@@ -294,7 +294,7 @@ Open Scope string_scope.
 Open Scope hasn_scope.
 """
 
-  def coqoutput (xs : List[SJDefinition], model : String, complete : Boolean, name : String) : Pair[List[String], Pair[Int, List[Pair[Pair[String, Pair[Position, List[Position]]],Pair[Int,List[Pair[Int,Int]]]]]]] = {
+  def coqoutput (xs : List[SJDefinition], model : String, complete : Boolean, name : String) : Pair[List[String], Pair[Pair[Int, Int], List[Pair[Pair[String, Pair[Position, List[Position]]],Pair[Int,List[Pair[Int,Int]]]]]]] = {
     outp = List[String]()
     specoutput = List[String]()
     proofoutput = List[String]()
@@ -401,7 +401,7 @@ Proof.
     } */
     //now, check whether we have a .v file around with the model which we can source...
     val prefix = List(model) ++ List("") ++ outp.reverse ++ List("") ++ specoutput.reverse
-    (prefix ++ proofoutput.reverse ++ List(""), (prefix.reduceLeft(_ + "\n" + _).length + 2, offs))
+    (prefix ++ proofoutput.reverse ++ List(""), ((model.length, prefix.reduceLeft(_ + "\n" + _).length + 2), offs))
   }
 
   def printArgList (l : List[String]) : String = {

@@ -155,6 +155,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
           case Some(d) => Console.println("found coq buffer of same project!")
           case None => Console.println("no coq buffer yet")
         }
+        proj.javaNewerThanSource = true
         val content = doc.get
         val off = event.getOffset - event.getLength
         val p1 = content.lastIndexOf("<%", off)
@@ -218,11 +219,9 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                 })
                 proj.coqOffsets = proj.coqOffsets + (x -> (n1, n2))
               }
-            Console.println("inside proof script!, now: " + content.drop(p1 + 2).substring(0, p3 - p1 - 2).trim)
+            proj.javaNewerThanSource = false
           }
         }
-        proj.javaNewerThanSource = true
-        //find out whether we modified inside <% or program code!
       }
       if (proj.isCoqModel(doc)) {
         proj.coqSource match {
