@@ -349,16 +349,12 @@ class ProveMethodAction extends KEditorAction {
     val arr = marr(0).split(" ")
     val nam = arr(arr.length - 1)
     // d: find lemma in .java.v buffer
-    val cont = DocumentState.content
-    val off = cont.indexOf("valid_" + nam)
-    if (off == -1)
-      Console.println("couldn't find validity lemma for " + nam + " - maybe not a method?")
-    val realoff = cont.indexOf("unfold_spec.", off) + 13
-    Console.println("going till " + realoff + " in coq buffer")
+    val off = proj.coqOffsets(nam)._1 + proj.proofOffset
+    Console.println("going till " + off + " in coq buffer")
     // e: set name in JavaPosition
     JavaPosition.name = nam
     // f: step until method lemma
-    CoqStepUntilAction.reallydoit(realoff)
+    CoqStepUntilAction.reallydoit(off)
     // g: set JavaPosition active
     CoqStepNotifier.later = Some(() => {
       JavaPosition.active = true
