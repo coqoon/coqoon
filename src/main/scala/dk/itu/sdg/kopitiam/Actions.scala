@@ -324,21 +324,39 @@ class ProveMethodAction extends KEditorAction {
     val prov = edi.getDocumentProvider
     val doc = prov.getDocument(edi.getEditorInput)
     val proj = EclipseTables.DocToProject(doc)
-    // b: if outdated .java.v (or not there): translate and openEditor (and activate JavaEditor)
+    //setup proper DocumentState state
+    DocumentState._content = proj.coqString
+    if (CoqTop.isStarted && ! (JavaPosition.active && JavaPosition.editor == edi)) {
+      DocumentState.resetState
+      if (DocumentState.activeEditor != null) {
+        DocumentState.activeEditor.addAnnotations(0, 0)
+        DocumentState.activeEditor.invalidate
+      }
+      PrintActor.deregister(CoqOutputDispatcher)
+      val shell = CoqState.getShell
+      PrintActor.register(CoqStartUp)
+      CoqTop.writeToCoq("Backtrack " + DocumentState.positionToShell(0).globalStep + " 0 " + shell.context.length + ".")
+      while (! CoqStartUp.fini) { }
+      CoqStartUp.fini = false
+    }
+    DocumentState.activeEditor = null
+    // b: if outdated coqString: translate
     if (proj.modelNewerThanSource) {
       Console.println("retracting and redoing model!!!!")
       proj.coqModel match {
         case None => Console.println("arrrrg, didn't expect that") //XXX: might happen is model modified, and then editor closed...
         case Some(x) =>
           val newm = x.get
+          Console.println("old content is (around model): " + DocumentState._content.drop(proj.modelLength - 10).take(20))
           val news = newm + "\n" + DocumentState._content.drop(proj.modelLength)
+          Console.println("new content is (around model): " + news.drop(newm.length - 10).take(20))
           DocumentState._content = Some(news)
+          proj.coqString = Some(news)
           proj.modelLength = newm.length
-          //I should retract here! (in case JavaPosition is active and running..)
       }
       proj.modelNewerThanSource = false
     }
-    if (proj.javaNewerThanSource || proj.generated == false) {
+    if (proj.javaNewerThanSource || proj.coqString == None) {
       Console.println("java changed in between.... need to retranslate (or it was never translated)")
       val fei = editor.getEditorInput
       if (fei.isInstanceOf[IFileEditorInput]) {
@@ -362,19 +380,22 @@ class ProveMethodAction extends KEditorAction {
     assert(marr.length == 2)
     val arr = marr(0).split(" ")
     val nam = arr(arr.length - 1)
-    // d: find lemma in .java.v buffer
-    val off = proj.coqOffsets(nam)._1 + proj.proofOffset
-    Console.println("going till " + off + " in coq buffer")
-    // e: set name in JavaPosition
-    JavaPosition.name = nam
-    // f: step until method lemma
-    CoqStepUntilAction.reallydoit(off)
-    // g: set JavaPosition active
-    CoqStepNotifier.later = Some(() => {
-      JavaPosition.active = true
-      JavaPosition.reAnnotate(false, false)
-      PrintActor.register(JavaPosition)
-    })
+    if (JavaPosition.active == false || JavaPosition.name != nam) {
+      JavaPosition.retract
+      // d: find lemma in .java.v buffer
+      val off = proj.coqOffsets(nam)._1 + proj.proofOffset
+      Console.println("going till " + off + " in coq buffer")
+      // e: set name in JavaPosition
+      JavaPosition.name = nam
+      // f: step until method lemma
+      CoqStepUntilAction.reallydoit(off)
+      // g: set JavaPosition active
+      CoqStepNotifier.later = Some(() => {
+        JavaPosition.active = true
+        JavaPosition.reAnnotate(false, false)
+        PrintActor.register(JavaPosition)
+      })
+    }
   }
   override def doit () : Unit = { }
 }
@@ -429,7 +450,7 @@ class TranslateAction extends KAction {
       val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
       proj.proofOffset = off._1._2
       proj.modelLength = off._1._1
-      proj.generated = true
+      proj.coqString = Some(con)
       proj.modelNewerThanSource = false
       proj.javaNewerThanSource = false
       off._2.map(x => {
