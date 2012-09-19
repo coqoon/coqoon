@@ -107,6 +107,7 @@ class CoqJavaProject (basename : String) {
     new HashMap[String, Pair[Int, List[Pair[Int,Int]]]]()
   var proofOffset : Int = 0
   var modelLength : Int = 0
+  var generated : Boolean = false
 
   def gotClosed (doc : IDocument) : Unit = {
     javaSource match {

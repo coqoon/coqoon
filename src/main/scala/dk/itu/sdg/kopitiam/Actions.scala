@@ -338,7 +338,7 @@ class ProveMethodAction extends KEditorAction {
       }
       proj.modelNewerThanSource = false
     }
-    if (proj.javaNewerThanSource || proj.coqSource == None) {
+    if (proj.javaNewerThanSource || proj.generated == false) {
       Console.println("java changed in between.... need to retranslate (or it was never translated)")
       val fei = editor.getEditorInput
       if (fei.isInstanceOf[IFileEditorInput]) {
@@ -429,6 +429,9 @@ class TranslateAction extends KAction {
       val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
       proj.proofOffset = off._1._2
       proj.modelLength = off._1._1
+      proj.generated = true
+      proj.modelNewerThanSource = false
+      proj.javaNewerThanSource = false
       off._2.map(x => {
         proj.javaOffsets = proj.javaOffsets + (x._1._1 -> x._1._2)
         proj.coqOffsets = proj.coqOffsets + (x._1._1 -> x._2)

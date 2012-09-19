@@ -151,10 +151,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     if (EclipseTables.DocToProject.contains(doc)) {
       val proj = EclipseTables.DocToProject(doc)
       if (proj.isJava(doc)) {
-        proj.coqSource match {
-          case Some(d) => Console.println("found coq buffer of same project!")
-          case None => Console.println("no coq buffer yet")
-        }
         proj.javaNewerThanSource = true
         val content = doc.get
         val off = event.getOffset - event.getLength
@@ -224,10 +220,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         }
       }
       if (proj.isCoqModel(doc)) {
-        proj.coqSource match {
-          case Some(d) => Console.println("found coq source for model you're editing")
-          case None => Console.println("no generated coq source yet")
-        }
+        Console.println("model updated, setting boolean")
         proj.modelNewerThanSource = true
       }
       if (proj.isCoqSource(doc))
