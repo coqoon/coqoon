@@ -252,6 +252,7 @@ class CoqStepAllAction extends KCoqAction {
     //Console.println("registering CoqStepNotifier to PrintActor, now stepping")
     //CoqProgressMonitor.multistep = true
     DocumentState.reveal = false
+    CoqStepNotifier.active = true
     PrintActor.register(CoqStepNotifier)
     //we need to provoke first message to start callback loops
     CoqStepAction.doit()
@@ -280,6 +281,7 @@ class CoqStepUntilAction extends KCoqAction {
       //CoqProgressMonitor.multistep = true
       DocumentState.reveal = false
       CoqStepNotifier.test = Some((x : Int, y : Int) => y >= togo)
+      CoqStepNotifier.active = true
       PrintActor.register(CoqStepNotifier)
       CoqStepAction.doit()
     } else { //Backtrack
@@ -529,6 +531,7 @@ object CoqStepNotifier extends CoqCallback {
   var err : Boolean = false
   var test : Option[(Int, Int) => Boolean] = None
   var later : Option[() => Unit] = None
+  var active : Boolean = false
 
   import org.eclipse.swt.widgets.Display
 
@@ -558,6 +561,7 @@ object CoqStepNotifier extends CoqCallback {
   def fini () : Unit = {
     PrintActor.deregister(CoqStepNotifier)
     err = false
+    active = false
     test = None
     DocumentState.reveal = true
     DocumentState.until = -1

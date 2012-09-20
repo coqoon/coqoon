@@ -330,10 +330,12 @@ object JavaPosition extends CoqCallback {
           Console.println("got proof completed")
           val proj = getProj
           if (proj.javaOffsets(name)._2.length == index) {
-            //send Qed over the wire
-            while (! DocumentState.readyForInput) { } //XXX: bad busy loop
             active = false //to prevent catches down there
-            CoqStepAction.doit()
+            //send Qed
+            if (! CoqStepNotifier.active) {
+              while (! DocumentState.readyForInput) { } //XXX: bad busy loop
+              CoqStepAction.doit()
+            }
           }
         }
       case CoqTheoremDefined(x) =>
@@ -414,8 +416,8 @@ object JavaPosition extends CoqCallback {
   def getPos (i : Int, elements : Pair[scala.util.parsing.input.Position, List[scala.util.parsing.input.Position]]) : Int = {
     if (i == -1)
       elements._1.line
-    else if (elements._2.length == i)
-      elements._2(i - 1).line + 2
+    else if (i >= elements._2.length)
+      elements._2(elements._2.length - 1).line + 2
     else
       elements._2(i).line
   }
@@ -443,46 +445,48 @@ object JavaPosition extends CoqCallback {
       if (!proc)
         index = npos
       val nextpos : Int = getPos(npos, proj.javaOffsets(name))
-      val annmodel = prov.getAnnotationModel(editor.getEditorInput)
-      annmodel.connect(doc)
-      if ((proc && undo) || (!proc && !undo)) {
-        processing match {
-          case Some(x) => annmodel.removeAnnotation(x)
-          case None =>
-        }
-        processing = None
-      }
-      if ((!proc && undo) || (!proc && !undo)) {
-        processed match {
-          case Some(x) => {
-            annmodel.removeAnnotation(x)
-            if (undo)
-              Display.getDefault.asyncExec(
-                new Runnable() {
-                  def run() = { editor.getViewer.invalidateTextPresentation }})
+      if (nextpos != pos) {
+        val annmodel = prov.getAnnotationModel(editor.getEditorInput)
+        annmodel.connect(doc)
+        if ((proc && undo) || (!proc && !undo)) {
+          processing match {
+            case Some(x) => annmodel.removeAnnotation(x)
+            case None =>
           }
-          case None =>
+          processing = None
         }
-        processed = None
-      }
-      
-      val txt =
-        if (proc)
-          "dk.itu.sdg.kopitiam.processing"
-        else
-          "dk.itu.sdg.kopitiam.processed"
-      val sma = new Annotation(txt, false, "Proof")
+        if ((!proc && undo) || (!proc && !undo)) {
+          processed match {
+            case Some(x) => {
+              annmodel.removeAnnotation(x)
+              if (undo)
+                Display.getDefault.asyncExec(
+                  new Runnable() {
+                    def run() = { editor.getViewer.invalidateTextPresentation }})
+            }
+            case None =>
+          }
+          processed = None
+        }
 
-      val loff = doc.getLineOffset(pos - 1) //XXX: bah
-      val finaloff = doc.getLineOffset(nextpos - 1) - 1
-      if (! (proc && undo)) {
-        annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
-        if (proc)
-          processing = Some(sma)
-        else
-          processed = Some(sma)
+        val txt =
+          if (proc)
+            "dk.itu.sdg.kopitiam.processing"
+          else
+            "dk.itu.sdg.kopitiam.processed"
+        val sma = new Annotation(txt, false, "Proof")
+
+        val loff = doc.getLineOffset(pos - 1) //XXX: bah
+        val finaloff = doc.getLineOffset(nextpos - 1) - 1
+        if (! (proc && undo)) {
+          annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
+          if (proc)
+            processing = Some(sma)
+          else
+            processed = Some(sma)
+        }
+        annmodel.disconnect(doc)
       }
-      annmodel.disconnect(doc)
     }
   }
 }
