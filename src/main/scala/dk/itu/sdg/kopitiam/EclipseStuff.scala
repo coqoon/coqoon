@@ -292,6 +292,36 @@ object JavaPosition extends CoqCallback {
   }
 
   import org.eclipse.ui.IFileEditorInput
+  def getCoqString () : Option[String] = {
+    val proj = getProj
+    if (proj.modelNewerThanSource && proj.coqString != None) {
+      Console.println("retracting and redoing model!!!!")
+      proj.coqModel match {
+        case None => Console.println("arrrrg, didn't expect that") //XXX: might happen is model modified, and then editor closed... - we should open the file!
+        case Some(x) =>
+          val newm = x.get
+          Console.println("old content is (around model): " + proj.coqString.getOrElse("").drop(proj.modelLength - 10).take(20))
+          val news = newm + "\n" + proj.coqString.getOrElse("").drop(proj.modelLength)
+          Console.println("new content is (around model): " + news.drop(newm.length - 10).take(20))
+          proj.coqString = Some(news)
+          DocumentState.needsRetract = newm.length - proj.modelLength
+          proj.modelLength = newm.length
+      }
+      proj.modelNewerThanSource = false
+    }
+    if (proj.javaNewerThanSource || proj.coqString == None) {
+      Console.println("java changed in between.... need to retranslate (or it was never translated)")
+      val fei = editor.getEditorInput
+      if (fei.isInstanceOf[IFileEditorInput]) {
+        val file = fei.asInstanceOf[IFileEditorInput].getFile
+        TranslateAction.translate(file)
+      }
+      proj.javaNewerThanSource = false
+    }
+    proj.coqString
+  }
+
+  import org.eclipse.ui.IFileEditorInput
   import org.eclipse.core.resources.IMarker
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
@@ -607,13 +637,17 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     } else null
   }
 
+  var needsRetract : Int = 0
   var _content : Option[String] = None
 
   def content () : String = {
     _content match {
       case None =>
+        Console.println("no content. activeeditor is " + activeEditor + " javapos is " + JavaPosition.editor)
         if (activeEditor != null)
           _content = Some(activeDocument.get)
+        else if (JavaPosition.editor != null)
+          _content = JavaPosition.getCoqString
         _content.getOrElse("  ") //not happy with this hack
       case Some(x) =>
         x

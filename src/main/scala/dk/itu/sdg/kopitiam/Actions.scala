@@ -91,9 +91,11 @@ abstract class KCoqAction extends KAction {
         while (! CoqStartUp.fini) { }
         CoqStartUp.fini = false
       }
-    } else
+    } else {
+      Console.println("who called me????")
       if (! coqstarted)
         CoqStartUp.start
+    }
     doit
   }
 
@@ -206,18 +208,36 @@ class CoqStepAction extends KCoqAction {
     Console.println("CoqStepAction.doit called, ready? " + DocumentState.readyForInput)
     if (DocumentState.readyForInput) {
       val con = DocumentState.content
-      val content = con.drop(DocumentState.position)
-      if (content.length > 0) {
-        val eoc = CoqTop.findNextCommand(content)
-        //Console.println("eoc is " + eoc)
-        if (eoc > 0) {
-          DocumentState.setBusy
-          DocumentState.sendlen = eoc
-          DocumentState.process
-          val cmd = content.take(eoc).trim
-          Console.println("command is (" + eoc + "): " + cmd)
-          //CoqProgressMonitor.actor.tell(("START", cmd))
-          CoqTop.writeToCoq(cmd) //sends comments over the line
+      if (DocumentState.needsRetract != 0) {
+        val newpos = DocumentState.position + DocumentState.needsRetract
+        DocumentState.needsRetract = 0
+        val initial = DocumentState.positionToShell(0).globalStep
+        DocumentState.position = 0
+        val act = JavaPosition.active
+        if (act)
+          JavaPosition.active = false
+        DocumentState.setBusy
+        CoqTop.writeToCoq("Backtrack " + initial + " 0 " + CoqState.getShell.context.length + ".")
+        while (! DocumentState.readyForInput) { }
+        CoqStepUntilAction.reallydoit(newpos)
+        CoqStepNotifier.later = Some(() => {
+          JavaPosition.active = act
+          CoqStepAction.doit()
+        })
+      } else {
+        val content = con.drop(DocumentState.position)
+        if (content.length > 0) {
+          val eoc = CoqTop.findNextCommand(content)
+          //Console.println("eoc is " + eoc)
+          if (eoc > 0) {
+            DocumentState.setBusy
+            DocumentState.sendlen = eoc
+            DocumentState.process
+            val cmd = content.take(eoc).trim
+            Console.println("command is (" + eoc + "): " + cmd)
+            //CoqProgressMonitor.actor.tell(("START", cmd))
+            CoqTop.writeToCoq(cmd) //sends comments over the line
+          }
         }
       }
     }
@@ -315,7 +335,6 @@ class ProveMethodAction extends KEditorAction {
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.text.ITextSelection
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
-  import org.eclipse.ui.{IFileEditorInput, PlatformUI}
   import org.eclipse.ui.part.FileEditorInput
   override def run (a : IAction) : Unit = {
     //plan:
@@ -335,41 +354,16 @@ class ProveMethodAction extends KEditorAction {
       PrintActor.deregister(CoqOutputDispatcher)
       val shell = CoqState.getShell
       PrintActor.register(CoqStartUp)
+      DocumentState.setBusy
       CoqTop.writeToCoq("Backtrack " + DocumentState.positionToShell(0).globalStep + " 0 " + shell.context.length + ".")
       while (! CoqStartUp.fini) { }
       CoqStartUp.fini = false
     }
     DocumentState.activeEditor = null
     // b: if outdated coqString: translate
-    if (proj.modelNewerThanSource) {
-      Console.println("retracting and redoing model!!!!")
-      proj.coqModel match {
-        case None => Console.println("arrrrg, didn't expect that") //XXX: might happen is model modified, and then editor closed...
-        case Some(x) =>
-          val newm = x.get
-          Console.println("old content is (around model): " + DocumentState._content.drop(proj.modelLength - 10).take(20))
-          val news = newm + "\n" + DocumentState._content.drop(proj.modelLength)
-          Console.println("new content is (around model): " + news.drop(newm.length - 10).take(20))
-          DocumentState._content = Some(news)
-          proj.coqString = Some(news)
-          proj.modelLength = newm.length
-      }
-      proj.modelNewerThanSource = false
-    }
-    if (proj.javaNewerThanSource || proj.coqString == None) {
-      Console.println("java changed in between.... need to retranslate (or it was never translated)")
-      val fei = editor.getEditorInput
-      if (fei.isInstanceOf[IFileEditorInput]) {
-        val file = fei.asInstanceOf[IFileEditorInput].getFile
-        val coqstring = TranslateAction.translate(file)
-        coqstring match {
-          case None => Console.println("do not proceed")
-          case Some(x) => DocumentState._content = coqstring
-        }
-        CoqStepAction.doitH()
-      }
-      proj.javaNewerThanSource = false
-    }
+    JavaPosition.getCoqString
+    if (! CoqTop.isStarted)
+      CoqStartUp.start
     // c: find method name in java buffer
     val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
     val sl = selection.getStartLine
