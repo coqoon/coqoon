@@ -946,11 +946,7 @@ class GoalViewer extends ViewPart {
                 index = index + 1
               }
             }
-            var index : Int = 0
-            while (index < sgoals.length) {
-              subgoalTexts(index).setText(sgoals(index))
-              index = index + 1
-            }
+            sgoals.indices.foreach(x => subgoalTexts(x).setText(sgoals(x)))
             comp.layout
           }
         })
