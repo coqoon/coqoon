@@ -98,7 +98,7 @@ class CoqJavaProject (basename : String) {
   var coqModel : Option[IDocument] = None
   var coqSource : Option[IDocument] = None
   var coqString : Option[String] = None
-  var modelNewerThanSource : Boolean = false
+  var modelNewerThanSource : Boolean = true
   var javaNewerThanSource : Boolean = false
 
   //def -> offset + [length1, .., lengthn]
@@ -148,6 +148,52 @@ class CoqJavaProject (basename : String) {
   def isJava (doc : IDocument) : Boolean = { optEq(javaSource, doc) }
   def isCoqModel (doc : IDocument) : Boolean = { optEq(coqModel, doc) }
   def isCoqSource (doc : IDocument) : Boolean = { optEq(coqSource, doc) }
+
+  import org.eclipse.ui.{IFileEditorInput, PlatformUI}
+  import org.eclipse.ui.part.FileEditorInput
+  import org.eclipse.core.resources.IFile
+  def proveMethod (name : String) : Unit = {
+    if (modelNewerThanSource) {
+      modelNewerThanSource = false
+      coqModel match {
+        case None => //need to open editor and run
+          if (JavaPosition.editor == null)
+            Console.println("this should not happen - no coqmodel and no java editor...")
+          else {
+            val fei = JavaPosition.editor.getEditorInput
+            val model : IFile =
+              if (fei.isInstanceOf[IFileEditorInput])
+                fei.asInstanceOf[IFileEditorInput].getFile.getProject.getFile(basename + ".v")
+              else {
+                Console.println("fei not a fileeditorinput: " + fei)
+                null
+              }
+            val wbp = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage
+            wbp.openEditor(new FileEditorInput(model), "kopitiam.CoqEditor")
+          }
+        case Some(x) =>
+          val wbp = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage
+          for (y <- wbp.getEditorReferences) {
+            val z = y.getEditorInput
+            if (z.isInstanceOf[IFileEditorInput])
+              if (z.asInstanceOf[IFileEditorInput].getFile.getName.equals(basename + ".v")) {
+                Console.println("activating " + y.getEditor(true))
+                wbp.activate(y.getEditor(true))
+              }
+          }
+      }
+      CoqStepAllAction.doitH
+    }
+    if (javaNewerThanSource || coqString == None) {
+      javaNewerThanSource = false
+      //safety first
+      val wbp = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage
+      wbp.activate(JavaPosition.editor)
+      val fei = JavaPosition.editor.getEditorInput
+      if (fei.isInstanceOf[IFileEditorInput])
+        coqString = Some(TranslateAction.translate(fei.asInstanceOf[IFileEditorInput].getFile))
+    }
+  }
 }
 
 object EclipseTables {

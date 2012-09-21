@@ -426,22 +426,11 @@ class TranslateAction extends KAction {
     if (nam.endsWith(".java")) {
       val trfi = file.getProject.getFile(nam + ".v") //TODO: find a suitable location!
       val is = StreamReader(new InputStreamReader(file.getContents, "UTF-8"))
-      val model = nam.substring(0, nam.length - 4) + "v"
-      val modelfile = file.getProject.getFile(model)
-      Console.println("modelfilename is " + model + " and it exists? " + modelfile.exists)
-      val mod : String =
-        if (modelfile.exists) {
-          try
-            new java.util.Scanner(modelfile.getContents, "UTF-8").useDelimiter("\\A").next() 
-          catch
-            { case e : Throwable => "" }
-        } else
-          ""
       if (trfi.exists)
         trfi.delete(true, false, null)
       trfi.create(null, IResource.NONE, null)
       trfi.setCharset("UTF-8", null)
-      val (con, off) = JavaTC.parse(is, mod, nam.substring(0, nam.indexOf(".java")))
+      val (con, off) = JavaTC.parse(is, nam.substring(0, nam.indexOf(".java")))
       trfi.setContents(new ByteArrayInputStream(con.getBytes("UTF-8")), IResource.NONE, null)
       val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
       proj.proofOffset = off._1._2

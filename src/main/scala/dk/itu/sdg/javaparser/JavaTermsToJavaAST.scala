@@ -36,15 +36,15 @@ object FinishAST extends JavaTerms
   }
 
   import scala.util.parsing.input.Position
-  def doit (a : Any, model : String, name : String) : Pair[String,Pair[Pair[Int,Int],List[Pair[Pair[String, Pair[Position, List[Position]]], Pair[Int,List[Pair[Int,Int]]]]]]] = {
+  def doit (a : Any, name : String) : Pair[String,Pair[Pair[Int,Int],List[Pair[Pair[String, Pair[Position, List[Position]]], Pair[Int,List[Pair[Int,Int]]]]]]] = {
     val w = doitHelper(a)
-    val (r, offs) = coqoutput(w, model, true, name)
+    val (r, offs) = coqoutput(w, true, name)
     (r.reduceLeft(_ + "\n" + _), offs)
   }
 
   def doitNoSpec (a : Any, name : String) : (String, String) = {
     val w = doitHelper(a)
-    val (re, offs) = coqoutput(w, "", false, name)
+    val (re, offs) = coqoutput(w, false, name)
     val prog = re.takeWhile(!_.contains("_spec.\nImport ")).reduceLeft(_ + "\n" + _)
     val spec = re.dropWhile(!_.contains("_spec.\nImport ")).drop(1).mkString("\n")
     (prog, spec)
