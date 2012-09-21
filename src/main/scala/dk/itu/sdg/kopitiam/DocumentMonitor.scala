@@ -103,6 +103,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       maybeInsert(txt, txt.getViewer)
       if (JavaPosition.editor != ed)
         JavaPosition.editor = ed.asInstanceOf[JavaEditor]
+      ActionDisabler.enableMaybe
     } else
       ActionDisabler.disableAll
   }
@@ -220,6 +221,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
             }
           }
         }
+        ActionDisabler.enableMaybe
       }
       if (proj.isCoqModel(doc)) {
         Console.println("model updated, setting boolean")
