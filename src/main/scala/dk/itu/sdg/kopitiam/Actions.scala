@@ -220,7 +220,7 @@ class CoqStepAction extends KCoqAction {
         CoqTop.writeToCoq("Backtrack " + initial + " 0 " + CoqState.getShell.context.length + ".")
         while (! DocumentState.readyForInput) { }
         CoqStepUntilAction.reallydoit(newpos)
-        CoqStepNotifier.later = Some(() => {
+        CoqCommands.doLater(() => {
           JavaPosition.active = act
           CoqStepAction.doit()
         })
@@ -287,11 +287,7 @@ class CoqStepUntilAction extends KCoqAction {
     } else { //Backtrack
       //go forward till cursor afterwards
       DocumentState.reveal = false
-      PrintActor.register(CoqLater(() =>
-        Display.getDefault.syncExec(
-          new Runnable() {
-            def run() = CoqStepUntilAction.doit
-          })))
+      CoqCommands.doLater(() => CoqStepUntilAction.reallydoit(cursor))
       CoqUndoAction.doitReally(cursor)
     }
   }
@@ -386,7 +382,7 @@ class ProveMethodAction extends KEditorAction {
       // f: step until method lemma
       CoqStepUntilAction.reallydoit(off)
       // g: set JavaPosition active
-      CoqStepNotifier.later = Some(() => {
+      CoqCommands.doLater(() => {
         JavaPosition.active = true
         JavaPosition.reAnnotate(false, false)
         PrintActor.register(JavaPosition)
@@ -453,17 +449,6 @@ class TranslateAction extends KAction {
 }
 object TranslateAction extends TranslateAction { }
 
-case class CoqLater (later : () => Unit) extends CoqCallback {
-  override def dispatch (x : CoqResponse) : Unit = {
-    x match {
-      case CoqShellReady(m, t) =>
-        PrintActor.deregister(this)
-        later()
-      case _ =>
-    }
-  }
-}
-
 object CoqStartUp extends CoqCallback {
   private var initialize : Int = 0
   var fini : Boolean = false
@@ -507,6 +492,7 @@ object CoqStartUp extends CoqCallback {
         } else {
           PrintActor.deregister(CoqStartUp)
           PrintActor.register(CoqOutputDispatcher)
+          PrintActor.register(CoqCommands)
           initialize = 0
           fini = true
           ActionDisabler.enableMaybe
@@ -519,7 +505,6 @@ object CoqStartUp extends CoqCallback {
 object CoqStepNotifier extends CoqCallback {
   var err : Boolean = false
   var test : Option[(Int, Int) => Boolean] = None
-  var later : Option[() => Unit] = None
   var active : Boolean = false
 
   import org.eclipse.swt.widgets.Display
@@ -554,14 +539,45 @@ object CoqStepNotifier extends CoqCallback {
     test = None
     DocumentState.reveal = true
     DocumentState.until = -1
-    later match {
-      case Some(x) => x()
-      case None =>
-    }
-    later = None
     //CoqProgressMonitor.multistep = false
     //CoqProgressMonitor.actor.tell("FINISHED")
   }
+}
+
+object CoqCommands extends CoqCallback {
+  private var commands : List[() => Unit] = List[() => Unit]()
+
+  def doLater (f : () => Unit) : Unit = {
+    commands ::= f
+  }
+
+  private def finished () : Boolean = {
+    //might also be used instead of reveal stuff in DocumentState!
+    if (CoqStepNotifier.active)
+      return false
+    //if (CoqStartUp.fini == false)
+      //unfortunately this is reset (to false) in CoqStartUp.start
+    //  return false
+    return true
+  }
+
+  override def dispatch (x : CoqResponse) : Unit = {
+    x match {
+      case CoqShellReady(monoton, token) =>
+        if (finished)
+          if (commands.size != 0) {
+            val c = commands.head 
+            Console.println("coq commands here - will do next command " + c)
+            commands = commands.tail
+            //should we execute in a certain thread? UI?
+            c()
+          }
+      case CoqError(m, s, l) =>
+        commands = List[() => Unit]()
+      case _ =>
+    }
+  }
+  
 }
 
 object CoqOutputDispatcher extends CoqCallback {

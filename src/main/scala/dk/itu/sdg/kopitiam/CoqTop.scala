@@ -50,7 +50,11 @@ object PrintActor {
 
   var callbacks : List[CoqCallback] = List[CoqCallback]() //why not actors?
 
-  def register (c : CoqCallback) : Unit = { callbacks = (c :: callbacks.reverse).reverse }
+  def register (c : CoqCallback) : Unit = {
+    if (! callbacks.contains(c))
+      callbacks = (c :: callbacks.reverse).reverse
+  }
+
   def deregister (c : CoqCallback) : Unit = { callbacks = callbacks.filterNot(_ == c) }
 
   def distribute (c : CoqResponse) : Unit = {
