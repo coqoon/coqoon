@@ -341,27 +341,6 @@ class ProveMethodAction extends KEditorAction {
     val prov = edi.getDocumentProvider
     val doc = prov.getDocument(edi.getEditorInput)
     val proj = EclipseTables.DocToProject(doc)
-    //setup proper DocumentState state
-    DocumentState._content = proj.coqString
-    if (CoqTop.isStarted && ! (JavaPosition.active && JavaPosition.editor == edi)) {
-      DocumentState.resetState
-      if (DocumentState.activeEditor != null) {
-        DocumentState.activeEditor.addAnnotations(0, 0)
-        DocumentState.activeEditor.invalidate
-      }
-      PrintActor.deregister(CoqOutputDispatcher)
-      val shell = CoqState.getShell
-      PrintActor.register(CoqStartUp)
-      DocumentState.setBusy
-      CoqTop.writeToCoq("Backtrack " + DocumentState.positionToShell(0).globalStep + " 0 " + shell.context.length + ".")
-      while (! CoqStartUp.fini) { }
-      CoqStartUp.fini = false
-    }
-    DocumentState.activeEditor = null
-    // b: if outdated coqString: translate
-    JavaPosition.getCoqString
-    if (! CoqTop.isStarted)
-      CoqStartUp.start
     // c: find method name in java buffer
     val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
     val sl = selection.getStartLine
@@ -372,15 +351,13 @@ class ProveMethodAction extends KEditorAction {
     assert(marr.length == 2)
     val arr = marr(0).split(" ")
     val nam = arr(arr.length - 1)
+    // b: if outdated coqString: translate
+    proj.proveMethod(nam)
+
     if (JavaPosition.active == false || JavaPosition.name != nam) {
       JavaPosition.retract
-      // d: find lemma in .java.v buffer
-      val off = proj.coqOffsets(nam)._1 + proj.proofOffset
-      Console.println("going till " + off + " in coq buffer")
       // e: set name in JavaPosition
       JavaPosition.name = nam
-      // f: step until method lemma
-      CoqStepUntilAction.reallydoit(off)
       // g: set JavaPosition active
       CoqCommands.doLater(() => {
         JavaPosition.active = true
@@ -388,6 +365,7 @@ class ProveMethodAction extends KEditorAction {
         PrintActor.register(JavaPosition)
       })
     }
+    //start coq batch processing
   }
   override def doit () : Unit = { }
 }
@@ -429,8 +407,7 @@ class TranslateAction extends KAction {
       val (con, off) = JavaTC.parse(is, nam.substring(0, nam.indexOf(".java")))
       trfi.setContents(new ByteArrayInputStream(con.getBytes("UTF-8")), IResource.NONE, null)
       val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
-      proj.proofOffset = off._1._2
-      proj.modelLength = off._1._1
+      proj.proofOffset = off._1
       proj.coqString = Some(con)
       proj.modelNewerThanSource = false
       proj.javaNewerThanSource = false
@@ -548,7 +525,7 @@ object CoqCommands extends CoqCallback {
   private var commands : List[() => Unit] = List[() => Unit]()
 
   def doLater (f : () => Unit) : Unit = {
-    commands ::= f
+    commands = (commands :+ f)
   }
 
   private def finished () : Boolean = {

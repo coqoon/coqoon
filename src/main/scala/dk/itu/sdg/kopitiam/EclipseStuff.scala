@@ -107,7 +107,6 @@ class CoqJavaProject (basename : String) {
   var coqOffsets : HashMap[String, Pair[Int, List[Pair[Int,Int]]]] =
     new HashMap[String, Pair[Int, List[Pair[Int,Int]]]]()
   var proofOffset : Int = 0
-  var modelLength : Int = 0
 
   def gotClosed (doc : IDocument) : Unit = {
     javaSource match {
@@ -182,8 +181,20 @@ class CoqJavaProject (basename : String) {
               }
           }
       }
-      CoqStepAllAction.doitH
+      CoqCommands.doLater(() => CoqStepAllAction.doitH)
+      //invoke/step coq!
+      if (! (javaNewerThanSource || coqString == None)) {
+        val p = DocumentState.position
+        CoqCommands.doLater(() => {
+          val wbp = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage
+          wbp.activate(JavaPosition.editor)
+          DocumentState._content = coqString
+          CoqStepUntilAction.reallydoit(p)
+        })
+      }
     }
+    //we need to do everything in here later...
+    //esp what needs to be done when model has been updated?
     if (javaNewerThanSource || coqString == None) {
       javaNewerThanSource = false
       //safety first
@@ -191,7 +202,13 @@ class CoqJavaProject (basename : String) {
       wbp.activate(JavaPosition.editor)
       val fei = JavaPosition.editor.getEditorInput
       if (fei.isInstanceOf[IFileEditorInput])
-        coqString = Some(TranslateAction.translate(fei.asInstanceOf[IFileEditorInput].getFile))
+        coqString = TranslateAction.translate(fei.asInstanceOf[IFileEditorInput].getFile)
+      val off = coqOffsets(name)._1 + proofOffset
+      CoqCommands.doLater(() => {
+        DocumentState._content = coqString
+        CoqStepUntilAction.reallydoit(off)
+      })
+      //invoke/step coq!
     }
   }
 }
@@ -341,18 +358,8 @@ object JavaPosition extends CoqCallback {
   def getCoqString () : Option[String] = {
     val proj = getProj
     if (proj.modelNewerThanSource && proj.coqString != None) {
-      Console.println("retracting and redoing model!!!!")
-      proj.coqModel match {
-        case None => Console.println("arrrrg, didn't expect that") //XXX: might happen is model modified, and then editor closed... - we should open the file!
-        case Some(x) =>
-          val newm = x.get
-          Console.println("old content is (around model): " + proj.coqString.getOrElse("").drop(proj.modelLength - 10).take(20))
-          val news = newm + "\n" + proj.coqString.getOrElse("").drop(proj.modelLength)
-          Console.println("new content is (around model): " + news.drop(newm.length - 10).take(20))
-          proj.coqString = Some(news)
-          DocumentState.needsRetract = newm.length - proj.modelLength
-          proj.modelLength = newm.length
-      }
+      Console.println("XXX: retracting and redoing model!!!! - not sure what to do yet")
+      DocumentState.needsRetract = 10
       proj.modelNewerThanSource = false
     }
     if (proj.javaNewerThanSource || proj.coqString == None) {

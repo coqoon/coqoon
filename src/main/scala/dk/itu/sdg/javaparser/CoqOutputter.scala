@@ -294,7 +294,7 @@ Open Scope string_scope.
 Open Scope hasn_scope.
 """
 
-  def coqoutput (xs : List[SJDefinition], model : String, complete : Boolean, name : String) : Pair[List[String], Pair[Pair[Int, Int], List[Pair[Pair[String, Pair[Position, List[Position]]],Pair[Int,List[Pair[Int,Int]]]]]]] = {
+  def coqoutput (xs : List[SJDefinition], complete : Boolean, name : String) : Pair[List[String], Pair[Int, List[Pair[Pair[String, Pair[Position, List[Position]]],Pair[Int,List[Pair[Int,Int]]]]]]] = {
     outp = List[String]()
     specoutput = List[String]()
     proofoutput = List[String]()
@@ -350,58 +350,8 @@ Proof.
 """ + proofs.foldRight("\n")("  apply " + _ + ".\n" + _) + "Qed."
     if (complete)
       proofoutput ::= "End " + name + "_spec."
-/* if (spec) {
-      outp ::= "End " + name + "."
-      outp ::= "\nImport " + name + "."
-      outp = ClassTable.getCoq(myclass, "BEFORESPEC") ++ List("\n") ++ outp
-      outp = interfs ++ outp
-      outp ::= "\nSection " + name + "_spec."
-    }
-    //method specs go here
-    xs.foreach(x => x match {
-      case SJClassDefinition(modifiers, "Coq", supers, inters, body, par, fs) =>
-      case SJClassDefinition(modifiers, id, supers, inters, body, par, fs) =>
-        myclass = id
-        val specs = ClassTable.getSpecs(myclass)
-        //filter out empty specs which are provided by an interface
-        val inter = inters.map(ClassTable.interfaceFunctions(_)).map(_._1)
-        val interf = if (inter.length == 0) List[String]() else inter.reduceLeft(_ ++ _)
-        var ems : List[String] = List[String]()
-        specs.keys.foreach(x => {
-          if ((specs(x)._1 == specs(x)._2) && (specs(x)._1 == null) && interf.contains(x))
-            ems ::= x
-          else {
-            if (spec) {
-              outp ::= "Definition " + x + "_pre : hasn :=\n  (" + specs(x)._1 + ")%asn."
-              outp ::= "Definition " + x + "_post : hasn := \n  (" + specs(x)._2 + ")%asn."
-            }
-          }
-        })
-        val spcs = specs.keys.flatMap(x => {
-          if (!ems.contains(x))
-            Some("\"" + myclass + "\" :.: \"" + x + "\" |->  (" + printArgList(ClassTable.getArguments(myclass, x).keys.toList) + ") {{ " + x + "_pre }}-{{ \"ret\", " + x + "_post }}")
-          else //copy them down from ems!
-            None
-        })
-        val spstr = if (spcs.toList.length == 0) "" else spcs.reduceLeft(_ + "\n    [/\\]\n  " + _)
-        val is = inters.map(x => x + " \"" + myclass + "\"" + " val VC (\\v, v) (\\_,\\v,v)") //XXX real instantiation
-        val ins =
-          if (is.length == 0) ""
-          else
-            "[E] VC : val -> val -> upred heap_alg, " + is.reduceLeft(_ + " [/\\] " + _)
-        val sps = if (ins.length > 0 && spstr.length > 0) " [/\\] " + spstr else ""
-        if (spec)
-          outp ::= "Definition " + myclass + "_spec := " + ins + sps + "."
-      case _ => Console.println("specs for " + x)
-    })
-    if (spec) {
-      outp = ClassTable.getCoq(myclass, "AFTERSPEC") ++ outp
-      outp ::= "End " + name + "_spec."
-      outp = ClassTable.getCoq("TOP") ++ outp
-    } */
-    //now, check whether we have a .v file around with the model which we can source...
-    val prefix = List(model) ++ List("") ++ outp.reverse ++ List("") ++ specoutput.reverse
-    (prefix ++ proofoutput.reverse ++ List(""), ((model.length, prefix.reduceLeft(_ + "\n" + _).length + 2), offs))
+    val prefix = outp.reverse ++ List("") ++ specoutput.reverse
+    (prefix ++ proofoutput.reverse ++ List(""), (prefix.reduceLeft(_ + "\n" + _).length + 2, offs))
   }
 
   def printArgList (l : List[String]) : String = {
