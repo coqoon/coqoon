@@ -151,7 +151,9 @@ class CoqJavaProject (basename : String) {
   import org.eclipse.ui.{IFileEditorInput, PlatformUI}
   import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.core.resources.IFile
+  import org.eclipse.swt.widgets.Display
   def proveMethod (name : String) : Unit = {
+    var m : Boolean = false
     if (modelNewerThanSource) {
       modelNewerThanSource = false
       coqModel match {
@@ -182,34 +184,53 @@ class CoqJavaProject (basename : String) {
           }
       }
       CoqCommands.doLater(() => CoqStepAllAction.doitH)
-      //invoke/step coq!
       if (! (javaNewerThanSource || coqString == None)) {
         val p = DocumentState.position
         CoqCommands.doLater(() => {
-          val wbp = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage
-          wbp.activate(JavaPosition.editor)
+          Display.getDefault.syncExec(
+            new Runnable() {
+              def run() = {
+                PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.activate(JavaPosition.editor)
+              }})
+          DocumentState.resetState
           DocumentState._content = coqString
           CoqStepUntilAction.reallydoit(p)
         })
       }
+      m = true
     }
     //we need to do everything in here later...
     //esp what needs to be done when model has been updated?
     if (javaNewerThanSource || coqString == None) {
       javaNewerThanSource = false
       //safety first
-      val wbp = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage
-      wbp.activate(JavaPosition.editor)
-      val fei = JavaPosition.editor.getEditorInput
-      if (fei.isInstanceOf[IFileEditorInput])
-        coqString = TranslateAction.translate(fei.asInstanceOf[IFileEditorInput].getFile)
-      val off = coqOffsets(name)._1 + proofOffset
       CoqCommands.doLater(() => {
+        Display.getDefault.syncExec(
+          new Runnable() {
+            def run() = {
+              PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.activate(JavaPosition.editor)
+            }})
+        val fei = JavaPosition.editor.getEditorInput
+        if (fei.isInstanceOf[IFileEditorInput])
+          coqString = TranslateAction.translate(fei.asInstanceOf[IFileEditorInput].getFile)
+        val off = coqOffsets(name)._1 + proofOffset
+        //this no good - we lose the model file information
+        DocumentState.activeEditor.addAnnotations(0, 0)
+        DocumentState.activeEditor.invalidate
+        DocumentState.activeEditor = null
+        DocumentState.resetState
         DocumentState._content = coqString
+        CoqCommands.doLater(() => {
+          JavaPosition.active = true
+          JavaPosition.reAnnotate(false, false)
+          PrintActor.register(JavaPosition)
+        })
         CoqStepUntilAction.reallydoit(off)
       })
-      //invoke/step coq!
+      m = true
     }
+    if (m)
+      CoqCommands.step
   }
 }
 

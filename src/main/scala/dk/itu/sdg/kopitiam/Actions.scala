@@ -249,11 +249,9 @@ object CoqStepAction extends CoqStepAction { }
 
 class CoqStepAllAction extends KCoqAction {
   override def doit () : Unit = {
-    //Console.println("registering CoqStepNotifier to PrintActor, now stepping")
     //CoqProgressMonitor.multistep = true
     DocumentState.reveal = false
     CoqStepNotifier.active = true
-    PrintActor.register(CoqStepNotifier)
     //we need to provoke first message to start callback loops
     CoqStepAction.doit()
   }
@@ -282,7 +280,6 @@ class CoqStepUntilAction extends KCoqAction {
       DocumentState.reveal = false
       CoqStepNotifier.test = Some((x : Int, y : Int) => y >= togo)
       CoqStepNotifier.active = true
-      PrintActor.register(CoqStepNotifier)
       CoqStepAction.doit()
     } else { //Backtrack
       //go forward till cursor afterwards
@@ -351,21 +348,14 @@ class ProveMethodAction extends KEditorAction {
     assert(marr.length == 2)
     val arr = marr(0).split(" ")
     val nam = arr(arr.length - 1)
-    // b: if outdated coqString: translate
-    proj.proveMethod(nam)
-
     if (JavaPosition.active == false || JavaPosition.name != nam) {
       JavaPosition.retract
       // e: set name in JavaPosition
       JavaPosition.name = nam
-      // g: set JavaPosition active
-      CoqCommands.doLater(() => {
-        JavaPosition.active = true
-        JavaPosition.reAnnotate(false, false)
-        PrintActor.register(JavaPosition)
-      })
     }
-    //start coq batch processing
+
+    // b: if outdated coqString: translate
+    proj.proveMethod(nam)
   }
   override def doit () : Unit = { }
 }
@@ -469,6 +459,7 @@ object CoqStartUp extends CoqCallback {
         } else {
           PrintActor.deregister(CoqStartUp)
           PrintActor.register(CoqOutputDispatcher)
+          PrintActor.register(CoqStepNotifier)
           PrintActor.register(CoqCommands)
           initialize = 0
           fini = true
@@ -484,33 +475,31 @@ object CoqStepNotifier extends CoqCallback {
   var test : Option[(Int, Int) => Boolean] = None
   var active : Boolean = false
 
-  import org.eclipse.swt.widgets.Display
-
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
-      case CoqError(m, s, l) => err = true
-      case CoqUserInterrupt() => err = true
+      case CoqError(m, s, l) => if (active) err = true
+      case CoqUserInterrupt() => if (active) err = true
       case CoqShellReady(monoton, tokens) =>
-        if (err)
-          fini
-        else
-          if (test.isDefined && test.get(DocumentState.position,
-                                         DocumentState.position + CoqTop.findNextCommand(DocumentState.content.drop(DocumentState.position))))
+        if (active)
+          if (err)
             fini
-          else if (monoton) {
-            CoqStepAction.doit
-            //is that really needed?
-            val drops = DocumentState.position + DocumentState.sendlen
-            if (drops >= DocumentState.content.length || CoqTop.findNextCommand(DocumentState.content.drop(drops)) == -1)
+          else
+            if (test.isDefined && test.get(DocumentState.position,
+                                           DocumentState.position + CoqTop.findNextCommand(DocumentState.content.drop(DocumentState.position))))
               fini
-          } else
-            fini
+            else if (monoton) {
+              CoqStepAction.doit
+              //is that really needed?
+              val drops = DocumentState.position + DocumentState.sendlen
+              if (drops >= DocumentState.content.length || CoqTop.findNextCommand(DocumentState.content.drop(drops)) == -1)
+                fini
+            } else
+              fini
       case x => //Console.println("got something, try again player 1 " + x)
     }
   }
 
   def fini () : Unit = {
-    PrintActor.deregister(CoqStepNotifier)
     err = false
     active = false
     test = None
@@ -528,6 +517,17 @@ object CoqCommands extends CoqCallback {
     commands = (commands :+ f)
   }
 
+  def step () : Unit = {
+    if (finished)
+      if (commands.size != 0) {
+        val c = commands.head 
+        Console.println("coq commands here - will do next command " + c)
+        commands = commands.tail
+        //should we execute in a certain thread? UI?
+        c()
+      }
+  }
+
   private def finished () : Boolean = {
     //might also be used instead of reveal stuff in DocumentState!
     if (CoqStepNotifier.active)
@@ -540,17 +540,8 @@ object CoqCommands extends CoqCallback {
 
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
-      case CoqShellReady(monoton, token) =>
-        if (finished)
-          if (commands.size != 0) {
-            val c = commands.head 
-            Console.println("coq commands here - will do next command " + c)
-            commands = commands.tail
-            //should we execute in a certain thread? UI?
-            c()
-          }
-      case CoqError(m, s, l) =>
-        commands = List[() => Unit]()
+      case CoqShellReady(monoton, token) => step
+      case CoqError(m, s, l) => commands = List[() => Unit]()
       case _ =>
     }
   }

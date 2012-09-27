@@ -52,7 +52,7 @@ object PrintActor {
 
   def register (c : CoqCallback) : Unit = {
     if (! callbacks.contains(c))
-      callbacks = (c :: callbacks.reverse).reverse
+      callbacks = callbacks :+ c
   }
 
   def deregister (c : CoqCallback) : Unit = { callbacks = callbacks.filterNot(_ == c) }
@@ -70,7 +70,7 @@ class PrintActorImplementation extends Actor {
       //Console.println("received message:" + msg)
       val coqr = ParseCoqResponse.parse(msg.trim)
       //Console.println("parsed response is " + coqr)
-      PrintActor.callbacks.foreach(_.dispatch(coqr))
+      PrintActor.distribute(coqr)
     }
   }
 }
