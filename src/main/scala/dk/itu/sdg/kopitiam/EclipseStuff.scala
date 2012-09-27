@@ -153,40 +153,50 @@ class CoqJavaProject (basename : String) {
   import org.eclipse.core.resources.IFile
   import org.eclipse.swt.widgets.Display
   def proveMethod (name : String) : Unit = {
-    var m : Boolean = false
     if (modelNewerThanSource) {
       modelNewerThanSource = false
+      var open : Boolean = false
+      var model : IFile = null
       coqModel match {
         case None => //need to open editor and run
           if (JavaPosition.editor == null)
             Console.println("this should not happen - no coqmodel and no java editor...")
           else {
             val fei = JavaPosition.editor.getEditorInput
-            val model : IFile =
+            model =
               if (fei.isInstanceOf[IFileEditorInput])
                 fei.asInstanceOf[IFileEditorInput].getFile.getProject.getFile(basename + ".v")
               else {
                 Console.println("fei not a fileeditorinput: " + fei)
                 null
               }
-            val wbp = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage
-            wbp.openEditor(new FileEditorInput(model), "kopitiam.CoqEditor")
+            open = true
           }
         case Some(x) =>
-          val wbp = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage
-          for (y <- wbp.getEditorReferences) {
-            val z = y.getEditorInput
-            if (z.isInstanceOf[IFileEditorInput])
-              if (z.asInstanceOf[IFileEditorInput].getFile.getName.equals(basename + ".v")) {
-                Console.println("activating " + y.getEditor(true))
-                wbp.activate(y.getEditor(true))
-              }
-          }
       }
-      CoqCommands.doLater(() => CoqStepAllAction.doitH)
+      CoqCommands.doLater(() => {
+        Console.println("activating model editor")
+        DocumentState._content = None
+        Display.getDefault.syncExec(
+          new Runnable() {
+            def run() = {
+              val wbp = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage
+              if (open)
+                wbp.openEditor(new FileEditorInput(model), "kopitiam.CoqEditor")
+              else
+                for (y <- wbp.getEditorReferences) {
+                  val z = y.getEditorInput
+                  if (z.isInstanceOf[IFileEditorInput])
+                    if (z.asInstanceOf[IFileEditorInput].getFile.getName.equals(basename + ".v"))
+                      wbp.activate(y.getEditor(true))
+                }
+            }})
+        Console.println("stepping over model! ")
+        CoqStepAllAction.doitH
+      })
       if (! (javaNewerThanSource || coqString == None)) {
-        val p = DocumentState.position
         CoqCommands.doLater(() => {
+          Console.println("now back to java editor")
           Display.getDefault.syncExec(
             new Runnable() {
               def run() = {
@@ -194,10 +204,24 @@ class CoqJavaProject (basename : String) {
               }})
           DocumentState.resetState
           DocumentState._content = coqString
-          CoqStepUntilAction.reallydoit(p)
+          Console.println("now step until")
+          val off = coqOffsets(name)._1 + proofOffset
+          if (DocumentState.activeEditor != null) {
+            DocumentState.activeEditor.addAnnotations(0, 0)
+            DocumentState.activeEditor.invalidate
+            DocumentState.activeEditor = null
+          }
+          DocumentState.resetState
+          DocumentState._content = coqString
+          CoqCommands.doLater(() => {
+            JavaPosition.name = name
+            JavaPosition.active = true
+            JavaPosition.reAnnotate(false, false)
+            PrintActor.register(JavaPosition)
+          })
+          CoqStepUntilAction.reallydoit(off)
         })
       }
-      m = true
     }
     //we need to do everything in here later...
     //esp what needs to be done when model has been updated?
@@ -215,9 +239,11 @@ class CoqJavaProject (basename : String) {
           coqString = TranslateAction.translate(fei.asInstanceOf[IFileEditorInput].getFile)
         val off = coqOffsets(name)._1 + proofOffset
         //this no good - we lose the model file information
-        DocumentState.activeEditor.addAnnotations(0, 0)
-        DocumentState.activeEditor.invalidate
-        DocumentState.activeEditor = null
+        if (DocumentState.activeEditor != null) {
+          DocumentState.activeEditor.addAnnotations(0, 0)
+          DocumentState.activeEditor.invalidate
+          DocumentState.activeEditor = null
+        }
         DocumentState.resetState
         DocumentState._content = coqString
         CoqCommands.doLater(() => {
@@ -227,10 +253,7 @@ class CoqJavaProject (basename : String) {
         })
         CoqStepUntilAction.reallydoit(off)
       })
-      m = true
     }
-    if (m)
-      CoqCommands.step
   }
 }
 
@@ -378,20 +401,7 @@ object JavaPosition extends CoqCallback {
   import org.eclipse.ui.IFileEditorInput
   def getCoqString () : Option[String] = {
     val proj = getProj
-    if (proj.modelNewerThanSource && proj.coqString != None) {
-      Console.println("XXX: retracting and redoing model!!!! - not sure what to do yet")
-      DocumentState.needsRetract = 10
-      proj.modelNewerThanSource = false
-    }
-    if (proj.javaNewerThanSource || proj.coqString == None) {
-      Console.println("java changed in between.... need to retranslate (or it was never translated)")
-      val fei = editor.getEditorInput
-      if (fei.isInstanceOf[IFileEditorInput]) {
-        val file = fei.asInstanceOf[IFileEditorInput].getFile
-        TranslateAction.translate(file)
-      }
-      proj.javaNewerThanSource = false
-    }
+    proj.proveMethod(name)
     proj.coqString
   }
 
@@ -715,7 +725,6 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     } else null
   }
 
-  var needsRetract : Int = 0
   var _content : Option[String] = None
 
   def content () : String = {

@@ -156,7 +156,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         DocumentState._content = None
         if (proj.coqString != None) {
           val content = doc.get
-          val off = event.getOffset - event.getLength
+          val off = event.getOffset
           val p1 = content.lastIndexOf("<%", off)
           val p2 = content.lastIndexOf("%>", off)
           if (p1 > p2) {

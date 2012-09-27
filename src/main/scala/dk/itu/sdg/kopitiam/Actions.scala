@@ -84,6 +84,8 @@ abstract class KCoqAction extends KAction {
       if (coqstarted) {
         DocumentState.setBusy
         PrintActor.deregister(CoqOutputDispatcher)
+        PrintActor.deregister(CoqStepNotifier)
+        PrintActor.deregister(CoqCommands)
         val shell = CoqState.getShell
         PrintActor.register(CoqStartUp)
         val initial = DocumentState.positionToShell(0).globalStep
@@ -91,11 +93,9 @@ abstract class KCoqAction extends KAction {
         while (! CoqStartUp.fini) { }
         CoqStartUp.fini = false
       }
-    } else {
-      Console.println("who called me????")
+    } else
       if (! coqstarted)
         CoqStartUp.start
-    }
     doit
   }
 
@@ -208,36 +208,19 @@ class CoqStepAction extends KCoqAction {
     Console.println("CoqStepAction.doit called, ready? " + DocumentState.readyForInput)
     if (DocumentState.readyForInput) {
       val con = DocumentState.content
-      if (DocumentState.needsRetract != 0) {
-        val newpos = DocumentState.position + DocumentState.needsRetract
-        DocumentState.needsRetract = 0
-        val initial = DocumentState.positionToShell(0).globalStep
-        DocumentState.position = 0
-        val act = JavaPosition.active
-        if (act)
-          JavaPosition.active = false
-        DocumentState.setBusy
-        CoqTop.writeToCoq("Backtrack " + initial + " 0 " + CoqState.getShell.context.length + ".")
-        while (! DocumentState.readyForInput) { }
-        CoqStepUntilAction.reallydoit(newpos)
-        CoqCommands.doLater(() => {
-          JavaPosition.active = act
-          CoqStepAction.doit()
-        })
-      } else {
-        val content = con.drop(DocumentState.position)
-        if (content.length > 0) {
-          val eoc = CoqTop.findNextCommand(content)
-          //Console.println("eoc is " + eoc)
-          if (eoc > 0) {
-            DocumentState.setBusy
-            DocumentState.sendlen = eoc
-            DocumentState.process
-            val cmd = content.take(eoc).trim
-            Console.println("command is (" + eoc + "): " + cmd)
-            //CoqProgressMonitor.actor.tell(("START", cmd))
-            CoqTop.writeToCoq(cmd) //sends comments over the line
-          }
+      CoqCommands.step
+      val content = con.drop(DocumentState.position)
+      if (content.length > 0) {
+        val eoc = CoqTop.findNextCommand(content)
+        //Console.println("eoc is " + eoc)
+        if (eoc > 0) {
+          DocumentState.setBusy
+          DocumentState.sendlen = eoc
+          DocumentState.process
+          val cmd = content.take(eoc).trim
+          Console.println("command is (" + eoc + "): " + cmd)
+          //CoqProgressMonitor.actor.tell(("START", cmd))
+          CoqTop.writeToCoq(cmd) //sends comments over the line
         }
       }
     }
@@ -356,6 +339,7 @@ class ProveMethodAction extends KEditorAction {
 
     // b: if outdated coqString: translate
     proj.proveMethod(nam)
+    CoqCommands.step
   }
   override def doit () : Unit = { }
 }
@@ -440,7 +424,7 @@ object CoqStartUp extends CoqCallback {
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqShellReady(m, t) =>
-      	//Console.println("dispatch, initialize is " + initialize + " fini is " + fini + " in CoqStartUp")
+      	//Console.println("CoqStartUp dispatch, initialize is " + initialize + " fini is " + fini)
         val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
         val lp = new File(loadp).exists
         if (initialize == 0) {
