@@ -468,18 +468,15 @@ object CoqStepNotifier extends CoqCallback {
         if (active)
           if (err)
             fini
-          else
-            if (test.isDefined && test.get(DocumentState.position,
-                                           DocumentState.position + CoqTop.findNextCommand(DocumentState.content.drop(DocumentState.position))))
+          else {
+            val nc = CoqTop.findNextCommand(DocumentState.content.drop(DocumentState.position))
+            if ((test.isDefined && test.get(DocumentState.position, DocumentState.position + nc)) || nc == -1)
               fini
             else if (monoton) {
               CoqStepAction.doit
-              //is that really needed?
-              val drops = DocumentState.position + DocumentState.sendlen
-              if (drops >= DocumentState.content.length || CoqTop.findNextCommand(DocumentState.content.drop(drops)) == -1)
-                fini
             } else
               fini
+          }
       case x => //Console.println("got something, try again player 1 " + x)
     }
   }
@@ -503,14 +500,18 @@ object CoqCommands extends CoqCallback {
   }
 
   def step () : Unit = {
-    if (finished)
+    if (finished) {
       if (commands.size != 0) {
         val c = commands.head 
         Console.println("coq commands here - will do next command " + c)
         commands = commands.tail
         //should we execute in a certain thread? UI?
         c()
-      }
+      } else
+        Console.println("no command to run")
+    }
+    else
+      Console.println("not finished... can't do much")
   }
 
   private def finished () : Boolean = {

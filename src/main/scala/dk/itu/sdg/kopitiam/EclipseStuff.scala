@@ -154,6 +154,11 @@ class CoqJavaProject (basename : String) {
   import org.eclipse.core.resources.IFile
   import org.eclipse.swt.widgets.Display
   def proveMethod (name : String) : Unit = {
+    modelShell match {
+      case Some(x) => if (x.globalStep > CoqState.getShell.globalStep) modelShell = None
+      case None =>
+    }
+    Console.println("provemethod called with " + name + " modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " modelshell " + modelShell + " coqstring " + coqString)
     if (modelNewerThanSource || modelShell == None) {
       modelNewerThanSource = false
       var open : Boolean = false
@@ -193,11 +198,12 @@ class CoqJavaProject (basename : String) {
                 }
             }})
         Console.println("stepping over model! ")
-        CoqCommands.doLater(() => {
-          modelShell = Some(CoqState.getShell)
-          CoqCommands.step
-        })
         CoqStepAllAction.doitH
+      })
+      CoqCommands.doLater(() => {
+        modelShell = Some(CoqState.getShell)
+        Console.println("preserving checkpoint " + modelShell)
+        CoqCommands.step
       })
       if (! (javaNewerThanSource || coqString == None)) {
         CoqCommands.doLater(() => {
@@ -226,10 +232,11 @@ class CoqJavaProject (basename : String) {
           coqString = TranslateAction.translate(fei.asInstanceOf[IFileEditorInput].getFile)
         }
         //retract up until model
-        DocumentState.setBusy
         modelShell match {
           case None => Console.println("how did I get here?")
           case Some(x) =>
+            DocumentState.setBusy
+            Console.println("backtracking to " + x)
             CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
         }
       })
@@ -391,19 +398,27 @@ object JavaPosition extends CoqCallback {
 
   import org.eclipse.jface.text.IDocument
   def getDoc () : IDocument = {
-    val prov = editor.getDocumentProvider
-    prov.getDocument(editor.getEditorInput)
+    if (editor != null) {
+      val prov = editor.getDocumentProvider
+      prov.getDocument(editor.getEditorInput)
+    } else null
   }
 
   def getProj () : CoqJavaProject = {
-    EclipseTables.DocToProject(getDoc)
+    val doc = getDoc
+    if (doc != null)
+      EclipseTables.DocToProject(doc)
+    else
+      null
   }
 
   import org.eclipse.ui.IFileEditorInput
   def getCoqString () : Option[String] = {
     val proj = getProj
-    proj.proveMethod(name)
-    proj.coqString
+    if (proj != null) {
+      proj.proveMethod(name)
+      proj.coqString
+    } else None
   }
 
   import org.eclipse.ui.IFileEditorInput
@@ -469,7 +484,9 @@ object JavaPosition extends CoqCallback {
   }
 
   def retractModel () : Unit = {
-    getProj.modelShell = None
+    val proj = getProj
+    if (proj != null)
+      proj.modelShell = None
   }
 
   import org.eclipse.swt.widgets.Display
