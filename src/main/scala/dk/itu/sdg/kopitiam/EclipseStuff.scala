@@ -259,6 +259,7 @@ class CoqJavaProject (basename : String) {
         JavaPosition.active = true
         JavaPosition.reAnnotate(false, false)
         PrintActor.register(JavaPosition)
+        ActionDisabler.enableMaybe //this is a hack :/
       })
       Console.println("  now, really do it!")
       CoqStepUntilAction.reallydoit(off)
