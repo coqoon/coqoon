@@ -186,7 +186,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                       val newc = oldc.take(coqoff) + ncon + oldc.drop(coqoff + coqp._2)
                       Console.println("new coq buffer: " + newc.drop(coqoff - 10).take(coqp._2 + 20))
                       offc = (coqp._1, ncon.length - coqp._2)
-                        proj.coqString = Some(newc)
+                      proj.coqString = Some(newc)
                       //update the javaOffsets table (only if newline)
                       //if there's a file or editor, rewrite that as well!
                       // -> maybe do that on ctrl + s in the java buffer?!?
@@ -217,6 +217,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                   })
                   proj.coqOffsets = proj.coqOffsets + (x -> (n1, n2))
                 }
+              Console.println("javaNewerThanSource is false again")
               proj.javaNewerThanSource = false
             }
           }

@@ -100,6 +100,7 @@ class CoqJavaProject (basename : String) {
   var coqString : Option[String] = None
   var modelNewerThanSource : Boolean = true
   var javaNewerThanSource : Boolean = false
+  var modelShell : Option[CoqShellTokens] = None
 
   //def -> offset + [length1, .., lengthn]
   var javaOffsets : HashMap[String, Pair[Position, List[Position]]] =
@@ -192,6 +193,10 @@ class CoqJavaProject (basename : String) {
                 }
             }})
         Console.println("stepping over model! ")
+        CoqCommands.doLater(() => {
+          modelShell = Some(CoqState.getShell)
+          CoqCommands.step
+        })
         CoqStepAllAction.doitH
       })
       if (! (javaNewerThanSource || coqString == None)) {
@@ -202,29 +207,10 @@ class CoqJavaProject (basename : String) {
               def run() = {
                 PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.activate(JavaPosition.editor)
               }})
-          DocumentState.resetState
-          DocumentState._content = coqString
-          Console.println("now step until")
-          val off = coqOffsets(name)._1 + proofOffset
-          if (DocumentState.activeEditor != null) {
-            DocumentState.activeEditor.addAnnotations(0, 0)
-            DocumentState.activeEditor.invalidate
-            DocumentState.activeEditor = null
-          }
-          DocumentState.resetState
-          DocumentState._content = coqString
-          CoqCommands.doLater(() => {
-            JavaPosition.name = name
-            JavaPosition.active = true
-            JavaPosition.reAnnotate(false, false)
-            PrintActor.register(JavaPosition)
-          })
-          CoqStepUntilAction.reallydoit(off)
+          CoqCommands.step
         })
       }
     }
-    //we need to do everything in here later...
-    //esp what needs to be done when model has been updated?
     if (javaNewerThanSource || coqString == None) {
       javaNewerThanSource = false
       //safety first
@@ -235,25 +221,40 @@ class CoqJavaProject (basename : String) {
               PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.activate(JavaPosition.editor)
             }})
         val fei = JavaPosition.editor.getEditorInput
-        if (fei.isInstanceOf[IFileEditorInput])
+        if (fei.isInstanceOf[IFileEditorInput]) {
+          Console.println("translating file....")
           coqString = TranslateAction.translate(fei.asInstanceOf[IFileEditorInput].getFile)
-        val off = coqOffsets(name)._1 + proofOffset
-        //this no good - we lose the model file information
-        if (DocumentState.activeEditor != null) {
-          DocumentState.activeEditor.addAnnotations(0, 0)
-          DocumentState.activeEditor.invalidate
-          DocumentState.activeEditor = null
         }
-        DocumentState.resetState
-        DocumentState._content = coqString
-        CoqCommands.doLater(() => {
-          JavaPosition.active = true
-          JavaPosition.reAnnotate(false, false)
-          PrintActor.register(JavaPosition)
-        })
-        CoqStepUntilAction.reallydoit(off)
+        //retract up until model
+        DocumentState.setBusy
+        modelShell match {
+          case None => Console.println("how did I get here?")
+          case Some(x) =>
+            CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
+        }
       })
     }
+    CoqCommands.doLater(() => {
+      JavaPosition.unmark
+      JavaPosition.retract
+      val off = coqOffsets(name)._1 + proofOffset
+      //this no good - we lose the model file information
+      if (DocumentState.activeEditor != null) {
+        DocumentState.activeEditor.addAnnotations(0, 0)
+        DocumentState.activeEditor.invalidate
+        DocumentState.activeEditor = null
+      }
+      DocumentState.resetState
+      DocumentState._content = coqString
+      CoqCommands.doLater(() => {
+        JavaPosition.name = name
+        JavaPosition.active = true
+        JavaPosition.reAnnotate(false, false)
+        PrintActor.register(JavaPosition)
+      })
+      Console.println("now, do it!")
+      CoqStepUntilAction.reallydoit(off)
+    })
   }
 }
 
@@ -447,10 +448,8 @@ object JavaPosition extends CoqCallback {
   var markers : List[IMarker] = List[IMarker]()
 
   def unmark () : Unit = {
-    if (editor != null && active) {
-      markers.foreach(_.delete)
-      markers = List[IMarker]()
-    }
+    markers.foreach(_.delete)
+    markers = List[IMarker]()
   }
 
   private def mark (message : String, spos : Int, len : Int, typ : String, severity : Int) : Unit = {
