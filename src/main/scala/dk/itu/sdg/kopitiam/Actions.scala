@@ -237,11 +237,13 @@ object CoqStepAction extends CoqStepAction { }
 
 class CoqStepAllAction extends KCoqAction {
   override def doit () : Unit = {
-    //CoqProgressMonitor.multistep = true
-    DocumentState.reveal = false
-    CoqStepNotifier.active = true
-    //we need to provoke first message to start callback loops
-    CoqStepAction.doit()
+    if (DocumentState.position < DocumentState.content.length) {
+      //CoqProgressMonitor.multistep = true
+      DocumentState.reveal = false
+      CoqStepNotifier.active = true
+      //we need to provoke first message to start callback loops
+      CoqStepAction.doit()
+    } else CoqCommands.step
   }
   override def start () : Boolean = false
   override def end () : Boolean = true
