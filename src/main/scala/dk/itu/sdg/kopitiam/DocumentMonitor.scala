@@ -151,9 +151,9 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     //Console.println("doc " + doc + " changed [@" + event.getOffset + "], len: " + event.getLength)
     if (EclipseTables.DocToProject.contains(doc)) {
       val proj = EclipseTables.DocToProject(doc)
+      DocumentState._content = None
       if (proj.isJava(doc)) {
         proj.javaNewerThanSource = true
-        DocumentState._content = None
         if (proj.coqString != None) {
           val content = doc.get
           val off = event.getOffset
@@ -187,6 +187,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                       Console.println("new coq buffer: " + newc.drop(coqoff - 10).take(coqp._2 + 20))
                       offc = (coqp._1, ncon.length - coqp._2)
                       proj.coqString = Some(newc)
+                      DocumentState._content = Some(newc)
                       //update the javaOffsets table (only if newline)
                       //if there's a file or editor, rewrite that as well!
                       // -> maybe do that on ctrl + s in the java buffer?!?
@@ -222,7 +223,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
             }
           }
         }
-        ActionDisabler.enableMaybe
       }
       if (proj.isCoqModel(doc)) {
         Console.println("model updated, setting boolean")
@@ -233,7 +233,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         Console.println("oh noez, someone edited the generated code")
     }
     if (DocumentState.activeDocument == doc) {
-      DocumentState._content = None
       val off = event.getOffset
       if (off < DocumentState.position) {
         //retract to before
@@ -246,6 +245,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       EclipseBoilerPlate.maybeunmark(off)
       //Console.println("may have unmarked stuff")
       ActionDisabler.enableMaybe
+      DocumentState._content = None
     }
   }
 

@@ -242,6 +242,7 @@ class CoqJavaProject (basename : String) {
       })
     }
     CoqCommands.doLater(() => {
+      Console.println("starting to feed java code!!!")
       JavaPosition.unmark
       JavaPosition.retract
       val off = coqOffsets(name)._1 + proofOffset
@@ -259,7 +260,7 @@ class CoqJavaProject (basename : String) {
         JavaPosition.reAnnotate(false, false)
         PrintActor.register(JavaPosition)
       })
-      Console.println("now, do it!")
+      Console.println("  now, really do it!")
       CoqStepUntilAction.reallydoit(off)
     })
   }

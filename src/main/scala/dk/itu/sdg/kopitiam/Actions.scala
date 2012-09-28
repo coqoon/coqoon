@@ -121,12 +121,15 @@ object ActionDisabler {
 
   def enableMaybe () = {
     //Console.println("maybe enable " + DocumentState.position + " len " + DocumentState.content.length)
-    if (DocumentState.position == 0)
-      enableStart
-    else if (DocumentState.position + 1 >= DocumentState.content.length)
-      actions.zip(ends).filterNot(_._2).map(_._1).foreach(_.setEnabled(true))
-    else
-      actions.foreach(_.setEnabled(true))
+    if (! CoqCommands.active) {
+      Console.println("enableMaybe - may call content...")
+      if (DocumentState.position == 0)
+        enableStart
+      else if (DocumentState.position + 1 >= DocumentState.content.length)
+        actions.zip(ends).filterNot(_._2).map(_._1).foreach(_.setEnabled(true))
+      else
+        actions.foreach(_.setEnabled(true))
+    }
   }
 
   def enableStart () = {
@@ -208,6 +211,7 @@ class CoqStepAction extends KCoqAction {
   override def doit () : Unit = {
     Console.println("CoqStepAction.doit called, ready? " + DocumentState.readyForInput)
     if (DocumentState.readyForInput) {
+      Console.println("CoqStepAction: calling content")
       val con = DocumentState.content
       CoqCommands.step
       val content = con.drop(DocumentState.position)
@@ -253,6 +257,7 @@ class CoqStepUntilAction extends KCoqAction {
   }
 
   def reallydoit (cursor : Int) : Unit = {
+    Console.println("CoqStepUntilAction:reallydoit - content")
     val togo = CoqTop.findNextCommand(DocumentState.content.drop(cursor)) + cursor
     Console.println("reallydoit: togo is " + togo + ", cursor is " + cursor + ", docpos is " + DocumentState.position)
     //doesn't work reliable when inside a comment
@@ -469,6 +474,7 @@ object CoqStepNotifier extends CoqCallback {
           if (err)
             fini
           else {
+            Console.println("CoqStepNotifier - content")
             val nc = CoqTop.findNextCommand(DocumentState.content.drop(DocumentState.position))
             if ((test.isDefined && test.get(DocumentState.position, DocumentState.position + nc)) || nc == -1)
               fini
@@ -494,6 +500,8 @@ object CoqStepNotifier extends CoqCallback {
 
 object CoqCommands extends CoqCallback {
   private var commands : List[() => Unit] = List[() => Unit]()
+
+  def active () : Boolean = commands.length > 0
 
   def doLater (f : () => Unit) : Unit = {
     commands = (commands :+ f)
