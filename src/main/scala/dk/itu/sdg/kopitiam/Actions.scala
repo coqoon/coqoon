@@ -72,6 +72,7 @@ abstract class KCoqAction extends KAction {
       DocumentState.resetState
       JavaPosition.unmark
       JavaPosition.retract
+      JavaPosition.retractModel
       if (DocumentState.activeEditor != null)
         DocumentState.processUndo
       DocumentState.activeEditor = acted.asInstanceOf[CoqEditor]

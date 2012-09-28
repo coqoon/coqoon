@@ -154,7 +154,7 @@ class CoqJavaProject (basename : String) {
   import org.eclipse.core.resources.IFile
   import org.eclipse.swt.widgets.Display
   def proveMethod (name : String) : Unit = {
-    if (modelNewerThanSource) {
+    if (modelNewerThanSource || modelShell == None) {
       modelNewerThanSource = false
       var open : Boolean = false
       var model : IFile = null
@@ -468,6 +468,10 @@ object JavaPosition extends CoqCallback {
       Console.println("no fileeditorinput " + file)
   }
 
+  def retractModel () : Unit = {
+    getProj.modelShell = None
+  }
+
   import org.eclipse.swt.widgets.Display
   def retract () : Unit = {
     if (editor != null && active) {
@@ -695,6 +699,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     }
     position_ = 0
     sendlen = 0
+    _content = None
     invalidateCoqMarker
   }
 
