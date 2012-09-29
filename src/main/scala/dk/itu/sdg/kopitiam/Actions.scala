@@ -280,15 +280,23 @@ class CoqStepUntilAction extends KCoqAction {
     val togo = CoqTop.findNextCommand(DocumentState.content.drop(cursor)) + cursor
     Console.println("reallydoit: togo is " + togo + ", cursor is " + cursor + ", docpos is " + DocumentState.position)
     //doesn't work reliable when inside a comment
-    if (DocumentState.position == togo) { } else
-    if (DocumentState.position < togo) {
-      DocumentState.until = CoqTop.findPreviousCommand(DocumentState.content, togo - 2)
-      DocumentState.process
-      //CoqProgressMonitor.multistep = true
-      DocumentState.reveal = false
-      CoqStepNotifier.test = Some((x : Int, y : Int) => y >= togo)
-      CoqStepNotifier.active = true
-      CoqStepAction.doit()
+    if (DocumentState.position == togo)
+      CoqCommands.step
+    else if (DocumentState.position < togo) {
+      val unt = CoqTop.findPreviousCommand(DocumentState.content, togo - 2)
+      //I can't life with non-deterministic behaviour:
+      // Step Until [x] ~> ~> ~> [x] ~> Step Until [x] <- runs one step further
+      //Step Until should be idempotent if x doesn't change!
+      if (unt > DocumentState.position) {
+        DocumentState.until = unt
+        DocumentState.process
+        //CoqProgressMonitor.multistep = true
+        DocumentState.reveal = false
+        CoqStepNotifier.test = Some((x : Int, y : Int) => y >= togo)
+        CoqStepNotifier.active = true
+        CoqStepAction.doit()
+      } else
+        CoqCommands.step
     } else { //Backtrack
       //go forward till cursor afterwards
       DocumentState.reveal = false
