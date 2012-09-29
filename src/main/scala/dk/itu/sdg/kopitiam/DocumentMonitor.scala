@@ -161,59 +161,108 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
             if (p4 > p3 || p4 == -1) {
               val l = doc.getLineOfOffset(p1) + 1
               var offc : Pair[Int, Int] = (0, 0)
-              for (x <- proj.javaOffsets.keys) {
-                var i : Int = 0
-                for (p <- proj.javaOffsets(x)._2) {
-                  Console.println("checking " + l + " against " + p.line + " in " + x)
-                  if (l == p.line) {
-                    Console.println("found something! excited! " + x + " i is " + i)
-                    val coqp = proj.coqOffsets(x)._2(i)
-                    val coqoff = coqp._1 + proj.proofOffset
-                    val nncon = content.drop(p1 + 2).substring(0, p3 - p1 - 2).trim
-                    val ncon =
-                      if (nncon.startsWith("invariant")) {
-                        val vals = nncon.drop(10).trim.split("frame:")
-                        assert(vals.length == 2)
-                        "forward (" + vals(0).trim + ") (" + vals(1).trim + ")."
-                      } else
-                        nncon
-                    Console.println("new content: " + ncon)
-                    val oldc = proj.coqString.getOrElse("")
-                    val newc = oldc.take(coqoff) + ncon + oldc.drop(coqoff + coqp._2)
-                    Console.println("new coq buffer: " + newc.drop(coqoff - 10).take(coqp._2 + 20))
-                    offc = (coqp._1, ncon.length - coqp._2)
-                    proj.coqString = Some(newc)
-                    DocumentState._content = Some(newc)
-                    //update the javaOffsets table (only if newline)
-                    //if there's a file or editor, rewrite that as well!
-                    // -> maybe do that on ctrl + s in the java buffer?!?
-                    //we might need to backtrack in coq + java!
+              val nncon = content.drop(p1 + 2).substring(0, p3 - p1 - 2).trim
+              //Console.println("new content is: " + nncon)
+              if (nncon.startsWith("quantification: ") || nncon.startsWith("precondition: ") || nncon.startsWith("postcondition: ")) {
+                for (x <- proj.specOffsets.keys) {
+                  var i : Int = 0
+                  val coqoffs = proj.specOffsets(x)._2
+                  for (y <- proj.specOffsets(x)._1) {
+                    if (y.line == l) { //gotcha!
+                      val oldc = proj.coqString.getOrElse(" ")
+                      val nc = nncon.substring(nncon.indexOf(":") + 1).trim
+                      //Console.println("setting new content to be " + nc)
+                      val newc = oldc.take(proj.specOffset + coqoffs._1 + coqoffs._2(i)._1) + nc + oldc.drop(proj.specOffset + coqoffs._1 + coqoffs._2(i)._1 + coqoffs._2(i)._2)
+                      //Console.println("new content is " + newc.drop(proj.specOffset + coqoffs._1 + coqoffs._2(i)._1 - 10).take(50))
+                      proj.coqString = Some(newc)
+                      DocumentState._content = Some(newc)
+                      offc = (coqoffs._1 + coqoffs._2(i)._1, nc.length - coqoffs._2(i)._2)
+                    }
+                    i = i + 1
                   }
-                  i = i + 1
                 }
+                if (offc != (0, 0)) {
+                  //Console.println("offc is now " + offc)
+                  for (x <- proj.specOffsets.keys) {
+                    //Console.println(" competing with " + proj.specOffsets(x)._2._1)
+                    val n1 =
+                      if (proj.specOffsets(x)._2._1 > offc._1) {
+                        //Console.println("updated for " + x + ": from " + proj.specOffsets(x)._2._1 + " to " + (proj.specOffsets(x)._2._1 + offc._2))
+                        proj.specOffsets(x)._2._1 + offc._2
+                      } else
+                        proj.specOffsets(x)._2._1
+                    val offf = offc._1 - proj.specOffsets(x)._2._1
+                    val n2 = proj.specOffsets(x)._2._2.map(p => {
+                      if (p._1 > offf) {
+                        val n = (p._1 + offc._2, p._2)
+                        //Console.println("up: " + p + " -> " + n)
+                        n
+                      } else if (p._1 == offf) {
+                        val n = (p._1, p._2 + offc._2)
+                        //Console.println("up: " + p + " -> " + n)
+                        n
+                      } else
+                        p
+                    })
+                    proj.specOffsets = proj.specOffsets + (x -> (proj.specOffsets(x)._1, (n1, n2)))
+                  }
+                  //Console.println("adjusting proof offset from " + proj.proofOffset + " to " + (proj.proofOffset + offc._2))
+                  proj.proofOffset = proj.proofOffset + offc._2
+                }
+              } else {
+                for (x <- proj.javaOffsets.keys) {
+                  var i : Int = 0
+                  for (p <- proj.javaOffsets(x)._2) {
+                    //Console.println("checking " + l + " against " + p.line + " in " + x)
+                    if (l == p.line) {
+                      //Console.println("found something! excited! " + x + " i is " + i)
+                      val coqp = proj.coqOffsets(x)._2(i)
+                      val coqoff = coqp._1 + proj.proofOffset
+                      val ncon =
+                        if (nncon.startsWith("invariant")) {
+                          val vals = nncon.drop(10).trim.split("frame:")
+                          assert(vals.length == 2)
+                          "forward (" + vals(0).trim + ") (" + vals(1).trim + ")."
+                        } else
+                          nncon
+                      //Console.println("new content: " + ncon)
+                      val oldc = proj.coqString.getOrElse("")
+                      val newc = oldc.take(coqoff) + ncon + oldc.drop(coqoff + coqp._2)
+                      //Console.println("new coq buffer: " + newc.drop(coqoff - 10).take(coqp._2 + 20))
+                      offc = (coqp._1, ncon.length - coqp._2)
+                      proj.coqString = Some(newc)
+                      DocumentState._content = Some(newc)
+                      //update the javaOffsets table (only if newline)
+                      //if there's a file or editor, rewrite that as well!
+                      // -> maybe do that on ctrl + s in the java buffer?!?
+                      //we might need to backtrack in coq + java!
+                    }
+                    i = i + 1
+                  }
+                }
+                if (offc != (0, 0))
+                  for (x <- proj.coqOffsets.keys) {
+                    val n1 =
+                      if (proj.coqOffsets(x)._1 > offc._1) {
+                        //Console.println("updated for " + x + ": from " + proj.coqOffsets(x)._1 + " to " + (proj.coqOffsets(x)._1 + offc._2))
+                        proj.coqOffsets(x)._1 + offc._2
+                      } else
+                        proj.coqOffsets(x)._1
+                    val n2 = proj.coqOffsets(x)._2.map(p => {
+                      if (p._1 > offc._1) {
+                        val n = (p._1 + offc._2, p._2)
+                        //Console.println("up: " + p + " -> " + n)
+                        n
+                      } else if (p._1 == offc._1) {
+                        val n = (p._1, p._2 + offc._2)
+                        //Console.println("up: " + p + " -> " + n)
+                        n
+                      } else
+                        p
+                    })
+                    proj.coqOffsets = proj.coqOffsets + (x -> (n1, n2))
+                  }
               }
-              if (offc != (0, 0))
-                for (x <- proj.coqOffsets.keys) {
-                  val n1 =
-                    if (proj.coqOffsets(x)._1 > offc._1) {
-                      Console.println("updated for " + x + ": from " + proj.coqOffsets(x)._1 + " to " + (proj.coqOffsets(x)._1 + offc._2))
-                      proj.coqOffsets(x)._1 + offc._2
-                    } else
-                      proj.coqOffsets(x)._1
-                  val n2 = proj.coqOffsets(x)._2.map(p => {
-                    if (p._1 > offc._1) {
-                      val n = (p._1 + offc._2, p._2)
-                        Console.println("up: " + p + " -> " + n)
-                      n
-                    } else if (p._1 == offc._1) {
-                      val n = (p._1, p._2 + offc._2)
-                        Console.println("up: " + p + " -> " + n)
-                      n
-                    } else
-                      p
-                  })
-                  proj.coqOffsets = proj.coqOffsets + (x -> (n1, n2))
-                }
               Console.println("javaNewerThanSource is false again")
               proj.javaNewerThanSource = false
             }
