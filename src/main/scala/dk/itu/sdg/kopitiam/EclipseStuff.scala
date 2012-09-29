@@ -161,7 +161,7 @@ class CoqJavaProject (basename : String) {
       case Some(x) => if (x.globalStep > CoqState.getShell.globalStep) modelShell = None
       case None =>
     }
-    Console.println("provemethod called with " + name + " modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " modelshell " + modelShell + " coqstring " + coqString)
+    Console.println("provemethod called with " + name + " modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " modelshell " + modelShell)
     if (modelNewerThanSource || modelShell == None) {
       modelNewerThanSource = false
       var open : Boolean = false
@@ -241,30 +241,30 @@ class CoqJavaProject (basename : String) {
             DocumentState.setBusy
             Console.println("backtracking to " + x)
             CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
+            DocumentState.resetState
+            JavaPosition.unmark
+            JavaPosition.retract
         }
       })
     }
     CoqCommands.doLater(() => {
-      Console.println("starting to feed java code!!!")
-      JavaPosition.unmark
-      JavaPosition.retract
+      //story so far: model is now updated, java might be newly generated!
       val off = coqOffsets(name)._1 + proofOffset
-      //this no good - we lose the model file information
       if (DocumentState.activeEditor != null) {
         DocumentState.activeEditor.addAnnotations(0, 0)
         DocumentState.activeEditor.invalidate
         DocumentState.activeEditor = null
       }
-      DocumentState.resetState
       DocumentState._content = coqString
-      CoqCommands.doLater(() => {
-        JavaPosition.name = name
-        JavaPosition.active = true
-        JavaPosition.reAnnotate(false, false)
-        PrintActor.register(JavaPosition)
-      })
-      Console.println("  now, really do it!")
-      CoqStepUntilAction.reallydoit(off)
+      if (! (JavaPosition.active && JavaPosition.name == name))
+        CoqCommands.doLater(() => {
+          JavaPosition.name = name
+          JavaPosition.active = true
+          JavaPosition.reAnnotate(false, false)
+          PrintActor.register(JavaPosition)
+        })
+      if (! (JavaPosition.active && JavaPosition.name == name && DocumentState.position >= off))
+        CoqStepUntilAction.reallydoit(off)
     })
   }
 }
