@@ -161,6 +161,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
             if (p4 > p3 || p4 == -1) {
               val l = doc.getLineOfOffset(p1) + 1
               var offc : Pair[Int, Int] = (0, 0)
+              var offintocoq : Int = 0
               val nncon = content.drop(p1 + 2).substring(0, p3 - p1 - 2).trim
               //Console.println("new content is: " + nncon)
               if (nncon.startsWith("quantification: ") || nncon.startsWith("precondition: ") || nncon.startsWith("postcondition: ")) {
@@ -177,6 +178,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                       proj.coqString = Some(newc)
                       DocumentState._content = Some(newc)
                       offc = (coqoffs._1 + coqoffs._2(i)._1, nc.length - coqoffs._2(i)._2)
+                      offintocoq = coqoffs._1 + coqoffs._2(i)._1 + proj.specOffset
                     }
                     i = i + 1
                   }
@@ -230,6 +232,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                       val newc = oldc.take(coqoff) + ncon + oldc.drop(coqoff + coqp._2)
                       //Console.println("new coq buffer: " + newc.drop(coqoff - 10).take(coqp._2 + 20))
                       offc = (coqp._1, ncon.length - coqp._2)
+                      offintocoq = coqp._1 + proj.proofOffset
                       proj.coqString = Some(newc)
                       DocumentState._content = Some(newc)
                       //update the javaOffsets table (only if newline)
@@ -265,6 +268,9 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
               }
               Console.println("javaNewerThanSource is false again")
               proj.javaNewerThanSource = false
+              //retract!
+              if (offintocoq != 0 && offintocoq < DocumentState.position)
+                CoqUndoAction.doitReally(offintocoq)
             }
           }
         }
