@@ -421,8 +421,13 @@ class TranslateAction extends KAction {
         //Console.println("spec offsets for " + x._1._1._1 + " are: ")
         //if (posl.length == 3)
         //  Console.println("quantification: " + x._2._1(0) + " precon: " + x._2._1(1) + " postcon: " + x._2._1(2))
-        //if (x._2._2._1 != 0)
-        //  Console.println(" coqdef: " + x._2._2 + " (con there:" + con.drop(proj.specOffset).drop(x._2._2._1).take(x._2._2._2) + ")")
+        //if (x._2._2.length == 7) {
+        //  val mycon = con.drop(proj.specOffset).drop(x._2._2(0))
+        //  Console.println(" coqdef-content:" + mycon.take(10))
+        //  Console.println("  parts: -- quantification: " + mycon.drop(x._2._2(1)).take(x._2._2(2)))
+        //  Console.println("  parts: -- precondition: " + mycon.drop(x._2._2(3)).take(x._2._2(4)))
+        //  Console.println("  parts: -- postcondition: " + mycon.drop(x._2._2(5)).take(x._2._2(6)))
+        //}
         proj.specOffsets = proj.specOffsets + (x._1._1._1 -> x._2)
       })
       Some(con)

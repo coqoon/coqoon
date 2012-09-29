@@ -208,7 +208,7 @@ trait CoqOutputter extends JavaToSimpleJava {
     (defi, res)
   }
 
-  def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[Pair[String,String],Pair[Pair[Pair[String,Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]],Pair[List[Position],Pair[Int,Int]]]]] = {
+  def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[Pair[String,String],Pair[Pair[Pair[String,Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]],Pair[List[Position],List[Int]]]]] = {
     var precon : Option[Precondition] = None
     var postcon : Option[Postcondition] = None
     var quantif : Option[Quantification] = None
@@ -223,7 +223,7 @@ trait CoqOutputter extends JavaToSimpleJava {
           else
             "this" :: args
         var preoffs : List[Position] = List[Position]()
-        var specoff : Pair[Int, Int] = (0, 0)
+        var specoff : List[Int] = List[Int]()
         precon match {
           case Some(pre) => postcon match {
             case Some(post) => quantif match {
@@ -232,10 +232,19 @@ trait CoqOutputter extends JavaToSimpleJava {
                 preoffs ::= pre.pos
                 preoffs ::= quant.pos
                 specifications ::= name + "_spec"
-                val spec = "Definition " + name + """_spec :=
-  (""" + quant.data + ", " + "\"" + clazz + "\" :.: \"" + name + "\" |-> [" + printArgListSpec(t) + """]
-  {{ """ + pre.data + " }}-{{ " + post.data + " }})."
-                specoff = (specoutput.reduceLeft(_ + "\n" + _).length, spec.length)
+                val spec1 = "Definition " + name + """_spec :=
+  (""" 
+                val spec2 = spec1 + quant.data + ", " + "\"" + clazz + "\" :.: \"" + name + "\" |-> [" + printArgListSpec(t) + """]
+  {{ """
+                val spec3 = spec2 + pre.data + " }}-{{ " 
+                val spec = spec3 + post.data + " }})."
+                specoff ::= post.data.length
+                specoff ::= spec3.length
+                specoff ::= pre.data.length
+                specoff ::= spec2.length
+                specoff ::= quant.data.length
+                specoff ::= spec1.length
+                specoff ::= specoutput.reduceLeft(_ + "\n" + _).length
                 specoutput ::= spec
               case None => Console.println("no quantification for method " + name)
             }
@@ -273,7 +282,7 @@ Proof.
         lengths = List[Position]()
         coqlengths = List[Pair[Int,Int]]()
         outp ::= "Definition " + nam + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\")."
-        Some((("\"new\"" , nam), (((nam, (x.pos, ls)), (0, cl)), (List[Position](), (0, 0)))))
+        Some((("\"new\"" , nam), (((nam, (x.pos, ls)), (0, cl)), (List[Position](), List[Int]()))))
       case x : Precondition => 
         precon match {
           case None => precon = Some(x); None
@@ -311,7 +320,7 @@ Open Scope string_scope.
 Open Scope hasn_scope.
 """
 
-  def coqoutput (xs : List[SJDefinition], complete : Boolean, name : String) : Pair[List[String], Pair[Pair[Int, Int], List[Pair[Pair[Pair[String, Pair[Position, List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position],Pair[Int,Int]]]]]] = {
+  def coqoutput (xs : List[SJDefinition], complete : Boolean, name : String) : Pair[List[String], Pair[Pair[Int, Int], List[Pair[Pair[Pair[String, Pair[Position, List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position],List[Int]]]]]] = {
     outp = List[String]()
     specoutput = List[String]()
     proofoutput = List[String]()
@@ -319,7 +328,7 @@ Open Scope hasn_scope.
     proofs = List[String]()
     lengths = List[Position]()
     coqlengths = List[Pair[Int,Int]]()
-    var offs = List[Pair[Pair[Pair[String, Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position], Pair[Int,Int]]]]()
+    var offs = List[Pair[Pair[Pair[String, Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position], List[Int]]]]()
     var cs : List[String] = List[String]()
     if (complete)
       outp ::= prelude
