@@ -161,37 +161,37 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
             if (p4 > p3 || p4 == -1) {
               val l = doc.getLineOfOffset(p1) + 1
               var offc : Pair[Int, Int] = (0, 0)
-                for (x <- proj.javaOffsets.keys) {
-                  var i : Int = 0
-                  for (p <- proj.javaOffsets(x)._2) {
-                    Console.println("checking " + l + " against " + p.line + " in " + x)
-                    if (l == p.line) {
-                      Console.println("found something! excited! " + x + " i is " + i)
-                      val coqp = proj.coqOffsets(x)._2(i)
-                      val coqoff = coqp._1 + proj.proofOffset
-                      val nncon = content.drop(p1 + 2).substring(0, p3 - p1 - 2).trim
-                      val ncon =
-                        if (nncon.startsWith("invariant")) {
-                          val vals = nncon.drop(10).trim.split("frame:")
-                          assert(vals.length == 2)
-                          "forward (" + vals(0).trim + ") (" + vals(1).trim + ")."
-                        } else
-                          nncon
-                      Console.println("new content: " + ncon)
-                      val oldc = proj.coqString.getOrElse("")
-                      val newc = oldc.take(coqoff) + ncon + oldc.drop(coqoff + coqp._2)
-                      Console.println("new coq buffer: " + newc.drop(coqoff - 10).take(coqp._2 + 20))
-                      offc = (coqp._1, ncon.length - coqp._2)
-                      proj.coqString = Some(newc)
-                      DocumentState._content = Some(newc)
-                      //update the javaOffsets table (only if newline)
-                      //if there's a file or editor, rewrite that as well!
-                      // -> maybe do that on ctrl + s in the java buffer?!?
-                      //we might need to backtrack in coq + java!
-                    }
-                    i = i + 1
+              for (x <- proj.javaOffsets.keys) {
+                var i : Int = 0
+                for (p <- proj.javaOffsets(x)._2) {
+                  Console.println("checking " + l + " against " + p.line + " in " + x)
+                  if (l == p.line) {
+                    Console.println("found something! excited! " + x + " i is " + i)
+                    val coqp = proj.coqOffsets(x)._2(i)
+                    val coqoff = coqp._1 + proj.proofOffset
+                    val nncon = content.drop(p1 + 2).substring(0, p3 - p1 - 2).trim
+                    val ncon =
+                      if (nncon.startsWith("invariant")) {
+                        val vals = nncon.drop(10).trim.split("frame:")
+                        assert(vals.length == 2)
+                        "forward (" + vals(0).trim + ") (" + vals(1).trim + ")."
+                      } else
+                        nncon
+                    Console.println("new content: " + ncon)
+                    val oldc = proj.coqString.getOrElse("")
+                    val newc = oldc.take(coqoff) + ncon + oldc.drop(coqoff + coqp._2)
+                    Console.println("new coq buffer: " + newc.drop(coqoff - 10).take(coqp._2 + 20))
+                    offc = (coqp._1, ncon.length - coqp._2)
+                    proj.coqString = Some(newc)
+                    DocumentState._content = Some(newc)
+                    //update the javaOffsets table (only if newline)
+                    //if there's a file or editor, rewrite that as well!
+                    // -> maybe do that on ctrl + s in the java buffer?!?
+                    //we might need to backtrack in coq + java!
                   }
+                  i = i + 1
                 }
+              }
               if (offc != (0, 0))
                 for (x <- proj.coqOffsets.keys) {
                   val n1 =
