@@ -538,18 +538,13 @@ object CoqCommands extends CoqCallback {
   }
 
   def step () : Unit = {
-    if (finished) {
+    if (finished)
       if (commands.size != 0) {
         val c = commands.head 
-        Console.println("coq commands here - will do next command " + c)
         commands = commands.tail
         //should we execute in a certain thread? UI?
         c()
-      } else
-        Console.println("no command to run")
-    }
-    else
-      Console.println("not finished... can't do much")
+      }
   }
 
   private def finished () : Boolean = {
