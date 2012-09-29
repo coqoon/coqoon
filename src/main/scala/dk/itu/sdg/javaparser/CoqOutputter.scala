@@ -211,6 +211,7 @@ trait CoqOutputter extends JavaToSimpleJava {
   def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[Pair[String,String],Pair[Pair[String,Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]]]] = {
     var precon : Option[Precondition] = None
     var postcon : Option[Postcondition] = None
+    var quantif : Option[Quantification] = None
     body.flatMap {
       case x@SJMethodDefinition(modifiers, name, typ, params, body, lvars) =>
         //Console.println("starting to print method " + name + " with body " + body)
@@ -223,11 +224,14 @@ trait CoqOutputter extends JavaToSimpleJava {
             "this" :: args
         precon match {
           case Some(pre) => postcon match {
-            case Some(post) =>
-              specifications ::= name + "_spec"
-              specoutput ::= "Definition " + name + """_spec :=
-  ([A] xs, """ + "\"" + clazz + "\" :.: \"" + name + "\" |-> [" + printArgListSpec(t) + """]
+            case Some(post) => quantif match {
+              case Some(quant) =>
+                specifications ::= name + "_spec"
+                specoutput ::= "Definition " + name + """_spec :=
+  (""" + quant.data + ", " + "\"" + clazz + "\" :.: \"" + name + "\" |-> [" + printArgListSpec(t) + """]
   {{ """ + pre.data + " }}-{{ " + post.data + " }})."
+              case None => Console.println("no quantification for method " + name)
+            }
             case None => Console.println("pre without post for method " + name);
           }
           case None => postcon match {
@@ -237,6 +241,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         }
         precon = None
         postcon = None
+        quantif = None
         proofs ::= "valid_" + name + "_" + clazz
         proofoutput ::= "Lemma valid_" + name + "_" + clazz + ": |= " + name + """_spec.
 Proof.
@@ -271,6 +276,11 @@ Proof.
         postcon match {
           case None => postcon = Some(x); None
           case Some(x) => Console.println("wrong! two postconditions for a method"); None
+        }
+      case x : Quantification =>
+        quantif match {
+          case None => quantif = Some(x); None
+          case Some(x) => Console.println("wrong! multiple quantifications for a method specification"); None
         }
       case x : Specification => specoutput ::= x.data; None
       case _ => None
