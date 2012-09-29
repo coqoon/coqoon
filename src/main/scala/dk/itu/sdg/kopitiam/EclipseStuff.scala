@@ -107,7 +107,10 @@ class CoqJavaProject (basename : String) {
     new HashMap[String, Pair[Position, List[Position]]]()
   var coqOffsets : HashMap[String, Pair[Int, List[Pair[Int,Int]]]] =
     new HashMap[String, Pair[Int, List[Pair[Int,Int]]]]()
+  var specOffsets : HashMap[String, Pair[List[Position], Pair[Int, Int]]] =
+    new HashMap[String, Pair[List[Position], Pair[Int, Int]]]()
   var proofOffset : Int = 0
+  var specOffset : Int = 0
 
   def gotClosed (doc : IDocument) : Unit = {
     javaSource match {

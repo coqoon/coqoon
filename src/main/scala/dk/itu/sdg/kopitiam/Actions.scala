@@ -408,13 +408,22 @@ class TranslateAction extends KAction {
       val (con, off) = JavaTC.parse(is, nam.substring(0, nam.indexOf(".java")))
       trfi.setContents(new ByteArrayInputStream(con.getBytes("UTF-8")), IResource.NONE, null)
       val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
-      proj.proofOffset = off._1
+      proj.specOffset = off._1._1
+      //Console.println("spec offset is: " + proj.specOffset + " content there is: FFF" + con.drop(proj.specOffset).take(20) + "FFF")
+      proj.proofOffset = off._1._2
       proj.coqString = Some(con)
       proj.modelNewerThanSource = false
       proj.javaNewerThanSource = false
       off._2.map(x => {
-        proj.javaOffsets = proj.javaOffsets + (x._1._1 -> x._1._2)
-        proj.coqOffsets = proj.coqOffsets + (x._1._1 -> x._2)
+        proj.javaOffsets = proj.javaOffsets + (x._1._1._1 -> x._1._1._2)
+        proj.coqOffsets = proj.coqOffsets + (x._1._1._1 -> x._1._2)
+        //val posl = x._2._1
+        //Console.println("spec offsets for " + x._1._1._1 + " are: ")
+        //if (posl.length == 3)
+        //  Console.println("quantification: " + x._2._1(0) + " precon: " + x._2._1(1) + " postcon: " + x._2._1(2))
+        //if (x._2._2._1 != 0)
+        //  Console.println(" coqdef: " + x._2._2 + " (con there:" + con.drop(proj.specOffset).drop(x._2._2._1).take(x._2._2._2) + ")")
+        proj.specOffsets = proj.specOffsets + (x._1._1._1 -> x._2)
       })
       Some(con)
     } else {

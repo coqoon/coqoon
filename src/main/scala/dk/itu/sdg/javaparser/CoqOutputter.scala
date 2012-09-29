@@ -208,7 +208,7 @@ trait CoqOutputter extends JavaToSimpleJava {
     (defi, res)
   }
 
-  def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[Pair[String,String],Pair[Pair[String,Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]]]] = {
+  def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[Pair[String,String],Pair[Pair[Pair[String,Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]],Pair[List[Position],Pair[Int,Int]]]]] = {
     var precon : Option[Precondition] = None
     var postcon : Option[Postcondition] = None
     var quantif : Option[Quantification] = None
@@ -222,14 +222,21 @@ trait CoqOutputter extends JavaToSimpleJava {
             args
           else
             "this" :: args
+        var preoffs : List[Position] = List[Position]()
+        var specoff : Pair[Int, Int] = (0, 0)
         precon match {
           case Some(pre) => postcon match {
             case Some(post) => quantif match {
               case Some(quant) =>
+                preoffs ::= post.pos
+                preoffs ::= pre.pos
+                preoffs ::= quant.pos
                 specifications ::= name + "_spec"
-                specoutput ::= "Definition " + name + """_spec :=
+                val spec = "Definition " + name + """_spec :=
   (""" + quant.data + ", " + "\"" + clazz + "\" :.: \"" + name + "\" |-> [" + printArgListSpec(t) + """]
   {{ """ + pre.data + " }}-{{ " + post.data + " }})."
+                specoff = (specoutput.reduceLeft(_ + "\n" + _).length, spec.length)
+                specoutput ::= spec
               case None => Console.println("no quantification for method " + name)
             }
             case None => Console.println("pre without post for method " + name);
@@ -255,7 +262,7 @@ Proof.
         coqlengths = List[Pair[Int,Int]]()
         outp ::= bodyp
         outp ::= "Definition " + name + "M := Build_Method (" + printArgList(t) + ") " + bodyref + " " + returnvar + "."
-        Some((("\"" + name + "\"", name + "M"), ((name, (x.pos, ls)), (fst, cl))))
+        Some((("\"" + name + "\"", name + "M"), (((name, (x.pos, ls)), (fst, cl)), (preoffs, specoff))))
       case x@SJConstructorDefinition(modifiers, typ, params, body, lvars) =>
         val args = getArgs(params)
         val bodi = body.flatMap(x => printStatement(x, lvars))
@@ -266,7 +273,7 @@ Proof.
         lengths = List[Position]()
         coqlengths = List[Pair[Int,Int]]()
         outp ::= "Definition " + nam + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\")."
-        Some((("\"new\"" , nam), ((nam, (x.pos, ls)), (0, cl))))
+        Some((("\"new\"" , nam), (((nam, (x.pos, ls)), (0, cl)), (List[Position](), (0, 0)))))
       case x : Precondition => 
         precon match {
           case None => precon = Some(x); None
@@ -304,7 +311,7 @@ Open Scope string_scope.
 Open Scope hasn_scope.
 """
 
-  def coqoutput (xs : List[SJDefinition], complete : Boolean, name : String) : Pair[List[String], Pair[Int, List[Pair[Pair[String, Pair[Position, List[Position]]],Pair[Int,List[Pair[Int,Int]]]]]]] = {
+  def coqoutput (xs : List[SJDefinition], complete : Boolean, name : String) : Pair[List[String], Pair[Pair[Int, Int], List[Pair[Pair[Pair[String, Pair[Position, List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position],Pair[Int,Int]]]]]] = {
     outp = List[String]()
     specoutput = List[String]()
     proofoutput = List[String]()
@@ -312,7 +319,7 @@ Open Scope hasn_scope.
     proofs = List[String]()
     lengths = List[Position]()
     coqlengths = List[Pair[Int,Int]]()
-    var offs = List[Pair[Pair[String, Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]]]()
+    var offs = List[Pair[Pair[Pair[String, Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position], Pair[Int,Int]]]]()
     var cs : List[String] = List[String]()
     if (complete)
       outp ::= prelude
@@ -360,8 +367,9 @@ Proof.
 """ + proofs.foldRight("\n")("  apply " + _ + ".\n" + _) + "Qed."
     if (complete)
       proofoutput ::= "End " + name + "_spec."
-    val prefix = outp.reverse ++ List("") ++ specoutput.reverse
-    (prefix ++ proofoutput.reverse ++ List(""), (prefix.reduceLeft(_ + "\n" + _).length + 2, offs))
+    val codeprefix = outp.reverse ++ List("")
+    val prefix = codeprefix ++ specoutput.reverse
+    (prefix ++ proofoutput.reverse ++ List(""), ((codeprefix.reduceLeft(_ + "\n" + _).length + 2, prefix.reduceLeft(_ + "\n" + _).length + 2), offs))
   }
 
   def printArgList (l : List[String]) : String = {
