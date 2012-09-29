@@ -119,17 +119,36 @@ object ActionDisabler {
     actions.foreach(_.setEnabled(false))
   }
 
+  import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   def enableMaybe () = {
     //Console.println("maybe enable " + DocumentState.position + " len " + DocumentState.content.length)
-    if (! CoqCommands.active) {
-      Console.println("enableMaybe - may call content...")
-      if (DocumentState.position == 0)
+    if (DocumentState.activated.isInstanceOf[CoqEditor])
+      if (DocumentState.activated.asInstanceOf[CoqEditor] == DocumentState.activeEditor) {
+        if (DocumentState.position == 0)
+          enableStart
+        else if (DocumentState.position + 1 >= DocumentState.content.length)
+          actions.zip(ends).filterNot(_._2).map(_._1).foreach(_.setEnabled(true))
+        else
+          actions.foreach(_.setEnabled(true))
+      } else
         enableStart
-      else if (DocumentState.position + 1 >= DocumentState.content.length)
-        actions.zip(ends).filterNot(_._2).map(_._1).foreach(_.setEnabled(true))
-      else
-        actions.foreach(_.setEnabled(true))
-    }
+    else if (DocumentState.activated.isInstanceOf[JavaEditor])
+      if (DocumentState.activated.asInstanceOf[JavaEditor] == JavaPosition.editor) {
+        //always true (due to DocumentMonitor:activateEditor)!
+        if (JavaPosition.index <= 0)
+          enableStart
+        else {
+          if (JavaPosition.getProj == null || JavaPosition.name == "" || ! JavaPosition.getProj.javaOffsets.contains(JavaPosition.name))
+            enableStart
+          else if (JavaPosition.index == JavaPosition.getProj.javaOffsets(JavaPosition.name)._2.length)
+            actions.zip(ends).filterNot(_._2).map(_._1).foreach(_.setEnabled(true))
+          else
+            actions.foreach(_.setEnabled(true))
+        }
+      } else
+        //I'll never be here :/
+        //actually, only enable RestartAcion (and ProveMethod)
+        enableStart
   }
 
   def enableStart () = {
@@ -502,8 +521,6 @@ object CoqStepNotifier extends CoqCallback {
 
 object CoqCommands extends CoqCallback {
   private var commands : List[() => Unit] = List[() => Unit]()
-
-  def active () : Boolean = commands.length > 0
 
   def doLater (f : () => Unit) : Unit = {
     commands = (commands :+ f)

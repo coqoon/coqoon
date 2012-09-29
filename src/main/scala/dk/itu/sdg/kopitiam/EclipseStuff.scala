@@ -259,7 +259,6 @@ class CoqJavaProject (basename : String) {
         JavaPosition.active = true
         JavaPosition.reAnnotate(false, false)
         PrintActor.register(JavaPosition)
-        ActionDisabler.enableMaybe //this is a hack :/
       })
       Console.println("  now, really do it!")
       CoqStepUntilAction.reallydoit(off)
@@ -449,6 +448,7 @@ object JavaPosition extends CoqCallback {
           mark("Method proven", spos, epos - spos, IMarker.PROBLEM, IMarker.SEVERITY_INFO) //XXX: custom!
           active = true //to force the retract
           retract
+          ActionDisabler.enableStart
         }
       case CoqError(m, s, l) =>
         if (editor != null && active) {
@@ -698,10 +698,12 @@ object EclipseBoilerPlate {
 }
 
 object DocumentState extends CoqCallback with KopitiamLogger {
-  import org.eclipse.jface.text.IDocument
+  import org.eclipse.ui.IWorkbenchPart
+  var activated : IWorkbenchPart = null
 
   var activeEditor : CoqEditor = null
 
+  import org.eclipse.jface.text.IDocument
   def activeDocument () : IDocument = {
     if (activeEditor != null)
       activeEditor.getDocumentProvider.getDocument(activeEditor.getEditorInput)

@@ -90,22 +90,18 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   def activateEditor (ed : IWorkbenchPart) : Unit = {
     Console.println("activated: " + ed)
+    DocumentState.activated = ed
     if (ed.isInstanceOf[CoqEditor]) {
       val txt = ed.asInstanceOf[CoqEditor]
       maybeInsert(txt, txt.getSource)
-      if (DocumentState.activeEditor != ed) {
-        ActionDisabler.disableAll
-        ActionDisabler.enableStart
-      } else
-        ActionDisabler.enableMaybe
     } else if (ed.isInstanceOf[JavaEditor]) {
       val txt = ed.asInstanceOf[JavaEditor]
       maybeInsert(txt, txt.getViewer)
       if (JavaPosition.editor != ed)
         JavaPosition.editor = ed.asInstanceOf[JavaEditor]
-      ActionDisabler.enableMaybe
-    } else
-      ActionDisabler.disableAll
+    }
+    ActionDisabler.disableAll
+    ActionDisabler.enableMaybe
   }
 
   override def partOpened (part : IWorkbenchPartReference) : Unit =
@@ -223,6 +219,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
             }
           }
         }
+        ActionDisabler.enableMaybe
       }
       if (proj.isCoqModel(doc)) {
         Console.println("model updated, setting boolean")
