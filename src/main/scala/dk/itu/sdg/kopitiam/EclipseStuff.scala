@@ -556,7 +556,8 @@ object JavaPosition extends CoqCallback {
       val doc = prov.getDocument(editor.getEditorInput)
       val proj = EclipseTables.DocToProject(doc)
       var doit : Boolean = active
-      if (DocumentState.position < (proj.coqOffsets(name)._1 + proj.proofOffset)) {
+      Console.println("comparing: pos " + DocumentState.position + " with " + (proj.coqOffsets(name)._1 + proj.proofOffset - 1))
+      if (DocumentState.position < (proj.coqOffsets(name)._1 + proj.proofOffset - 1)) {
         if (active) {
           //Console.println("deactivating, 'cause we're too low")
           active = false
@@ -648,7 +649,7 @@ object JavaPosition extends CoqCallback {
             processing = None
             val sma = new Annotation("dk.itu.sdg.kopitiam.processing", false, "Proof")
             val loff = doc.getLineOffset(proj.specOffsets(name)._1(0).line - 1) //XXX: bah
-            val finaloff = doc.getLineOffset(proj.specOffsets(name)._1(2).line - 1)
+            val finaloff = doc.getLineOffset(proj.specOffsets(name)._1(2).line) - 1
             annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
             processing = Some(sma)
           } else { //done with spec!
@@ -660,7 +661,7 @@ object JavaPosition extends CoqCallback {
             if (! undo) {
               val sma = new Annotation("dk.itu.sdg.kopitiam.processed", false, "Proof")
               val loff = doc.getLineOffset(proj.specOffsets(name)._1(0).line - 1) //XXX: bah
-              val finaloff = doc.getLineOffset(proj.specOffsets(name)._1(2).line - 1)
+              val finaloff = doc.getLineOffset(proj.specOffsets(name)._1(2).line) - 1
               annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
               processed = Some(sma)
               spec = false

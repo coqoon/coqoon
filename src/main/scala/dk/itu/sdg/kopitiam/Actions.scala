@@ -133,22 +133,20 @@ object ActionDisabler {
       } else
         enableStart
     else if (DocumentState.activated.isInstanceOf[JavaEditor])
-      if (DocumentState.activated.asInstanceOf[JavaEditor] == JavaPosition.editor) {
+      if (DocumentState.activated.asInstanceOf[JavaEditor] == JavaPosition.editor && JavaPosition.active) {
         //always true (due to DocumentMonitor:activateEditor)!
-        if (JavaPosition.index <= 0)
+        if (JavaPosition.index == -1)
           enableStart
         else {
           if (JavaPosition.getProj == null || JavaPosition.name == "" || ! JavaPosition.getProj.javaOffsets.contains(JavaPosition.name))
-            enableStart
+            disableAll
           else if (JavaPosition.index == JavaPosition.getProj.javaOffsets(JavaPosition.name)._2.length)
             actions.zip(ends).filterNot(_._2).map(_._1).foreach(_.setEnabled(true))
           else
             actions.foreach(_.setEnabled(true))
         }
       } else
-        //I'll never be here :/
-        //actually, only enable RestartAcion (and ProveMethod)
-        enableStart
+        disableAll
   }
 
   def enableStart () = {
