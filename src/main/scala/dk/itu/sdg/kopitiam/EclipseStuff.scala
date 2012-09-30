@@ -244,24 +244,26 @@ class CoqJavaProject (basename : String) {
             Console.println("backtracking to " + x)
             CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
             DocumentState.resetState
-            JavaPosition.unmark
             JavaPosition.retract
         }
       })
     }
     CoqCommands.doLater(() => {
       //story so far: model is now updated, java might be newly generated!
-      val off = coqOffsets(name)._1 + proofOffset
-      if (DocumentState.activeEditor != null) {
-        DocumentState.activeEditor.addAnnotations(0, 0)
-        DocumentState.activeEditor.invalidate
-        DocumentState.activeEditor = null
-      }
-      DocumentState._content = coqString
-      JavaPosition.name = name
-      PrintActor.register(JavaPosition)
-      if (DocumentState.position < off)
-        CoqStepUntilAction.reallydoit(off)
+      if (coqOffsets.contains(name)) {
+        val off = coqOffsets(name)._1 + proofOffset
+        if (DocumentState.activeEditor != null) {
+          DocumentState.activeEditor.addAnnotations(0, 0)
+          DocumentState.activeEditor.invalidate
+          DocumentState.activeEditor = null
+        }
+        DocumentState._content = coqString
+        JavaPosition.name = name
+        PrintActor.register(JavaPosition)
+        if (DocumentState.position < off)
+          CoqStepUntilAction.reallydoit(off)
+      } else
+        CoqCommands.step
     })
   }
 }
@@ -482,6 +484,14 @@ object JavaPosition extends CoqCallback {
   def unmark () : Unit = {
     markers.foreach(_.delete)
     markers = List[IMarker]()
+  }
+
+  def markPos (message : String, position : scala.util.parsing.input.Position) = {
+    val doc = getDoc
+    val pos = doc.getLineOffset(position.line - 1) + position.column
+    val pos2 = doc.getLineOffset(position.line) - 1
+    Console.println("marking java at " + pos + " with: " + message)
+    mark(message, pos, pos2 - pos, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
   }
 
   def mark (message : String, spos : Int, len : Int, typ : String, severity : Int) : Unit = {

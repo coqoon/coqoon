@@ -190,10 +190,12 @@ trait JavaToSimpleJava extends KopitiamLogger {
         val (ai, ls2) = translateStatement(a, fields, ms, ls1)
         (ti ++ List(SJConditional(at, ci, ai)), ls2)
 
-      case JWhile(test, body) =>
+      case x@JWhile(test, body) =>
         val (at, ti, ls0) = extractHelper(None, test, fields, ms, ls)
         val (newbody, ls1) = translateStatement(body, fields, ms, ls0)
-        (ti ++ List(SJWhile(at, newbody ++ ti)), ls1)
+        val why = SJWhile(at, newbody ++ ti)
+        why.setPos(x.pos)
+        (ti ++ List(why), ls1)
 
       case JReturn(e : JVariableAccess) =>
         (List(SJReturn(SJVariableAccess(e.variable))), ls)

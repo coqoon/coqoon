@@ -36,10 +36,15 @@ object FinishAST extends JavaTerms
   }
 
   import scala.util.parsing.input.Position
-  def doit (a : Any, name : String) : Pair[String,Pair[Pair[Int,Int],List[Pair[Pair[Pair[String, Pair[Position, List[Position]]], Pair[Int,List[Pair[Int,Int]]]],Pair[List[Position],Pair[Int,List[Pair[Int,Int]]]]]]]] = {
+  def doit (a : Any, name : String) : Either[List[SJWarning],Pair[String,Pair[Pair[Int,Int],List[Pair[Pair[Pair[String, Pair[Position, List[Position]]], Pair[Int,List[Pair[Int,Int]]]],Pair[List[Position],Pair[Int,List[Pair[Int,Int]]]]]]]]] = {
     val w = doitHelper(a)
-    val (r, offs) = coqoutput(w, true, name)
-    (r.reduceLeft(_ + "\n" + _), offs)
+    val ws = SimpleJavaChecker.check(w)
+    if (ws.length > 0)
+      Left(ws)
+    else {
+      val (r, offs) = coqoutput(w, true, name)
+      Right((r.reduceLeft(_ + "\n" + _), offs))
+    }
   }
 
   def doitNoSpec (a : Any, name : String) : (String, String) = {
@@ -273,7 +278,10 @@ object FinishAST extends JavaTerms
       // statements
       case AnyStatement(x) => transformAnyExpr(x)
       case Return(x) => JReturn(transformExpression(x))
-      case While(test, body) => JWhile(transformExpression(test), transformJBlock(transformAnyExpr(body)))
+      case x@While(test, body) =>
+        val r = JWhile(transformExpression(test), transformJBlock(transformAnyExpr(body)))
+        r.setPos(x.pos)
+        r
       case Block(xs) => JBlock(None, transformMethodBody(xs))
       case cond : Conditional => transformConditional(cond)
       // expressions

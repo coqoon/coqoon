@@ -408,6 +408,7 @@ class TranslateAction extends KAction {
     null
   }
 
+  import scala.util.parsing.input.Position
   def translate (file : IFile, generate : Boolean) : Option[String] = {
     val nam = file.getName
     if (nam.endsWith(".java")) {
@@ -420,8 +421,15 @@ class TranslateAction extends KAction {
         trfi.create(null, IResource.NONE, null)
         trfi.setCharset("UTF-8", null)
       }
-      val (con, off) = JavaTC.parse(is, nam.substring(0, nam.indexOf(".java")))
-      if (generate) {
+      var con : Option[String] = None
+      var moff : Option[Pair[Pair[Int, Int], List[Pair[Pair[Pair[String, Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position],Pair[Int,List[Pair[Int,Int]]]]]]]] = None
+      JavaTC.parse(is, nam.substring(0, nam.indexOf(".java"))) match {
+        case Left(x) =>
+          Console.println("got some warnings for you " + x.length)
+          x.foreach(y => JavaPosition.markPos(y.message, y.position))
+        case Right(x) => con = Some(x._1); moff = Some(x._2) 
+      }
+      if (generate && con != None) {
         val model = nam.substring(0, nam.length - 4) + "v"
         val modelfile = file.getProject.getFile(model)
         Console.println("modelfilename is " + model + " and it exists? " + modelfile.exists)
@@ -435,37 +443,40 @@ class TranslateAction extends KAction {
           } else
             ""
         val modbytes = mod.getBytes("UTF-8")
-        val conbytes = con.getBytes("UTF-8")
+        val conbytes = con.getOrElse("").getBytes("UTF-8")
         val bytessize = modbytes.length + conbytes.length
         val bs = new Array[Byte](bytessize)
         System.arraycopy(modbytes, 0, bs, 0, modbytes.length)
         System.arraycopy(conbytes, 0, bs, modbytes.length, conbytes.length)
         trfi.setContents(new ByteArrayInputStream(bs), IResource.NONE, null)
       }
-      val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
-      proj.specOffset = off._1._1
-      //Console.println("spec offset is: " + proj.specOffset + " content there is: FFF" + con.drop(proj.specOffset).take(20) + "FFF")
-      proj.proofOffset = off._1._2
-      proj.coqString = Some(con)
-      proj.modelNewerThanSource = false
-      proj.javaNewerThanSource = false
-      off._2.map(x => {
-        proj.javaOffsets = proj.javaOffsets + (x._1._1._1 -> x._1._1._2)
-        proj.coqOffsets = proj.coqOffsets + (x._1._1._1 -> x._1._2)
-        //val posl = x._2._1
-        //Console.println("spec offsets for " + x._1._1._1 + " are: ")
-        //if (posl.length == 3)
-        //  Console.println("quantification: " + x._2._1(0) + " precon: " + x._2._1(1) + " postcon: " + x._2._1(2))
-        //if (x._2._2._2.length == 3) {
-        //  val mycon = con.drop(proj.specOffset).drop(x._2._2._1)
-        //  Console.println(" coqdef-content:" + mycon.take(10))
-        //  Console.println("  parts: -- quantification: " + mycon.drop(x._2._2._2(0)._1).take(x._2._2._2(0)._2))
-        //  Console.println("  parts: -- precondition: " + mycon.drop(x._2._2._2(1)._1).take(x._2._2._2(1)._2))
-        //  Console.println("  parts: -- postcondition: " + mycon.drop(x._2._2._2(2)._1).take(x._2._2._2(2)._2))
-        //}
-        proj.specOffsets = proj.specOffsets + (x._1._1._1 -> x._2)
-      })
-      Some(con)
+      if (con != None) {
+        val off = moff.get
+        val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
+        proj.specOffset = off._1._1
+        //Console.println("spec offset is: " + proj.specOffset + " content there is: FFF" + con.drop(proj.specOffset).take(20) + "FFF")
+        proj.proofOffset = off._1._2
+        proj.coqString = con
+        proj.modelNewerThanSource = false
+        proj.javaNewerThanSource = false
+        off._2.map(x => {
+          proj.javaOffsets = proj.javaOffsets + (x._1._1._1 -> x._1._1._2)
+          proj.coqOffsets = proj.coqOffsets + (x._1._1._1 -> x._1._2)
+          //val posl = x._2._1
+          //Console.println("spec offsets for " + x._1._1._1 + " are: ")
+          //if (posl.length == 3)
+          //  Console.println("quantification: " + x._2._1(0) + " precon: " + x._2._1(1) + " postcon: " + x._2._1(2))
+          //if (x._2._2._2.length == 3) {
+          //  val mycon = con.drop(proj.specOffset).drop(x._2._2._1)
+          //  Console.println(" coqdef-content:" + mycon.take(10))
+          //  Console.println("  parts: -- quantification: " + mycon.drop(x._2._2._2(0)._1).take(x._2._2._2(0)._2))
+          //  Console.println("  parts: -- precondition: " + mycon.drop(x._2._2._2(1)._1).take(x._2._2._2(1)._2))
+          //  Console.println("  parts: -- postcondition: " + mycon.drop(x._2._2._2(2)._1).take(x._2._2._2(2)._2))
+          //}
+          proj.specOffsets = proj.specOffsets + (x._1._1._1 -> x._2)
+        })
+      }
+      con
     } else {
       Console.println("wasn't a java file")
       None

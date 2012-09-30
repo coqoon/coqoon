@@ -30,7 +30,7 @@ case class SJBodyBlock (modifier : Option[Static], body : List[SJStatement]) ext
 
 sealed case class SJArgument (id : String, jtype : String)
 
-trait SJStatement
+trait SJStatement extends Positional
 case class SJAssert (assertion : SJExpression) extends SJStatement
 case class SJWhile (test : SJExpression, body : List[SJStatement]) extends SJStatement
 case class SJConditional (test : SJExpression, consequent : List[SJStatement], alternative : List[SJStatement]) extends SJStatement
