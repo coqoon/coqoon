@@ -345,6 +345,7 @@ class ProveMethodAction extends KEditorAction {
   import org.eclipse.jface.text.ITextSelection
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   import org.eclipse.ui.part.FileEditorInput
+  import org.eclipse.core.resources.IMarker
   override def run (a : IAction) : Unit = {
     //plan:
     // a: get project
@@ -359,18 +360,25 @@ class ProveMethodAction extends KEditorAction {
     val slen = doc.getLineLength(sl)
     val line = doc.get(soff, slen)
     val marr = line.split("\\(")
-    assert(marr.length == 2)
-    val arr = marr(0).split(" ")
-    val nam = arr(arr.length - 1)
-    if (JavaPosition.active == false || JavaPosition.name != nam) {
-      JavaPosition.retract
-      // e: set name in JavaPosition
-      JavaPosition.name = nam
-    }
+    if (marr.length != 2)
+      JavaPosition.mark("please do prove method when the cursor is on a method definition", soff, slen, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
+    else {
+      val arr = marr(0).split(" ")
+      val nam = arr(arr.length - 1)
+      if (nam.trim.equals("while") || nam.trim.equals("for") || nam.trim.equals("if") || nam.trim.equals("try") || nam.trim.equals("catch"))
+        JavaPosition.mark("please do prove method when the cursor is on a method definition", soff, slen, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
+      else {
+        if (JavaPosition.active == false || JavaPosition.name != nam) {
+          JavaPosition.retract
+          // e: set name in JavaPosition
+          JavaPosition.name = nam
+        }
 
-    // b: if outdated coqString: translate
-    proj.proveMethod(nam)
-    CoqCommands.step
+        // b: if outdated coqString: translate
+        proj.proveMethod(nam)
+        CoqCommands.step
+      }
+    }
   }
   override def doit () : Unit = { }
 }

@@ -482,7 +482,7 @@ object JavaPosition extends CoqCallback {
     markers = List[IMarker]()
   }
 
-  private def mark (message : String, spos : Int, len : Int, typ : String, severity : Int) : Unit = {
+  def mark (message : String, spos : Int, len : Int, typ : String, severity : Int) : Unit = {
     val file = editor.getEditorInput
     if (file.isInstanceOf[IFileEditorInput]) {
       val rfile = file.asInstanceOf[IFileEditorInput].getFile
