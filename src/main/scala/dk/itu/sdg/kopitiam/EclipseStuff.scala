@@ -154,7 +154,7 @@ class CoqJavaProject (basename : String) {
 
   import org.eclipse.ui.{IFileEditorInput, PlatformUI}
   import org.eclipse.ui.part.FileEditorInput
-  import org.eclipse.core.resources.IFile
+  import org.eclipse.core.resources.{IFile, IMarker}
   import org.eclipse.swt.widgets.Display
   def proveMethod (name : String) : Unit = {
     modelShell match {
@@ -176,9 +176,11 @@ class CoqJavaProject (basename : String) {
               if (fei.isInstanceOf[IFileEditorInput])
                 fei.asInstanceOf[IFileEditorInput].getFile.getProject.getFile(basename + ".v")
               else {
-                Console.println("fei not a fileeditorinput: " + fei)
+                JavaPosition.mark("something went wrong reading the Java file", 0, 10, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
                 null
               }
+            if (! model.exists)
+              JavaPosition.mark("Please write a model file for this java file with a Module named " + name + "_model, which is used to prove the java code.", 0, 10, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
             open = true
           }
         case Some(x) =>
