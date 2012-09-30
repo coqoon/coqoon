@@ -257,10 +257,11 @@ trait CoqOutputter extends JavaToSimpleJava {
         postcon = None
         quantif = None
         proofs ::= "valid_" + name + "_" + clazz
-        proofoutput ::= "Lemma valid_" + name + "_" + clazz + ": |= " + name + """_spec.
-Proof.
+        val lemma = "Lemma valid_" + name + "_" + clazz + ": |= " + name + """_spec.
+Proof."""
+        val fst = if (proofoutput.length > 0) proofoutput.reduceLeft(_ + "\n" + _).length else 0 + (lemma.length - 1) //the -1 is due to off vs length!
+        proofoutput ::= lemma + """
   unfold """ + name + "_spec" + "; unfold_spec."
-        val fst = proofoutput.reduceLeft(_ + "\n" + _).length
         val (bodyp, returnvar) = getBody(body, bodyref, lvars)
         proofoutput ::= "Qed."
         val ls = lengths.reverse

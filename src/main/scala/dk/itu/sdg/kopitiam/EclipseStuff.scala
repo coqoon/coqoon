@@ -256,14 +256,9 @@ class CoqJavaProject (basename : String) {
         DocumentState.activeEditor = null
       }
       DocumentState._content = coqString
-      if (! (JavaPosition.active && JavaPosition.name == name))
-        CoqCommands.doLater(() => {
-          JavaPosition.name = name
-          JavaPosition.active = true
-          JavaPosition.reAnnotate(false, false)
-          PrintActor.register(JavaPosition)
-        })
-      if (! (JavaPosition.active && JavaPosition.name == name && DocumentState.position >= off))
+      JavaPosition.name = name
+      PrintActor.register(JavaPosition)
+      if (DocumentState.position < off)
         CoqStepUntilAction.reallydoit(off)
     })
   }
@@ -532,29 +527,45 @@ object JavaPosition extends CoqCallback {
   }
 
   def reAnnotate (proc : Boolean, undo : Boolean) : Unit = {
+    Console.println("reannotate called with proc " + proc + " undo " + undo + " index is " + index + " active is " + active + " editor is " + editor)
     //4 cases:
     // #t #f =>                  remove nothing, mark yellow
     // #t #t => problem marker - remove yellow, mark nothing
     // #f #t => real undo -      remove last green, remark green
     // #f #f => processed!       remove yellow & green, mark green
-    if (editor != null && active) {
+    if (editor != null && name != "" && getProj != null && getProj.coqOffsets.contains(name)) {
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
       val proj = EclipseTables.DocToProject(doc)
-      val pos =
+      var doit : Boolean = active
+      if (DocumentState.position < (proj.coqOffsets(name)._1 + proj.proofOffset)) {
+        Console.println("pos " + DocumentState.position + " coq " + (proj.coqOffsets(name)._1 + proj.proofOffset))
+        if (active) {
+          Console.println("deactivating, 'cause we're too low")
+          active = false
+          index = -1
+        }
+      } else if (! active) {
+        Console.println("activating 'cause we're too high")
+        active = true
+        doit = true
+      }
+      if (doit) {
+        val pos =
+          if (!proc)
+            getPos(-1, proj.javaOffsets(name))
+          else
+            getPos(index, proj.javaOffsets(name))
+        val npos =
+          scala.math.max(
+            if (undo)
+              index - 1
+            else
+              index + 1,
+            -1)
         if (!proc)
-          getPos(-1, proj.javaOffsets(name))
-        else
-          getPos(index, proj.javaOffsets(name))
-      val npos =
-        if (undo)
-          index - 1
-        else
-          index + 1
-      if (!proc)
-        index = npos
-      val nextpos : Int = getPos(npos, proj.javaOffsets(name))
-      if (nextpos != pos) {
+          index = npos
+        val nextpos : Int = getPos(npos, proj.javaOffsets(name))
         val annmodel = prov.getAnnotationModel(editor.getEditorInput)
         annmodel.connect(doc)
         if ((proc && undo) || (!proc && !undo)) {
@@ -578,21 +589,23 @@ object JavaPosition extends CoqCallback {
           processed = None
         }
 
-        val txt =
-          if (proc)
-            "dk.itu.sdg.kopitiam.processing"
-          else
-            "dk.itu.sdg.kopitiam.processed"
-        val sma = new Annotation(txt, false, "Proof")
-
-        val loff = doc.getLineOffset(pos - 1) //XXX: bah
-        val finaloff = doc.getLineOffset(nextpos - 1) - 1
-        if (! (proc && undo)) {
-          annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
-          if (proc)
-            processing = Some(sma)
-          else
-            processed = Some(sma)
+        if (nextpos != pos) {
+          val txt =
+            if (proc)
+              "dk.itu.sdg.kopitiam.processing"
+            else
+              "dk.itu.sdg.kopitiam.processed"
+          val sma = new Annotation(txt, false, "Proof")
+          
+          val loff = doc.getLineOffset(pos - 1) //XXX: bah
+          val finaloff = doc.getLineOffset(nextpos - 1) - 1
+          if (! (proc && undo)) {
+            annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
+            if (proc)
+              processing = Some(sma)
+            else
+              processed = Some(sma)
+          }
         }
         annmodel.disconnect(doc)
       }
