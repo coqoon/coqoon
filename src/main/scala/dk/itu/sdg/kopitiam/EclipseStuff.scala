@@ -450,12 +450,26 @@ object JavaPosition extends CoqCallback {
           ActionDisabler.enableStart
         }
       case CoqError(m, s, l) =>
-        if (editor != null && active) {
-          val doc = getDoc
-          val javapos = getProj.javaOffsets(name)._2(index)
-          val soff = doc.getLineOffset(javapos.line - 1)
-          val star = s + soff + javapos.column + 2 //<%
-          mark(m, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+        if (editor != null) {
+          if (active) {
+            val doc = getDoc
+            val javapos = getProj.javaOffsets(name)._2(index)
+            val soff = doc.getLineOffset(javapos.line - 1)
+            val star = s + soff + javapos.column + 2 //<%
+            mark(m, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+          } else if (spec) {
+            val doc = getDoc
+            val javaPos = getProj.specOffsets(name)._1
+            val coqOffs = getProj.specOffsets(name)._2._2
+            val star : Int =
+                if (s > coqOffs(0)._1 && s < coqOffs(1)._1)
+                  doc.getLineOffset(javaPos(0).line - 1) + javaPos(0).column + 2 + "quantification: ".length + (s - coqOffs(0)._1)
+                else if (s > coqOffs(1)._1 && s < coqOffs(2)._1)
+                  doc.getLineOffset(javaPos(1).line - 1) + javaPos(1).column + 2 + "precondition: ".length + (s - coqOffs(1)._1)
+                else //if (s > coqOffs(2)._1)
+                  doc.getLineOffset(javaPos(2).line - 1) + javaPos(2).column + 2 + "postcondition: ".length + (s - coqOffs(2)._1)
+            mark(m, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+          }
         }
       case x =>
     }
@@ -649,11 +663,11 @@ object JavaPosition extends CoqCallback {
               val finaloff = doc.getLineOffset(proj.specOffsets(name)._1(2).line - 1)
               annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
               processed = Some(sma)
+              spec = false
             } else
               Display.getDefault.asyncExec(
                 new Runnable() {
                   def run() = { editor.getViewer.invalidateTextPresentation }})
-            spec = false
           }
         annmodel.disconnect(doc)
       }
