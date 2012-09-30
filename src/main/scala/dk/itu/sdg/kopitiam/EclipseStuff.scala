@@ -388,6 +388,7 @@ object JavaPosition extends CoqCallback {
   var index : Int = -1
   var name : String = ""
   var active : Boolean = false
+  var spec : Boolean = false
 
   import org.eclipse.jface.text.Position
   import org.eclipse.jface.text.source.Annotation
@@ -517,9 +518,12 @@ object JavaPosition extends CoqCallback {
     }
   }
 
-  def getPos (i : Int, elements : Pair[scala.util.parsing.input.Position, List[scala.util.parsing.input.Position]]) : Int = {
+  def getPos (i : Int, proj : CoqJavaProject, name : String) : Int = {
+//elements : Pair[scala.util.parsing.input.Position,
+//List[scala.util.parsing.input.Position]]) : Int = {
+    val elements = proj.javaOffsets(name)
     if (i == -1)
-      elements._1.line
+      proj.specOffsets(name)._1(0).line
     else if (i >= elements._2.length)
       elements._2(elements._2.length - 1).line + 2
     else
@@ -527,7 +531,7 @@ object JavaPosition extends CoqCallback {
   }
 
   def reAnnotate (proc : Boolean, undo : Boolean) : Unit = {
-    Console.println("reannotate called with proc " + proc + " undo " + undo + " index is " + index + " active is " + active + " editor is " + editor)
+    Console.println("reannotate called with proc " + proc + " undo " + undo + " index is " + index + " active is " + active + " spec is " + spec)
     //4 cases:
     // #t #f =>                  remove nothing, mark yellow
     // #t #t => problem marker - remove yellow, mark nothing
@@ -539,74 +543,118 @@ object JavaPosition extends CoqCallback {
       val proj = EclipseTables.DocToProject(doc)
       var doit : Boolean = active
       if (DocumentState.position < (proj.coqOffsets(name)._1 + proj.proofOffset)) {
-        Console.println("pos " + DocumentState.position + " coq " + (proj.coqOffsets(name)._1 + proj.proofOffset))
         if (active) {
-          Console.println("deactivating, 'cause we're too low")
+          //Console.println("deactivating, 'cause we're too low")
           active = false
           index = -1
         }
       } else if (! active) {
-        Console.println("activating 'cause we're too high")
+        //Console.println("activating 'cause we're too high")
         active = true
         doit = true
       }
+      if (DocumentState.position == (proj.specOffsets(name)._2._1 + proj.specOffset - 1)) {
+        if (proc && undo && spec) {
+          //Console.println("awwwwwww, broke it. uncolor. retract! NOW!")
+          doit = true
+        } else if (proc) {
+          //Console.println("working on tha spec real soon now, paint it black^Wyellow!")
+          spec = true
+          doit = true
+        }
+      } else if (DocumentState.position > (proj.specOffsets(name)._2._1 + proj.specOffset - 1) && spec) {
+        //Console.println("done working on tha spec!, paint it blue^Wgreen")
+        doit = true
+      }
       if (doit) {
-        val pos =
-          if (!proc)
-            getPos(-1, proj.javaOffsets(name))
-          else
-            getPos(index, proj.javaOffsets(name))
-        val npos =
-          scala.math.max(
-            if (undo)
-              index - 1
-            else
-              index + 1,
-            -1)
-        if (!proc)
-          index = npos
-        val nextpos : Int = getPos(npos, proj.javaOffsets(name))
         val annmodel = prov.getAnnotationModel(editor.getEditorInput)
         annmodel.connect(doc)
-        if ((proc && undo) || (!proc && !undo)) {
-          processing match {
-            case Some(x) => annmodel.removeAnnotation(x)
-            case None =>
-          }
-          processing = None
-        }
-        if ((!proc && undo) || (!proc && !undo)) {
-          processed match {
-            case Some(x) => {
-              annmodel.removeAnnotation(x)
+        if (!spec) {
+          val pos =
+            if (!proc)
+              getPos(-1, proj, name)
+            else
+              getPos(index, proj, name)
+          val npos =
+            scala.math.max(
               if (undo)
-                Display.getDefault.asyncExec(
-                  new Runnable() {
-                    def run() = { editor.getViewer.invalidateTextPresentation }})
+                index - 1
+              else
+                index + 1,
+              -1)
+          if (!proc)
+            index = npos
+          val nextpos : Int = getPos(npos, proj, name)
+          if ((proc && undo) || (!proc && !undo)) {
+            processing match {
+              case Some(x) => annmodel.removeAnnotation(x)
+              case None =>
             }
-            case None =>
+            processing = None
           }
-          processed = None
-        }
+          if ((!proc && undo) || (!proc && !undo)) {
+            processed match {
+              case Some(x) => {
+                annmodel.removeAnnotation(x)
+                if (undo)
+                  Display.getDefault.asyncExec(
+                    new Runnable() {
+                      def run() = { editor.getViewer.invalidateTextPresentation }})
+              }
+              case None =>
+            }
+            processed = None
+          }
 
-        if (nextpos != pos) {
-          val txt =
-            if (proc)
-              "dk.itu.sdg.kopitiam.processing"
-            else
-              "dk.itu.sdg.kopitiam.processed"
-          val sma = new Annotation(txt, false, "Proof")
-          
-          val loff = doc.getLineOffset(pos - 1) //XXX: bah
-          val finaloff = doc.getLineOffset(nextpos - 1) - 1
-          if (! (proc && undo)) {
-            annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
-            if (proc)
-              processing = Some(sma)
-            else
-              processed = Some(sma)
+          if (nextpos != pos) {
+            val txt =
+              if (proc)
+                "dk.itu.sdg.kopitiam.processing"
+              else
+                "dk.itu.sdg.kopitiam.processed"
+            val sma = new Annotation(txt, false, "Proof")
+            
+            val loff = doc.getLineOffset(pos - 1) //XXX: bah
+            val finaloff = doc.getLineOffset(nextpos - 1) - 1
+            if (! (proc && undo)) {
+              annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
+              if (proc)
+                processing = Some(sma)
+              else
+                processed = Some(sma)
+            }
           }
         }
+        else //if (spec)
+          if (proc && !undo) {
+            processing match {
+              case Some(x) => annmodel.removeAnnotation(x)
+              case None =>
+            }
+            processing = None
+            val sma = new Annotation("dk.itu.sdg.kopitiam.processing", false, "Proof")
+            val loff = doc.getLineOffset(proj.specOffsets(name)._1(0).line - 1) //XXX: bah
+            val finaloff = doc.getLineOffset(proj.specOffsets(name)._1(2).line - 1)
+            annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
+            processing = Some(sma)
+          } else { //done with spec!
+            processing match {
+              case Some(x) => annmodel.removeAnnotation(x)
+              case None =>
+            }
+            processing = None
+            if (! undo) {
+              val sma = new Annotation("dk.itu.sdg.kopitiam.processed", false, "Proof")
+              val loff = doc.getLineOffset(proj.specOffsets(name)._1(0).line - 1) //XXX: bah
+              val finaloff = doc.getLineOffset(proj.specOffsets(name)._1(2).line - 1)
+              annmodel.addAnnotation(sma, new Position(loff, finaloff - loff))
+              processed = Some(sma)
+            } else
+              Display.getDefault.asyncExec(
+                new Runnable() {
+                  def run() = { editor.getViewer.invalidateTextPresentation }})
+            spec = false
+          }
         annmodel.disconnect(doc)
       }
     }
