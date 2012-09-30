@@ -556,7 +556,6 @@ object JavaPosition extends CoqCallback {
       val doc = prov.getDocument(editor.getEditorInput)
       val proj = EclipseTables.DocToProject(doc)
       var doit : Boolean = active
-      Console.println("comparing: pos " + DocumentState.position + " with " + (proj.coqOffsets(name)._1 + proj.proofOffset - 1))
       if (DocumentState.position < (proj.coqOffsets(name)._1 + proj.proofOffset - 1)) {
         if (active) {
           //Console.println("deactivating, 'cause we're too low")
