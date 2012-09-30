@@ -232,7 +232,7 @@ class CoqJavaProject (basename : String) {
         val fei = JavaPosition.editor.getEditorInput
         if (fei.isInstanceOf[IFileEditorInput]) {
           Console.println("translating file....")
-          coqString = TranslateAction.translate(fei.asInstanceOf[IFileEditorInput].getFile)
+          coqString = TranslateAction.translate(fei.asInstanceOf[IFileEditorInput].getFile, false)
         }
         //retract up until model
         modelShell match {

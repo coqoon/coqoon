@@ -402,23 +402,46 @@ class TranslateAction extends KAction {
     val sel = HandlerUtil.getActiveMenuSelection(ev).asInstanceOf[IStructuredSelection]
     val fe = sel.getFirstElement
     if (fe.isInstanceOf[IFile])
-      translate(fe.asInstanceOf[IFile])
+      translate(fe.asInstanceOf[IFile], true)
     else if (fe.isInstanceOf[ICompilationUnit])
-      translate(fe.asInstanceOf[ICompilationUnit].getResource.asInstanceOf[IFile])
+      translate(fe.asInstanceOf[ICompilationUnit].getResource.asInstanceOf[IFile], true)
     null
   }
 
-  def translate (file : IFile) : Option[String] = {
+  def translate (file : IFile, generate : Boolean) : Option[String] = {
     val nam = file.getName
     if (nam.endsWith(".java")) {
-      val trfi = file.getProject.getFile(nam + ".v") //TODO: find a suitable location!
       val is = StreamReader(new InputStreamReader(file.getContents, "UTF-8"))
-      if (trfi.exists)
-        trfi.delete(true, false, null)
-      trfi.create(null, IResource.NONE, null)
-      trfi.setCharset("UTF-8", null)
+      var trfi : IFile = null
+      if (generate) {
+        trfi = file.getProject.getFile(nam + ".v") //TODO: find a suitable location!
+        if (trfi.exists)
+          trfi.delete(true, false, null)
+        trfi.create(null, IResource.NONE, null)
+        trfi.setCharset("UTF-8", null)
+      }
       val (con, off) = JavaTC.parse(is, nam.substring(0, nam.indexOf(".java")))
-      trfi.setContents(new ByteArrayInputStream(con.getBytes("UTF-8")), IResource.NONE, null)
+      if (generate) {
+        val model = nam.substring(0, nam.length - 4) + "v"
+        val modelfile = file.getProject.getFile(model)
+        Console.println("modelfilename is " + model + " and it exists? " + modelfile.exists)
+        val mod : String =
+          if (modelfile.exists) {
+            modelfile.setCharset("UTF-8")
+            try
+              new java.util.Scanner(modelfile.getContents, "UTF-8").useDelimiter("\\A").next()
+            catch
+            { case (e : Throwable) => "" }
+          } else
+            ""
+        val modbytes = mod.getBytes("UTF-8")
+        val conbytes = con.getBytes("UTF-8")
+        val bytessize = modbytes.length + conbytes.length
+        val bs = new Array[Byte](bytessize)
+        System.arraycopy(modbytes, 0, bs, 0, modbytes.length)
+        System.arraycopy(conbytes, 0, bs, modbytes.length, conbytes.length)
+        trfi.setContents(new ByteArrayInputStream(bs), IResource.NONE, null)
+      }
       val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
       proj.specOffset = off._1._1
       //Console.println("spec offset is: " + proj.specOffset + " content there is: FFF" + con.drop(proj.specOffset).take(20) + "FFF")
