@@ -413,14 +413,6 @@ class TranslateAction extends KAction {
     val nam = file.getName
     if (nam.endsWith(".java")) {
       val is = StreamReader(new InputStreamReader(file.getContents, "UTF-8"))
-      var trfi : IFile = null
-      if (generate) {
-        trfi = file.getProject.getFile(nam + ".v") //TODO: find a suitable location!
-        if (trfi.exists)
-          trfi.delete(true, false, null)
-        trfi.create(null, IResource.NONE, null)
-        trfi.setCharset("UTF-8", null)
-      }
       var con : Option[String] = None
       var moff : Option[Pair[Pair[Int, Int], List[Pair[Pair[Pair[String, Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position],Pair[Int,List[Pair[Int,Int]]]]]]]] = None
       JavaTC.parse(is, nam.substring(0, nam.indexOf(".java"))) match {
@@ -430,6 +422,11 @@ class TranslateAction extends KAction {
         case Right(x) => con = Some(x._1); moff = Some(x._2) 
       }
       if (generate && con != None) {
+        val trfi : IFile = file.getProject.getFile(nam + ".v") //TODO: find a suitable location!
+        if (trfi.exists)
+          trfi.delete(true, false, null)
+        trfi.create(null, IResource.NONE, null)
+        trfi.setCharset("UTF-8", null)
         val model = nam.substring(0, nam.length - 4) + "v"
         val modelfile = file.getProject.getFile(model)
         Console.println("modelfilename is " + model + " and it exists? " + modelfile.exists)
