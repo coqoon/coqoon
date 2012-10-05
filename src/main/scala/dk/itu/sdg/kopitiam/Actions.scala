@@ -314,6 +314,7 @@ class RestartCoqAction extends KAction {
     DocumentState.processUndo
     EclipseBoilerPlate.unmarkReally
     JavaPosition.unmark
+    JavaPosition.retractModel
     JavaPosition.retract
     PrintActor.deregister(CoqOutputDispatcher)
     CoqStartUp.start
