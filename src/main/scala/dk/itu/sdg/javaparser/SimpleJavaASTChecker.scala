@@ -37,7 +37,7 @@ object SimpleJavaChecker {
           if ((i < 2) || (! d(i - 2).isInstanceOf[Precondition]))
             warn("no precondition provided for method", y.pos)
           if ((i < 3) || (! d(i - 3).isInstanceOf[Quantification]))
-            warn("no quantification provided for method", y.pos)
+            warn("no logical variables provided for method", y.pos)
           checkStatements(body)
         case _ =>
       }
