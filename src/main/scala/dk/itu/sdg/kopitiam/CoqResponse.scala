@@ -18,6 +18,7 @@ case class CoqSearchResult (name : String) extends CoqResponse { }
 object ParseCoqResponse {
   private val ident = """([\p{L}_][\p{L}_0-9']*)"""
 
+  private val NoGoal = """(No more subgoals.*)""".r
   private val Goal = """([0-9]+) subgoal(.*)""".r
   private val Vars = (ident + """ is assumed""").r
   private val Comp = """Proof completed.""".r
@@ -31,6 +32,7 @@ object ParseCoqResponse {
   def parse (s : String) : CoqResponse = {
     s.split(LineSeparator).take(1)(0) match {
       case Goal(x, _) => CoqGoal(x.toInt, s.split(LineSeparator).toList.drop(1))
+      case NoGoal(x) => CoqGoal(0, List(x))
       case Vars(v) => CoqVariablesAssumed(v)
       case Comp() => CoqProofCompleted()
       case Thmd(t) => CoqTheoremDefined(t)
