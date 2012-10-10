@@ -83,7 +83,14 @@ object ValidCoqShell {
   def getTokens (s : String) : Option[CoqShellTokens] = {
     val tokens0 = s.split('\n')
     if (tokens0.length > 0) {
-      val tokens1 = tokens0(tokens0.length - 1).trim.split('<') //Thm < gstep |con|text| lstep < ?
+      val shellstring = tokens0(tokens0.length - 1).trim
+      val shstring =
+        if (shellstring.startsWith("<prompt>"))
+          //remove <prompt> and </prompt>
+          shellstring.substring(8, shellstring.length - 9)
+        else
+          shellstring
+      val tokens1 = shstring.split('<') //Thm < gstep |con|text| lstep < ?
       if (tokens1.length == 3) {
         val tokens2 = tokens1(1).split('|') //gstep |con|text| lstep
         if (tokens2.length >= 2)
