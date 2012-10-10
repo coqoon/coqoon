@@ -232,9 +232,15 @@ trait CoqOutputter extends JavaToSimpleJava {
                 preoffs ::= pre.pos
                 preoffs ::= quant.pos
                 specifications ::= name + "_spec"
+                val quant1 = quant.data.split(",")
+                val quant2 =
+                  if (quant1.length == 0)
+                    ""
+                  else
+                    quant1.mkString("[A] ", ", [A]", "")
                 val spec1 = "Definition " + name + """_spec :=
   (""" 
-                val spec2 = spec1 + quant.data + ", " + "\"" + clazz + "\" :.: \"" + name + "\" |-> [" + printArgListSpec(t) + """]
+                val spec2 = spec1 + quant2 + ", " + "\"" + clazz + "\" :.: \"" + name + "\" |-> [" + printArgListSpec(t) + """]
   {{ """
                 val spec3 = spec2 + pre.data + " }}-{{ " 
                 val spec = spec3 + post.data + " }})."
@@ -244,7 +250,7 @@ trait CoqOutputter extends JavaToSimpleJava {
                 specoffs ::= (spec1.length, quant.data.length)
                 specoff = (specoutput.reduceLeft(_ + "\n" + _).length, specoffs)
                 specoutput ::= spec
-              case None => Console.println("no quantification for method " + name)
+              case None => Console.println("no logical variables for method " + name)
             }
             case None => Console.println("pre without post for method " + name);
           }
@@ -294,7 +300,7 @@ Proof.
       case x : Quantification =>
         quantif match {
           case None => quantif = Some(x); None
-          case Some(x) => Console.println("wrong! multiple quantifications for a method specification"); None
+          case Some(x) => Console.println("wrong! multiple logical variables for a method specification"); None
         }
       case x : Specification => specoutput ::= x.data; None
       case _ => None
