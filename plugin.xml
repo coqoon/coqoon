@@ -230,7 +230,7 @@
             defaultHandler="dk.itu.sdg.kopitiam.TranslateAction"
             description="Translate to Coq"
             id="Kopitiam.translatetocoq"
-            name="Translate to Coq">
+            name="Generate Proof Certificate">
       </command>
       <command
             categoryId="Kopitiam.category"
