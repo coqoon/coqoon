@@ -1126,7 +1126,7 @@ class GoalViewer extends ViewPart {
   }
 
   def writeGoal (assumptions : String, sgoals : List[String]) : Unit = {
-    Display.getDefault.syncExec(
+    Display.getDefault.asyncExec(
       new Runnable() {
         def run() =
           if (! comp.isDisposed) {
