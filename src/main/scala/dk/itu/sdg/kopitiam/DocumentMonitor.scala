@@ -164,6 +164,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
               var offc : Pair[Int, Int] = (0, 0)
               var offintocoq : Int = 0
               val nncon = content.drop(p1 + 2).substring(0, p3 - p1 - 2).trim
+              var name : Option[String] = None
               //Console.println("new content is: " + nncon)
               if (nncon.startsWith("lvars: ") || nncon.startsWith("precondition: ") || nncon.startsWith("requires: ") ||  nncon.startsWith("postcondition: ") || nncon.startsWith("ensures: ")) {
                 for (x <- proj.specOffsets.keys) {
@@ -189,6 +190,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                       DocumentState._content = Some(newc)
                       offc = (coqoffs._1 + coqoffs._2(i)._1, nc.length - coqoffs._2(i)._2)
                       offintocoq = coqoffs._1 + coqoffs._2(i)._1 + proj.specOffset
+                      name = Some(x)
                     }
                     i = i + 1
                   }
@@ -203,21 +205,28 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                         proj.specOffsets(x)._2._1 + offc._2
                       } else
                         proj.specOffsets(x)._2._1
-                    val offf = offc._1 - proj.specOffsets(x)._2._1
-                    val n2 = proj.specOffsets(x)._2._2.map(p => {
-                      if (p._1 > offf) {
-                        val n = (p._1 + offc._2, p._2)
-                        //Console.println("up: " + p + " -> " + n)
-                        n
-                      } else if (p._1 == offf) {
-                        val n = (p._1, p._2 + offc._2)
-                        //Console.println("up: " + p + " -> " + n)
-                        n
-                      } else
-                        p
-                    })
-                    proj.specOffsets = proj.specOffsets + (x -> (proj.specOffsets(x)._1, (n1, n2)))
+                    proj.specOffsets = proj.specOffsets + (x -> (proj.specOffsets(x)._1, (n1, proj.specOffsets(x)._2._2)))
                   }
+                  
+                  name match {
+                    case None =>
+                    case Some(x) =>
+                      val offf = offc._1 - proj.specOffsets(x)._2._1
+                      val n2 = proj.specOffsets(x)._2._2.map(p => {
+                        if (p._1 > offf) {
+                          val n = (p._1 + offc._2, p._2)
+                          //Console.println("up: " + p + " -> " + n)
+                          n
+                        } else if (p._1 == offf) {
+                          val n = (p._1, p._2 + offc._2)
+                          //Console.println("up: " + p + " -> " + n)
+                          n
+                        } else
+                          p
+                      })
+                    proj.specOffsets = proj.specOffsets + (x -> (proj.specOffsets(x)._1, (proj.specOffsets(x)._2._1, n2)))
+                  }
+
                   //Console.println("adjusting proof offset from " + proj.proofOffset + " to " + (proj.proofOffset + offc._2))
                   proj.proofOffset = proj.proofOffset + offc._2
                 }

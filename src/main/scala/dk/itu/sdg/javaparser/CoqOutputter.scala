@@ -270,6 +270,10 @@ trait CoqOutputter extends JavaToSimpleJava {
                 specoffs ::= (spec2.length, pre.data.length)
                 specoffs ::= (spec1.length, quant2.length)
                 specoff = (specoutput.reduceLeft(_ + "\n" + _).length, specoffs)
+//                Console.println("SPEC! (" + specoffs(0)._1 + ", " + specoffs(0)._2 + "), " +
+//                                "(" + specoffs(1)._1 + ", " + specoffs(1)._2 + "), " +
+//                                "(" + specoffs(2)._1 + ", " + specoffs(2)._2 + "): " +
+//                                spec)
                 specoutput ::= spec
               case None => Console.println("no logical variables for method " + name)
             }
