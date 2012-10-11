@@ -474,7 +474,8 @@ object JavaPosition extends CoqCallback {
                 else //if (s > coqOffs(2)._1)
                   doc.getLineOffset(javaPos(2).line - 1) + javaPos(2).column + 2 + "postcondition: ".length + (s - coqOffs(2)._1)
             mark(m, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
-          }
+          } else
+            mark(m, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
         }
       case x =>
     }
@@ -502,8 +503,10 @@ object JavaPosition extends CoqCallback {
       val mark = rfile.createMarker(typ)
       mark.setAttribute(IMarker.MESSAGE, message)
       mark.setAttribute(IMarker.LOCATION, rfile.getName)
-      mark.setAttribute(IMarker.CHAR_START, spos)
-      mark.setAttribute(IMarker.CHAR_END, spos + len)
+      if (spos >= 0) {
+        mark.setAttribute(IMarker.CHAR_START, spos)
+        mark.setAttribute(IMarker.CHAR_END, spos + len)
+      }
       mark.setAttribute(IMarker.TRANSIENT, true)
       mark.setAttribute(IMarker.SEVERITY, severity)
       markers ::= mark
