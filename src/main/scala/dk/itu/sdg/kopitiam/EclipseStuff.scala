@@ -208,13 +208,8 @@ class CoqJavaProject (basename : String) {
                       wbp.activate(y.getEditor(true))
                 }
             }})
-        if (DocumentState.activeEditor != null) {
-          Console.println("stepping over model! ")
-          CoqStepAllAction.doitH
-        } else {
-          Console.println("no model, no stepping!")
-          CoqCommands.step
-        }
+        Console.println("stepping over model! ")
+        CoqStepAllAction.doitH
       })
       CoqCommands.doLater(() => {
         modelShell = Some(CoqState.getShell)
