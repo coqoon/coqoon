@@ -299,7 +299,7 @@
          <action
                class="dk.itu.sdg.kopitiam.ProveMethodAction"
                id="dk.itu.sdg.kopitiam.popup.provemethod"
-               label="Prove Method"
+               label="Verify Method"
                menubarPath="group.add">
          </action>
       </viewerContribution>
