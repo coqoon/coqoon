@@ -518,6 +518,7 @@ object CoqStartUp extends CoqCallback {
             CoqTop.writeToCoq("Add LoadPath \"" + loadp + "\".")
             initialize = 1
           } else {
+            Console.println("loadpath from preferences does not exist")
             CoqTop.writeToCoq("Add LoadPath \"" + EclipseBoilerPlate.getProjectDir + "\".")
             initialize = 2
           }
