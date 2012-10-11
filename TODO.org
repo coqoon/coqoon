@@ -1,8 +1,5 @@
 * General
 ** move global loadpath into project-specific settings (similar to referenced libraries in eclipse)!
-** Most likely for the integration of proofs and code something like http://blog.objectteams.org/2010/02/ide-for-your-own-language-embedded-in-java-part-1/ is worth trying (to extend JDT at the points where there is no API/extension point for that)
-*** alternatively, maybe the jdt weaving (http://wiki.eclipse.org/JDT_weaving_features) scala-ide uses is worth looking into?
-** remove the introduced global state - DocumentState - plus everything that depends on that
 ** future: incrementally run proofer in the background, annoy user then with unproven stuff (when code is changed)
 ** incremental combinator parsers, done in yi http://yi-editor.blogspot.com/2008/11/incremental-parsing-in-yi.html
 ** read scala style guide
@@ -18,14 +15,6 @@
    it (too much depends on activeeditor == null in DocumentMonitor and EclipseStuff)
 ** useful: http://robertvarttinen.blogspot.com/2007/01/adding-third-party-jar-to-your-eclipse.html
 * Coq side
-** Annotation/Folding:
-Lemma foo : .
-Proof
-  foo bar baz
-Qed.
-should have the +/- on the "Lemma" line and fold only the Proof..,
-displaying the Qed solely
-  support for that could be achieved http://www.eclipse.org/articles/Article-Folding-in-Eclipse-Text-Editors/folding.html
 ** CoqOutputter: find disjoint definition names (newR, newM,...)
 ** Use Set Cwd instead of Add LoadPath for project diretory
 ** Undo from just after End should jump to start of Section/Module/whatever
@@ -36,25 +25,16 @@ displaying the Qed solely
 *** to fight performance issues - being able to load current state again
 *** might also help for background proofing
 ** interrupt on windows (custom c code which sends ctrl-c)
-*** also, coqtop is coqtop.exe on windows!
+*** maybe Ctrl+Br ("" + 3)?
 *** http://msdn.microsoft.com/en-us/library/ms811896
 *** http://msdn.microsoft.com/en-us/library/ms683155(v=vs.85).aspx
 ** Reset ident <- undefines everything back to ident
-** proof completion
-*** start with SearchAbout and similar helpers
 ** dependency graph of coq files, run coqc as background task
-** Progress as part of progress window, not custom dialog (without using Job API?)
-*** real steps while GotoCursor/GotoEnd
-*** add lemma name to progress (especially interesting for Qed.)
-*** join strings (otherwise displays one line only, might be (* COMMENT *))
-** [Jesper] Using ctrl-Enter to parse lots of code works nicely, but would it be faster if it didn't print the output for all steps? If not then disregard this.
 ** syntax highlighting in GoalViewer
 * Java side
 ** highlight verified/proven method in green or however
-** add/remove whitespaces at end of class/file messes the coq synced output up (DeDefinition and emma instead of Definition and Lemma)
 ** Report Warnings/Errors instead of Console.println during parsing and simplification
 ** update on save rather than edit (and only if it typechecks/compiles ok)
-** ignore Coq class in java output (at least partially)
 ** SimpleJava optimizations
 observations from SnapshotTrees.java:
 pushLeftPath: node = node.left (where node is an argument (must be allocated on stack anyhow?)) ~~> JAssignment(node, JFieldAccess(node, left)) ~~> tmp because node is used on RHS
@@ -96,12 +76,10 @@ if (node.item > 20)
 
 ** name newly introduced variables not tmp_xx, but find a logical name for them (as done in LOOP/Umbra/...)
 ** types for ternary Bool ? x : y <- intersect x y
-** proper syntax (not only a string) for pre/postcondition and loop invariants - plus completion!
 ** for loops -> translate to while
 ** error on multiple returns and overloading of the same method name
 *** at least warnings for eclipse and support for refactoring/fixing these
 ** constructors (multiple, what to do in there?)
-** copy fields + methods bodies from superclasses (once we have a strategy for class-to-class inheritance)
 ** there's an alternative way to get the source of an editor:
   final IEditorInput editorInput = window.getActivePage().getActiveEditor().getEditorInput();
   final IFile selectedFile = (IFile) editorInput.getAdapter(IFile.class);
