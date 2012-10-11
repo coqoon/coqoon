@@ -172,7 +172,17 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                   for (y <- proj.specOffsets(x)._1) {
                     if (y.line == l) { //gotcha!
                       val oldc = proj.coqString.getOrElse(" ")
-                      val nc = nncon.substring(nncon.indexOf(":") + 1).trim
+                      val nnc = nncon.substring(nncon.indexOf(":") + 1).trim
+                      val nc = 
+                        if (nncon.startsWith("lvars: ")) {
+                          val spl = nnc.split(",")
+                          if (spl.length == 0)
+                            ""
+                          else
+                            spl.mkString("[A] ", ", [A]", "")
+                        }
+                        else
+                          nnc
                       //Console.println("setting new content to be " + nc)
                       val newc = oldc.take(proj.specOffset + coqoffs._1 + coqoffs._2(i)._1) + nc + oldc.drop(proj.specOffset + coqoffs._1 + coqoffs._2(i)._1 + coqoffs._2(i)._2)
                       //Console.println("new content is " + newc.drop(proj.specOffset + coqoffs._1 + coqoffs._2(i)._1 - 10).take(50))
