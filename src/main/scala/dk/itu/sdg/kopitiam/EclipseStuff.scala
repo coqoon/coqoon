@@ -226,6 +226,7 @@ class CoqJavaProject (basename : String) {
       javaNewerThanSource = false
       //safety first
       CoqCommands.doLater(() => {
+        Console.println("activating javaeditor")
         Display.getDefault.syncExec(
           new Runnable() {
             def run() = {
@@ -236,7 +237,8 @@ class CoqJavaProject (basename : String) {
           Console.println("translating file....")
           JavaPosition.unmark
           coqString = TranslateAction.translate(fei.asInstanceOf[IFileEditorInput].getFile, false)
-        }
+        } else
+          Console.println("fei not a IFEI")
         //retract up until model
         modelShell match {
           case None => Console.println("how did I get here?")

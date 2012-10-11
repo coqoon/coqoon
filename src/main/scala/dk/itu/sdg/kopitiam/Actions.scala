@@ -591,6 +591,8 @@ object CoqCommands extends CoqCallback {
         //should we execute in a certain thread? UI?
         c()
       }
+    else
+      Console.println("step called, but wasn't finished")
   }
 
   private def finished () : Boolean = {
