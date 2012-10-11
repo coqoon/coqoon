@@ -19,20 +19,18 @@ case class RawSpecification (override val data : String) extends Specification {
 
 object ParseSpecification {
   private val Lvar = """lvars: (.*)""".r
-  private val Quant = """quantification: (.*)""".r
-  private val Pre = """pre: (.*)""".r
+  private val Prec = """requires: (.*)""".r
   private val Precon = """precondition: (.*)""".r
-  private val Post = """post: (.*)""".r
+  private val Postc = """ensures: (.*)""".r
   private val Postcon = """postcondition: (.*)""".r
   private val Invariant = """invariant: (.*) frame: (.*)""".r
 
   def parse (s : String) : Specification = {
     s.trim match {
       case Precon(x) => Precondition(x)
-      case Pre(x) => Precondition(x)
+      case Prec(x) => Precondition(x)
       case Postcon(x) => Postcondition(x)
-      case Post(x) => Postcondition(x)
-      case Quant(x) => Quantification(x)
+      case Postc(x) => Postcondition(x)
       case Lvar(x) => Quantification(x)
       case Invariant(x, y) => Loopinvariant(x, y)
       case x => RawSpecification(x)

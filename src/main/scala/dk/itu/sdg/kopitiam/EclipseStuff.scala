@@ -466,6 +466,7 @@ object JavaPosition extends CoqCallback {
             val javaPos = getProj.specOffsets(name)._1
             val coqOffs = getProj.specOffsets(name)._2._2
             val star : Int =
+                //TODO: smarter!
                 if (s > coqOffs(0)._1 && s < coqOffs(1)._1)
                   doc.getLineOffset(javaPos(0).line - 1) + javaPos(0).column + 2 + "quantification: ".length + (s - coqOffs(0)._1)
                 else if (s > coqOffs(1)._1 && s < coqOffs(2)._1)

@@ -165,7 +165,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
               var offintocoq : Int = 0
               val nncon = content.drop(p1 + 2).substring(0, p3 - p1 - 2).trim
               //Console.println("new content is: " + nncon)
-              if (nncon.startsWith("quantification: ") || nncon.startsWith("lvars: ") || nncon.startsWith("precondition: ") || nncon.startsWith("pre: ") || nncon.startsWith("postcondition: ") || nncon.startsWith("post: ")) {
+              if (nncon.startsWith("lvars: ") || nncon.startsWith("precondition: ") || nncon.startsWith("requires: ") ||  nncon.startsWith("postcondition: ") || nncon.startsWith("ensures: ")) {
                 for (x <- proj.specOffsets.keys) {
                   var i : Int = 0
                   val coqoffs = proj.specOffsets(x)._2
