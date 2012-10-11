@@ -262,7 +262,7 @@ trait CoqOutputter extends JavaToSimpleJava {
                 var specoffs : List[Pair[Int,Int]] = List[Pair[Int,Int]]()
                 specoffs ::= (spec3.length, post.data.length)
                 specoffs ::= (spec2.length, pre.data.length)
-                specoffs ::= (spec1.length, quant.data.length)
+                specoffs ::= (spec1.length, quant2.length)
                 specoff = (specoutput.reduceLeft(_ + "\n" + _).length, specoffs)
                 specoutput ::= spec
               case None => Console.println("no logical variables for method " + name)
