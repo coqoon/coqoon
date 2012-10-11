@@ -240,11 +240,14 @@ class CoqJavaProject (basename : String) {
         modelShell match {
           case None => Console.println("how did I get here?")
           case Some(x) =>
-            DocumentState.setBusy
-            Console.println("backtracking to " + x)
-            CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
             DocumentState.resetState
             JavaPosition.retract
+            if (x.globalStep < CoqState.getShell.globalStep) {
+              DocumentState.setBusy
+              Console.println("backtracking to " + x)
+              CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
+            } else
+              CoqCommands.step
         }
       })
     }
@@ -465,14 +468,18 @@ object JavaPosition extends CoqCallback {
             val doc = getDoc
             val javaPos = getProj.specOffsets(name)._1
             val coqOffs = getProj.specOffsets(name)._2._2
-            val star : Int =
-                //TODO: smarter!
-                if (s > coqOffs(0)._1 && s < coqOffs(1)._1)
-                  doc.getLineOffset(javaPos(0).line - 1) + javaPos(0).column + 2 + "quantification: ".length + (s - coqOffs(0)._1)
-                else if (s > coqOffs(1)._1 && s < coqOffs(2)._1)
-                  doc.getLineOffset(javaPos(1).line - 1) + javaPos(1).column + 2 + "precondition: ".length + (s - coqOffs(1)._1)
-                else //if (s > coqOffs(2)._1)
-                  doc.getLineOffset(javaPos(2).line - 1) + javaPos(2).column + 2 + "postcondition: ".length + (s - coqOffs(2)._1)
+            val (line, off) =
+              if (s > coqOffs(0)._1 && s < coqOffs(1)._1)
+                //slightly wrong because of [A] and , being inserted (correct for first var)
+                (javaPos(0).line - 1, javaPos(0).column - coqOffs(0)._1 + 4)
+              else if (s > coqOffs(1)._1 && s < coqOffs(2)._1)
+                (javaPos(1).line - 1, javaPos(1).column - coqOffs(1)._1)
+              else //if (s > coqOffs(2)._1)
+                (javaPos(2).line - 1, javaPos(2).column - coqOffs(2)._1)
+            val lineoffset = doc.getLineOffset(line)
+            val content = doc.get(lineoffset, doc.getLineLength(line))
+            val offset = content.drop(off).indexOf(": ") + 2
+            val star = lineoffset + off + offset + 2
             mark(m, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
           } else
             mark(m, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
