@@ -225,6 +225,16 @@ class CoqRetractAction extends KCoqAction {
 object CoqRetractAction extends CoqRetractAction { }
 
 class CoqStepAction extends KCoqAction {
+//should be elsewhere
+import scala.annotation.tailrec
+def countSubstring (str1 : String, str2 : String) : Int={
+   @tailrec def count (pos : Int, c : Int) : Int={
+      val idx = str1.indexOf(str2, pos)
+      if (idx == -1) c else count(idx + str2.size, c + 1)
+   }
+   count(0,0)
+}
+
   override def doit () : Unit = {
     Console.println("CoqStepAction.doit called, ready? " + DocumentState.readyForInput)
     if (DocumentState.readyForInput) {
@@ -235,10 +245,13 @@ class CoqStepAction extends KCoqAction {
         val eoc = CoqTop.findNextCommand(content)
         //Console.println("eoc is " + eoc)
         if (eoc > 0) {
+          val cmd = content.take(eoc).trim
+          if (countSubstring(cmd, "\"") % 2 == 1)
+            Console.println("unterminated string!!!!! -- might be in comment")
+            //bail out here!
           DocumentState.setBusy
           DocumentState.sendlen = eoc
           DocumentState.process
-          val cmd = content.take(eoc).trim
           Console.println("command is (" + eoc + "): " + cmd)
           //CoqProgressMonitor.actor.tell(("START", cmd))
           CoqTop.writeToCoq(cmd) //sends comments over the line
