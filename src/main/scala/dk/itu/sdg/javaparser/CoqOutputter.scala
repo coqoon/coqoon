@@ -67,15 +67,14 @@ trait CoqOutputter extends JavaToSimpleJava {
 
   //TODO: that's wrong, since operations depend on argument types...
   def translateOp (x : String) : String = {
-    if (x == ">") "egt"
-    else if (x == "<") "elt"
-    else if (x == "-") "eminus"
-    else if (x == "*") "etimes"
-    else if (x == "+") "eplus"
-    else if (x == "==") "eeq"
-    else if (x == "!=") "eneq"
-    else if (x == "!") "enot"
-    else if (x == "&&") "eand"
+    if (x == ">") "vgt"
+    else if (x == "<") "vlt"
+    else if (x == "<=") "vle"
+    else if (x == "-") "vminus"
+    else if (x == "*") "vtimes"
+    else if (x == "+") "vadd"
+    else if (x == "==") "veq"
+    else if (x == "!") "vnot"
     else { Console.println("translateOp dunno Key " + x); "" }
   }
 
@@ -99,27 +98,43 @@ trait CoqOutputter extends JavaToSimpleJava {
     }
   }
 
+  def printEVal (ex : SJExpression) : String = {
+    val r = printE(ex)
+    if (r(0) == '"')
+      r + "/V"
+    else
+      r
+  }
+
+  def printEExpr (ex : SJExpression) : String = {
+    val r = printE(ex)
+    if (r(0) == '"')
+      "(" + r + ":expr)"
+    else
+      r
+  }
+
   def printE (ex : SJExpression) : String = {
     ex match {
       case SJVariableAccess(x) => "\"" + x + "\""
-      case SJUnaryExpression(op, e) => "(" + translateOp(op) + " " + printE(e) + ")"
+      case SJUnaryExpression(op, e) => "(lift1 " + translateOp(op) + " " + printEVal(e) + ")"
       case SJBinaryExpression(op, l, r) =>
         if (op == "!=")
           //XXX: hack for AMP (list reversal) 11-04-12
-          "(enot (eeq_ptrs (" + printE(l) + ":expr) " + printE(r) + "))"
+          "(enot (lift2 eeq_ptr_up " + printEVal(l) + " " + printEVal(r) + "))"
         else
-          "(" + translateOp(op) + " " + printE(l) + " " + printE(r) + ")"
+          "(lift2 " + translateOp(op) + " " + printEVal(l) + " " + printEVal(r) + ")"
       case SJLiteral(v) =>
         if (v == "null" || v == "true" || v == "false")
           "`" + v
         else
-          try { "(" + v.toInt.toString + ":expr)" }
+          try { "`" + v.toInt.toString }
           catch { case e : Throwable => "\"" + e + "\"" }
     }
   }
 
   def argstring (as : List[SJExpression]) : String = {
-    as.map(printE).foldRight("nil")(_ + " :: " + _)
+    as.map(printEVal).mkString("[", "; ", "]")
   }
 
   def printStatement (something : SJStatement, locals : HashMap[String, String]) : Option[String] = {
@@ -348,9 +363,6 @@ Open Scope spec_scope.
 Open Scope asn_scope.
 """
     outp ::= "Module " + name + " <: PROGRAM."
-    //XXX hardcoded for AMP (list reversal) 11-04-12
-    outp ::= """Notation "'eeq_ptrs'" :=
-  (lift2 eeq_ptr_up) (at level 50) : hasn_scope."""
     xs.foreach(x => x match {
       case SJInterfaceDefinition(modifiers, id, inters, body) =>
         //Console.println("interfaces are " + inters)
