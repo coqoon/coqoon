@@ -173,7 +173,8 @@ trait CoqOutputter extends JavaToSimpleJava {
         val (cw, cp) = if (isstatic) ("cscall", "\"" + cl + "\"") else ("cdcall", printE(r))
         Some("(" + cw + " " + value + " " + cp + " \"" + f + "\" (" +  argstring(a) + "))")
       case SJNewExpression(v, t, a) =>
-        Some("(cscall " + printE(v) + " \"" + t + "\" \"new\" " + argstring(a) + ")")
+        //Some("(cscall " + printE(v) + " \"" + t + "\" \"new\" " + argstring(a) + ")")
+        Some("(calloc " + printE(v) + " \"" + t + "\")")
       case SJConditional(test, consequence, alternative) =>
         val te = printE(test)
         val tr = optPrintBody(consequence.flatMap(x => printStatement(x, locals)))
