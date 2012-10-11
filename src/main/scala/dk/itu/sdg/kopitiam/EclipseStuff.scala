@@ -154,7 +154,7 @@ class CoqJavaProject (basename : String) {
 
   import org.eclipse.ui.{IFileEditorInput, PlatformUI}
   import org.eclipse.ui.part.FileEditorInput
-  import org.eclipse.core.resources.{IFile, IMarker}
+  import org.eclipse.core.resources.{IFile, IMarker, IProject}
   import org.eclipse.swt.widgets.Display
   def proveMethod (name : String) : Unit = {
     modelShell match {
@@ -172,16 +172,22 @@ class CoqJavaProject (basename : String) {
             Console.println("this should not happen - no coqmodel and no java editor...")
           else {
             val fei = JavaPosition.editor.getEditorInput
-            model =
-              if (fei.isInstanceOf[IFileEditorInput])
-                fei.asInstanceOf[IFileEditorInput].getFile.getProject.getFile(basename + ".v")
+            if (fei.isInstanceOf[IFileEditorInput]) {
+              val proj : IProject = fei.asInstanceOf[IFileEditorInput].getFile.getProject
+              val maybemodel = proj.getFile(basename + ".v")
+              if (maybemodel.exists)
+                model = maybemodel
               else {
-                JavaPosition.mark("something went wrong reading the Java file", 0, 10, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
-                null
+                val maybemodel = proj.getFile("src/" + basename + ".v")
+                if (maybemodel.exists)
+                  model = maybemodel
               }
-            if (! model.exists)
+            } else
+              JavaPosition.mark("something went wrong reading the Java file", 0, 10, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
+            if (model == null || ! model.exists)
               JavaPosition.mark("Please write a model file for this java file with a Module named " + name + "_model, which is used to prove the java code.", 0, 10, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
-            open = true
+            else
+              open = true
           }
         case Some(x) =>
       }
@@ -202,8 +208,13 @@ class CoqJavaProject (basename : String) {
                       wbp.activate(y.getEditor(true))
                 }
             }})
-        Console.println("stepping over model! ")
-        CoqStepAllAction.doitH
+        if (DocumentState.activeEditor != null) {
+          Console.println("stepping over model! ")
+          CoqStepAllAction.doitH
+        } else {
+          Console.println("no model, no stepping!")
+          CoqCommands.step
+        }
       })
       CoqCommands.doLater(() => {
         modelShell = Some(CoqState.getShell)
