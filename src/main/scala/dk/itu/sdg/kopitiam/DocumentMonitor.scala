@@ -180,8 +180,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                             ""
                           else
                             spl.mkString("[A] ", ", [A]", "")
-                        }
-                        else
+                        } else
                           nnc
                       //Console.println("setting new content to be " + nc)
                       val newc = oldc.take(proj.specOffset + coqoffs._1 + coqoffs._2(i)._1) + nc + oldc.drop(proj.specOffset + coqoffs._1 + coqoffs._2(i)._1 + coqoffs._2(i)._2)

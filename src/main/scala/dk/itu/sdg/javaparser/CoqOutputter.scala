@@ -257,7 +257,12 @@ trait CoqOutputter extends JavaToSimpleJava {
   (""" 
                 val spec2 = spec1 + quant2 + ", " + "\"" + clazz + "\" :.: \"" + name + "\" |-> [" + printArgListSpec(t) + """]
   {{ """
-                val spec3 = spec2 + pre.data + " }}-{{ " 
+                val ret =
+                  if (typ == "void")
+                    "\"\", "
+                  else
+                    ""
+                val spec3 = spec2 + pre.data + " }}-{{ " + ret
                 val spec = spec3 + post.data + " }})."
                 var specoffs : List[Pair[Int,Int]] = List[Pair[Int,Int]]()
                 specoffs ::= (spec3.length, post.data.length)

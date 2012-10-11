@@ -34,6 +34,15 @@ object SimpleJavaChecker {
         case y@SJMethodDefinition(m, id, jtype, params, body, locals) =>
           if ((i == 0) || (! d(i - 1).isInstanceOf[Postcondition]))
             warn("no postcondition provided for method", y.pos)
+          else if (i > 0) {
+            val post = d(i - 1).asInstanceOf[Postcondition].data
+            if (jtype == "void") {
+              if (post.startsWith("\"") && post.contains("\","))
+                warn("return type is void, but postcondition contains a return value", y.pos)
+            } else
+              if (! (post.startsWith("\"") && post.contains("\",")))
+                warn("no binding to return value in postcondition", y.pos)
+          }
           if ((i < 2) || (! d(i - 2).isInstanceOf[Precondition]))
             warn("no precondition provided for method", y.pos)
           if ((i < 3) || (! d(i - 3).isInstanceOf[Quantification]))
