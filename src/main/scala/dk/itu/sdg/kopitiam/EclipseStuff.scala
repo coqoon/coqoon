@@ -215,6 +215,7 @@ class CoqJavaProject (basename : String) {
       })
       CoqCommands.doLater(() => {
         modelShell = Some(CoqState.getShell)
+        DocumentState.resetState
         Console.println("preserving checkpoint " + modelShell)
         CoqCommands.step
       })
