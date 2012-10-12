@@ -231,6 +231,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                   proj.proofOffset = proj.proofOffset + offc._2
                 }
               } else {
+                var name : Option[String] = None
                 for (x <- proj.javaOffsets.keys) {
                   var i : Int = 0
                   for (p <- proj.javaOffsets(x)._2) {
@@ -238,7 +239,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                     if (l == p.line) {
                       //Console.println("found something! excited! " + x + " i is " + i)
                       val coqp = proj.coqOffsets(x)._2(i)
-                      val coqoff = coqp._1 + proj.proofOffset
+                      val coqoff = coqp._1 + proj.coqOffsets(x)._1 + proj.proofOffset
                       val ncon =
                         if (nncon.startsWith("invariant")) {
                           val vals = nncon.drop(10).trim.split("frame:")
@@ -250,8 +251,9 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                       val oldc = proj.coqString.getOrElse("")
                       val newc = oldc.take(coqoff) + ncon + oldc.drop(coqoff + coqp._2)
                       //Console.println("new coq buffer: " + newc.drop(coqoff - 10).take(coqp._2 + 20))
-                      offc = (coqp._1, ncon.length - coqp._2)
-                      offintocoq = coqp._1 + proj.proofOffset
+                      offc = (proj.coqOffsets(x)._1 + coqp._1, ncon.length - coqp._2)
+                      offintocoq = proj.coqOffsets(x)._1 + coqp._1 + proj.proofOffset
+                      name = Some(x)
                       proj.coqString = Some(newc)
                       DocumentState._content = Some(newc)
                       //update the javaOffsets table (only if newline)
@@ -262,7 +264,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                     i = i + 1
                   }
                 }
-                if (offc != (0, 0))
+                if (offc != (0, 0)) {
                   for (x <- proj.coqOffsets.keys) {
                     val n1 =
                       if (proj.coqOffsets(x)._1 > offc._1) {
@@ -270,20 +272,28 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                         proj.coqOffsets(x)._1 + offc._2
                       } else
                         proj.coqOffsets(x)._1
-                    val n2 = proj.coqOffsets(x)._2.map(p => {
-                      if (p._1 > offc._1) {
-                        val n = (p._1 + offc._2, p._2)
-                        //Console.println("up: " + p + " -> " + n)
-                        n
-                      } else if (p._1 == offc._1) {
-                        val n = (p._1, p._2 + offc._2)
-                        //Console.println("up: " + p + " -> " + n)
-                        n
-                      } else
-                        p
-                    })
-                    proj.coqOffsets = proj.coqOffsets + (x -> (n1, n2))
+                    proj.coqOffsets = proj.coqOffsets + (x -> (n1, proj.coqOffsets(x)._2))
                   }
+
+                  name match {
+                    case None =>
+                    case Some(x) =>
+                      val offf = offc._1 - proj.coqOffsets(x)._1
+                      val n2 = proj.coqOffsets(x)._2.map(p => {
+                        if (p._1 > offf) {
+                          val n = (p._1 + offc._2, p._2)
+                          //Console.println("up: " + p + " -> " + n)
+                          n
+                        } else if (p._1 == offf) {
+                          val n = (p._1, p._2 + offc._2)
+                          //Console.println("up: " + p + " -> " + n)
+                          n
+                        } else
+                          p
+                      })
+                    proj.coqOffsets = proj.coqOffsets + (x -> (proj.coqOffsets(x)._1, n2))
+                  }
+                }
               }
               Console.println("javaNewerThanSource is false again")
               proj.javaNewerThanSource = false

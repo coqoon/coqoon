@@ -187,12 +187,12 @@ trait CoqOutputter extends JavaToSimpleJava {
       case y@Loopinvariant(i, f) =>
         lengths ::= y.pos
         val con = "forward (" + i + ") (" + f + ")."
-        coqlengths ::= (proofoutput.reduceLeft(_ + "\n" + _).length, con.length)
-        proofoutput ::= con; None
+        coqlengths ::= (if (mproof.length == 0) 0 else mproof.reduceLeft(_ + "\n" + _).length + 1, con.length)
+        mproof ::= con; None
       case x : Specification =>
         lengths ::= x.pos
-        coqlengths ::= (proofoutput.reduceLeft(_ + "\n" + _).length, x.data.length)
-        proofoutput ::= x.data; None
+        coqlengths ::= (if (mproof.length == 0) 0 else mproof.reduceLeft(_ + "\n" + _).length + 1, x.data.length)
+        mproof ::= x.data; None
     }
   }
 
@@ -213,10 +213,12 @@ trait CoqOutputter extends JavaToSimpleJava {
 
   private var ret : String = "myreturnvaluedummy"
   private var deps : List[Pair[String,String]] = List[Pair[String,String]]()
+  private var mproof : List[String] = List[String]()
 
   def getBody (xs : List[SJStatement], myname : String, locals : HashMap[String, String]) : Pair[String, Pair[String, List[Pair[String,String]]]] = {
     ret = "myreturnvaluedummy"
     deps = List[Pair[String,String]]()
+    mproof = List[String]()
     val body = xs.flatMap(x => printStatement(x, locals))
     val b = printBody(body)
     val defi = "Definition " + myname + " := " + b + "."
@@ -297,6 +299,7 @@ Proof.
   unfold """ + name + "_spec" + "; unfold_spec."
         val fst = proofoutput.reduceLeft(_ + "\n" + _).length
         val (bodyp, (returnvar, deps)) = getBody(body, bodyref, lvars)
+        proofoutput = mproof ++ proofoutput
         proofoutput ::= "Qed."
         val ls = lengths.reverse
         val cl = coqlengths.reverse
