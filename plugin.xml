@@ -314,5 +314,35 @@
          </action>
       </viewerContribution> -->
    </extension>
+   <extension
+         id="dk.itu.sdg.kopitiam.provenmarker"
+         point="org.eclipse.core.resources.markers">
+      <persistent
+            value="true">
+      </persistent>
+      <super
+            type="org.eclipse.core.resources.textmarker">
+      </super>
+   </extension>
+   <extension
+         point="org.eclipse.ui.editors.annotationTypes">
+      <type
+            markerSeverity="2"
+            markerType="dk.itu.sdg.kopitiam.provenmarker"
+            name="dk.itu.sdg.kopitiam.provenannotation"
+            super="org.eclipse.ui.workbench.texteditor.warning">
+      </type>
+   </extension>
+   <extension
+         point="org.eclipse.ui.editors.markerAnnotationSpecification">
+      <specification
+            annotationType="dk.itu.sdg.kopitiam.provenannotation"
+            colorPreferenceValue="3,167,17"
+            icon="icons/checkmark.gif"
+            includeOnPreferencePage="true"
+            verticalRulerPreferenceKey="provenmarkerIndicationInVerticalRuler"
+            verticalRulerPreferenceValue="true">
+      </specification>
+   </extension>
 
 </plugin>

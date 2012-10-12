@@ -448,9 +448,11 @@ object JavaPosition extends CoqCallback {
         if (editor != null && active) {
           Console.println("got proof completed")
           val proj = getProj
+          Console.println("bah at " + proj.javaOffsets(name)._2.length + " idx " + index)
           if (proj.javaOffsets(name)._2.length == index) {
             active = false //to prevent catches down there
             //send Qed
+            Console.println("sending or not ? " + CoqStepNotifier.active)
             if (! CoqStepNotifier.active) {
               while (! DocumentState.readyForInput) { } //XXX: bad busy loop
               CoqStepAction.doit()
@@ -463,7 +465,7 @@ object JavaPosition extends CoqCallback {
           val locs = getProj.javaOffsets(name)
           val spos = doc.getLineOffset(locs._1.line - 1)
           val epos = doc.getLineOffset(locs._2(locs._2.length - 1).line + 2 - 1) - 1
-          mark("Method proven", spos, epos - spos, IMarker.PROBLEM, IMarker.SEVERITY_INFO) //XXX: custom!
+          mark("Method proven", spos, epos - spos, "dk.itu.sdg.kopitiam.provenmarker", IMarker.SEVERITY_ERROR)
           active = true //to force the retract
           retract
           ActionDisabler.enableStart
