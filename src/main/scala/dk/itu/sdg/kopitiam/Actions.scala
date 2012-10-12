@@ -89,6 +89,7 @@ abstract class KCoqAction extends KAction {
         PrintActor.deregister(CoqCommands)
         val shell = CoqState.getShell
         PrintActor.register(CoqStartUp)
+        CoqStartUp.fini = false
         val initial = DocumentState.positionToShell(0).globalStep
         CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
         while (! CoqStartUp.fini) { }
