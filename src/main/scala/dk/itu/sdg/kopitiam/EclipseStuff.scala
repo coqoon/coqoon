@@ -158,7 +158,9 @@ class CoqJavaProject (basename : String) {
   import org.eclipse.swt.widgets.Display
   def proveMethod (name : String) : Unit = {
     modelShell match {
-      case Some(x) => if (x.globalStep > CoqState.getShell.globalStep) modelShell = None
+      case Some(x) =>
+        if (x.globalStep > CoqState.getShell.globalStep)
+          modelShell = None
       case None =>
     }
     Console.println("provemethod called with " + name + " modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " modelshell " + modelShell)
