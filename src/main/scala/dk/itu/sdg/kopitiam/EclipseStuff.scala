@@ -240,6 +240,9 @@ class CoqJavaProject (basename : String) {
           new Runnable() {
             def run() = {
               PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.activate(JavaPosition.editor)
+              //TODO: shouldn't work on a file-basis here anyways
+              if (JavaPosition.editor.isDirty)
+                JavaPosition.editor.doSave(null)
             }})
         val fei = JavaPosition.editor.getEditorInput
         if (fei.isInstanceOf[IFileEditorInput]) {
