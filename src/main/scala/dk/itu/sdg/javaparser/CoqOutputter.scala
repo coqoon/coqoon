@@ -170,6 +170,8 @@ trait CoqOutputter extends JavaToSimpleJava {
               case Some(x) => x.modifiers.contains(Static())
             }
           }
+        //what if expression here? doesn't make sense!
+        deps ::= (cl, f)
         val (cw, cp) = if (isstatic) ("cscall", "\"" + cl + "\"") else ("cdcall", printE(r))
         Some("(" + cw + " " + value + " " + cp + " \"" + f + "\" (" +  argstring(a) + "))")
       case SJNewExpression(v, t, a) =>
@@ -210,9 +212,11 @@ trait CoqOutputter extends JavaToSimpleJava {
   }
 
   private var ret : String = "myreturnvaluedummy"
+  private var deps : List[Pair[String,String]] = List[Pair[String,String]]()
 
-  def getBody (xs : List[SJStatement], myname : String, locals : HashMap[String, String]) : (String, String) = {
+  def getBody (xs : List[SJStatement], myname : String, locals : HashMap[String, String]) : Pair[String, Pair[String, List[Pair[String,String]]]] = {
     ret = "myreturnvaluedummy"
+    deps = List[Pair[String,String]]()
     val body = xs.flatMap(x => printStatement(x, locals))
     val b = printBody(body)
     val defi = "Definition " + myname + " := " + b + "."
@@ -221,7 +225,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         "`0"
       else
         ret
-    (defi, res)
+    (defi, (res, deps))
   }
 
   def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[Pair[String,String],Pair[Pair[Pair[String,Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]],Pair[List[Position],Pair[Int,List[Pair[Int,Int]]]]]]] = {
@@ -292,7 +296,7 @@ trait CoqOutputter extends JavaToSimpleJava {
 Proof.
   unfold """ + name + "_spec" + "; unfold_spec."
         val fst = proofoutput.reduceLeft(_ + "\n" + _).length
-        val (bodyp, returnvar) = getBody(body, bodyref, lvars)
+        val (bodyp, (returnvar, deps)) = getBody(body, bodyref, lvars)
         proofoutput ::= "Qed."
         val ls = lengths.reverse
         val cl = coqlengths.reverse
