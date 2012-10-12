@@ -407,7 +407,7 @@ class CoqContentAssistantProcessor extends IContentAssistProcessor with CoqCallb
     
     //Get definitions etc. from CoqTop
     if (prefix.length > 1)
-    	CoqTop.writeToCoq("SearchAbout [ \""+ prefix.replaceAll("_", " ") +"\" ].")
+    	CoqTop.writeToCoq("SearchAbout [ \""+ prefix +"\" ].")
     
     val filteredCompletions = Array.concat(staticCompletions, dynamicCompletions.toArray[String]).filter( comp => prefix.length == 0 || comp.startsWith(prefix) )
     val proposals = new Array[ICompletionProposal](filteredCompletions.size)
