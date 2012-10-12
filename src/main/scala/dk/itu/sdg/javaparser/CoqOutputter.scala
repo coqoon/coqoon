@@ -170,7 +170,7 @@ trait CoqOutputter extends JavaToSimpleJava {
               case Some(x) => x.modifiers.contains(Static())
             }
           }
-        deps ::= (cl, f)
+        deps = deps + ((cl, f))
         val (cw, cp) = if (isstatic) ("cscall", "\"" + cl + "\"") else ("cdcall", printE(r))
         Some("(" + cw + " " + value + " " + cp + " \"" + f + "\" (" +  argstring(a) + "))")
       case SJNewExpression(v, t, a) =>
@@ -211,12 +211,12 @@ trait CoqOutputter extends JavaToSimpleJava {
   }
 
   private var ret : String = "myreturnvaluedummy"
-  private var deps : List[Pair[String,String]] = List[Pair[String,String]]()
+  private var deps : Set[Pair[String,String]] = Set[Pair[String,String]]()
   private var mproof : List[String] = List[String]()
 
-  def getBody (xs : List[SJStatement], myname : String, locals : HashMap[String, String]) : Pair[String, Pair[String, List[Pair[String,String]]]] = {
+  def getBody (xs : List[SJStatement], myname : String, locals : HashMap[String, String]) : Pair[String, Pair[String, Set[Pair[String,String]]]] = {
     ret = "myreturnvaluedummy"
-    deps = List[Pair[String,String]]()
+    deps = Set[Pair[String,String]]()
     mproof = List[String]()
     val body = xs.flatMap(x => printStatement(x, locals))
     val b = printBody(body)
@@ -294,10 +294,21 @@ trait CoqOutputter extends JavaToSimpleJava {
         quantif = None
         val (bodyp, (returnvar, deps)) = getBody(body, bodyref, lvars)
         proofs ::= "valid_" + name + "_" + clazz
-        val rdep = deps.map(_._2).filter(! name.equals(_)).map(_ + "_spec").mkString(" [/\\] ")
-        proofoutput ::= "Lemma valid_" + name + "_" + clazz + ": " + rdep + " |= " + name + """_spec.
+        val rde = deps.map(_._2)
+        val rdep = rde.map(_ + "_spec")
+        val rdeps =
+          if (rdep.size == 0) ""
+          else if (rdep.size == 1) "|> " + rdep.last
+          else
+            "|> " + rdep.mkString("(", " [/\\] ", ")")
+        val suff =
+          if (rde.contains(name))
+            " at 2"
+          else
+            ""
+        proofoutput ::= "Lemma valid_" + name + "_" + clazz + ": " + rdeps + " |= " + name + """_spec.
 Proof.
-  unfold """ + name + "_spec" + "; unfold_spec."
+  unfold """ + name + "_spec" + suff + "; unfold_spec."
         val fst = proofoutput.reduceLeft(_ + "\n" + _).length
         Console.println("method " + name + " depends on " + deps.mkString(";"))
         proofoutput = mproof ++ proofoutput
