@@ -170,7 +170,6 @@ trait CoqOutputter extends JavaToSimpleJava {
               case Some(x) => x.modifiers.contains(Static())
             }
           }
-        //what if expression here? doesn't make sense!
         deps ::= (cl, f)
         val (cw, cp) = if (isstatic) ("cscall", "\"" + cl + "\"") else ("cdcall", printE(r))
         Some("(" + cw + " " + value + " " + cp + " \"" + f + "\" (" +  argstring(a) + "))")
@@ -293,12 +292,14 @@ trait CoqOutputter extends JavaToSimpleJava {
         precon = None
         postcon = None
         quantif = None
+        val (bodyp, (returnvar, deps)) = getBody(body, bodyref, lvars)
         proofs ::= "valid_" + name + "_" + clazz
-        proofoutput ::= "Lemma valid_" + name + "_" + clazz + ": |= " + name + """_spec.
+        val rdep = deps.map(_._2).filter(! name.equals(_)).map(_ + "_spec").mkString(" [/\\] ")
+        proofoutput ::= "Lemma valid_" + name + "_" + clazz + ": " + rdep + " |= " + name + """_spec.
 Proof.
   unfold """ + name + "_spec" + "; unfold_spec."
         val fst = proofoutput.reduceLeft(_ + "\n" + _).length
-        val (bodyp, (returnvar, deps)) = getBody(body, bodyref, lvars)
+        Console.println("method " + name + " depends on " + deps.mkString(";"))
         proofoutput = mproof ++ proofoutput
         proofoutput ::= "Qed."
         val ls = lengths.reverse
