@@ -246,15 +246,18 @@ def countSubstring (str1 : String, str2 : String) : Int={
         //Console.println("eoc is " + eoc)
         if (eoc > 0) {
           val cmd = content.take(eoc).trim
-          if (countSubstring(cmd, "\"") % 2 == 1)
-            Console.println("unterminated string!!!!! -- might be in comment")
-            //bail out here!
-          DocumentState.setBusy
           DocumentState.sendlen = eoc
-          DocumentState.process
-          Console.println("command is (" + eoc + "): " + cmd)
-          //CoqProgressMonitor.actor.tell(("START", cmd))
-          CoqTop.writeToCoq(cmd) //sends comments over the line
+          if (countSubstring(CoqTop.filterComments(cmd), "\"") % 2 == 1) {
+            DocumentState.undo
+            Console.println("not sending anything here!")
+            EclipseBoilerPlate.mark("unterminated string!")
+          } else {
+            DocumentState.setBusy
+            DocumentState.process
+            Console.println("command is (" + eoc + "): " + cmd)
+            //CoqProgressMonitor.actor.tell(("START", cmd))
+            CoqTop.writeToCoq(cmd) //sends comments over the line
+          }
         }
       }
     }

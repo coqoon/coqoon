@@ -948,7 +948,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   var autoreveal : Boolean = false
 
   import org.eclipse.swt.widgets.Display
-  private def undo () : Unit = {
+  def undo () : Unit = {
     //Console.println("undo (@" + position + ", sendlen: " + sendlen + ") real: " + realundo)
     if (sendlen != 0) {
       if (realundo) {
