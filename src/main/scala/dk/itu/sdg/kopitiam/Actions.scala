@@ -633,8 +633,11 @@ object CoqCommands extends CoqCallback {
 
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
-      case CoqShellReady(monoton, token) => step
-      case CoqError(m, s, l) => commands = List[() => Unit]()
+      case CoqShellReady(monoton, token) =>
+        if (monoton)
+          step
+        else
+          commands = List[() => Unit]()
       case _ =>
     }
   }
