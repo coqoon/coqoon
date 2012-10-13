@@ -116,42 +116,50 @@ object ActionDisabler {
     ends ::= end
   }
 
+  private var initialized : Boolean = false
+  def initializationFinished () : Unit = {
+    initialized = true
+    enableMaybe
+  }
+
   def disableAll () = {
     actions.foreach(_.setEnabled(false))
   }
 
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   def enableMaybe () = {
-    //Console.println("maybe enable " + DocumentState.position + " len " + DocumentState.content.length)
-    if (DocumentState.activated.isInstanceOf[CoqEditor])
-      if (DocumentState.activated.asInstanceOf[CoqEditor] == DocumentState.activeEditor) {
-        if (DocumentState.position == 0)
-          enableStart
-        else if (DocumentState.position + 1 >= DocumentState.content.length)
-          actions.zip(ends).filterNot(_._2).map(_._1).foreach(_.setEnabled(true))
-        else
-          actions.foreach(_.setEnabled(true))
-      } else
-        enableStart
-    else if (DocumentState.activated.isInstanceOf[JavaEditor])
-      if (DocumentState.activated.asInstanceOf[JavaEditor] == JavaPosition.editor && JavaPosition.active) {
-        //always true (due to DocumentMonitor:activateEditor)!
-        if (JavaPosition.index == -1)
-          enableStart
-        else {
-          if (JavaPosition.getProj == null || JavaPosition.name == "" || ! JavaPosition.getProj.javaOffsets.contains(JavaPosition.name))
-            disableAll
-          else if (JavaPosition.index == JavaPosition.getProj.javaOffsets(JavaPosition.name)._2.length)
+    if (initialized)
+      //Console.println("maybe enable " + DocumentState.position + " len " + DocumentState.content.length)
+      if (DocumentState.activated.isInstanceOf[CoqEditor])
+        if (DocumentState.activated.asInstanceOf[CoqEditor] == DocumentState.activeEditor) {
+          if (DocumentState.position == 0)
+            enableStart
+          else if (DocumentState.position + 1 >= DocumentState.content.length)
             actions.zip(ends).filterNot(_._2).map(_._1).foreach(_.setEnabled(true))
           else
             actions.foreach(_.setEnabled(true))
-        }
-      } else
-        disableAll
+        } else
+          enableStart
+          else if (DocumentState.activated.isInstanceOf[JavaEditor])
+            if (DocumentState.activated.asInstanceOf[JavaEditor] == JavaPosition.editor && JavaPosition.active) {
+        //always true (due to DocumentMonitor:activateEditor)!
+              if (JavaPosition.index == -1)
+                enableStart
+              else {
+                if (JavaPosition.getProj == null || JavaPosition.name == "" || ! JavaPosition.getProj.javaOffsets.contains(JavaPosition.name))
+                  disableAll
+                else if (JavaPosition.index == JavaPosition.getProj.javaOffsets(JavaPosition.name)._2.length)
+                  actions.zip(ends).filterNot(_._2).map(_._1).foreach(_.setEnabled(true))
+                else
+                  actions.foreach(_.setEnabled(true))
+              }
+            } else
+              disableAll
   }
 
   def enableStart () = {
-    actions.zip(starts).filterNot(_._2).map(_._1).foreach(_.setEnabled(true))
+    if (initialized)
+      actions.zip(starts).filterNot(_._2).map(_._1).foreach(_.setEnabled(true))
   }
 }
 

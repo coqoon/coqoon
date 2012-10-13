@@ -1198,5 +1198,6 @@ class Startup extends IStartup {
     CoqTop.init
     PrintActor.register(DocumentState)
     CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + System.getProperty("file.separator")
+    ActionDisabler.initializationFinished
   }
 }
