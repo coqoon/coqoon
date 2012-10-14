@@ -362,6 +362,7 @@ Proof.
   private val unique_names : List[String] = List("Opaque unique_method_names.", "Definition unique_method_names := option_proof (search_unique_names Prog).")
 
   private val prelude : String = """
+Require Import AbstractAsn.
 Require Import Tactics.
 
 Open Scope string_scope.
