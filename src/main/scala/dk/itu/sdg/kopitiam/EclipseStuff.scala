@@ -473,14 +473,20 @@ object JavaPosition extends CoqCallback {
           retract
           ActionDisabler.enableStart
         }
-      case CoqError(m, s, l) =>
+      case CoqError(m, n, s, l) =>
         if (editor != null) {
           if (active) {
             val doc = getDoc
             val javapos = getProj.javaOffsets(name)._2(index)
             val soff = doc.getLineOffset(javapos.line - 1)
-            val star = s + soff + javapos.column + 2 //<%
-            mark(m, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+            val content = doc.get(soff, doc.getLineLength(javapos.line - 1))
+            val specialoff =
+              if (content.contains("invariant: ")) //LI! beware!
+                2 //most likely wrong for frame... but need more structure for that
+              else
+                0
+            val star = s + specialoff + soff + javapos.column + 2 //<%
+            mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
           } else if (spec) {
             val doc = getDoc
             val javaPos = getProj.specOffsets(name)._1
@@ -497,9 +503,9 @@ object JavaPosition extends CoqCallback {
             val content = doc.get(lineoffset, doc.getLineLength(line))
             val offset = content.drop(off).indexOf(": ") + 2
             val star = lineoffset + off + offset + 2
-            mark(m, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+            mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
           } else
-            mark(m, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+            mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
         }
       case x =>
     }

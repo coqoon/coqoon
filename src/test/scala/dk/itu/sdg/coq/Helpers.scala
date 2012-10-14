@@ -23,7 +23,7 @@ object WarningOutputter extends CoqCallback {
         if (gl == 5 && loc == 0)
           readyfortest = true
       case CoqWarning(x) => warnings ::= x
-      case CoqError(x, s, l) => errors ::= x
+      case CoqError(x, y, s, l) => errors ::= y
       case y => Console.println("received " + y)
     }
   }

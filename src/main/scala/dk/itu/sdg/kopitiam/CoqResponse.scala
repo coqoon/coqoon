@@ -6,7 +6,7 @@ sealed abstract class CoqResponse { }
 
 case class CoqGoal (n : Int, goals : List[String]) extends CoqResponse { }
 case class CoqVariablesAssumed (vars : String) extends CoqResponse { }
-case class CoqError (message : String, start : Int, len : Int) extends CoqResponse { }
+case class CoqError (message : String, msgwithoutnl : String, start : Int, len : Int) extends CoqResponse { }
 case class CoqProofCompleted () extends CoqResponse { }
 case class CoqTheoremDefined (theorem : String) extends CoqResponse { }
 case class CoqUnknown (stuff : String) extends CoqResponse { }
@@ -57,9 +57,9 @@ object ParseCoqResponse {
           val split = ff.indexWhere(_ == '-')
           val pos0 = ff.substring(0, split).toInt
           val pos1 = ff.substring(split + 1, ff.length - 1).toInt
-          CoqError(ps, pos0, pos1 - pos0)
+          CoqError(ps, p.reduceLeft(_ + " " + _), pos0, pos1 - pos0)
         } else
-          CoqError(ps, 0, 0)
+          CoqError(ps, p.reduceLeft(_ + " " + _), 0, 0)
       }
       case Inte() => CoqUserInterrupt()
       case Sear(n) => CoqSearchResult(n)

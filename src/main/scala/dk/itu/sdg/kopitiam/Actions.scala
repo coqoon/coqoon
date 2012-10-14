@@ -574,7 +574,7 @@ object CoqStepNotifier extends CoqCallback {
 
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
-      case CoqError(m, s, l) => if (active) err = true
+      case CoqError(m, n, s, l) => if (active) err = true
       case CoqUserInterrupt() => if (active) err = true
       case CoqShellReady(monoton, tokens) =>
         if (active)
@@ -700,11 +700,11 @@ object CoqOutputDispatcher extends CoqCallback {
       case CoqProofCompleted() =>
         if (goalviewer != null)
           goalviewer.writeGoal("Proof completed", List[String]())
-      case CoqError(msg, start, len) =>
+      case CoqError(msg, msgnonl, start, len) =>
         if (len != 0)
-          EclipseBoilerPlate.mark(msg, IMarker.SEVERITY_ERROR, false, start, len)
+          EclipseBoilerPlate.mark(msgnonl, IMarker.SEVERITY_ERROR, false, start, len)
         else
-          EclipseBoilerPlate.mark(msg)
+          EclipseBoilerPlate.mark(msgnonl)
         EclipseConsole.out.println("Error: " + msg)
       case CoqWarning(msg) =>
         EclipseBoilerPlate.mark(msg, IMarker.SEVERITY_WARNING, true)
