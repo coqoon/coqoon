@@ -381,6 +381,27 @@ class CoqRefreshAction extends KCoqAction {
 }
 object CoqRefreshAction extends CoqRefreshAction { }
 
+class ProveClassAction extends KEditorAction {
+  import org.eclipse.jface.action.IAction
+  import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
+  override def run (a : IAction) : Unit = {
+    val edi : JavaEditor = editor.asInstanceOf[JavaEditor]
+    val prov = edi.getDocumentProvider
+    val doc = prov.getDocument(edi.getEditorInput)
+    val proj = EclipseTables.DocToProject(doc)
+    val ms = proj.methods.keys.size
+    if (proj.provenMethods.length < ms - 1)
+      EclipseBoilerPlate.warnUser("Missing proofs", "Sorry, not all methods of the class have been proven, thus I cannot prove the class.")
+    else if (proj.provenMethods.length == ms - 1)
+      //generate certificate!?
+      Console.println("successfully proved class!")
+    else
+      EclipseBoilerPlate.warnUser("Missing proofs", "Sorry, not all methods of the class have been proven, thus I cannot prove the class.")
+  }
+  override def doit () : Unit = { }
+}
+object ProveClassAction extends ProveClassAction { }
+
 class ProveMethodAction extends KEditorAction {
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.text.ITextSelection
@@ -466,7 +487,45 @@ class TranslateAction extends KAction {
           x.foreach(y => JavaPosition.markPos(y.message, y.position))
         case Right(x) => con = Some(x._1); moff = Some(x._2) 
       }
+      val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
+      val ps = proj.provenMethods.length
+      if (con != None) {
+        val off = moff.get
+        proj.specOffset = off._1._1
+        //Console.println("spec offset is: " + proj.specOffset + " content there is: FFF" + con.drop(proj.specOffset).take(20) + "FFF")
+        proj.proofOffset = off._1._2
+        proj.setCoqString(Some(con.get._1))
+        con.get._2.map(x => {
+          //Console.println("new mapping! " + x._1 + " to " + x._2)
+          proj.methods = proj.methods + (x._1 -> x._2)
+        })
+        proj.modelNewerThanSource = false
+        proj.javaNewerThanSource = false
+        proj.proofShell = None
+        proj.provenMethods = List[String]()
+        off._2.map(x => {
+          proj.javaOffsets = proj.javaOffsets + (x._1._1._1 -> x._1._1._2)
+          proj.coqOffsets = proj.coqOffsets + (x._1._1._1 -> x._1._2)
+          //val posl = x._2._1
+          //Console.println("spec offsets for " + x._1._1._1 + " are: ")
+          //if (posl.length == 3)
+          //  Console.println("quantification: " + x._2._1(0) + " precon: " + x._2._1(1) + " postcon: " + x._2._1(2))
+          //if (x._2._2._2.length == 3) {
+          //  val mycon = con.drop(proj.specOffset).drop(x._2._2._1)
+          //  Console.println(" coqdef-content:" + mycon.take(10))
+          //  Console.println("  parts: -- quantification: " + mycon.drop(x._2._2._2(0)._1).take(x._2._2._2(0)._2))
+          //  Console.println("  parts: -- precondition: " + mycon.drop(x._2._2._2(1)._1).take(x._2._2._2(1)._2))
+          //  Console.println("  parts: -- postcondition: " + mycon.drop(x._2._2._2(2)._1).take(x._2._2._2(2)._2))
+          //}
+          proj.specOffsets = proj.specOffsets + (x._1._1._1 -> x._2)
+        })
+      }
       if (generate && con != None) {
+        val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
+        val ms = proj.methods.keys.size
+        if (ps < ms - 1)
+          EclipseBoilerPlate.warnUser("Missing proofs", "Sorry, not all methods of the class have been proven, thus I will not certify this class.")
+        else if (ps == ms - 1) {
         val trfi : IFile = file.getProject.getFile(nam + ".v") //TODO: find a suitable location!
         if (trfi.exists)
           trfi.delete(true, false, null)
@@ -493,39 +552,8 @@ class TranslateAction extends KAction {
         System.arraycopy(modbytes, 0, bs, 0, modbytes.length)
         System.arraycopy(conbytes, 0, bs, modbytes.length, conbytes.length)
         trfi.setContents(new ByteArrayInputStream(bs), IResource.NONE, null)
-      }
-      if (con != None) {
-        val off = moff.get
-        val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
-        proj.specOffset = off._1._1
-        //Console.println("spec offset is: " + proj.specOffset + " content there is: FFF" + con.drop(proj.specOffset).take(20) + "FFF")
-        proj.proofOffset = off._1._2
-        proj.setCoqString(Some(con.get._1))
-        con.get._2.map(x => {
-          Console.println("new mapping! " + x._1 + " to " + x._2)
-          proj.methods = proj.methods + (x._1 -> x._2)
-        })
-        proj.modelNewerThanSource = false
-        proj.javaNewerThanSource = false
-        proj.proofShell = None
-        proj.provenMethods = List[String]()
-        off._2.map(x => {
-          proj.javaOffsets = proj.javaOffsets + (x._1._1._1 -> x._1._1._2)
-          proj.coqOffsets = proj.coqOffsets + (x._1._1._1 -> x._1._2)
-          //val posl = x._2._1
-          //Console.println("spec offsets for " + x._1._1._1 + " are: ")
-          //if (posl.length == 3)
-          //  Console.println("quantification: " + x._2._1(0) + " precon: " + x._2._1(1) + " postcon: " + x._2._1(2))
-          //if (x._2._2._2.length == 3) {
-          //  val mycon = con.drop(proj.specOffset).drop(x._2._2._1)
-          //  Console.println(" coqdef-content:" + mycon.take(10))
-          //  Console.println("  parts: -- quantification: " + mycon.drop(x._2._2._2(0)._1).take(x._2._2._2(0)._2))
-          //  Console.println("  parts: -- precondition: " + mycon.drop(x._2._2._2(1)._1).take(x._2._2._2(1)._2))
-          //  Console.println("  parts: -- postcondition: " + mycon.drop(x._2._2._2(2)._1).take(x._2._2._2(2)._2))
-          //}
-          proj.specOffsets = proj.specOffsets + (x._1._1._1 -> x._2)
-        })
-      }
+        EclipseBoilerPlate.warnUser("Generated Proof Certificate", "Successfully generated a proof certificate: \"" + nam + ".java.v\" .")
+      } }
     } else
       Console.println("wasn't a java file")
   }

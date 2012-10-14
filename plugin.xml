@@ -303,6 +303,16 @@
                menubarPath="group.add">
          </action>
       </viewerContribution>
+      <viewerContribution
+            id="dk.itu.sdg.kopitiam.popupContribution"
+            targetID="#CompilationUnitEditorContext">
+         <action
+               class="dk.itu.sdg.kopitiam.ProveClassAction"
+               id="dk.itu.sdg.kopitiam.popup.proveclass"
+               label="Verify Class"
+               menubarPath="group.add">
+         </action>
+      </viewerContribution>
 <!--      <viewerContribution
             id="dk.itu.sdg.kopitiam.popupContribution"
             targetID="#CompilationUnitRulerContext">
