@@ -244,6 +244,7 @@ def countSubstring (str1 : String, str2 : String) : Int={
    count(0,0)
 }
 
+  import java.io.File
   override def doit () : Unit = {
     Console.println("CoqStepAction.doit called, ready? " + DocumentState.readyForInput)
     if (DocumentState.readyForInput) {
@@ -256,10 +257,14 @@ def countSubstring (str1 : String, str2 : String) : Int={
         if (eoc > 0) {
           val cmd = content.take(eoc).trim
           DocumentState.sendlen = eoc
-          if (countSubstring(CoqTop.filterComments(cmd), "\"") % 2 == 1) {
+          val cmd2 = CoqTop.filterComments(cmd)
+          if (countSubstring(cmd2, "\"") % 2 == 1) {
             DocumentState.undo
             Console.println("not sending anything here!")
             EclipseBoilerPlate.mark("unterminated string!")
+          } else if (cmd2.contains("Add LoadPath") && ! new File(cmd2.substring(cmd2.indexOf("\"") + 1, cmd2.lastIndexOf("\""))).exists) {
+            DocumentState.undo
+            EclipseBoilerPlate.mark("LoadPath does not exist!")            
           } else {
             DocumentState.setBusy
             DocumentState.process
