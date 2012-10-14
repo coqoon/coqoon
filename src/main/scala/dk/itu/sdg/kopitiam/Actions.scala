@@ -341,7 +341,9 @@ class RestartCoqAction extends KAction {
     JavaPosition.unmark
     JavaPosition.retractModel
     JavaPosition.retract
+    CoqCommands.empty
     PrintActor.deregister(CoqOutputDispatcher)
+    CoqStartUp.fini = false
     CoqStartUp.start
   }
 }
@@ -605,6 +607,10 @@ object CoqStepNotifier extends CoqCallback {
 object CoqCommands extends CoqCallback {
   private var commands : List[() => Unit] = List[() => Unit]()
 
+  def empty () : Unit = {
+    commands = List[() => Unit]()
+  }
+
   def doLater (f : () => Unit) : Unit = {
     commands = (commands :+ f)
   }
@@ -637,7 +643,7 @@ object CoqCommands extends CoqCallback {
         if (monoton)
           step
         else
-          commands = List[() => Unit]()
+          empty
       case _ =>
     }
   }

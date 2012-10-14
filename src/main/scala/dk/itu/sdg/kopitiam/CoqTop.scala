@@ -109,6 +109,13 @@ object CoqState {
   private var readyforinput : Boolean = false
   private var context : CoqShellTokens = new CoqShellTokens("Coq", 0, List(), 0)
 
+  //danger! lions! do not come here!
+  def setReady () : Unit = {
+    Console.println("did you handin your 27B-6?")
+    readyforinput = true
+    Console.println("this 27B-6 is not stamped by central services")
+  }
+
   def readyForInput () : Boolean = { readyforinput }
 
   def getShell () : CoqShellTokens = context
@@ -249,6 +256,7 @@ object CoqTop {
     if (coqprocess != null)
       coqprocess.destroy
     coqprocess = null
+    CoqState.setReady
   }
 
   def interruptCoq () : Unit = {
