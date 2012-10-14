@@ -64,13 +64,13 @@ abstract class KCoqAction extends KAction {
   import org.eclipse.core.resources.{IResource, IMarker}
   def doitH () : Unit = {
     ActionDisabler.disableAll
+    JavaPosition.unmark
     val coqstarted = CoqTop.isStarted
     var acted = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.getActiveEditor
     if (DocumentState.activeEditor != acted && acted.isInstanceOf[CoqEditor]) {
       if (DocumentState.resource != null)
         EclipseBoilerPlate.unmarkReally
       DocumentState.resetState
-      JavaPosition.unmark
       JavaPosition.retract
       JavaPosition.retractModel
       if (DocumentState.activeEditor != null)
