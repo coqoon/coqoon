@@ -546,6 +546,7 @@ object JavaPosition extends CoqCallback {
           ActionDisabler.enableStart
         }
       case CoqError(m, n, s, l) =>
+        unmark
         if (editor != null) {
           if (active) {
             val doc = getDoc
@@ -559,7 +560,7 @@ object JavaPosition extends CoqCallback {
                 0
             val star = s + specialoff + soff + javapos.column + 2 //<%
             mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
-          } else if (spec) {
+/*          } else if (spec) {
             val doc = getDoc
             val javaPos = getProj.specOffsets(name)._1
             val coqOffs = getProj.specOffsets(name)._2._2
@@ -575,7 +576,43 @@ object JavaPosition extends CoqCallback {
             val content = doc.get(lineoffset, doc.getLineLength(line))
             val offset = content.drop(off).indexOf(": ") + 2
             val star = lineoffset + off + offset + 2
-            mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+            mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR) */
+          } else if (DocumentState.position >= getProj.specOffset && DocumentState.position <= getProj.proofOffset) {
+            Console.println("we've something wrong in the specs")
+            var fnd : Boolean = false
+            var fst : Boolean = true
+            val doc = getDoc
+            val reloff = DocumentState.position - getProj.specOffset + 1 + s
+            for (x <- getProj.specOffsets.keys) {
+              val coqOff = getProj.specOffsets(x)._2._1
+              //Console.println("x is " + x + " reloff is " + reloff + " coqOff is " + coqOff + " thus: " + (reloff >= coqOff))
+              if (reloff >= coqOff) {
+                val specreloff = reloff - coqOff
+                var i : Int = 0
+                for (p <- getProj.specOffsets(x)._2._2) {
+                  //Console.println("now we're talking with i " + i + " specreloff " + specreloff + " p " + p)
+                  if (specreloff >= p._1 && specreloff <= p._1 + p._2) {
+                    val javaPos = getProj.specOffsets(x)._1(i)
+
+                    val lineoffset = doc.getLineOffset(javaPos.line - 1)
+                    val content = doc.get(lineoffset, doc.getLineLength(javaPos.line - 1))
+                    val offset = content.drop(javaPos.column).indexOf(": ") + 2
+                    val specoff = specreloff - p._1
+                    val lvoff =
+                      if (content.contains("lvars"))
+                        -4
+                      else
+                        0
+                    val star = lineoffset + javaPos.column + offset + lvoff + specoff
+                    fnd = true
+                    mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+                  }
+                  i = i + 1
+                }
+              }
+            }
+            if (!fnd)
+              mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
           } else
             mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
         }
