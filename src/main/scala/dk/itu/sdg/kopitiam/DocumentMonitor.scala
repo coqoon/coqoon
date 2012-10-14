@@ -150,6 +150,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       val proj = EclipseTables.DocToProject(doc)
       DocumentState._content = None
       if (proj.isJava(doc)) {
+        val oldval = proj.javaNewerThanSource
         proj.javaNewerThanSource = true
         if (proj.coqString != None) {
           val content = doc.get
@@ -160,6 +161,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
             val p3 = content.indexOf("%>", off)
             val p4 = content.indexOf("<%", off)
             if (p4 > p3 || p4 == -1) {
+              var found : Boolean = false
               val l = doc.getLineOfOffset(p1) + 1
               var offc : Pair[Int, Int] = (0, 0)
               var offintocoq : Int = 0
@@ -172,6 +174,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                   val coqoffs = proj.specOffsets(x)._2
                   for (y <- proj.specOffsets(x)._1) {
                     if (y.line == l) { //gotcha!
+                      found = true
                       val oldc = proj.coqString.getOrElse(" ")
                       val nnc = nncon.substring(nncon.indexOf(":") + 1).trim
                       val nc = 
@@ -195,41 +198,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                     i = i + 1
                   }
                 }
-                if (offc != (0, 0)) {
-                  //Console.println("offc is now " + offc)
-                  for (x <- proj.specOffsets.keys) {
-                    //Console.println(" competing with " + proj.specOffsets(x)._2._1)
-                    val n1 =
-                      if (proj.specOffsets(x)._2._1 > offc._1) {
-                        //Console.println("updated for " + x + ": from " + proj.specOffsets(x)._2._1 + " to " + (proj.specOffsets(x)._2._1 + offc._2))
-                        proj.specOffsets(x)._2._1 + offc._2
-                      } else
-                        proj.specOffsets(x)._2._1
-                    proj.specOffsets = proj.specOffsets + (x -> (proj.specOffsets(x)._1, (n1, proj.specOffsets(x)._2._2)))
-                  }
-                  
-                  name match {
-                    case None =>
-                    case Some(x) =>
-                      val offf = offc._1 - proj.specOffsets(x)._2._1
-                      val n2 = proj.specOffsets(x)._2._2.map(p => {
-                        if (p._1 > offf) {
-                          val n = (p._1 + offc._2, p._2)
-                          //Console.println("up: " + p + " -> " + n)
-                          n
-                        } else if (p._1 == offf) {
-                          val n = (p._1, p._2 + offc._2)
-                          //Console.println("up: " + p + " -> " + n)
-                          n
-                        } else
-                          p
-                      })
-                    proj.specOffsets = proj.specOffsets + (x -> (proj.specOffsets(x)._1, (proj.specOffsets(x)._2._1, n2)))
-                  }
-
-                  //Console.println("adjusting proof offset from " + proj.proofOffset + " to " + (proj.proofOffset + offc._2))
-                  proj.proofOffset = proj.proofOffset + offc._2
-                }
+                proj.updateSpecOffsets(offc, name)
               } else {
                 var name : Option[String] = None
                 for (x <- proj.javaOffsets.keys) {
@@ -237,6 +206,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                   for (p <- proj.javaOffsets(x)._2) {
                     //Console.println("checking " + l + " against " + p.line + " in " + x)
                     if (l == p.line) {
+                      found = true
                       //Console.println("found something! excited! " + x + " i is " + i)
                       val coqp = proj.coqOffsets(x)._2(i)
                       val coqoff = coqp._1 + proj.coqOffsets(x)._1 + proj.proofOffset
@@ -264,42 +234,15 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                     i = i + 1
                   }
                 }
-                if (offc != (0, 0)) {
-                  for (x <- proj.coqOffsets.keys) {
-                    val n1 =
-                      if (proj.coqOffsets(x)._1 > offc._1) {
-                        //Console.println("updated for " + x + ": from " + proj.coqOffsets(x)._1 + " to " + (proj.coqOffsets(x)._1 + offc._2))
-                        proj.coqOffsets(x)._1 + offc._2
-                      } else
-                        proj.coqOffsets(x)._1
-                    proj.coqOffsets = proj.coqOffsets + (x -> (n1, proj.coqOffsets(x)._2))
-                  }
-
-                  name match {
-                    case None =>
-                    case Some(x) =>
-                      val offf = offc._1 - proj.coqOffsets(x)._1
-                      val n2 = proj.coqOffsets(x)._2.map(p => {
-                        if (p._1 > offf) {
-                          val n = (p._1 + offc._2, p._2)
-                          //Console.println("up: " + p + " -> " + n)
-                          n
-                        } else if (p._1 == offf) {
-                          val n = (p._1, p._2 + offc._2)
-                          //Console.println("up: " + p + " -> " + n)
-                          n
-                        } else
-                          p
-                      })
-                    proj.coqOffsets = proj.coqOffsets + (x -> (proj.coqOffsets(x)._1, n2))
-                  }
-                }
+                proj.updateCoqOffsets(offc, name)
               }
-              Console.println("javaNewerThanSource is false again")
-              proj.javaNewerThanSource = false
-              //retract!
-              if (offintocoq != 0 && offintocoq < DocumentState.position)
-                CoqUndoAction.doitReally(offintocoq)
+              if (found && ! oldval) {
+                Console.println("javaNewerThanSource is false again")
+                proj.javaNewerThanSource = false
+                //retract!
+                if (offintocoq < DocumentState.position)
+                  CoqUndoAction.doitReally(offintocoq)
+              }
             }
           }
         }

@@ -135,8 +135,14 @@ object CoqState {
     //Console.println(" -> done distributing " + tokens)
   }
 
-  def sendCommand () : Unit = {
+  private var lastc : String = ""
+  def lastCommand () : String = {
+    lastc
+  }
+
+  def sendCommand (c : String) : Unit = {
     //Console.println("not ready :/")
+    lastc = c
     readyforinput = false
   }
 }
@@ -218,7 +224,7 @@ object CoqTop {
         Console.println("coqin is null")
       //Console.println("ready? " + CoqState.readyForInput + ", sending " + data.take(10) + "..." + data.takeRight(10))
       if (CoqState.readyForInput) {
-        CoqState.sendCommand
+        CoqState.sendCommand(data)
         val datarr = data.getBytes("UTF-8")
         coqin.write(datarr)
         if (data.length < 20)

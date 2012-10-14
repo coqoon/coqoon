@@ -262,9 +262,11 @@ def countSubstring (str1 : String, str2 : String) : Int={
             DocumentState.undo
             Console.println("not sending anything here!")
             EclipseBoilerPlate.mark("unterminated string!")
+            PrintActor.distribute(CoqShellReady(false, CoqState.getShell))
           } else if (cmd2.contains("Add LoadPath") && ! new File(cmd2.substring(cmd2.indexOf("\"") + 1, cmd2.lastIndexOf("\""))).exists) {
             DocumentState.undo
-            EclipseBoilerPlate.mark("LoadPath does not exist!")            
+            EclipseBoilerPlate.mark("LoadPath does not exist!")
+            PrintActor.distribute(CoqShellReady(false, CoqState.getShell))
           } else {
             DocumentState.setBusy
             DocumentState.process
@@ -627,7 +629,8 @@ object CoqCommands extends CoqCallback {
         commands = commands.tail
         //should we execute in a certain thread? UI?
         c()
-      }
+      } else
+        Console.println("no command to run")
     else
       Console.println("step called, but wasn't finished")
   }
@@ -646,6 +649,8 @@ object CoqCommands extends CoqCallback {
     x match {
       case CoqShellReady(monoton, token) =>
         if (monoton)
+          step
+        else if (CoqState.lastCommand.startsWith("Backtrack"))
           step
         else
           empty

@@ -267,6 +267,7 @@ class CoqJavaProject (basename : String) {
       })
     }
     CoqCommands.doLater(() => {
+      Console.println("last closure with " + name + " and check is " + coqOffsets.contains(name))
       //story so far: model is now updated, java might be newly generated!
       if (coqOffsets.contains(name)) {
         val off = coqOffsets(name)._1 + proofOffset
@@ -283,6 +284,77 @@ class CoqJavaProject (basename : String) {
       } else
         CoqCommands.step
     })
+  }
+
+
+  def updateSpecOffsets (offc : Pair[Int,Int], name : Option[String]) : Unit = {
+    if (offc != (0, 0)) {
+      //Console.println("offc is now " + offc)
+      for (x <- specOffsets.keys) {
+        //Console.println(" competing with " + proj.specOffsets(x)._2._1)
+        val n1 =
+          if (specOffsets(x)._2._1 > offc._1) {
+            //Console.println("updated for " + x + ": from " + specOffsets(x)._2._1 + " to " + (specOffsets(x)._2._1 + offc._2))
+            specOffsets(x)._2._1 + offc._2
+          } else
+            specOffsets(x)._2._1
+        specOffsets = specOffsets + (x -> (specOffsets(x)._1, (n1, specOffsets(x)._2._2)))
+      }
+      
+      name match {
+        case None =>
+        case Some(x) =>
+          val offf = offc._1 - specOffsets(x)._2._1
+          val n2 = specOffsets(x)._2._2.map(p => {
+            if (p._1 > offf) {
+              val n = (p._1 + offc._2, p._2)
+              //Console.println("up: " + p + " -> " + n)
+              n
+            } else if (p._1 == offf) {
+              val n = (p._1, p._2 + offc._2)
+              //Console.println("up: " + p + " -> " + n)
+              n
+            } else
+              p
+          })
+        specOffsets = specOffsets + (x -> (specOffsets(x)._1, (specOffsets(x)._2._1, n2)))
+      }
+      //Console.println("adjusting proof offset from " + proofOffset + " to " + (proofOffset + offc._2))
+      proofOffset = proofOffset + offc._2
+    }
+  }
+
+  def updateCoqOffsets (offc : Pair[Int,Int], name : Option[String]) : Unit = {
+    if (offc != (0, 0)) {
+      for (x <- coqOffsets.keys) {
+        val n1 =
+          if (coqOffsets(x)._1 > offc._1) {
+            //Console.println("updated for " + x + ": from " + coqOffsets(x)._1 + " to " + (coqOffsets(x)._1 + offc._2))
+            coqOffsets(x)._1 + offc._2
+          } else
+            coqOffsets(x)._1
+        coqOffsets = coqOffsets + (x -> (n1, coqOffsets(x)._2))
+      }
+      
+      name match {
+        case None =>
+        case Some(x) =>
+          val offf = offc._1 - coqOffsets(x)._1
+          val n2 = coqOffsets(x)._2.map(p => {
+            if (p._1 > offf) {
+              val n = (p._1 + offc._2, p._2)
+              //Console.println("up: " + p + " -> " + n)
+              n
+            } else if (p._1 == offf) {
+              val n = (p._1, p._2 + offc._2)
+              //Console.println("up: " + p + " -> " + n)
+              n
+            } else
+              p
+          })
+        coqOffsets = coqOffsets + (x -> (coqOffsets(x)._1, n2))
+      }
+    }
   }
 }
 
