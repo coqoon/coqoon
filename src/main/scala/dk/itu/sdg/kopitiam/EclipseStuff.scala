@@ -468,7 +468,7 @@ object JavaPosition extends CoqCallback {
           val locs = getProj.javaOffsets(name)
           val spos = doc.getLineOffset(locs._1.line - 1)
           val epos = doc.getLineOffset(locs._2(locs._2.length - 1).line + 2 - 1) - 1
-          mark("Method proven", spos, epos - spos, "dk.itu.sdg.kopitiam.provenmarker", IMarker.SEVERITY_ERROR)
+          markproven(spos, epos - spos)
           active = true //to force the retract
           retract
           ActionDisabler.enableStart
@@ -505,7 +505,20 @@ object JavaPosition extends CoqCallback {
     }
   }
 
+  def markproven (s : Int, l : Int) = {
+    markHelper("Verified", s, l, "dk.itu.sdg.kopitiam.provenmarker", IMarker.SEVERITY_ERROR) match {
+      case Some(x) => proofmarkers ::= x
+      case None =>
+    }
+  }
+
+  def unmarkProofs () : Unit = {
+    proofmarkers.foreach(_.delete)
+    proofmarkers = List[IMarker]()
+  }
+
   var markers : List[IMarker] = List[IMarker]()
+  var proofmarkers : List[IMarker] = List[IMarker]()
 
   def unmark () : Unit = {
     markers.foreach(_.delete)
@@ -521,6 +534,13 @@ object JavaPosition extends CoqCallback {
   }
 
   def mark (message : String, spos : Int, len : Int, typ : String, severity : Int) : Unit = {
+    markHelper(message, spos, len, typ, severity) match {
+      case Some(x) => markers ::= x
+      case None =>
+    }
+  }
+
+  def markHelper (message : String, spos : Int, len : Int, typ : String, severity : Int) : Option[IMarker] = {
     val file = editor.getEditorInput
     if (file.isInstanceOf[IFileEditorInput]) {
       val rfile = file.asInstanceOf[IFileEditorInput].getFile
@@ -533,9 +553,11 @@ object JavaPosition extends CoqCallback {
       }
       mark.setAttribute(IMarker.TRANSIENT, true)
       mark.setAttribute(IMarker.SEVERITY, severity)
-      markers ::= mark
-    } else
+      Some(mark)
+    } else {
       Console.println("no fileeditorinput " + file)
+      None
+    }
   }
 
   def retractModel () : Unit = {
