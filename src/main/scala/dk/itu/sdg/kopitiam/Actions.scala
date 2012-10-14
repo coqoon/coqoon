@@ -63,6 +63,9 @@ abstract class KCoqAction extends KAction {
   import org.eclipse.ui.{IFileEditorInput, PlatformUI}
   import org.eclipse.core.resources.{IResource, IMarker}
   def doitH () : Unit = {
+    if (! ActionDisabler.ready)
+      EclipseBoilerPlate.warnUser("Not ready", "Eclipse preference is not ready yet, please wait a moment")
+    else {
     ActionDisabler.disableAll
     JavaPosition.unmark
     val coqstarted = CoqTop.isStarted
@@ -100,6 +103,7 @@ abstract class KCoqAction extends KAction {
         CoqStartUp.start
     doit
   }
+  }
 
   def start () : Boolean
   def end () : Boolean
@@ -116,6 +120,7 @@ object ActionDisabler {
     ends ::= end
   }
 
+  def ready () : Boolean = { initialized }
   private var initialized : Boolean = false
   def initializationFinished () : Unit = {
     initialized = true
@@ -219,6 +224,7 @@ class CoqRetractAction extends KCoqAction {
     EclipseBoilerPlate.unmarkReally
     JavaPosition.unmark
     JavaPosition.retract
+    JavaPosition.retractModel
     val initial =
       if (DocumentState.positionToShell.contains(0))
         DocumentState.positionToShell(0).globalStep
@@ -382,6 +388,9 @@ class ProveMethodAction extends KEditorAction {
   import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.core.resources.IMarker
   override def run (a : IAction) : Unit = {
+    if (! ActionDisabler.ready)
+      EclipseBoilerPlate.warnUser("Not ready", "Sorry, the Eclipse preference store is not yet ready. Wait a few seconds")
+    else {
     //plan:
     // a: get project
     val edi : JavaEditor = editor.asInstanceOf[JavaEditor]
@@ -414,6 +423,7 @@ class ProveMethodAction extends KEditorAction {
         CoqCommands.step
       }
     }
+    }
   }
   override def doit () : Unit = { }
 }
@@ -444,11 +454,11 @@ class TranslateAction extends KAction {
   }
 
   import scala.util.parsing.input.Position
-  def translate (file : IFile, generate : Boolean) : Option[String] = {
+  def translate (file : IFile, generate : Boolean) : Unit = {
     val nam = file.getName
     if (nam.endsWith(".java")) {
       val is = StreamReader(new InputStreamReader(file.getContents, "UTF-8"))
-      var con : Option[String] = None
+      var con : Option[Pair[String, List[Pair[String,String]]]] = None
       var moff : Option[Pair[Pair[Int, Int], List[Pair[Pair[Pair[String, Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position],Pair[Int,List[Pair[Int,Int]]]]]]]] = None
       JavaTC.parse(is, nam.substring(0, nam.indexOf(".java"))) match {
         case Left(x) =>
@@ -475,7 +485,9 @@ class TranslateAction extends KAction {
           } else
             ""
         val modbytes = mod.getBytes("UTF-8")
-        val conbytes = con.getOrElse("").getBytes("UTF-8")
+        val cont = con.get
+        val content = cont._1 + "\n" + cont._2.filter(x => !x._1.equals("class")).map(_._2).mkString("\n") + "\n" + cont._2.filter(x =>  x._1.equals("class")).map(_._2).mkString("\n") + "\nEnd " + nam.substring(0, nam.indexOf(".java")) + "_spec.\n"
+        val conbytes = content.getBytes("UTF-8")
         val bytessize = modbytes.length + conbytes.length
         val bs = new Array[Byte](bytessize)
         System.arraycopy(modbytes, 0, bs, 0, modbytes.length)
@@ -488,9 +500,15 @@ class TranslateAction extends KAction {
         proj.specOffset = off._1._1
         //Console.println("spec offset is: " + proj.specOffset + " content there is: FFF" + con.drop(proj.specOffset).take(20) + "FFF")
         proj.proofOffset = off._1._2
-        proj.coqString = con
+        proj.setCoqString(Some(con.get._1))
+        con.get._2.map(x => {
+          Console.println("new mapping! " + x._1 + " to " + x._2)
+          proj.methods = proj.methods + (x._1 -> x._2)
+        })
         proj.modelNewerThanSource = false
         proj.javaNewerThanSource = false
+        proj.proofShell = None
+        proj.provenMethods = List[String]()
         off._2.map(x => {
           proj.javaOffsets = proj.javaOffsets + (x._1._1._1 -> x._1._1._2)
           proj.coqOffsets = proj.coqOffsets + (x._1._1._1 -> x._1._2)
@@ -508,11 +526,8 @@ class TranslateAction extends KAction {
           proj.specOffsets = proj.specOffsets + (x._1._1._1 -> x._2)
         })
       }
-      con
-    } else {
+    } else
       Console.println("wasn't a java file")
-      None
-    }
   }
 
   override def doit () : Unit = ()

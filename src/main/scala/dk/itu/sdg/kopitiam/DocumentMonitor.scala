@@ -152,7 +152,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       if (proj.isJava(doc)) {
         val oldval = proj.javaNewerThanSource
         proj.javaNewerThanSource = true
-        if (proj.coqString != None) {
+        if (proj.getCoqString != None) {
           val content = doc.get
           val off = event.getOffset
           val p1 = content.lastIndexOf("<%", off)
@@ -162,6 +162,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
             val p4 = content.indexOf("<%", off)
             if (p4 > p3 || p4 == -1) {
               var found : Boolean = false
+              var rtr : Boolean = false
               val l = doc.getLineOfOffset(p1) + 1
               var offc : Pair[Int, Int] = (0, 0)
               var offintocoq : Int = 0
@@ -175,7 +176,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                   for (y <- proj.specOffsets(x)._1) {
                     if (y.line == l) { //gotcha!
                       found = true
-                      val oldc = proj.coqString.getOrElse(" ")
+                      val oldc = proj.getCoqString.getOrElse(" ")
                       val nnc = nncon.substring(nncon.indexOf(":") + 1).trim
                       val nc = 
                         if (nncon.startsWith("lvars: ")) {
@@ -189,11 +190,12 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                       //Console.println("setting new content to be " + nc)
                       val newc = oldc.take(proj.specOffset + coqoffs._1 + coqoffs._2(i)._1) + nc + oldc.drop(proj.specOffset + coqoffs._1 + coqoffs._2(i)._1 + coqoffs._2(i)._2)
                       //Console.println("new content is " + newc.drop(proj.specOffset + coqoffs._1 + coqoffs._2(i)._1 - 10).take(50))
-                      proj.coqString = Some(newc)
+                      proj.setCoqString(Some(newc))
                       DocumentState._content = Some(newc)
                       offc = (coqoffs._1 + coqoffs._2(i)._1, nc.length - coqoffs._2(i)._2)
                       offintocoq = coqoffs._1 + coqoffs._2(i)._1 + proj.specOffset
                       name = Some(x)
+                      rtr = true
                     }
                     i = i + 1
                   }
@@ -207,9 +209,9 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                     //Console.println("checking " + l + " against " + p.line + " in " + x)
                     if (l == p.line) {
                       found = true
-                      //Console.println("found something! excited! " + x + " i is " + i)
+                      Console.println("found something! excited! " + x + " i is " + i)
                       val coqp = proj.coqOffsets(x)._2(i)
-                      val coqoff = coqp._1 + proj.coqOffsets(x)._1 + proj.proofOffset
+                      val coqoff = coqp._1 + proj.coqOffsets(x)._1
                       val ncon =
                         if (nncon.startsWith("invariant")) {
                           val vals = nncon.drop(10).trim.split("frame:")
@@ -217,15 +219,17 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                           "forward (" + vals(0).trim + ") (" + vals(1).trim + ")."
                         } else
                           nncon
-                      //Console.println("new content: " + ncon)
-                      val oldc = proj.coqString.getOrElse("")
+                      Console.println("new content: " + ncon)
+                      val oldc = proj.methods(x)
                       val newc = oldc.take(coqoff) + ncon + oldc.drop(coqoff + coqp._2)
-                      //Console.println("new coq buffer: " + newc.drop(coqoff - 10).take(coqp._2 + 20))
+                      Console.println("new coq buffer: " + newc.drop(scala.math.max(0, coqoff - 10)).take(scala.math.min(coqp._2 + 20, newc.length)))
                       offc = (proj.coqOffsets(x)._1 + coqp._1, ncon.length - coqp._2)
                       offintocoq = proj.coqOffsets(x)._1 + coqp._1 + proj.proofOffset
                       name = Some(x)
-                      proj.coqString = Some(newc)
-                      DocumentState._content = Some(newc)
+                      proj.methods = proj.methods + (x -> newc)
+                      DocumentState._content = proj.getCoqString
+                      if (JavaPosition.name == x) rtr = true
+                      //DocumentState._content = Some(newc)
                       //update the javaOffsets table (only if newline)
                       //if there's a file or editor, rewrite that as well!
                       // -> maybe do that on ctrl + s in the java buffer?!?
@@ -239,8 +243,8 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
               if (found && ! oldval) {
                 Console.println("javaNewerThanSource is false again")
                 proj.javaNewerThanSource = false
-                //retract!
-                if (offintocoq < DocumentState.position)
+                //retract! XXXX
+                if (rtr && offintocoq < DocumentState.position)
                   CoqUndoAction.doitReally(offintocoq)
               }
             }

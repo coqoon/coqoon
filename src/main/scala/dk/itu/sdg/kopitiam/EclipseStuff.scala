@@ -97,10 +97,11 @@ class CoqJavaProject (basename : String) {
   var javaSource : Option[IDocument] = None
   var coqModel : Option[IDocument] = None
   var coqSource : Option[IDocument] = None
-  var coqString : Option[String] = None
+  private var coqString : Option[String] = None //this will be code + spec
   var modelNewerThanSource : Boolean = true
   var javaNewerThanSource : Boolean = false
   var modelShell : Option[CoqShellTokens] = None
+  var proofShell : Option[CoqShellTokens] = None
 
   //def -> offset + [length1, .., lengthn]
   var javaOffsets : HashMap[String, Pair[Position, List[Position]]] =
@@ -111,6 +112,9 @@ class CoqJavaProject (basename : String) {
     new HashMap[String, Pair[List[Position], Pair[Int, List[Pair[Int,Int]]]]]()
   var proofOffset : Int = 0
   var specOffset : Int = 0
+
+  var methods : HashMap[String, String] = new HashMap[String, String]()
+  var provenMethods : List[String] = List[String]()
 
   def gotClosed (doc : IDocument) : Unit = {
     javaSource match {
@@ -163,7 +167,13 @@ class CoqJavaProject (basename : String) {
           modelShell = None
       case None =>
     }
-    Console.println("provemethod called with " + name + " modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " modelshell " + modelShell)
+    proofShell match {
+      case Some(x) =>
+        if (x.globalStep > CoqState.getShell.globalStep)
+          proofShell = None
+      case None =>
+    }
+    Console.println("provemethod called with " + name + " modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " modelshell " + modelShell + " proofshell " + proofShell)
     if (modelNewerThanSource || modelShell == None) {
       modelNewerThanSource = false
       var open : Boolean = false
@@ -248,7 +258,7 @@ class CoqJavaProject (basename : String) {
         if (fei.isInstanceOf[IFileEditorInput]) {
           Console.println("translating file....")
           JavaPosition.unmark
-          coqString = TranslateAction.translate(fei.asInstanceOf[IFileEditorInput].getFile, false)
+          TranslateAction.translate(fei.asInstanceOf[IFileEditorInput].getFile, false)
         } else
           Console.println("fei not a IFEI")
         //retract up until model
@@ -267,17 +277,41 @@ class CoqJavaProject (basename : String) {
       })
     }
     CoqCommands.doLater(() => {
+      if (DocumentState.activeEditor != null) {
+        DocumentState.activeEditor.addAnnotations(0, 0)
+        DocumentState.activeEditor.invalidate
+        DocumentState.activeEditor = null
+      }
+      CoqCommands.step
+    })
+    CoqCommands.doLater(() => {
+      proofShell match {
+        case None =>
+          Console.println("sending defs + spec")
+          DocumentState._content = coqString
+          PrintActor.register(JavaPosition)
+          CoqStepAllAction.doit
+        case Some(x) =>
+          if (x.globalStep < CoqState.getShell.globalStep) {
+            DocumentState.setBusy
+            Console.println("backtracking to proofshell " + x)
+            CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
+            DocumentState.position = coqString.get.length
+          } else
+            CoqCommands.step
+      }
+    })
+    CoqCommands.doLater(() => {
+      if (proofShell == None) {
+        Console.println("preserving proof shell: " + CoqState.getShell)
+        proofShell = Some(CoqState.getShell)
+      }
       Console.println("last closure with " + name + " and check is " + coqOffsets.contains(name))
       //story so far: model is now updated, java might be newly generated!
       if (coqOffsets.contains(name)) {
-        val off = coqOffsets(name)._1 + proofOffset
-        if (DocumentState.activeEditor != null) {
-          DocumentState.activeEditor.addAnnotations(0, 0)
-          DocumentState.activeEditor.invalidate
-          DocumentState.activeEditor = null
-        }
-        DocumentState._content = coqString
+        var off = coqOffsets(name)._1 + proofOffset
         JavaPosition.name = name
+        DocumentState._content = getCoqString
         PrintActor.register(JavaPosition)
         if (DocumentState.position < off)
           CoqStepUntilAction.reallydoit(off)
@@ -286,6 +320,16 @@ class CoqJavaProject (basename : String) {
     })
   }
 
+  def setCoqString (s : Option[String]) : Unit = {
+    coqString = s
+  }
+
+  def getCoqString () : Option[String] = {
+    coqString match {
+      case None => None
+      case Some(x) => Some(x + "\n" + methods(JavaPosition.name))
+    }
+  }
 
   def updateSpecOffsets (offc : Pair[Int,Int], name : Option[String]) : Unit = {
     if (offc != (0, 0)) {
@@ -326,16 +370,6 @@ class CoqJavaProject (basename : String) {
 
   def updateCoqOffsets (offc : Pair[Int,Int], name : Option[String]) : Unit = {
     if (offc != (0, 0)) {
-      for (x <- coqOffsets.keys) {
-        val n1 =
-          if (coqOffsets(x)._1 > offc._1) {
-            //Console.println("updated for " + x + ": from " + coqOffsets(x)._1 + " to " + (coqOffsets(x)._1 + offc._2))
-            coqOffsets(x)._1 + offc._2
-          } else
-            coqOffsets(x)._1
-        coqOffsets = coqOffsets + (x -> (n1, coqOffsets(x)._2))
-      }
-      
       name match {
         case None =>
         case Some(x) =>
@@ -343,11 +377,11 @@ class CoqJavaProject (basename : String) {
           val n2 = coqOffsets(x)._2.map(p => {
             if (p._1 > offf) {
               val n = (p._1 + offc._2, p._2)
-              //Console.println("up: " + p + " -> " + n)
+              Console.println("up: " + p + " -> " + n)
               n
             } else if (p._1 == offf) {
               val n = (p._1, p._2 + offc._2)
-              //Console.println("up: " + p + " -> " + n)
+              Console.println("up: " + p + " -> " + n)
               n
             } else
               p
@@ -511,7 +545,7 @@ object JavaPosition extends CoqCallback {
     val proj = getProj
     if (proj != null) {
       proj.proveMethod(name)
-      proj.coqString
+      proj.getCoqString
     } else None
   }
 
@@ -621,10 +655,12 @@ object JavaPosition extends CoqCallback {
   }
 
   def markproven (s : Int, l : Int) = {
+    getProj.provenMethods ::= name
     markHelper("Verified", s, l, "dk.itu.sdg.kopitiam.provenmarker", IMarker.SEVERITY_ERROR) match {
       case Some(x) => proofmarkers ::= x
       case None =>
     }
+    //CoqTop.writeToCoq("Backtrack " + ...)
   }
 
   def unmarkProofs () : Unit = {
@@ -677,8 +713,10 @@ object JavaPosition extends CoqCallback {
 
   def retractModel () : Unit = {
     val proj = getProj
-    if (proj != null)
+    if (proj != null) {
       proj.modelShell = None
+      proj.proofShell = None
+    }
   }
 
   import org.eclipse.swt.widgets.Display
@@ -733,18 +771,20 @@ object JavaPosition extends CoqCallback {
       val doc = prov.getDocument(editor.getEditorInput)
       val proj = EclipseTables.DocToProject(doc)
       var doit : Boolean = active
-      if (DocumentState.position < (proj.coqOffsets(name)._1 + proj.proofOffset - 1)) {
+      Console.println("lets evaluate: " + DocumentState.position + " coqoff " + proj.coqOffsets(name)._1 + " proof " + proj.proofOffset + " evals to " + (DocumentState.position < (proj.coqOffsets(name)._1 + proj.proofOffset - 2)))
+      if (DocumentState.position < (proj.coqOffsets(name)._1 + proj.proofOffset - 2)) {
         if (active) {
-          //Console.println("deactivating, 'cause we're too low")
+          Console.println("deactivating, 'cause we're too low")
           active = false
           index = -1
         }
       } else if (! active) {
-        //Console.println("activating 'cause we're too high")
+        Console.println("activating 'cause we're too high")
         active = true
         doit = true
       }
-      if (DocumentState.position == (proj.specOffsets(name)._2._1 + proj.specOffset - 1)) {
+      Console.println("lets evaluate: " + DocumentState.position + " specoff " + proj.specOffsets(name)._2._1 + " spec " + proj.specOffset + " evals to " + (DocumentState.position == (proj.specOffsets(name)._2._1 + proj.specOffset - 2)))
+      if (DocumentState.position == (proj.specOffsets(name)._2._1 + proj.specOffset - 2)) {
         if (proc && undo && spec) {
           //Console.println("awwwwwww, broke it. uncolor. retract! NOW!")
           doit = true

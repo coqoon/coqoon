@@ -222,16 +222,16 @@ object CoqJavaDocumentProvider extends TextFileDocumentProvider {
 
   import dk.itu.sdg.javaparser.FinishAST
   def updateCoqCode (coq : IDocument, s : String, name : String) : Unit = {
-    val (prog, spec) = JavaToCoq.parseNoSpec(new CharArrayReader(s.toArray), name)
+//    val (prog, spec) = JavaToCoq.parseNoSpec(new CharArrayReader(s.toArray), name)
     //Console.println("got prog " + prog + " and spec " + spec)
     //TODO: actually do a proper diff - there might be changes from the user in that area
     //like Definition of eeqptr, elt, eand, eneqptr in Snap.v
-    val old = coq.get
-    val pstart = old.indexOf(prog.substring(0, 15))
-    val proend = prog.length - 20
-    val pend = old.indexOf(prog.substring(proend, prog.length))
-    Console.println("old start " + pstart + " old end " + pend) //+ ":: " + old.substring(pstart, pend + (prog.length - proend)))
-    coq.replace(pstart, pend + (prog.length - proend) - pstart, prog)
+//    val old = coq.get
+//    val pstart = old.indexOf(prog.substring(0, 15))
+//    val proend = prog.length - 20
+//    val pend = old.indexOf(prog.substring(proend, prog.length))
+//    Console.println("old start " + pstart + " old end " + pend) //+ ":: " + old.substring(pstart, pend + (prog.length - proend)))
+//    coq.replace(pstart, pend + (prog.length - proend) - pstart, prog)
    /* val sstart = old.indexOf(spec.substring(0, spec.indexOf(" :=")))
     val specend = spec.lastIndexOf("}}.")
     val send = old.indexOf(spec.substring(specend, spec.length))

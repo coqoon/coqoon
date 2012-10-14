@@ -306,13 +306,16 @@ trait CoqOutputter extends JavaToSimpleJava {
             " at 2"
           else
             ""
-        proofoutput ::= "Lemma valid_" + name + "_" + clazz + ": " + rdeps + " |= " + name + """_spec.
+        var proof = List[String]()
+        proof ::= "Lemma valid_" + name + "_" + clazz + ": " + rdeps + " |= " + name + """_spec.
 Proof.
   unfold """ + name + "_spec" + suff + "; unfold_spec."
-        val fst = proofoutput.reduceLeft(_ + "\n" + _).length
-        Console.println("method " + name + " depends on " + deps.mkString(";"))
-        proofoutput = mproof ++ proofoutput
-        proofoutput ::= "Qed."
+        val fst = proof.mkString("\n").length + 1
+        //Console.println("method " + name + " depends on " + deps.mkString(";"))
+        proof = mproof ++ proof
+        proof ::= "Qed."
+        methodproofs ::= (name, proof.reverse.mkString("\n"))
+        Console.println("method " + name + ": sentences: F" + methodproofs.head._2.drop(fst) + "F")
         val ls = lengths.reverse
         val cl = coqlengths.reverse
         lengths = List[Position]()
@@ -353,11 +356,12 @@ Proof.
 
   private var outp : List[String] = null
   private var specoutput : List[String] = null
-  private var proofoutput : List[String] = null
+  //private var proofoutput : List[String] = null
   private var specifications : List[String] = null
   private var proofs : List[String] = null
   private var lengths : List[Position] = null
   private var coqlengths : List[Pair[Int,Int]] = null
+  private var methodproofs : List[Pair[String, String]] = null
 
   private val unique_names : List[String] = List("Opaque unique_method_names.", "Definition unique_method_names := option_proof (search_unique_names Prog).")
 
@@ -369,14 +373,15 @@ Open Scope string_scope.
 Open Scope hasn_scope.
 """
 
-  def coqoutput (xs : List[SJDefinition], complete : Boolean, name : String) : Pair[List[String], Pair[Pair[Int, Int], List[Pair[Pair[Pair[String, Pair[Position, List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position],Pair[Int,List[Pair[Int,Int]]]]]]]] = {
+  def coqoutput (xs : List[SJDefinition], complete : Boolean, name : String) : Pair[Pair[List[String], List[Pair[String,String]]], Pair[Pair[Int, Int], List[Pair[Pair[Pair[String, Pair[Position, List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position],Pair[Int,List[Pair[Int,Int]]]]]]]] = {
     outp = List[String]()
     specoutput = List[String]()
-    proofoutput = List[String]()
+    //proofoutput = List[String]()
     specifications = List[String]()
     proofs = List[String]()
     lengths = List[Position]()
     coqlengths = List[Pair[Int,Int]]()
+    methodproofs = List[Pair[String,String]]()
     var offs = List[Pair[Pair[Pair[String, Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position], Pair[Int, List[Pair[Int,Int]]]]]]()
     var cs : List[String] = List[String]()
     if (complete)
@@ -416,15 +421,21 @@ Open Scope asn_scope.
     outp = unique_names ++ outp
     outp ::= "End " + name + "."
     specoutput ::= "Definition " + name + "_spec : spec := " + specifications.mkString(""" [/\] """) + "."
-    proofoutput ::= "Lemma valid_" + name + " : |= " + name + """_spec.
+    val classproof = "Lemma valid_" + name + " : |= " + name + """_spec.
 Proof.
   unfold """ + name + """_spec.
-""" + proofs.foldRight("\n")("  apply " + _ + ".\n" + _) + "Qed."
-    if (complete)
-      proofoutput ::= "End " + name + "_spec."
+  apply lob; spec_solve.
+Qed.
+"""
+//    proofoutput ::= "Lemma valid_" + name + " : |= " + name + """_spec.
+//Proof.
+//  unfold """ + name + """_spec.
+//""" + proofs.foldRight("\n")("  apply " + _ + ".\n" + _) + "Qed."
+//    if (complete)
+//      proofoutput ::= "End " + name + "_spec."
     val codeprefix = outp.reverse ++ List("")
     val prefix = codeprefix ++ specoutput.reverse
-    (prefix ++ proofoutput.reverse ++ List(""), ((codeprefix.reduceLeft(_ + "\n" + _).length + 2, prefix.reduceLeft(_ + "\n" + _).length + 2), offs))
+    ((prefix, ("class", classproof) :: methodproofs), ((codeprefix.reduceLeft(_ + "\n" + _).length + 2, prefix.reduceLeft(_ + "\n" + _).length + 2), offs))
   }
 
   def printArgList (l : List[String]) : String = {

@@ -36,24 +36,25 @@ object FinishAST extends JavaTerms
   }
 
   import scala.util.parsing.input.Position
-  def doit (a : Any, name : String) : Either[List[SJWarning],Pair[String,Pair[Pair[Int,Int],List[Pair[Pair[Pair[String, Pair[Position, List[Position]]], Pair[Int,List[Pair[Int,Int]]]],Pair[List[Position],Pair[Int,List[Pair[Int,Int]]]]]]]]] = {
+  def doit (a : Any, name : String) : Either[List[SJWarning],Pair[Pair[String,List[Pair[String,String]]],Pair[Pair[Int,Int],List[Pair[Pair[Pair[String, Pair[Position, List[Position]]], Pair[Int,List[Pair[Int,Int]]]],Pair[List[Position],Pair[Int,List[Pair[Int,Int]]]]]]]]] = {
     val w = doitHelper(a)
     val ws = SimpleJavaChecker.check(w)
     if (ws.length > 0)
       Left(ws)
     else {
       val (r, offs) = coqoutput(w, true, name)
-      Right((r.reduceLeft(_ + "\n" + _), offs))
+      //whereas r has the shape of Pair[List[String], List[Pair[String,String]]]
+      Right(((r._1.mkString("\n"), r._2), offs))
     }
   }
 
-  def doitNoSpec (a : Any, name : String) : (String, String) = {
+/*  def doitNoSpec (a : Any, name : String) : (String, String) = {
     val w = doitHelper(a)
     val (re, offs) = coqoutput(w, false, name)
     val prog = re.takeWhile(!_.contains("_spec.\nImport ")).reduceLeft(_ + "\n" + _)
     val spec = re.dropWhile(!_.contains("_spec.\nImport ")).drop(1).mkString("\n")
     (prog, spec)
-  }
+  } */
 
  /*
   *  ========================================================
