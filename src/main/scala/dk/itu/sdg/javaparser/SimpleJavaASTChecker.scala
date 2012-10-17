@@ -14,7 +14,7 @@ object SimpleJavaChecker {
 
   def check (xs : List[SJDefinition]) : List[SJWarning] = {
     warnings = List[SJWarning]()
-    Console.println("trollolo checking!!!")
+    //Console.println("trollolo checking!!!")
     xs.foreach(checkDefinition(_))
     warnings
   }
