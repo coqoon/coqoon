@@ -731,8 +731,9 @@ object CoqOutputDispatcher extends CoqCallback {
             index = res.length
         }
         if (goalviewer != null) {
-          //Console.println("calling writegoal with " + subgoals.reverse)
+          Console.println("calling writegoal") // with " + subgoals.reverse)
           goalviewer.writeGoal(ht, subgoals.reverse)
+          Console.println("done!")
         }
       case CoqProofCompleted() =>
         if (goalviewer != null)

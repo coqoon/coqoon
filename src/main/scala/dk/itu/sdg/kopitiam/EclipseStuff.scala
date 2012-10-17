@@ -1053,8 +1053,10 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         Console.println("no content. activeeditor is " + activeEditor + " javapos is " + JavaPosition.editor)
         if (activeEditor != null)
           _content = Some(activeDocument.get)
-        else if (JavaPosition.editor != null)
+        else if (JavaPosition.editor != null) {
+          Console.println("calling JP.getCS here...")
           _content = JavaPosition.getCoqString
+        }
         _content.getOrElse("  ") //not happy with this hack
       case Some(x) =>
         x
