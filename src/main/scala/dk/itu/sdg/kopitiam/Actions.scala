@@ -381,27 +381,6 @@ class CoqRefreshAction extends KCoqAction {
 }
 object CoqRefreshAction extends CoqRefreshAction { }
 
-class ProveClassAction extends KEditorAction {
-  import org.eclipse.jface.action.IAction
-  import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
-  override def run (a : IAction) : Unit = {
-    val edi : JavaEditor = editor.asInstanceOf[JavaEditor]
-    val prov = edi.getDocumentProvider
-    val doc = prov.getDocument(edi.getEditorInput)
-    val proj = EclipseTables.DocToProject(doc)
-    val ms = proj.methods.keys.size
-    if (proj.provenMethods.length < ms - 1)
-      EclipseBoilerPlate.warnUser("Missing proofs", "Sorry, not all methods of the class have been proven, thus I cannot prove the class.")
-    else if (proj.provenMethods.length == ms - 1)
-      //generate certificate!?
-      Console.println("successfully proved class!")
-    else
-      EclipseBoilerPlate.warnUser("Missing proofs", "Sorry, not all methods of the class have been proven, thus I cannot prove the class.")
-  }
-  override def doit () : Unit = { }
-}
-object ProveClassAction extends ProveClassAction { }
-
 class ProveMethodAction extends KEditorAction {
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.text.ITextSelection
