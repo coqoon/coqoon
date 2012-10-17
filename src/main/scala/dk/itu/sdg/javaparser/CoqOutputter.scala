@@ -315,7 +315,7 @@ Proof.
         proof = mproof ++ proof
         proof ::= "Qed."
         methodproofs ::= (name, proof.reverse.mkString("\n"))
-        Console.println("method " + name + ": sentences: F" + methodproofs.head._2.drop(fst) + "F")
+        //Console.println("method " + name + ": sentences: F" + methodproofs.head._2.drop(fst) + "F")
         val ls = lengths.reverse
         val cl = coqlengths.reverse
         lengths = List[Position]()
