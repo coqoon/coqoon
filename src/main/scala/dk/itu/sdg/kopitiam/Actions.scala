@@ -291,7 +291,9 @@ object CoqStepAction extends CoqStepAction { }
 
 class CoqStepAllAction extends KCoqAction {
   override def doit () : Unit = {
-    if (DocumentState.position < DocumentState.content.length) {
+    val nc = CoqTop.findNextCommand(DocumentState.content.drop(DocumentState.position))
+    Console.println("step step step " + nc)
+    if (nc != -1) {
       //CoqProgressMonitor.multistep = true
       DocumentState.reveal = false
       CoqStepNotifier.active = true
