@@ -424,7 +424,9 @@ Open Scope asn_scope.
     val classproof = "Lemma valid_" + name + " : |= " + name + """_spec.
 Proof.
   unfold """ + name + """_spec.
-  apply lob; spec_solve.
+  apply lob; repeat rewrite later_and_spec; spec_splits.
+""" + proofs.map(x => { "etransitivity; [|apply " + x + "]; spec_solve."}).mkString("\n") +
+"""
 Qed.
 """
 //    proofoutput ::= "Lemma valid_" + name + " : |= " + name + """_spec.
