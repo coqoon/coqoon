@@ -89,7 +89,6 @@ abstract class KCoqAction extends KAction {
         DocumentState.setBusy
         PrintActor.deregister(CoqOutputDispatcher)
         PrintActor.deregister(CoqStepNotifier)
-        PrintActor.deregister(CoqCommands)
         val shell = CoqState.getShell
         PrintActor.register(CoqStartUp)
         CoqStartUp.fini = false
@@ -588,7 +587,6 @@ object CoqStartUp extends CoqCallback {
           PrintActor.deregister(CoqStartUp)
           PrintActor.register(CoqOutputDispatcher)
           PrintActor.register(CoqStepNotifier)
-          PrintActor.register(CoqCommands)
           initialize = 0
           fini = true
           ActionDisabler.enableMaybe
@@ -640,9 +638,12 @@ object CoqCommands extends CoqCallback {
 
   def empty () : Unit = {
     commands = List[() => Unit]()
+    PrintActor.deregister(CoqCommands)
   }
 
   def doLater (f : () => Unit) : Unit = {
+    if (commands.size == 0)
+      PrintActor.register(CoqCommands)
     commands = (commands :+ f)
   }
 
@@ -653,8 +654,10 @@ object CoqCommands extends CoqCallback {
         commands = commands.tail
         //should we execute in a certain thread? UI?
         c()
-      } else
-        Console.println("no command to run")
+      } else {
+        PrintActor.deregister(CoqCommands)
+        Console.println("no command to run, deregistered")
+      }
     else
       Console.println("step called, but wasn't finished")
   }
