@@ -548,6 +548,7 @@ object CoqStartUp extends CoqCallback {
 
   def start () : Unit = {
     if (! CoqTop.isStarted) {
+      PrintActor.deregister(CoqCommands)
       PrintActor.register(CoqStartUp)
       if (EclipseConsole.out == null)
         EclipseConsole.initConsole
@@ -587,6 +588,8 @@ object CoqStartUp extends CoqCallback {
           PrintActor.deregister(CoqStartUp)
           PrintActor.register(CoqOutputDispatcher)
           PrintActor.register(CoqStepNotifier)
+          if (CoqCommands.nonempty)
+            PrintActor.register(CoqCommands)
           initialize = 0
           fini = true
           ActionDisabler.enableMaybe
@@ -635,6 +638,8 @@ object CoqStepNotifier extends CoqCallback {
 
 object CoqCommands extends CoqCallback {
   private var commands : List[() => Unit] = List[() => Unit]()
+
+  def nonempty () : Boolean = { commands.size > 0 }
 
   def empty () : Unit = {
     commands = List[() => Unit]()
