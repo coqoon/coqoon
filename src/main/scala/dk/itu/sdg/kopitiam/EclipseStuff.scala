@@ -1145,7 +1145,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
           activeEditor.addAnnotations(start, 0)
           activeEditor.invalidate
           if (reveal)
-            Display.getDefault.syncExec(
+            Display.getDefault.asyncExec(
               new Runnable() {
                 def run() = {
                   activeEditor.selectAndReveal(start, 0)
@@ -1202,7 +1202,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       if (activeEditor != null) {
         activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
         if (reveal)
-          Display.getDefault.syncExec(
+          Display.getDefault.asyncExec(
             new Runnable() {
               def run() = {
                 activeEditor.selectAndReveal(position, 0)
