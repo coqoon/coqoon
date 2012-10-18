@@ -58,6 +58,9 @@ class CoqEditor extends TextEditor with EclipseUtils {
   }
 
   import org.eclipse.jface.text.source.Annotation
+  private var processed : Option[Annotation] = None
+  private var processing : Option[Annotation] = None
+
   import org.eclipse.jface.text.Position
   import org.eclipse.swt.widgets.Display
   def addAnnotations (first : Int, second : Int) : Unit = {
@@ -65,19 +68,25 @@ class CoqEditor extends TextEditor with EclipseUtils {
     val doc = provider.getDocument(getEditorInput)
     val annmodel = provider.getAnnotationModel(getEditorInput)
     annmodel.connect(doc)
-    val anniter = annmodel.getAnnotationIterator
-    while (anniter.hasNext) {
-      val ann = anniter.next.asInstanceOf[Annotation]
-      if (ann.getType == "dk.itu.sdg.kopitiam.processed")
-        annmodel.removeAnnotation(ann)
-      if (ann.getType == "dk.itu.sdg.kopitiam.processing")
-        annmodel.removeAnnotation(ann)
+    processed match {
+      case None =>
+      case Some(x) =>
+        annmodel.removeAnnotation(x)
+        processed = None
+    }
+    processing match {
+      case None =>
+      case Some(x) =>
+        annmodel.removeAnnotation(x)
+        processing = None
     }
     val ann = new Annotation("dk.itu.sdg.kopitiam.processed", false, "Processed Proof")
     annmodel.addAnnotation(ann, new Position(0, first))
+    processed = Some(ann)
     if (second > 0) {
       val ann2 = new Annotation("dk.itu.sdg.kopitiam.processing", false, "Processing Proof")
       annmodel.addAnnotation(ann2, new Position(first, second))
+      processing = Some(ann2)
     }
     annmodel.disconnect(doc)
   }
