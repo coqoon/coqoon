@@ -458,16 +458,17 @@ class TranslateAction extends KAction {
   def translate (file : IFile, generate : Boolean) : Unit = {
     val nam = file.getName
     if (nam.endsWith(".java")) {
+      val basename = nam.split("\\.")(0)
       val is = StreamReader(new InputStreamReader(file.getContents, "UTF-8"))
       var con : Option[Pair[String, List[Pair[String,String]]]] = None
       var moff : Option[Pair[Pair[Int, Int], List[Pair[Pair[Pair[String, Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position],Pair[Int,List[Pair[Int,Int]]]]]]]] = None
-      JavaTC.parse(is, nam.substring(0, nam.indexOf(".java"))) match {
+      JavaTC.parse(is, basename) match {
         case Left(x) =>
           Console.println("got some warnings for you " + x.length)
           x.foreach(y => JavaPosition.markPos(y.message, y.position))
         case Right(x) => con = Some(x._1); moff = Some(x._2) 
       }
-      val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
+      val proj = EclipseTables.StringToProject(basename)
       val ps = proj.provenMethods.length
       if (con != None) {
         val off = moff.get
@@ -501,17 +502,17 @@ class TranslateAction extends KAction {
         })
       }
       if (generate && con != None) {
-        val proj = EclipseTables.StringToProject(nam.split("\\.")(0))
         val ms = proj.methods.keys.size
         if (ps < ms - 1)
           EclipseBoilerPlate.warnUser("Missing proofs", "Sorry, not all methods of the class have been proven, thus I will not certify this class.")
         else if (ps == ms - 1) {
-        val trfi : IFile = file.getProject.getFile(nam + ".v") //TODO: find a suitable location!
+        //TODO: find a suitable location!
+        val trfi : IFile = file.getProject.getFile(basename + "Java.v")
         if (trfi.exists)
           trfi.delete(true, false, null)
         trfi.create(null, IResource.NONE, null)
         trfi.setCharset("UTF-8", null)
-        val model = nam.substring(0, nam.length - 4) + "v"
+        val model = basename + ".v"
         val modelfile = file.getProject.getFile(model)
         Console.println("modelfilename is " + model + " and it exists? " + modelfile.exists)
         val mod : String =
@@ -532,7 +533,7 @@ class TranslateAction extends KAction {
         System.arraycopy(modbytes, 0, bs, 0, modbytes.length)
         System.arraycopy(conbytes, 0, bs, modbytes.length, conbytes.length)
         trfi.setContents(new ByteArrayInputStream(bs), IResource.NONE, null)
-        EclipseBoilerPlate.warnUser("Generated Proof Certificate", "Successfully generated a proof certificate: \"" + nam + ".java.v\" .")
+        EclipseBoilerPlate.warnUser("Generated Proof Certificate", "Successfully generated a proof certificate: \"" + basename + "Java.v\" .")
       } }
     } else
       Console.println("wasn't a java file")
