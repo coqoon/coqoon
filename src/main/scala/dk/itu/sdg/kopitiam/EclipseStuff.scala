@@ -775,13 +775,16 @@ object JavaPosition extends CoqCallback {
   }
 
   def getPos (i : Int, proj : CoqJavaProject, name : String) : Int = {
-//elements : Pair[scala.util.parsing.input.Position,
-//List[scala.util.parsing.input.Position]]) : Int = {
+//elements : Pair[scala.util.parsing.input.Position, List[scala.util.parsing.input.Position]]
     val elements = proj.javaOffsets(name)
+    //Console.println("getPos: i: " + i + " elements(" + elements._2.length + "): " + elements._2)
     if (i == -1)
       proj.specOffsets(name)._1(0).line
     else if (i >= elements._2.length)
-      elements._2(elements._2.length - 1).line + 2
+      if (elements._2.length > 0)
+        elements._2(elements._2.length - 1).line + 2
+      else
+        elements._1.line + 1
     else
       elements._2(i).line
   }
