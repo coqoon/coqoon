@@ -401,29 +401,10 @@ class ProveMethodAction extends KEditorAction {
     // c: find method name in java buffer
     val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
     val sl = selection.getStartLine
-    val soff = doc.getLineOffset(sl)
-    val slen = doc.getLineLength(sl)
-    val line = doc.get(soff, slen)
-    val marr = line.split("\\(")
-    if (marr.length != 2)
-      JavaPosition.mark("please do prove method when the cursor is on a method definition", soff, slen, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
-    else {
-      val arr = marr(0).split(" ")
-      val nam = arr(arr.length - 1)
-      if (nam.trim.equals("while") || nam.trim.equals("for") || nam.trim.equals("if") || nam.trim.equals("try") || nam.trim.equals("catch"))
-        JavaPosition.mark("please do prove method when the cursor is on a method definition", soff, slen, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
-      else {
-        if (JavaPosition.active == false || JavaPosition.name != nam) {
-          JavaPosition.retract
-          // e: set name in JavaPosition
-          JavaPosition.name = nam
-        }
 
-        // b: if outdated coqString: translate
-        proj.proveMethod(nam)
-        CoqCommands.step
-      }
-    }
+    // b: if outdated coqString: translate
+    proj.proveMethod(sl)
+    CoqCommands.step
     }
   }
   override def doit () : Unit = { }

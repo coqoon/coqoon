@@ -160,7 +160,7 @@ class CoqJavaProject (basename : String) {
   import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.core.resources.{IFile, IMarker, IProject}
   import org.eclipse.swt.widgets.Display
-  def proveMethod (name : String) : Unit = {
+  def proveMethod (sourceline : Int) : Unit = {
     modelShell match {
       case Some(x) =>
         if (x.globalStep > CoqState.getShell.globalStep)
@@ -173,7 +173,7 @@ class CoqJavaProject (basename : String) {
           proofShell = None
       case None =>
     }
-    Console.println("provemethod called with " + name + " modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " modelshell " + modelShell + " proofshell " + proofShell)
+    Console.println("provemethod called with " + sourceline + " modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " modelshell " + modelShell + " proofshell " + proofShell)
     if (modelNewerThanSource || modelShell == None) {
       modelNewerThanSource = false
       var open : Boolean = false
@@ -197,7 +197,7 @@ class CoqJavaProject (basename : String) {
             } else
               JavaPosition.mark("something went wrong reading the Java file", 0, 10, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
             if (model == null || ! model.exists)
-              JavaPosition.mark("Please write a model file for this java file with a Module named " + name + "_model, which is used to prove the java code.", 0, 10, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
+              JavaPosition.mark("Please write a model file for this java file with a Module named " + basename + "_model, which is used to prove the java code.", 0, 10, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
             else
               open = true
           }
@@ -306,11 +306,38 @@ class CoqJavaProject (basename : String) {
         Console.println("preserving proof shell: " + CoqState.getShell)
         proofShell = Some(CoqState.getShell)
       }
-      Console.println("last closure with " + name + " and check is " + coqOffsets.contains(name))
+      //Console.println("last closure with " + sourceline)
+      val nam =
+        if (sourceline == -1)
+          if (coqOffsets.contains(JavaPosition.name))
+            JavaPosition.name
+          else {
+            //Console.println("wasn't too lucky -- name is not in coqOffsets and sourceline is negative")
+            ""
+          }
+        else {
+          //try to find sourceline (+ 1) in javaOffsets, get name!
+          var distName : Pair[String, Int] = ("", Int.MaxValue)
+          for (x <- javaOffsets.keys) {
+            //why 4? -- well, 1 is for counting from 1 instead of 0,
+            // the 3 others are for spec!
+            //lets filter ghosts
+            //Console.println("oeff: " + (javaOffsets(x)._1.line - 4))
+            val dist = sourceline - (javaOffsets(x)._1.line - 4)
+            //look into barf
+            if (dist >= 0 && distName._2 > dist) {
+              Console.println("maybe verifying: " + x + " distance is " + dist)
+              distName = (x, dist)
+            }
+          }
+          //Console.println("found an approximation: " + distName)
+          distName._1
+        }
       //story so far: model is now updated, java might be newly generated!
-      if (coqOffsets.contains(name)) {
-        var off = coqOffsets(name)._1 + proofOffset
-        JavaPosition.name = name
+      if (nam != "") {
+        var off = coqOffsets(nam)._1 + proofOffset
+        //Console.println("woosh woosh -- going to " + nam + " whose off is " + off)
+        JavaPosition.name = nam
         DocumentState._content = getCoqString
         PrintActor.register(JavaPosition)
         if (DocumentState.position < off)
@@ -544,7 +571,7 @@ object JavaPosition extends CoqCallback {
   def getCoqString () : Option[String] = {
     val proj = getProj
     if (proj != null) {
-      proj.proveMethod(name)
+      proj.proveMethod(-1)
       proj.getCoqString
     } else None
   }
