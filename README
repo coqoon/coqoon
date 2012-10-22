@@ -1,18 +1,14 @@
 Kopitiam - modular incremental interactive full functional static verification of Java code
 
 Information about this project can be found:
+* Website http://www.itu.dk/research/tomeso/kopitiam/
 * NFM2011 paper http://www.itu.dk/~hame/nfm2011.pdf
 * Design http://www.itu.dk/~hame/kopitiam-design.pdf
-
-Binary Installation:
-* update-site should be: http://www.itu.dk/~hame/kopitiam/
-* On 64 Bit -Xint has to be passed to eclipse (disable just-in-time compilation)
-* make sure to have Coq (from http://coq.inria.fr/download) tested is 8.3pl2 - and specify coqpath in preferences
 
 Source Installation:
 * Eclipse SDK (from http://download.eclipse.org/eclipse/downloads/) tested is 3.7
 * Scala IDE (from http://www.scala-ide.org/) tested is Scala IDE 2.1.0 with Scala 2.9.2 (http://scala-ide.org/download/milestone.html)
-* runtime: Coq (from http://coq.inria.fr/download) tested is 8.3pl2
+* runtime: Coq (from http://coq.inria.fr/download); supported is both 8.3 and 8.4
 
 Setup:
 1) checkout git repository
