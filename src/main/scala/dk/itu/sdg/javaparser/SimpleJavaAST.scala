@@ -5,9 +5,27 @@ package dk.itu.sdg.javaparser
 import scala.collection.immutable.HashMap
 import scala.util.parsing.input.Positional
 
-sealed abstract class SJDefinition () { val id : String ; val body: List[SJBodyDefinition] }
-case class SJClassDefinition (modifiers : Set[JModifier], override val id : String, superclass : String, interfaces : List[String], override val body : List[SJBodyDefinition], outerclass : Option[String], fields : HashMap[String, String]) extends SJDefinition
-case class SJInterfaceDefinition (modifiers : Set[JModifier], override val id : String, interfaces : List[String], override val body : List[SJBodyDefinition]) extends SJDefinition
+sealed abstract class SJDefinition () {
+  val id : String
+  val body: List[SJBodyDefinition]
+}
+
+case class SJClassDefinition (
+  modifiers : Set[JModifier],
+  override val id : String,
+  superclass : String,
+  interfaces : List[String],
+  override val body : List[SJBodyDefinition],
+  outerclass : Option[String],
+  fields : HashMap[String, String]
+) extends SJDefinition
+
+case class SJInterfaceDefinition (
+  modifiers : Set[JModifier],
+  override val id : String,
+  interfaces : List[String],
+  override val body : List[SJBodyDefinition]
+) extends SJDefinition
 
 trait SJBodyDefinition extends Positional
 
@@ -20,13 +38,35 @@ sealed abstract class SJInvokable() extends SJBodyDefinition {
   val localvariables: HashMap[String, String]
 }
 
-//not sure whether we really need this here
-case class SJFieldDefinition (modifiers : Set[JModifier], id : String, jtype : String) extends SJBodyDefinition
-case class SJMethodDefinition (modifiers : Set[JModifier], override val id : String, override val jtype : String, override val parameters : List[SJArgument], override val body : List[SJStatement], override val localvariables : HashMap[String, String]) extends SJInvokable
-case class SJConstructorDefinition (modifiers : Set[JModifier], override val jtype : String, override val parameters : List[SJArgument], override val body : List[SJStatement], override val localvariables : HashMap[String, String]) extends SJInvokable {
+case class SJFieldDefinition (
+  modifiers : Set[JModifier],
+  id : String,
+  jtype : String
+) extends SJBodyDefinition
+
+case class SJMethodDefinition (
+  modifiers : Set[JModifier],
+  override val id : String,
+  override val jtype : String,
+  override val parameters : List[SJArgument],
+  override val body : List[SJStatement],
+  override val localvariables : HashMap[String, String]
+) extends SJInvokable
+
+case class SJConstructorDefinition (
+  modifiers : Set[JModifier],
+  override val jtype : String,
+  override val parameters : List[SJArgument],
+  override val body : List[SJStatement],
+  override val localvariables : HashMap[String, String]
+) extends SJInvokable {
   override val id = "constructor"
 }
-case class SJBodyBlock (modifier : Option[Static], body : List[SJStatement]) extends SJBodyDefinition
+
+case class SJBodyBlock (
+  modifier : Option[Static],
+  body : List[SJStatement]
+) extends SJBodyDefinition
 
 sealed case class SJArgument (id : String, jtype : String)
 
