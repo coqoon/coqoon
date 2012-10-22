@@ -524,6 +524,55 @@ class TranslateAction extends KAction {
 }
 object TranslateAction extends TranslateAction { }
 
+class TranslateToSimpleJavaAction extends KAction {
+  import org.eclipse.ui.handlers.HandlerUtil
+  import org.eclipse.jface.viewers.IStructuredSelection
+  import org.eclipse.core.resources.{IResource,IFile}
+  import org.eclipse.core.commands.ExecutionEvent
+  import org.eclipse.jdt.core.ICompilationUnit
+  import java.io.{InputStreamReader,ByteArrayInputStream}
+  import scala.util.parsing.input.StreamReader
+
+  override def execute (ev : ExecutionEvent) : Object = {
+    val sel = HandlerUtil.getActiveMenuSelection(ev).asInstanceOf[IStructuredSelection]
+    val fe = sel.getFirstElement
+    if (fe.isInstanceOf[IFile])
+      translate(fe.asInstanceOf[IFile])
+    else if (fe.isInstanceOf[ICompilationUnit])
+      translate(fe.asInstanceOf[ICompilationUnit].getResource.asInstanceOf[IFile])
+    null
+  }
+
+  import dk.itu.sdg.javaparser.JavaOutput
+  def translate (file : IFile) : Unit = {
+    val con : Option[String]=
+      try
+        Some(new java.util.Scanner(file.getContents, "UTF-8").useDelimiter("\\A").next())
+      catch
+      { case (e : Throwable) => None }
+    con match {
+      case Some(x) =>
+        val newcon = JavaOutput.parseandoutput(x)
+        val fn = file.getName
+        val nffm = file.getProjectRelativePath.removeLastSegments(1).toString + "/" + fn.substring(0, fn.length - 5) + "Simple.java"
+        Console.println("new file name is " + nffm)
+        val translatedfile = file.getProject.getFile(nffm)
+        if (! translatedfile.exists)
+          translatedfile.create(null, IResource.NONE, null)
+        translatedfile.setCharset("UTF-8", null)
+
+        val ncon = newcon.getBytes("UTF-8")
+
+        translatedfile.setContents(new ByteArrayInputStream(ncon), IResource.NONE, null)
+      case None =>
+    }
+  }
+
+  override def doit () : Unit = ()
+}
+object TranslateToSimpleJavaAction extends TranslateToSimpleJavaAction { }
+
+
 object CoqStartUp extends CoqCallback {
   private var initialize : Int = 0
   var fini : Boolean = false

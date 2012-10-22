@@ -233,6 +233,12 @@
             name="Generate Proof Certificate">
       </command>
       <command
+            defaultHandler="dk.itu.sdg.kopitiam.TranslateToSimpleJavaAction"
+            description="Translate to SimpleJava"
+            id="Kopitiam.translatetosimplejava"
+            name="Translate to SimpleJava">
+      </command>
+      <command
             categoryId="Kopitiam.category"
             defaultHandler="dk.itu.sdg.kopitiam.CoqRefreshAction"
             id="Kopitiam.refresh"
@@ -266,6 +272,18 @@
             locationURI="popup:org.eclipse.ui.navigator.ProjectExplorer#PopupMenu?after=additions">
         <command
         	commandId="Kopitiam.translatetocoq">
+       	</command>
+      </menuContribution>
+      <menuContribution
+            locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
+         <command
+               commandId="Kopitiam.translatetosimplejava">
+         </command>
+      </menuContribution>
+      <menuContribution
+            locationURI="popup:org.eclipse.ui.navigator.ProjectExplorer#PopupMenu?after=additions">
+        <command
+        	commandId="Kopitiam.translatetosimplejava">
        	</command>
       </menuContribution>
    </extension>
