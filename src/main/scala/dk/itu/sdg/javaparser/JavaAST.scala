@@ -45,10 +45,6 @@ trait JavaAST extends JavaParser { // with CoqOutputter {
     FinishAST.doit(parseH(r), name)
   }
 
-/*  def parseNoSpec(r: Reader[Char], name : String) : (String, String) = {
-    FinishAST.doitNoSpec(parseH(r), name)
-  }
-*/
   def parseH(r: Reader[Char]) : Any = {
     //ClassTable.empty
     val p = phrase(compilationUnit)(new lexical.Scanner(r))

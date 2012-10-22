@@ -48,14 +48,6 @@ object FinishAST extends JavaTerms
     }
   }
 
-/*  def doitNoSpec (a : Any, name : String) : (String, String) = {
-    val w = doitHelper(a)
-    val (re, offs) = coqoutput(w, false, name)
-    val prog = re.takeWhile(!_.contains("_spec.\nImport ")).reduceLeft(_ + "\n" + _)
-    val spec = re.dropWhile(!_.contains("_spec.\nImport ")).drop(1).mkString("\n")
-    (prog, spec)
-  } */
-
  /*
   *  ========================================================
   *  The methods that take care of the actual transformations
