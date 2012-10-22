@@ -7,5 +7,5 @@ import java.util.logging.{ Logger, FileHandler, ConsoleHandler, Level }
 */
 trait KopitiamLogger {
   protected val log = Logger.getLogger(this.getClass().getName());
-  log.setLevel(Level.WARNING)
+  log.setLevel(Level.INFO)
 }

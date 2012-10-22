@@ -183,7 +183,7 @@ object FinishAST extends JavaTerms
   def transformMethodDeclaration (method : MethodDeclaration, modifiers : Set[JModifier]) : JMethodDefinition = {
     val (mid, args, body) = extractMethodOrConstructorInfo(method)
     val res = JMethodDefinition(modifiers, mid, unpackR(method.jtype), args, body)
-    Console.println("transforming method at " + method.pos)
+    log.info("transforming method "+ mid + " at " + method.pos)
     res.setPos(method.pos)
     res
   }
@@ -194,6 +194,7 @@ object FinishAST extends JavaTerms
   def transformConstructor (constructor : ConstructorDeclaration, modifiers : Set[JModifier] = Set()) : JConstructorDefinition = {
     val (mid, args, body) = extractMethodOrConstructorInfo(constructor)
     val r = JConstructorDefinition(modifiers, mid, args, body)
+    log.info("transforming constructor at " + constructor.pos)
     r.setPos(constructor.pos)
     r
   }
@@ -270,31 +271,82 @@ object FinishAST extends JavaTerms
     expr match {
       // statements
       case AnyStatement(x) => transformAnyExpr(x)
-      case Return(x) => JReturn(transformExpression(x))
+      case r@Return(x) =>
+        val res = JReturn(transformExpression(x))
+        res.setPos(r.pos)
+        log.info("return at pos " + r.pos)
+        res
       case x@While(test, body) =>
         val r = JWhile(transformExpression(test), transformJBlock(transformAnyExpr(body)))
         r.setPos(x.pos)
+        log.info("while at pos " + x.pos)
         r
       case Block(xs) => JBlock(None, transformMethodBody(xs))
-      case cond : Conditional => transformConditional(cond)
+      case cond : Conditional => 
+        val c = transformConditional(cond)
+        c.setPos(cond.pos)
+        log.info("conditional at " + cond.pos)
+        c
       // expressions
-      case binaryExpr : BinaryExpr => transformBinaryExpr(binaryExpr)
+      case binaryExpr : BinaryExpr =>
+        val r = transformBinaryExpr(binaryExpr)
+        r.setPos(binaryExpr.pos)
+        log.info("binary expression at " + binaryExpr.pos)
+        r
       case PrimaryExpr(x) => transformAnyExpr(x)
       case ParExpr(x) => transformAnyExpr(x)
-      case "this" => JVariableAccess("this")
-      case PostExpr(k, x) => JPostfixExpression(unpackR(k), transformExpression(x))
-      case UnaryExpr(op, v) => JUnaryExpression(unpackR(op), transformExpression(v))
-      case NewExpression(ntype, args) => JNewExpression(unpackR(ntype), args.map(transformExpression))
-      case Name(x) => JVariableAccess(x)
+      case "this" =>
+        log.info("hit this here...")
+        JVariableAccess("this")
+      case p@PostExpr(k, x) =>
+        val r = JPostfixExpression(unpackR(k), transformExpression(x))
+        r.setPos(p.pos)
+        log.info("postexpr at " + p.pos)
+        r
+      case u@UnaryExpr(op, v) =>
+        val r = JUnaryExpression(unpackR(op), transformExpression(v))
+        r.setPos(u.pos)
+        log.info("unaryexpr at " + u.pos)
+        r
+      case n@NewExpression(ntype, args) =>
+        val r = JNewExpression(unpackR(ntype), args.map(transformExpression))
+        r.setPos(n.pos)
+        log.info("newexpr at " + n.pos)
+        r
+      case n@Name(x) =>
+        val r = JVariableAccess(x)
+        r.setPos(n.pos)
+        log.info("name at " + n.pos)
+        r
       case Expr(x) => transformAnyExpr(x)
       case PostFixExpression(x) => transformAnyExpr(x)
-      case Lit(x) => JLiteral(unpackR(x))
+      case l@Lit(x) =>
+        val r = JLiteral(unpackR(x))
+        r.setPos(l.pos)
+        log.info("Literal at " + l.pos)
+        r
       case Some(x) => transformAnyExpr(x)
-      case c : Call => transformCall(c)
-      case qualid : QualId => transformQualId(qualid)
-      case (x : PrimaryExpr) ~ (y : List[Any]) => transformPrimaryExprFollowedByList(x,y)
+      case c : Call =>
+        val r = transformCall(c)
+        r.setPos(c.pos)
+        log.info("call at " + c.pos)
+        r
+      case qualid : QualId =>
+        val r = transformQualId(qualid)
+        r.setPos(qualid.pos)
+        log.info("QualId at " + qualid.pos)
+        r
+      case (x : PrimaryExpr) ~ (y : List[Any]) =>
+        val r = transformPrimaryExprFollowedByList(x,y)
+        r.setPos(x.pos)
+        log.info("primary expr at " + x.pos)
+        r
       case ("." ~ expr) => transformAnyExpr(expr)
-      case (("assert" ~ x) ~ None) => JAssert(transformAnyExpr(x))
+      case (("assert" ~ x) ~ None) =>
+        val r = JAssert(transformAnyExpr(x))
+        //r.setPos(x.pos)
+        log.info("assertion at unknown...")
+        r
     }
   }
 

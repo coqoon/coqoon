@@ -34,92 +34,100 @@ trait Expression extends ImplicitConversions
 
   // high level look
 
-  def expression = assignmentExpression ^^ Expr
+  def expression = positioned(assignmentExpression ^^ Expr)
   def expressionList = rep1sep(expression, ",")
   def parExpression = "(" ~> expression <~ ")" ^^ ParExpr
   def arguments = "(" ~> repsep(expression, ",") <~ ")"
 
-  def assignmentExpression: Parser[Any] = conditionalExpression ~ opt(assignmentOp ~ assignmentExpression) ^^ {
+  def assignmentExpression: Parser[AnyExpr] = positioned(conditionalExpression ~ opt(assignmentOp ~ assignmentExpression) ^^ {
     case x~None => x
     case (x : AnyExpr)~Some((op : Key)~(y : AnyExpr)) => BinaryExpr(op, x, y)
-  }
+  })
 
-  def conditionalExpression: Parser[Any] = logicalOrExpression ~ opt("?" ~> assignmentExpression ~ ":" ~ conditionalExpression) ^^ {
+  def conditionalExpression: Parser[AnyExpr] = positioned(logicalOrExpression ~ opt("?" ~> assignmentExpression ~ ":" ~ conditionalExpression) ^^ {
     case x~None => x
     case (x : AnyExpr)~Some((y : AnyExpr)~":"~(z : AnyExpr)) => Conditional(ParExpr(x), y, Some(z))
-  }
+  })
 
-  def logicalOrExpression: Parser[Any] = logicalAndExpression ~ rep("||" ~ logicalAndExpression) ^^ {
+  def logicalOrExpression: Parser[AnyExpr] = positioned(logicalAndExpression ~ rep("||" ~ logicalAndExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
-  }
-  def logicalAndExpression: Parser[Any] = inclusiveOrExpression ~ rep("&&" ~ inclusiveOrExpression) ^^ {
+  })
+  def logicalAndExpression: Parser[AnyExpr] = positioned(inclusiveOrExpression ~ rep("&&" ~ inclusiveOrExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
-  }
-  def inclusiveOrExpression: Parser[Any] = exclusiveOrExpression ~ rep("|" ~ exclusiveOrExpression) ^^ {
+  })
+  def inclusiveOrExpression: Parser[AnyExpr] = positioned(exclusiveOrExpression ~ rep("|" ~ exclusiveOrExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
-  }
-  def exclusiveOrExpression: Parser[Any] = andExpression ~ rep("^" ~ andExpression) ^^ {
+  })
+  def exclusiveOrExpression: Parser[AnyExpr] = positioned(andExpression ~ rep("^" ~ andExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
-  }
-  def andExpression: Parser[Any] = equalityExpression ~ rep("&" ~ equalityExpression) ^^ {
+  })
+  def andExpression: Parser[AnyExpr] = positioned(equalityExpression ~ rep("&" ~ equalityExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
-  }
+  })
 
-  def equalityExpression: Parser[Any] = instanceOfExpression ~ rep(List("==", "!=") ~ instanceOfExpression) ^^ {
+  def equalityExpression: Parser[AnyExpr] = positioned(instanceOfExpression ~ rep(List("==", "!=") ~ instanceOfExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
-  }
-  def instanceOfExpression: Parser[Any] = relationalExpression ~ opt("instanceof" ~> jtype) ^^ {
+  })
+  def instanceOfExpression: Parser[AnyExpr] = positioned(relationalExpression ~ opt("instanceof" ~> jtype) ^^ {
     case x~None => x
-    case x~Some(y) => new ~(x, y)
-  }
-  def relationalExpression: Parser[Any] = shiftExpression ~ rep(List("<", ">", "<=", ">=") ~ shiftExpression) ^^ {
+    case x~Some(y) => InstanceOf(x, y)
+  })
+  def relationalExpression: Parser[AnyExpr] = positioned(shiftExpression ~ rep(List("<", ">", "<=", ">=") ~ shiftExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
-  }
+  })
 
-  def shiftExpression = additiveExpression ~ rep(List("<<", ">>", ">>>") ~ additiveExpression) ^^ {
+  def shiftExpression : Parser[AnyExpr] = positioned(additiveExpression ~ rep(List("<<", ">>", ">>>") ~ additiveExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
-  }
-  def additiveExpression = multiplicativeExpression ~ rep(List("+", "-") ~ multiplicativeExpression) ^^ {
+  })
+  def additiveExpression : Parser[AnyExpr] = positioned(multiplicativeExpression ~ rep(List("+", "-") ~ multiplicativeExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
-  }
-  def multiplicativeExpression = unaryExpression ~ rep(List("*", "/", "%") ~ unaryExpression) ^^ {
+  })
+  def multiplicativeExpression : Parser[AnyExpr] = positioned(unaryExpression ~ rep(List("*", "/", "%") ~ unaryExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
-  }
+  })
 
   def listhelper (left : AnyExpr, x : List[Any]) : AnyExpr = {
     x match {
       case Nil => left
-      case (op : Key)~(y : AnyExpr) :: rt => listhelper(BinaryExpr(op, left, y), rt)
-      case (op : String)~(y : AnyExpr) :: rt => listhelper(BinaryExpr(Key(op), left, y), rt)
+      case (op : Key)~(y : AnyExpr) :: rt =>
+        val r = BinaryExpr(op, left, y)
+        r.setPos(y.pos)
+        listhelper(r, rt)
+      case (op : String)~(y : AnyExpr) :: rt =>
+        val r = BinaryExpr(Key(op), left, y)
+        r.setPos(y.pos)
+        listhelper(r, rt)
     }
   }
 
-  def unaryExpression: Parser[Any] =
-    ( "++" ~ unaryExpression ^^ UnaryExpr
+  def unaryExpression : Parser[AnyExpr] =
+    positioned(
+     ( "++" ~ unaryExpression ^^ UnaryExpr
      | "--" ~ unaryExpression ^^ UnaryExpr
      | "-" ~ unaryExpression ^^ UnaryExpr
      | "+" ~ unaryExpression ^^ UnaryExpr
      | unaryExpressionNotPlusOrMinus
-   ) ^^ PrimaryExpr
-  def unaryExpressionNotPlusOrMinus: Parser[Any] =
+   ) ^^ PrimaryExpr)
+  def unaryExpressionNotPlusOrMinus : Parser[AnyExpr] =
+    positioned(
     ( "~" ~ unaryExpression ^^ UnaryExpr
      | "!" ~ unaryExpression ^^ UnaryExpr
-     | "(" ~ jtype ~ ")" ~ unaryExpression
-     | postfixExpression
-   )
+//     | "(" ~ jtype ~ ")" ~ unaryExpression
+     | postfixExpr
+   ))
 
   // always starts with primary expression, then 0 or more of various things
-  def postfixExpression = primaryExpression ~
+  def postfixExpr : Parser[AnyExpr] = positioned(primaryExpression ~
     rep ( "." ~
           ( opt(genericTypeArgumentList) ~> id ~ opt(arguments) ^^ { //that's either call or field access (depending on arguments or no arguments)
             case x~None => x
@@ -136,9 +144,10 @@ trait Expression extends ImplicitConversions
       case x~None => PostFixExpression(x)
       case x~List()~Some(k:Key) => PostExpr(k, x)
       case x => PostFixExpression(x)
-    }
+    })
 
-  def primaryExpression =
+  def primaryExpression : Parser[AnyExpr] =
+    positioned(
     ( parExpression
      | literal
      | newExpression
@@ -153,9 +162,9 @@ trait Expression extends ImplicitConversions
      | "super" ~ "." ~ id ~ opt(arguments)
      | basicType ~ rep(braces) ~ "." ~ "class"
      | "void" ~ "." ~ "class"
-   ) ^^ PrimaryExpr
+   ) ^^ PrimaryExpr)
 
-  def qualifiedIdExpression = qualifiedId ~
+  def qualifiedIdExpression : Parser[Term] = positioned(qualifiedId ~
     opt ( bracesList ~ "." ~ "class"
          | arguments //a call!
          | "." ~ ( "class"
@@ -167,21 +176,23 @@ trait Expression extends ImplicitConversions
         ) ^^ {
       case x~Some(y : List[AnyExpr]) => Call(x, y)
       case x~None => x
-      case x~Some(y) => new ~(x, y)
-    }
+      case x~Some(y) =>
+        Console.println("got " + x + " and some y: " + y + "\nwhat should I do now? (dropping y at the moment)")
+        x
+    })
 
-  def newExpression = "new" ~>
+  def newExpression : Parser[AnyExpr] = positioned("new" ~>
     ( basicType ~ newArrayConstruction
      | opt(genericTypeArgumentList) ~> qualifiedTypeIdent ~
        (newArrayConstruction | arguments <~ opt(classBody))
     ) ^^ { case ty~(arg : List[AnyExpr]) => NewExpression(ty, arg)
            case x => NewExpr(x)
-        }
+        })
 
-  def innerNewExpression = "new" ~> opt(genericTypeArgumentList) ~> id ~ arguments <~ opt(classBody) ^^ {
-    case ty~(arg : List[AnyExpr]) => NewExpression
-    case x => NewExpr
-  }
+  def innerNewExpression : Parser[Term] = positioned("new" ~> opt(genericTypeArgumentList) ~> id ~ arguments <~ opt(classBody) ^^ {
+    case ty~(arg : List[AnyExpr]) => NewExpression(ty, arg)
+    case x => NewExpr(x)
+  })
 
   def newArrayConstruction =
     ( bracesList ~ arrayInitializer
