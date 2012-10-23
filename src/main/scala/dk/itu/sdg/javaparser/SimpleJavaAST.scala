@@ -5,6 +5,40 @@ package dk.itu.sdg.javaparser
 import scala.collection.immutable.HashMap
 import scala.util.parsing.input.Positional
 
+sealed trait CoqPosition {
+  def offset : Int
+  def length : Int
+
+  override def toString = "(" + offset + ", " + length + ")"
+}
+
+case object NoCoqPosition extends CoqPosition {
+  def offset = 0
+  def length = 0
+
+  override def toString = "(no position)"
+}
+
+case class CoqRegion (offset : Int, length : Int) extends CoqPosition { }
+
+trait CoqPositional {
+  private var coqPos : CoqPosition = NoCoqPosition
+
+  def setCoqPos (o : Int, l : Int) : this.type = {
+    this.coqPos = CoqRegion(o, l)
+    this
+  }
+
+  def getCoqPos () : CoqPosition = { this.coqPos }
+}
+
+trait CoqOutput {
+  private var coqString : Option[String] = None
+
+  def setCoqString (s : Option[String]) = { coqString = s }
+  def getCoqString () : Option[String] = coqString
+}
+
 sealed abstract class SJDefinition () {
   val id : String
   val body: List[SJBodyDefinition]
@@ -27,7 +61,7 @@ case class SJInterfaceDefinition (
   override val body : List[SJBodyDefinition]
 ) extends SJDefinition
 
-trait SJBodyDefinition extends Positional
+trait SJBodyDefinition extends Positional with CoqPositional with CoqOutput
 
 // common interface for methods and constructors
 sealed abstract class SJInvokable() extends SJBodyDefinition {
@@ -70,7 +104,8 @@ case class SJBodyBlock (
 
 sealed case class SJArgument (id : String, jtype : String)
 
-trait SJStatement extends Positional
+
+trait SJStatement extends Positional with CoqPositional
 case class SJAssert (assertion : SJExpression) extends SJStatement
 case class SJWhile (test : SJExpression, body : List[SJStatement]) extends SJStatement
 case class SJConditional (test : SJExpression, consequent : List[SJStatement], alternative : List[SJStatement]) extends SJStatement
