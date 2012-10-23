@@ -122,7 +122,9 @@ trait Expression extends ImplicitConversions
     positioned(
     ( "~" ~ unaryExpression ^^ UnaryExpr
      | "!" ~ unaryExpression ^^ UnaryExpr
-//     | "(" ~ jtype ~ ")" ~ unaryExpression
+     | "(" ~ jtype ~ ")" ~ unaryExpression ^^ {
+       case p~t~p2~u => DownCast(u, t)
+     }
      | postfixExpr
    ))
 

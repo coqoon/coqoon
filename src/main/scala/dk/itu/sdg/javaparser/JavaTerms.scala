@@ -89,6 +89,7 @@ trait JavaTerms
   case class QualId (xs : List[Any]) extends Term
   // case class expression (x : Term) extends Term { override def toString = x }
   case class InstanceOf (x : AnyExpr, y : Any) extends AnyExpr
+  case class DownCast (x : AnyExpr, y : Any) extends AnyExpr
 
   case class Import (static : Boolean, id : QualId, wildcard : Boolean) extends Term
 
