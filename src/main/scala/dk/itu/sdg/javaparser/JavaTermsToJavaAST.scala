@@ -408,14 +408,26 @@ object FinishAST extends JavaTerms
     oper match {
       case "=" => {
         transformAnyExpr(le) match {
-          case JFieldAccess(cnx, nam) => JFieldWrite(cnx, nam, transformExpression(ri))
-          case JVariableAccess(nam)   => JAssignment(nam, transformExpression(ri))
+          case fa@JFieldAccess(cnx, nam) =>
+            val r = JFieldWrite(cnx, nam, transformExpression(ri))
+            r.setPos(fa.pos)
+            r
+          case va@JVariableAccess(nam) =>
+            val r = JAssignment(nam, transformExpression(ri))
+            r.setPos(va.pos)
+            r
       }}
       case assignmentOperator if isAssignmentOperator(assignmentOperator) => {
         val binOp = assignmentOperator.replace("=","") // all assignment operators are just the normal operator with '=' appended
         transformAnyExpr(le) match {
-          case va @ JVariableAccess(name)  => JAssignment(name, JBinaryExpression(binOp, va, transformExpression(ri)))
-          case fa @ JFieldAccess(cnx, nam) => JFieldWrite(cnx, nam, JBinaryExpression(binOp, fa, transformExpression(ri)))
+          case va@JVariableAccess(name) =>
+            val r = JAssignment(name, JBinaryExpression(binOp, va, transformExpression(ri)))
+            r.setPos(va.pos)
+            r
+          case fa@JFieldAccess(cnx, nam) =>
+            val r = JFieldWrite(cnx, nam, JBinaryExpression(binOp, fa, transformExpression(ri)))
+            r.setPos(fa.pos)
+            r
       }}
       case _ => JBinaryExpression(oper, transformExpression(le), transformExpression(ri))
     }
@@ -481,12 +493,16 @@ object FinishAST extends JavaTerms
             val init  = transformExpression(y)
             val realn = unpackR(name)
             lvars += realn
-            JBinding(realn, typ, Some(init))
+            val r = JBinding(realn, typ, Some(init))
+            r.setPos(name.pos)
+            r
           }
           case (name : Name) ~ b ~ None => {
             val realn = unpackR(name)
             lvars += realn
-            JBinding(realn, typ, None)
+            val r = JBinding(realn, typ, None)
+            r.setPos(name.pos)
+            r
           }
           case x => throw new Exception("dunno about lvar " + x)
         }

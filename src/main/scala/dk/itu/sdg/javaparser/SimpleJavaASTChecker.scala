@@ -3,9 +3,11 @@
 package dk.itu.sdg.javaparser
 
 import scala.util.parsing.input.Position
+import dk.itu.sdg.util.KopitiamLogger
+
 case class SJWarning (message : String, position : Position) { }
 
-object SimpleJavaChecker {
+object SimpleJavaChecker extends KopitiamLogger {
   private var warnings : List[SJWarning] = List[SJWarning]()
 
   def warn (msg : String, pos : Position) : Unit = {
@@ -55,14 +57,19 @@ object SimpleJavaChecker {
   }
 
   import dk.itu.sdg.kopitiam.CoqTop
+  import scala.util.parsing.input.NoPosition
   def checkStatements (b : List[SJStatement]) : Unit = {
     var i : Int = 0
     for (x <- b) {
       x match {
         case y : SJWhile =>
+          if (y.pos == NoPosition)
+            log.info("no position information for while...")
           if ((i == 0) || (! b(i - 1).isInstanceOf[Loopinvariant]))
             warn("missing loop invariant", y.pos)
         case x@RawSpecification(data) =>
+          if (x.pos == NoPosition)
+            log.info("no position information for spec...")
           if (data.contains("\n"))
             warn("proof script or specification contains a newline, that is invalid", x.pos)
           val eoc = CoqTop.findNextCommand(data)
@@ -70,7 +77,9 @@ object SimpleJavaChecker {
             warn("no command found", x.pos)
           else if (CoqTop.findNextCommand(data.drop(eoc)) != -1)
             warn("multiple commands found", x.pos)
-        case _ =>
+        case x =>
+          if (x.pos == NoPosition)
+            log.info("no position information for " + x)
       }
       i = i + 1
     }

@@ -133,6 +133,8 @@ object JavaOutput extends JavaOutputter with JavaAST {
 
   def parseandoutput (s : String) : String = {
     val intermediate = FinishAST.doitHelper(parseH(new CharArrayReader(s.toArray)))
+    val ws = SimpleJavaChecker.check(intermediate)
+    //do sth with the warnings, maybe!?
     intermediate.map(outputDefinition(_, 0)).reduceLeft(_ + "\n\n" + _)
   }
 }
