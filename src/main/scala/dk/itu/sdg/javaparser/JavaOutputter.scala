@@ -36,19 +36,33 @@ trait JavaOutputter {
     }
   }
 
+  def concatBody (body : List[String]) : String = {
+    if (body.length == 0)
+      ""
+    else
+      body.reduceLeft((x, y) =>
+        if (y.endsWith("%>"))
+          if (x.endsWith("%>") || x.endsWith("}"))
+            x + "\n" + y
+          else
+            x + " " + y.trim
+        else
+          x + "\n" + y)
+  }
+
   def outputBodyDef (x : SJBodyDefinition, ind : Int, cl : Boolean) : String = {
     x match {
       case SJFieldDefinition(modifiers, id, t) => indent(ind) + mapm(modifiers).mkString(" ") + " " + t + " " + id + ";"
       case SJMethodDefinition(modifiers, id, typ, ar, bo, ls) =>
         val vars = printlocals(ls, ar, ind + 2)
-        val body = mapi(bo, ind + 2).mkString("\n")
+        val body = concatBody(mapi(bo, ind + 2))
         val rv = if (vars.length > 0) vars + ";\n" else ""
         val rb = if (body.length > 0) body + "\n" else ""
         val entirebody = if (cl) "{\n" + rv + rb + indent(ind) + "}\n" else " "
         indent(ind) + mapm(modifiers).mkString(" ") +  " " + typ + " " + id + " (" + outputArguments(ar) + ") " + entirebody
       case SJConstructorDefinition(modifiers, typ, ar, bo, ls) =>
         val vars = printlocals(ls, ar, ind + 2)
-        val body = mapi(bo, ind + 2).mkString("\n")
+        val body = concatBody(mapi(bo, ind + 2))
         val rv = if (vars.length > 0) vars + ";\n" else ""
         val rb = if (body.length > 0) body + "\n" else ""
         val entirebody = if (cl) "{\n" + rv + rb + indent(ind) + "}\n" else " "
@@ -58,7 +72,7 @@ trait JavaOutputter {
           case None => ""
           case Some(x) => "static"
         }
-        mod + " {\n" + mapi(xs, ind + 2).mkString("\n") + "\n" + indent(ind) + "} "
+        mod + " {\n" + concatBody(mapi(xs, ind + 2)) + "\n" + indent(ind) + "} "
       case Quantification(x) => indent(ind) + "<% lvars: " + x + " %>"
       case Precondition(x) => indent(ind) + "<% requires: " + x + " %>"
       case Postcondition(x) => indent(ind) + "<% ensures: " + x + " %>"
@@ -73,8 +87,8 @@ trait JavaOutputter {
     val r =
     x match {
       case SJAssert(ass) => "assert(" + outputExpression(ass) + ");"
-      case SJWhile(test, body) => "while (" + outputExpression(test) + ") {\n" + body.map(outputStatement(_, ind + 2)).mkString("\n") + "\n" + indent(ind) + "}"
-      case SJConditional(test, c, a) => "if (" + outputExpression(test) + ") {\n" + c.map(outputStatement(_, ind + 2)).mkString("\n") + "\n" + indent(ind) + "} else {\n" + a.map(outputStatement(_, ind + 2)).mkString("\n") + "\n" + indent(ind) + "}"
+      case SJWhile(test, body) => "while (" + outputExpression(test) + ") {\n" + concatBody(body.map(outputStatement(_, ind + 2))) + "\n" + indent(ind) + "}"
+      case SJConditional(test, c, a) => "if (" + outputExpression(test) + ") {\n" + concatBody(c.map(outputStatement(_, ind + 2))) + "\n" + indent(ind) + "} else {\n" + concatBody(a.map(outputStatement(_, ind + 2))) + "\n" + indent(ind) + "}"
       case SJAssignment(SJVariableAccess(l), r) => l + " = " + outputExpression(r) + ";"
       case SJFieldWrite(SJVariableAccess(l), f, v) => l + "." + f + " = " + outputExpression(v) + ";"
       case SJFieldRead(SJVariableAccess(v), SJVariableAccess(l), f) => v + " = " + l + "." + f + ";"
@@ -85,7 +99,9 @@ trait JavaOutputter {
           case Some(SJVariableAccess(x)) => x + " = "
         }
         val vari = outputExpression(r)
-        val varia = if (vari == "this") "" else vari + "." //that's wrong, we should look for whether it is a static method!
+        //that's wrong, we should look for whether it is a static method!
+        //and if so, use the classname (similar to CoqOutputter)
+        val varia = if (vari == "this") "" else vari + "."
         lhs + varia + f + "(" + a.map(outputExpression).mkString(", ") + ");"
       case SJNewExpression(SJVariableAccess(v), ty, ar) =>
         v + " = " + "new " + ty + "(" + ar.map(outputExpression).mkString(", ") + ");"
