@@ -233,7 +233,6 @@ object FinishAST extends JavaTerms
    */
   def transformFieldDeclaration (field : FieldDeclaration, modifiers : Set[JModifier] = Set()) : JFieldDefinition = {
     val FieldDeclaration(id, jtype, rest) = field
-    log.info("field pos info " + field.pos)
 
     val initializer = rest match {
       case x ~ Some("=" ~ y) => Some(transformAnyExpr(y).asInstanceOf[JExpression])
@@ -292,6 +291,11 @@ object FinishAST extends JavaTerms
         val r = transformBinaryExpr(binaryExpr)
         r.setPos(binaryExpr.pos)
         log.info("binary expression at " + binaryExpr.pos)
+        r
+      case p@PrimaryExpr("this") =>
+        val r = JVariableAccess("this")
+        r.setPos(p.pos)
+        log.info("primary this at " + p.pos)
         r
       case PrimaryExpr(x) => transformAnyExpr(x)
       case ParExpr(x) => transformAnyExpr(x)

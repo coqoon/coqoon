@@ -77,7 +77,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
   def charLit: Parser[String] = elem("char literal", _.isInstanceOf[CharLit]) ^^ (_.chars)
 
   // standard tokens to transform into terms
-  def id: Parser[Term] = ident ^^ Name // ((id: String) => Name(id))
+  def id: Parser[Term] = positioned(ident ^^ Name) // ((id: String) => Name(id))
   def JNum: Parser[Term] = numericLit ^^ Num   // (_.toInt) ^^ Lit
   def JString: Parser[Term] = stringLit ^^ Str
   def JChar: Parser[Term] = charLit ^^ Str
@@ -130,7 +130,7 @@ trait JavaParser extends StdTokenParsers with ImplicitConversions with JavaTerms
   // p585
   def qualifiedId = rep1sep(id, ".") ^^ QualId
   def qualifiedIdList = rep1sep(qualifiedId, ",")
-  def literal = (JNum | JString | JChar | "true" | "false" | "null") ^^ Lit
+  def literal = positioned((JNum | JString | JChar | "true" | "false" | "null") ^^ Lit)
 
   // p586-589 are in the expression trait
 
