@@ -145,18 +145,18 @@ object ActionDisabler {
         } else
           enableStart
           else if (DocumentState.activated.isInstanceOf[JavaEditor])
-            if (DocumentState.activated.asInstanceOf[JavaEditor] == JavaPosition.editor && JavaPosition.active) {
+            if (DocumentState.activated.asInstanceOf[JavaEditor] == JavaPosition.editor) {
         //always true (due to DocumentMonitor:activateEditor)!
-              if (JavaPosition.index == -1)
-                enableStart
-              else {
-                if (JavaPosition.getProj == null || JavaPosition.name == "" || ! JavaPosition.getProj.javaOffsets.contains(JavaPosition.name))
-                  disableAll
-                else if (JavaPosition.index == JavaPosition.getProj.javaOffsets(JavaPosition.name)._2.length)
-                  actions.zip(ends).filterNot(_._2).map(_._1).foreach(_.setEnabled(true))
-                else
+//              if (JavaPosition.index == -1)
+//                enableStart
+//              else {
+//                if (JavaPosition.getProj == null || JavaPosition.name == "" || ! JavaPosition.getProj.javaOffsets.contains(JavaPosition.name))
+//                  disableAll
+//                else if (JavaPosition.index == JavaPosition.getProj.javaOffsets(JavaPosition.name)._2.length)
+//                  actions.zip(ends).filterNot(_._2).map(_._1).foreach(_.setEnabled(true))
+//                else
                   actions.foreach(_.setEnabled(true))
-              }
+//              }
             } else
               disableAll
   }
@@ -436,53 +436,42 @@ class TranslateAction extends KAction {
   }
 
   import scala.util.parsing.input.Position
+  import dk.itu.sdg.javaparser.{SJFieldDefinition, SJInvokable}
   def translate (file : IFile, generate : Boolean) : Unit = {
     val nam = file.getName
     if (nam.endsWith(".java")) {
       val basename = nam.split("\\.")(0)
       val is = StreamReader(new InputStreamReader(file.getContents, "UTF-8"))
-      var con : Option[Pair[String, List[Pair[String,String]]]] = None
-      var moff : Option[Pair[Pair[Int, Int], List[Pair[Pair[Pair[String, Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position],Pair[Int,List[Pair[Int,Int]]]]]]]] = None
-      JavaTC.parse(is, basename) match {
-        case Left(x) =>
-          Console.println("got some warnings for you " + x.length)
-          x.foreach(y => JavaPosition.markPos(y.message, y.position))
-        case Right(x) => con = Some(x._1); moff = Some(x._2) 
-      }
       val proj = EclipseTables.StringToProject(basename)
       val ps = proj.provenMethods.length
-      if (con != None) {
-        val off = moff.get
-        proj.specOffset = off._1._1
-        //Console.println("spec offset is: " + proj.specOffset + " content there is: FFF" + con.drop(proj.specOffset).take(20) + "FFF")
-        proj.proofOffset = off._1._2
-        proj.setCoqString(Some(con.get._1))
-        con.get._2.map(x => {
-          //Console.println("new mapping! " + x._1 + " to " + x._2)
-          proj.methods = proj.methods + (x._1 -> x._2)
-        })
+      var success : Boolean = false
+      JavaTC.parse(is, basename) match {
+        case Left(x) =>
+          x.foreach(y => JavaPosition.markPos(y.message, y.position))
+        case Right((c, defs)) =>
+          proj.program = Some(c)
+          Console.println("our program " + c.id + " is there: " + c.getProgram)
+          Console.println("spec is: " + c.getSpec)
+          Console.println("class correctness is " + c.getClassCorrectness)
+          for (m <- c.body)
+            m match {
+              case x : SJInvokable =>
+                Console.println("method " + x.id + ": " + x.getCoqString)
+              case x : SJFieldDefinition =>
+                Console.println("field! " + x.id)
+              case x =>
+                Console.println("something else " + x)
+            }
+          proj.definitions = defs
+          success = true
+      }
+      proj.provenMethods = List[String]()
+      proj.proofShell = None
+      if (success) {
         proj.modelNewerThanSource = false
         proj.javaNewerThanSource = false
-        proj.proofShell = None
-        proj.provenMethods = List[String]()
-        off._2.map(x => {
-          proj.javaOffsets = proj.javaOffsets + (x._1._1._1 -> x._1._1._2)
-          proj.coqOffsets = proj.coqOffsets + (x._1._1._1 -> x._1._2)
-          //val posl = x._2._1
-          //Console.println("spec offsets for " + x._1._1._1 + " are: ")
-          //if (posl.length == 3)
-          //  Console.println("quantification: " + x._2._1(0) + " precon: " + x._2._1(1) + " postcon: " + x._2._1(2))
-          //if (x._2._2._2.length == 3) {
-          //  val mycon = con.drop(proj.specOffset).drop(x._2._2._1)
-          //  Console.println(" coqdef-content:" + mycon.take(10))
-          //  Console.println("  parts: -- quantification: " + mycon.drop(x._2._2._2(0)._1).take(x._2._2._2(0)._2))
-          //  Console.println("  parts: -- precondition: " + mycon.drop(x._2._2._2(1)._1).take(x._2._2._2(1)._2))
-          //  Console.println("  parts: -- postcondition: " + mycon.drop(x._2._2._2(2)._1).take(x._2._2._2(2)._2))
-          //}
-          proj.specOffsets = proj.specOffsets + (x._1._1._1 -> x._2)
-        })
       }
-      if (generate && con != None) {
+      if (generate && success) {
         val ms = proj.methods.keys.size
         if (ps < ms - 1)
           EclipseBoilerPlate.warnUser("Missing proofs", "Sorry, not all methods of the class have been proven, thus I will not certify this class.")
@@ -506,8 +495,13 @@ class TranslateAction extends KAction {
           } else
             ""
         val modbytes = mod.getBytes("UTF-8")
-        val cont = con.get
-        val content = cont._1 + "\n" + cont._2.filter(x => !x._1.equals("class")).map(_._2).mkString("\n") + "\n" + cont._2.filter(x =>  x._1.equals("class")).map(_._2).mkString("\n") + "\nEnd " + nam.substring(0, nam.indexOf(".java")) + "_spec.\n"
+
+//Needs rework here!
+
+//        val cont = con.get
+        val content = ""
+
+// cont._1 + "\n" + cont._2.filter(x => !x._1.equals("class")).map(_._2).mkString("\n") + "\n" + cont._2.filter(x =>  x._1.equals("class")).map(_._2).mkString("\n") + "\nEnd " + nam.substring(0, nam.indexOf(".java")) + "_spec.\n"
         val conbytes = content.getBytes("UTF-8")
         val bytessize = modbytes.length + conbytes.length
         val bs = new Array[Byte](bytessize)

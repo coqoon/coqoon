@@ -137,28 +137,35 @@ trait CoqOutputter extends JavaToSimpleJava {
     as.map(printEVal).mkString("[", "; ", "]")
   }
 
-  def printStatement (something : SJStatement, locals : HashMap[String, String]) : Option[String] = {
+  def printStatement (something : SJStatement, m : SJInvokable) : Option[String] = {
     //Console.println("getexpr called with " + something + " class " + something.asInstanceOf[AnyRef].getClass.getName)
     something match {
       case SJAssert(x) =>
+        something.setCoqPos(m.getLength, 0)
         Some("(cassert " + printEOpt(x) + ")")
       case SJAssignment(l, r) =>
+        something.setCoqPos(m.getLength, 0)
         Some("(cassign " + printE(l) + " " + printE(r) + ")")
       case SJFieldWrite(v, fi, va) =>
+        something.setCoqPos(m.getLength, 0)
         Some("(cwrite " + printE(v) + " \"" + fi + "\" " + printE(va) + ")")
       case SJFieldRead(va, v, fi) =>
+        something.setCoqPos(m.getLength, 0)
         Some("(cread " + printE(va) + " " + printE(v) + " \"" + fi + "\")")
       case SJReturn(SJVariableAccess(x)) =>
+        something.setCoqPos(m.getLength, 0)
         ret = "(var_expr \"" + x +"\")"; None
       case SJReturn(x : SJLiteral) =>
+        something.setCoqPos(m.getLength, 0)
         ret = printE(x); None
       case SJCall(v, r, f, a) =>
+        something.setCoqPos(m.getLength, 0)
         val value = v match {
           case None => "\"\""
           case Some(x) => printE(x)
         }
         val (cl, static : Boolean) = r match {
-          case SJVariableAccess(x) => (locals(x), false)
+          case SJVariableAccess(x) => (m.localvariables(x), false)
           case SJLiteral(y) => (y, true)
         }
         val isstatic =
@@ -174,24 +181,28 @@ trait CoqOutputter extends JavaToSimpleJava {
         val (cw, cp) = if (isstatic) ("cscall", "\"" + cl + "\"") else ("cdcall", printE(r))
         Some("(" + cw + " " + value + " " + cp + " \"" + f + "\" (" +  argstring(a) + "))")
       case SJNewExpression(v, t, a) =>
+        something.setCoqPos(m.getLength, 0)
         //Some("(cscall " + printE(v) + " \"" + t + "\" \"new\" " + argstring(a) + ")")
         Some("(calloc " + printE(v) + " \"" + t + "\")")
       case SJConditional(test, consequence, alternative) =>
+        something.setCoqPos(m.getLength, 0)
         val te = printE(test)
-        val tr = optPrintBody(consequence.flatMap(x => printStatement(x, locals)))
-        val fa = optPrintBody(alternative.flatMap(x => printStatement(x, locals)))
+        val tr = optPrintBody(consequence.flatMap(x => printStatement(x, m)))
+        val fa = optPrintBody(alternative.flatMap(x => printStatement(x, m)))
         Some("(cif " + te + " " + tr + " " + fa + ")")
       case SJWhile(test, body) =>
-        Some("(cwhile " + printE(test) + " " + optPrintBody(body.flatMap(x => printStatement(x, locals))) + ")")
+        something.setCoqPos(m.getLength, 0)
+        Some("(cwhile " + printE(test) + " " + optPrintBody(body.flatMap(x => printStatement(x, m))) + ")")
       case y@Loopinvariant(i, f) =>
-        lengths ::= y.pos
         val con = "forward (" + i + ") (" + f + ")."
-        coqlengths ::= (if (mproof.length == 0) 0 else mproof.reduceLeft(_ + "\n" + _).length + 1, con.length)
-        mproof ::= con; None
+        something.setCoqPos(m.getLength, con.length)
+        m.appendCoqString(con)
+        None
       case x : Specification =>
-        lengths ::= x.pos
-        coqlengths ::= (if (mproof.length == 0) 0 else mproof.reduceLeft(_ + "\n" + _).length + 1, x.data.length)
-        mproof ::= x.data; None
+        val con = x.data
+        something.setCoqPos(m.getLength, con.length)
+        m.appendCoqString(con)
+        None
     }
   }
 
@@ -212,13 +223,12 @@ trait CoqOutputter extends JavaToSimpleJava {
 
   private var ret : String = "myreturnvaluedummy"
   private var deps : Set[Pair[String,String]] = Set[Pair[String,String]]()
-  private var mproof : List[String] = List[String]()
 
-  def getBody (xs : List[SJStatement], myname : String, locals : HashMap[String, String]) : Pair[String, Pair[String, Set[Pair[String,String]]]] = {
+  def getBody (xs : List[SJStatement], method : SJMethodDefinition) : Pair[String, Pair[String, Set[Pair[String,String]]]] = {
+    val myname = method.id + "_body"
     ret = "myreturnvaluedummy"
     deps = Set[Pair[String,String]]()
-    mproof = List[String]()
-    val body = xs.flatMap(x => printStatement(x, locals))
+    val body = xs.flatMap(x => printStatement(x, method))
     val b = printBody(body)
     val defi = "Definition " + myname + " := " + b + "."
     val res =
@@ -229,11 +239,12 @@ trait CoqOutputter extends JavaToSimpleJava {
     (defi, (res, deps))
   }
 
-  def classMethods (body : List[SJBodyDefinition], clazz : String) : List[Pair[Pair[String,String],Pair[Pair[Pair[String,Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]],Pair[List[Position],Pair[Int,List[Pair[Int,Int]]]]]]] = {
+  //(("$name", $name + M), (valid_ + $name + _ + $class, $name + _spec))
+  def classMethods (c : SJClassDefinition, cd : SJClassDefinition) : List[Pair[Pair[String,String], Pair[Option[String],Option[String]]]] = {
     var precon : Option[Precondition] = None
     var postcon : Option[Postcondition] = None
     var quantif : Option[Quantification] = None
-    body.flatMap {
+    c.body.flatMap {
       case x@SJMethodDefinition(modifiers, name, typ, params, body, lvars) =>
         //Console.println("starting to print method " + name + " with body " + body)
         val bodyref = name + "_body"
@@ -243,16 +254,10 @@ trait CoqOutputter extends JavaToSimpleJava {
             args
           else
             "this" :: args
-        var preoffs : List[Position] = List[Position]()
-        var specoff : Pair[Int,List[Pair[Int,Int]]] = (0, List[Pair[Int,Int]]())
         precon match {
           case Some(pre) => postcon match {
             case Some(post) => quantif match {
               case Some(quant) =>
-                preoffs ::= post.pos
-                preoffs ::= pre.pos
-                preoffs ::= quant.pos
-                specifications ::= name + "_spec"
                 val quant1 = quant.data.split(",")
                 val quant2 =
                   if (quant1.length == 0)
@@ -260,8 +265,8 @@ trait CoqOutputter extends JavaToSimpleJava {
                   else
                     quant1.mkString("[A] ", ", [A]", "")
                 val spec1 = "Definition " + name + """_spec :=
-  (""" 
-                val spec2 = spec1 + quant2 + ", " + "\"" + clazz + "\" :.: \"" + name + "\" |-> [" + printArgListSpec(t) + """]
+  ("""
+                val spec2 = spec1 + quant2 + ", " + "\"" + c.id + "\" :.: \"" + name + "\" |-> [" + printArgListSpec(t) + """]
   {{ """
                 val ret =
                   if (typ == "void")
@@ -270,16 +275,15 @@ trait CoqOutputter extends JavaToSimpleJava {
                     ""
                 val spec3 = spec2 + pre.data + " }}-{{ " + ret
                 val spec = spec3 + post.data + " }})."
-                var specoffs : List[Pair[Int,Int]] = List[Pair[Int,Int]]()
-                specoffs ::= (spec3.length, post.data.length)
-                specoffs ::= (spec2.length, pre.data.length)
-                specoffs ::= (spec1.length, quant2.length)
-                specoff = (specoutput.reduceLeft(_ + "\n" + _).length, specoffs)
-//                Console.println("SPEC! (" + specoffs(0)._1 + ", " + specoffs(0)._2 + "), " +
-//                                "(" + specoffs(1)._1 + ", " + specoffs(1)._2 + "), " +
-//                                "(" + specoffs(2)._1 + ", " + specoffs(2)._2 + "): " +
-//                                spec)
-                specoutput ::= spec
+                post.setCoqPos(spec3.length, post.data.length)
+                x.addSpec(post)
+                pre.setCoqPos(spec2.length, pre.data.length)
+                x.addSpec(pre)
+                quant.setCoqPos(spec1.length, quant2.length)
+                x.addSpec(quant)
+                x.setSpecOff(cd.getSpec.getOrElse("").length)
+                x.setSpecLength(spec.length)
+                cd.appendSpec(spec)
               case None => Console.println("no logical variables for method " + name)
             }
             case None => Console.println("pre without post for method " + name);
@@ -292,8 +296,7 @@ trait CoqOutputter extends JavaToSimpleJava {
         precon = None
         postcon = None
         quantif = None
-        val (bodyp, (returnvar, deps)) = getBody(body, bodyref, lvars)
-        proofs ::= "valid_" + name + "_" + clazz
+        val (bodyp, (returnvar, deps)) = getBody(body, x)
         val rde = deps.map(_._2)
         val rdep = rde.map(_ + "_spec")
         val rdeps =
@@ -306,35 +309,23 @@ trait CoqOutputter extends JavaToSimpleJava {
             " at 2"
           else
             ""
-        var proof = List[String]()
-        proof ::= "Lemma valid_" + name + "_" + clazz + ": " + rdeps + " |= " + name + """_spec.
+        val proof = "Lemma valid_" + name + "_" + c.id + ": " + rdeps + " |= " + name + """_spec.
 Proof.
   unfold """ + name + "_spec" + suff + "; unfold_spec."
-        val fst = proof.mkString("\n").length + 1
-        //Console.println("method " + name + " depends on " + deps.mkString(";"))
-        proof = mproof ++ proof
-        proof ::= "Qed."
-        methodproofs ::= (name, proof.reverse.mkString("\n"))
-        //Console.println("method " + name + ": sentences: F" + methodproofs.head._2.drop(fst) + "F")
-        val ls = lengths.reverse
-        val cl = coqlengths.reverse
-        lengths = List[Position]()
-        coqlengths = List[Pair[Int,Int]]()
-        outp ::= bodyp
-        outp ::= "Definition " + name + "M := Build_Method (" + printArgList(t) + ") " + bodyref + " " + returnvar + "."
-        Some((("\"" + name + "\"", name + "M"), (((name, (x.pos, ls)), (fst, cl)), (preoffs, specoff))))
+        x.prependCoqString(proof)
+        x.setCoqPos(proof.length, 0)
+        x.appendCoqString("Qed.")
+        cd.appendProgram(bodyp)
+        cd.appendProgram("Definition " + name + "M := Build_Method (" + printArgList(t) + ") " + bodyref + " " + returnvar + ".")
+        Some((("\"" + name + "\"", name + "M"), (Some("valid_" + name + "_" + c.id), Some(name + "_spec"))))
       case x@SJConstructorDefinition(modifiers, typ, params, body, lvars) =>
         val args = getArgs(params)
-        val bodi = body.flatMap(x => printStatement(x, lvars))
+        val bodi = body.flatMap(y => printStatement(y, x))
         val bodip = printBody("(calloc \"this\" \"" + typ + "\")" :: bodi)
         val nam = typ + "_new"
-        val ls = lengths.reverse
-        val cl = coqlengths.reverse
-        lengths = List[Position]()
-        coqlengths = List[Pair[Int,Int]]()
-        outp ::= "Definition " + nam + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\")."
-        Some((("\"new\"" , nam), (((nam, (x.pos, ls)), (0, cl)), (List[Position](), (0, List[Pair[Int,Int]]())))))
-      case x : Precondition => 
+        cd.appendProgram("Definition " + nam + " := Build_Method (" + printArgList(getArgs(params)) + ") " + bodip + " (var_expr \"this\").")
+        Some((("\"new\"" , nam), (None, None)))
+      case x : Precondition =>
         precon match {
           case None => precon = Some(x); None
           case Some(x) => Console.println("wrong! two preconditions for a method"); None
@@ -349,20 +340,17 @@ Proof.
           case None => quantif = Some(x); None
           case Some(x) => Console.println("wrong! multiple logical variables for a method specification"); None
         }
-      case x : Specification => specoutput ::= x.data; None
+      case x : Specification =>
+        x.setCoqPos(cd.getSpec.getOrElse("").length, x.data.length)
+        cd.appendSpec(x.data)
+        None
       case _ => None
     }
   }
 
-  private var outp : List[String] = null
-  private var specoutput : List[String] = null
-  private var specifications : List[String] = null
-  private var proofs : List[String] = null
-  private var lengths : List[Position] = null
-  private var coqlengths : List[Pair[Int,Int]] = null
-  private var methodproofs : List[Pair[String, String]] = null
-
-  private val unique_names : List[String] = List("Opaque unique_method_names.", "Definition unique_method_names := option_proof (search_unique_names Prog).")
+  private val unique_names : String =
+"""Definition unique_method_names := option_proof (search_unique_names Prog).
+Opaque unique_method_names."""
 
   private val prelude : String = """
 Require Import AbstractAsn.
@@ -372,64 +360,52 @@ Open Scope string_scope.
 Open Scope hasn_scope.
 """
 
-  def coqoutput (xs : List[SJDefinition], complete : Boolean, name : String) : Pair[Pair[List[String], List[Pair[String,String]]], Pair[Pair[Int, Int], List[Pair[Pair[Pair[String, Pair[Position, List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position],Pair[Int,List[Pair[Int,Int]]]]]]]] = {
-    outp = List[String]()
-    specoutput = List[String]()
-    specifications = List[String]()
-    proofs = List[String]()
-    lengths = List[Position]()
-    coqlengths = List[Pair[Int,Int]]()
-    methodproofs = List[Pair[String,String]]()
-    var offs = List[Pair[Pair[Pair[String, Pair[Position,List[Position]]],Pair[Int,List[Pair[Int,Int]]]], Pair[List[Position], Pair[Int, List[Pair[Int,Int]]]]]]()
+  def coqoutput (xs : List[SJDefinition], c : SJClassDefinition) : Unit = {
+    var specifications : List[String] = List[String]()
+    var proofs : List[String] = List[String]()
     var cs : List[String] = List[String]()
-    if (complete)
-      outp ::= prelude
-    var interfs : List[String] = List[String]()
-    if (complete)
-      specoutput ::= """
-Module """ + name + """_spec.
-Import """ + name + """.
-Import """ + name + """_model.
-Module Import SC := Tac """ + name + """.
+    c.appendProgram(prelude)
+    c.appendSpec("""
+Module """ + c.id + """_spec.
+Import """ + c.id + """.
+Import """ + c.id + """_model.
+Module Import SC := Tac """ + c.id + """.
 
 Open Scope spec_scope.
 Open Scope asn_scope.
-"""
-    outp ::= "Module " + name + " <: PROGRAM."
+""")
+    c.appendProgram("Module " + c.id + " <: PROGRAM.")
     xs.foreach(x => x match {
       case SJInterfaceDefinition(modifiers, id, inters, body) =>
         //Console.println("interfaces are " + inters)
-        val (mmethods, methodspecs) = interfaceMethods(id, body)
+/*        val (mmethods, methodspecs) = interfaceMethods(id, body)
         val mmeths = if (mmethods.length == 0) "" else mmethods.reduceLeft(_ + " " + _)
         val mspecs = if (methodspecs.length == 0) "" else methodspecs.reduceLeft(_ + "\n [/\\]\n  " + _)
         val (supermethods, interfaces) = interfaceSpec(inters)
         val superms = if (supermethods.length == 0) "" else supermethods.reduceLeft(_ + " " + _)
         val superis = if (interfaces.length == 0) "" else interfaces.reduceLeft(_ + "\n  " + _) + "\n  "
-        interfs ::= "Definition " + id + " (C : class) (T : Type) (R : val -> T -> upred heap_alg) " + superms + " " + mmeths + " : spec :=\n  " + superis + mspecs + "."
-      case SJClassDefinition(modifiers, id, supers, inters, body, par, fs) =>
-        //let's hope only a single class and interfaces before that!
+        interfs ::= "Definition " + id + " (C : class) (T : Type) (R : val -> T -> upred heap_alg) " + superms + " " + mmeths + " : spec :=\n  " + superis + mspecs + "." */
+      case cd@SJClassDefinition(modifiers, id, supers, inters, body, par, fs) =>
         cs ::= id
         val fields = fs.keys.toList
-        val methods = classMethods(body, id)
-        offs ++= methods.map(_._2)
-        outp ::= "Definition " + id + " := Build_Class " + printFiniteSet(fields) + " " + printFiniteMap(methods.map(_._1)) + "."
+        val methods = classMethods(cd, c)
+        proofs ++= methods.flatMap(_._2._1)
+        specifications ++= methods.flatMap(_._2._2)
+        c.appendProgram("Definition " + id + " := Build_Class " + printFiniteSet(fields) + " " + printFiniteMap(methods.map(_._1)) + ".")
     })
     val classes = printFiniteMap(cs.map(x => ("\"" + x + "\"", x)))
-    outp ::= "Definition Prog := Build_Program " + classes + "."
-    outp = unique_names ++ outp
-    outp ::= "End " + name + "."
-    specoutput ::= "Definition " + name + "_spec : spec := " + specifications.mkString(""" [/\] """) + "."
-    val classproof = "Lemma valid_" + name + " : |= " + name + """_spec.
+    c.appendProgram("Definition Prog := Build_Program " + classes + ".")
+    c.appendProgram(unique_names)
+    c.appendProgram("End " + c.id + ".")
+    c.appendSpec("Definition " + c.id + "_spec : spec := " + specifications.mkString(""" [/\] """) + ".")
+    c.setClassCorrectness(Some("Lemma valid_" + c.id + " : |= " + c.id + """_spec.
 Proof.
-  unfold """ + name + """_spec.
+  unfold """ + c.id + """_spec.
   apply lob; repeat rewrite later_and_spec; spec_splits.
 """ + proofs.map(x => { "etransitivity; [|apply " + x + "]; spec_solve."}).mkString("\n") +
 """
 Qed.
-"""
-    val codeprefix = outp.reverse ++ List("")
-    val prefix = codeprefix ++ specoutput.reverse
-    ((prefix, ("class", classproof) :: methodproofs), ((codeprefix.reduceLeft(_ + "\n" + _).length + 2, prefix.reduceLeft(_ + "\n" + _).length + 2), offs))
+"""))
   }
 
   def printArgList (l : List[String]) : String = {

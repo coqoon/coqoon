@@ -36,15 +36,19 @@ object FinishAST extends JavaTerms
   }
 
   import scala.util.parsing.input.Position
-  def doit (a : Any, name : String) : Either[List[SJWarning],Pair[Pair[String,List[Pair[String,String]]],Pair[Pair[Int,Int],List[Pair[Pair[Pair[String, Pair[Position, List[Position]]], Pair[Int,List[Pair[Int,Int]]]],Pair[List[Position],Pair[Int,List[Pair[Int,Int]]]]]]]]] = {
+  def doit (a : Any, name : String) : Either[List[SJWarning],Pair[SJClassDefinition,List[SJDefinition]]] = {
     val w = doitHelper(a)
     val ws = SimpleJavaChecker.check(w)
     if (ws.length > 0)
       Left(ws)
     else {
-      val (r, offs) = coqoutput(w, true, name)
+      val clazzez = w.filter(_.id.equals(name))
+      assert(clazzez.length == 1)
+      assert(clazzez(0).isInstanceOf[SJClassDefinition])
+      val clazz = clazzez(0).asInstanceOf[SJClassDefinition]
+      coqoutput(w, clazz)
       //whereas r has the shape of Pair[List[String], List[Pair[String,String]]]
-      Right(((r._1.mkString("\n"), r._2), offs))
+      Right((clazz, w))
     }
   }
 

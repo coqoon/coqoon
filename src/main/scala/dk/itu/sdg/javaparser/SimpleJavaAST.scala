@@ -35,11 +35,88 @@ trait CoqPositional {
 trait CoqOutput {
   private var coqString : Option[String] = None
 
-  def setCoqString (s : Option[String]) = { coqString = s }
+  def setCoqString (s : Option[String]) : Unit = { coqString = s }
   def getCoqString () : Option[String] = coqString
+  def prependCoqString (s : String) : Unit = {
+    coqString = Some(s + "\n" + coqString.getOrElse(""))
+  }
+  def appendCoqString (s : String) : Unit = {
+    coqString = Some(coqString.getOrElse("") + "\n" + s)
+  }
+
+  def getLength () : Int = {
+    coqString match {
+      case None => 0
+      case Some(x) => x.length
+    }
+  }
+
+  private var specOff : Int = 0
+  def setSpecOff (n : Int) : Unit = specOff = n
+  def getSpecOff () : Int = specOff
+
+  private var specLength : Int = 0
+  def setSpecLength (n : Int) : Unit = specLength = n
+  def getSpecLength () : Int = specLength
+
+  private var specs : List[Specification] = List[Specification]()
+  def getSpecs () : List[Specification] = specs
+  def addSpec (x : Specification) : Unit = specs ::= x
 }
 
-sealed abstract class SJDefinition () {
+trait CoqClassOutput { //rather "CoqProgramOutput"
+  private var program : Option[String] = None
+  private var spec : Option[String] = None
+  private var classCorrectness : Option[String] = None
+  private var specLength : Int = 0
+  private var programLength : Int = 0
+
+  def setProgram (s : Option[String]) : Unit = {
+    program = s
+    s match {
+      case None => programLength = 0
+      case Some(x) => programLength = x.length
+    }
+  }
+  def appendProgram (s : String) : Unit = {
+    program match {
+      case None =>
+        program = Some(s)
+        programLength = s.length
+      case Some(x) =>
+        program = Some(x + "\n" + s)
+        programLength = programLength + s.length + 1
+    }
+  }
+  def getProgram () : Option[String] = program
+
+  def setSpec (s : Option[String]) : Unit = {
+    spec = s
+    s match {
+      case None => specLength = 0
+      case Some(x) => specLength = x.length
+    }
+  }
+  def appendSpec (s : String) : Unit = {
+    spec match {
+      case None =>
+        spec = Some(s)
+        specLength = s.length
+      case Some(x) =>
+        spec = Some(x + "\n" + s)
+        specLength = specLength + s.length + 1
+    }
+  }
+  def getSpec () : Option[String] = spec
+
+  def setClassCorrectness (s : Option[String]) : Unit = classCorrectness = s
+  def getClassCorrectness () : Option[String] = classCorrectness
+
+  def getProofOffset () : Int = programLength + specLength + 1 //note the \n!
+  def getSpecOffset () : Int = programLength
+}
+
+sealed abstract class SJDefinition () extends CoqClassOutput {
   val id : String
   val body: List[SJBodyDefinition]
 }
