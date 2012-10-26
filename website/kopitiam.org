@@ -62,6 +62,55 @@ Coq. On the right the goal viewer shows the current proof state.
    #+end_html
 
 
+* Getting Started (Coq Environment)
+ #+begin_html
+ <div class="content">
+ #+end_html
+
+The Goal Viewer, which displays the current context and proof obligations, is activated via "Window -> Show View -> Other -> Coq Views -> Goal Viewer".
+
+You will need to specify in the Preferences -> Kopitiam the path to coqtop (usually /usr/local/bin) in order to get the interactive Coq mode running.
+
+Kopitiam adds some icons into the menubar:
+
+[[file:menu-bar.png]]
+
+These are enabled when a Coq editor is active (or a Java editor). The actions are (from left to right):
+
+** Undo - which steps a single command back
+** Retract - which retracts the whole file
+** Step forward - which steps a single command forward
+** Step until - which steps until the cursor position
+** Step All - which steps until the end of the file
+** Refresh - which refreshes the Goal Viewer
+** Restart - which terminates Coq and spawns a new Coq process
+** Interrupt - which breaks Coq
+
+Additionally, ".v" files are opened by default in the Coq editor provided by Kopitiam. You can always click with the right mouse button on any file, use the "Open With" menu item and select Coq Editor from the list to open that file in a Coq Editor.
+
+Open or create a new Coq file (there is a wizard to create a new Coq file), and type some proof script. You should then be able to interact with Coq by pressing the "Step forward" button.
+
+Some Coq output is also put onto the Console, which you might want to activate via "Window -> Show View -> Console".
+
+   #+begin_html
+   </div>
+   #+end_html
+
+* Getting Started (Java Environment)
+ #+begin_html
+ <div class="content">
+ #+end_html
+
+The Java editor is extended with a "Verify Method" context menu action - which uses the current cursor position to choose which method to verify.
+When "Verify Method" is selected, first the Coq model file is processed by Coq (indicated by that being activated), afterwards the Java program is translated to Coq definitions, and the specifications of the methods are translated into Coq definitions. These definitions are processed by Coq, currently without indication.
+
+Once Coq has processed all definitions, the specification of the currently focused method is higlighted with a green background. In the goal viewer the current proof obligation is shown, you can step forwards and backwards over the antiquotations.
+
+When all methods of a program are verified, you can generate a proof certificate from the context menu of the file.
+ #+begin_html
+ </div>
+ #+end_html
+
 * Eclipse Example Projects
  #+begin_html
  <div class="content">
