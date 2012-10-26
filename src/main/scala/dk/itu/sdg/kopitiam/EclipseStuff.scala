@@ -93,7 +93,7 @@ class CoqJavaProject (basename : String) {
   import scala.collection.immutable.HashMap
   import org.eclipse.jface.text.IDocument
   import scala.util.parsing.input.Position
-  import dk.itu.sdg.javaparser.{ SJClassDefinition, SJDefinition }
+  import dk.itu.sdg.javaparser.{SJClassDefinition, SJMethodDefinition, SJDefinition, Specification, SJStatement, SJInvokable, SJConditional, SJWhile}
 
   var javaSource : Option[IDocument] = None
   var coqModel : Option[IDocument] = None
@@ -106,18 +106,77 @@ class CoqJavaProject (basename : String) {
   var program : Option[SJClassDefinition] = None
   var definitions : List[SJDefinition] = List[SJDefinition]()
 
-  //def -> offset + [length1, .., lengthn]
-  var javaOffsets : HashMap[String, Pair[Position, List[Position]]] =
-    new HashMap[String, Pair[Position, List[Position]]]()
-  var coqOffsets : HashMap[String, Pair[Int, List[Pair[Int,Int]]]] =
-    new HashMap[String, Pair[Int, List[Pair[Int,Int]]]]()
-  var specOffsets : HashMap[String, Pair[List[Position], Pair[Int, List[Pair[Int,Int]]]]] =
-    new HashMap[String, Pair[List[Position], Pair[Int, List[Pair[Int,Int]]]]]()
-  var proofOffset : Int = 0
-  var specOffset : Int = 0
+  def countMethods () : Int = {
+    definitions.map(_.body.filter(_.isInstanceOf[SJMethodDefinition])).flatten.length
+  }
 
-  var methods : HashMap[String, String] = new HashMap[String, String]()
-  var provenMethods : List[String] = List[String]()
+  def findSpecOfJavaPos (line : Int, column : Int) : Option[Specification] = {
+    var res : Option[Specification] = None
+    for (d <- definitions)
+      for (b <- d.body)
+        b match {
+          case x : Specification =>
+            if (x.pos.line == line)
+              res = Some(x)
+          case _ =>
+        }
+    res
+  }
+
+  import scala.collection.immutable.Stack
+  def findProofScriptOfJavaPos (line : Int, column : Int) : Option[Pair[SJStatement,SJInvokable]] = {
+    var res : Option[Pair[SJStatement,SJInvokable]] = None
+    for (d <- definitions)
+      for (b <- d.body)
+        b match {
+          case x : SJInvokable =>
+            var todo : Stack[SJStatement] = Stack[SJStatement]()
+            todo = todo.pushAll(x.body.reverse)
+            while (res == None && !todo.isEmpty) {
+              val mine = todo.top
+              todo = todo.pop
+              mine match {
+                case SJConditional(t, c, a) =>
+                  todo = todo.pushAll(c.reverse)
+                  todo = todo.pushAll(a.reverse)
+                case SJWhile(t, b) =>
+                  todo = todo.pushAll(b.reverse)
+                case s =>
+                  if (s.pos.line == line) {
+                    //Console.println("s is nearby: " + s + " scol" + s.pos.column + " c" + column)
+                    if (s.pos.column == column) {
+                      //Console.println("s is there!!!!")
+                      res = Some((s, x))
+                    }
+                  }
+              }
+            }
+          case _ =>
+        }
+    res
+  }
+
+  def updatePSOffsets (m : SJInvokable, off : Int, diff : Int) = {
+    var todo : Stack[SJStatement] = Stack[SJStatement]()
+    todo = todo.pushAll(m.body.reverse)
+    while (!todo.isEmpty) {
+      val mine = todo.top
+      todo = todo.pop
+      if (mine.getCoqPos.offset > off)
+        mine.setCoqPos(mine.getCoqPos.offset + diff, mine.getCoqPos.length)
+      mine match {
+        case SJConditional(t, c, a) =>
+          todo = todo.pushAll(c.reverse)
+          todo = todo.pushAll(a.reverse)
+        case SJWhile(t, b) =>
+          todo = todo.pushAll(b.reverse)
+        case _ =>
+      }
+    }
+  }
+
+
+  var provenMethods : List[SJInvokable] = List[SJInvokable]()
 
   def gotClosed (doc : IDocument) : Unit = {
     javaSource match {
@@ -208,7 +267,7 @@ class CoqJavaProject (basename : String) {
         case Some(x) =>
       }
       CoqCommands.doLater(() => {
-        Console.println("activating model editor")
+        Console.println("activating model editor for " + basename + " with open " + open)
         DocumentState._content = None
         Display.getDefault.syncExec(
           new Runnable() {
@@ -321,32 +380,20 @@ class CoqJavaProject (basename : String) {
           DocumentState._content = getCoqString
           PrintActor.register(JavaPosition)
           JavaPosition.method = meth
-          meth match {
-            case None =>
-            case Some(x) =>
-              JavaPosition.name = x.id
-          }
           CoqStepAllAction.doit
         case Some(x) =>
           if (x.globalStep < CoqState.getShell.globalStep) {
-            DocumentState.setBusy
-            Console.println("backtracking to proofshell " + x)
-            CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
-            JavaPosition.method = None
-            DocumentState.position = getCoqString.get.length
-            JavaPosition.method = meth
-            meth match {
-              case None =>
-              case Some(x) =>
-                JavaPosition.name = x.id
-            }
+            if (JavaPosition.method != meth) {
+              DocumentState.setBusy
+              Console.println("backtracking to proofshell " + x)
+              CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
+              JavaPosition.method = None
+              DocumentState.position = getCoqString.get.length
+              JavaPosition.method = meth
+            } else
+              CoqCommands.step
           } else {
             JavaPosition.method = meth
-            meth match {
-              case None =>
-              case Some(x) =>
-                JavaPosition.name = x.id
-            }
             CoqCommands.step
           }
       }
@@ -389,68 +436,8 @@ class CoqJavaProject (basename : String) {
             case Some(x) => x.getCoqString
           }
         val res = x.getProgram.getOrElse("") + x.getSpec.getOrElse("") + "\n" + suffix.getOrElse("")
-        Console.println("getcoqstring returns " + res)
+        //Console.println("getcoqstring returns " + res)
         Some(res)
-    }
-  }
-
-  def updateSpecOffsets (offc : Pair[Int,Int], name : Option[String]) : Unit = {
-    if (offc != (0, 0)) {
-      //Console.println("offc is now " + offc)
-      for (x <- specOffsets.keys) {
-        //Console.println(" competing with " + proj.specOffsets(x)._2._1)
-        val n1 =
-          if (specOffsets(x)._2._1 > offc._1) {
-            //Console.println("updated for " + x + ": from " + specOffsets(x)._2._1 + " to " + (specOffsets(x)._2._1 + offc._2))
-            specOffsets(x)._2._1 + offc._2
-          } else
-            specOffsets(x)._2._1
-        specOffsets = specOffsets + (x -> (specOffsets(x)._1, (n1, specOffsets(x)._2._2)))
-      }
-
-      name match {
-        case None =>
-        case Some(x) =>
-          val offf = offc._1 - specOffsets(x)._2._1
-          val n2 = specOffsets(x)._2._2.map(p => {
-            if (p._1 > offf) {
-              val n = (p._1 + offc._2, p._2)
-              //Console.println("up: " + p + " -> " + n)
-              n
-            } else if (p._1 == offf) {
-              val n = (p._1, p._2 + offc._2)
-              //Console.println("up: " + p + " -> " + n)
-              n
-            } else
-              p
-          })
-        specOffsets = specOffsets + (x -> (specOffsets(x)._1, (specOffsets(x)._2._1, n2)))
-      }
-      //Console.println("adjusting proof offset from " + proofOffset + " to " + (proofOffset + offc._2))
-      proofOffset = proofOffset + offc._2
-    }
-  }
-
-  def updateCoqOffsets (offc : Pair[Int,Int], name : Option[String]) : Unit = {
-    if (offc != (0, 0)) {
-      name match {
-        case None =>
-        case Some(x) =>
-          val offf = offc._1 - coqOffsets(x)._1
-          val n2 = coqOffsets(x)._2.map(p => {
-            if (p._1 > offf) {
-              val n = (p._1 + offc._2, p._2)
-              Console.println("up: " + p + " -> " + n)
-              n
-            } else if (p._1 == offf) {
-              val n = (p._1, p._2 + offc._2)
-              Console.println("up: " + p + " -> " + n)
-              n
-            } else
-              p
-          })
-        coqOffsets = coqOffsets + (x -> (coqOffsets(x)._1, n2))
-      }
     }
   }
 }
@@ -574,18 +561,13 @@ class ProofDrawingStrategy extends IDrawingStrategy with EclipseUtils {
 
 object JavaPosition extends CoqCallback {
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
-
   var editor : JavaEditor = null
-  var index : Int = -1
-  var name : String = ""
+
   import dk.itu.sdg.javaparser.SJInvokable
   var method : Option[SJInvokable] = None
-  var active : Boolean = false
-  var spec : Boolean = false
 
   import org.eclipse.jface.text.Position
   import org.eclipse.jface.text.source.Annotation
-
   var processed : Option[Annotation] = None
   var processing : Option[Annotation] = None
 
@@ -623,108 +605,68 @@ object JavaPosition extends CoqCallback {
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqProofCompleted() =>
-        if (editor != null && active) {
-          Console.println("got proof completed")
-          val proj = getProj
-          Console.println("bah at " + proj.javaOffsets(name)._2.length + " idx " + index)
-          if (proj.javaOffsets(name)._2.length == index) {
-            active = false //to prevent catches down there
-            //send Qed
-            Console.println("sending or not ? " + CoqStepNotifier.active)
-            if (! CoqStepNotifier.active) {
-              while (! DocumentState.readyForInput) { } //XXX: bad busy loop
-              CoqStepAction.doit()
-            }
+        if (editor != null) {
+          Console.println("proof completed - not sending Qed? " + CoqStepNotifier.active)
+          if (! CoqStepNotifier.active) {
+            while (! DocumentState.readyForInput) { } //XXX: bad busy loop
+            CoqStepAction.doit()
           }
         }
       case CoqTheoremDefined(x) =>
-        if (editor != null && x.startsWith("valid_" + name)) {
+        if (editor != null && x.startsWith("valid_" + method.get.id)) {
           val doc = getDoc
-          val locs = getProj.javaOffsets(name)
-          val spos = doc.getLineOffset(locs._1.line - 1)
-          val epos = doc.getLineOffset(locs._2(locs._2.length - 1).line + 2 - 1) - 1
+          //what about specifications!?
+          val spos = doc.getLineOffset(method.get.pos.line - 1)
+          val epos = doc.getLineOffset(method.get.body.last.pos.line + 1) - 1
           markproven(spos, epos - spos)
-          active = true //to force the retract
+          //generate proof certificate IF last method!
           retract
           ActionDisabler.enableStart
         }
       case CoqError(m, n, s, l) =>
         unmark
         if (editor != null) {
-          if (active) {
-            val doc = getDoc
-            val javapos = getProj.javaOffsets(name)._2(index)
-            val soff = doc.getLineOffset(javapos.line - 1)
-            val content = doc.get(soff, doc.getLineLength(javapos.line - 1))
-            val specialoff =
-              if (content.contains("invariant: ")) //LI! beware!
-                2 //most likely wrong for frame... but need more structure for that
-              else
-                0
-            val star = s + specialoff + soff + javapos.column + 2 //<%
-            mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
-/*          } else if (spec) {
-            val doc = getDoc
-            val javaPos = getProj.specOffsets(name)._1
-            val coqOffs = getProj.specOffsets(name)._2._2
-            val (line, off) =
-              if (s > coqOffs(0)._1 && s < coqOffs(1)._1)
-                //slightly wrong because of [A] and , being inserted (correct for first var)
-                (javaPos(0).line - 1, javaPos(0).column - coqOffs(0)._1 + 4)
-              else if (s > coqOffs(1)._1 && s < coqOffs(2)._1)
-                (javaPos(1).line - 1, javaPos(1).column - coqOffs(1)._1)
-              else //if (s > coqOffs(2)._1)
-                (javaPos(2).line - 1, javaPos(2).column - coqOffs(2)._1)
-            val lineoffset = doc.getLineOffset(line)
-            val content = doc.get(lineoffset, doc.getLineLength(line))
-            val offset = content.drop(off).indexOf(": ") + 2
-            val star = lineoffset + off + offset + 2
-            mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR) */
-          } else if (DocumentState.position >= getProj.specOffset && DocumentState.position <= getProj.proofOffset) {
-            Console.println("we've something wrong in the specs")
-            var fnd : Boolean = false
-            var fst : Boolean = true
-            val doc = getDoc
-            val reloff = DocumentState.position - getProj.specOffset + 1 + s
-            for (x <- getProj.specOffsets.keys) {
-              val coqOff = getProj.specOffsets(x)._2._1
-              //Console.println("x is " + x + " reloff is " + reloff + " coqOff is " + coqOff + " thus: " + (reloff >= coqOff))
-              if (reloff >= coqOff) {
-                val specreloff = reloff - coqOff
-                var i : Int = 0
-                for (p <- getProj.specOffsets(x)._2._2) {
-                  //Console.println("now we're talking with i " + i + " specreloff " + specreloff + " p " + p)
-                  if (specreloff >= p._1 && specreloff <= p._1 + p._2) {
-                    val javaPos = getProj.specOffsets(x)._1(i)
-
-                    val lineoffset = doc.getLineOffset(javaPos.line - 1)
-                    val content = doc.get(lineoffset, doc.getLineLength(javaPos.line - 1))
-                    val offset = content.drop(javaPos.column).indexOf(": ") + 2
-                    val specoff = specreloff - p._1
-                    val lvoff =
-                      if (content.contains("lvars"))
-                        -4
-                      else
-                        0
-                    val star = lineoffset + javaPos.column + offset + lvoff + specoff
-                    fnd = true
-                    mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
-                  }
-                  i = i + 1
-                }
+          //have coq position, need java position!
+          //might either be spec or proof script (or neither of them)
+          val proj = getProj
+          val doc = getDoc
+          proj.proofShell match {
+            case None =>
+              //spec!
+              val poff = DocumentState.position - proj.program.get.getSpecOffset
+              val ast = findSpecForCoqOffset(poff)
+              ast match {
+                case Some(as) =>
+                  val soff = doc.getLineOffset(as.pos.line - 1)
+                  //find start of coq complain
+                  val content = doc.get(soff, doc.getLineLength(as.pos.line - 1))
+                  val offset = content.drop(as.pos.column).indexOf(": ") + 2
+                  val star = soff + offset + as.pos.column + s
+                  mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+                case None =>
+                  mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
               }
-            }
-            if (!fnd)
-              mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
-          } else
-            mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+            case Some(x) =>
+              //proof!
+              val poff = DocumentState.position - proj.program.get.getProofOffset - method.get.getCoqPos.offset
+              val (ast, prev) = findStatementForCoqOffset(poff)
+              ast match {
+                case Some(as) =>
+                  val soff = doc.getLineOffset(as.pos.line - 1)
+                  //not entirely correct computation... ("<%" "invariant:")
+                  val star = s + soff + as.pos.column
+                  mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+                case None =>
+                  mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+              }
+          }
         }
-      case x =>
+      case _ =>
     }
   }
 
   def markproven (s : Int, l : Int) = {
-    getProj.provenMethods ::= name
+    getProj.provenMethods ::= method.get
     markHelper("Verified", s, l, "dk.itu.sdg.kopitiam.provenmarker", IMarker.SEVERITY_ERROR) match {
       case Some(x) => proofmarkers ::= x
       case None =>
@@ -790,10 +732,8 @@ object JavaPosition extends CoqCallback {
 
   import org.eclipse.swt.widgets.Display
   def retract () : Unit = {
-    if (editor != null && active) {
-      active = false
-      index = -1
-      name = ""
+    if (editor != null) {
+      method = None
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
@@ -816,6 +756,26 @@ object JavaPosition extends CoqCallback {
     }
   }
 
+  import dk.itu.sdg.javaparser.Specification
+  def findSpecForCoqOffset (coqoff : Int) : Option[Specification] = {
+    var res : Option[Specification] = None
+    for (d <- getProj.definitions)
+      for (x <- d.body)
+        x match {
+          case i : SJInvokable =>
+            val soff = i.getSpecOff
+            if (coqoff > soff) {
+              val off = coqoff - soff
+              for (x <- i.getSpecs)
+                if (x.getCoqPos.offset >= off && x.getCoqPos.length + x.getCoqPos.offset <= off)
+                  //win!
+                  res = Some(x)
+            }
+          case _ =>
+        }
+    res
+  }
+
   import dk.itu.sdg.javaparser.{SJStatement, SJConditional, SJWhile}
   import scala.collection.immutable.Stack
   //coqoff -> [match, previous]
@@ -829,20 +789,16 @@ object JavaPosition extends CoqCallback {
       todo = todo.pop
       st match {
         case SJConditional(t, c, a) =>
-          Console.println("pushing conditional: " + c.length + " and alt: " + a.length)
           todo = todo.pushAll(c.reverse)
           todo = todo.pushAll(a.reverse)
         case SJWhile(t, l) =>
-          Console.println("pushing while: " + l.length)
           todo = todo.pushAll(l.reverse)
         case x =>
           val offstart = st.getCoqPos.offset
           val offend = offstart + st.getCoqPos.length
-          Console.println("numbers: s:" + offstart + " e:" + offend + " st:" + st)
-          if (offstart != offend && offstart <= coqoff && coqoff <= offend) {
-            Console.println("using this!")
+          if (offstart != offend && offstart <= coqoff && coqoff <= offend)
             statement = Some(st)
-          } else if (offstart > coqoff) {
+          else if (offstart > coqoff) {
             statement = latestStatement
             latestStatement = None
           } else if (offstart != offend)

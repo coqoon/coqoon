@@ -41,7 +41,10 @@ trait CoqOutput {
     coqString = Some(s + "\n" + coqString.getOrElse(""))
   }
   def appendCoqString (s : String) : Unit = {
-    coqString = Some(coqString.getOrElse("") + "\n" + s)
+    coqString match {
+      case None => coqString = Some(s)
+      case Some(x) => coqString = Some(x + "\n" + s)
+    }
   }
 
   def getLength () : Int = {

@@ -89,7 +89,9 @@ abstract class KCoqAction extends KAction {
         DocumentState.setBusy
         PrintActor.deregister(CoqOutputDispatcher)
         PrintActor.deregister(CoqStepNotifier)
+        PrintActor.deregister(CoqCommands)
         val shell = CoqState.getShell
+        Console.println("registering CoqStartup")
         PrintActor.register(CoqStartUp)
         CoqStartUp.fini = false
         val initial = DocumentState.positionToShell(0).globalStep
@@ -465,14 +467,14 @@ class TranslateAction extends KAction {
           proj.definitions = defs
           success = true
       }
-      proj.provenMethods = List[String]()
+      proj.provenMethods = List[SJInvokable]()
       proj.proofShell = None
       if (success) {
         proj.modelNewerThanSource = false
         proj.javaNewerThanSource = false
       }
       if (generate && success) {
-        val ms = proj.methods.keys.size
+        val ms = proj.countMethods
         if (ps < ms - 1)
           EclipseBoilerPlate.warnUser("Missing proofs", "Sorry, not all methods of the class have been proven, thus I will not certify this class.")
         else if (ps == ms - 1) {
@@ -613,6 +615,7 @@ object CoqStartUp extends CoqCallback {
           PrintActor.deregister(CoqStartUp)
           PrintActor.register(CoqOutputDispatcher)
           PrintActor.register(CoqStepNotifier)
+          PrintActor.register(CoqCommands)
           if (CoqCommands.nonempty)
             PrintActor.register(CoqCommands)
           initialize = 0
@@ -680,7 +683,7 @@ object CoqCommands extends CoqCallback {
   def step () : Unit = {
     if (finished)
       if (commands.size != 0) {
-        val c = commands.head 
+        val c = commands.head
         commands = commands.tail
         //should we execute in a certain thread? UI?
         c()

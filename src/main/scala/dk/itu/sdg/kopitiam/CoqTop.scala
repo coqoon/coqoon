@@ -25,7 +25,7 @@ class BusyStreamReader (input : InputStream) extends Runnable {
           Console.println("bytesread " + bytesread + " < avail " + avail)
         if (bytesread > 0) {
           val res = new String(inbuf, 0, bytesread + 1, "UTF-8")
-          Console.println("distributing [" + bytesread + "]" + res + " to " + callbacks.length)
+          //Console.println("distributing [" + bytesread + "]" + res + " to " + callbacks.length)
           callbacks.foreach((_ : ActorRef).tell(res))
         }
       }

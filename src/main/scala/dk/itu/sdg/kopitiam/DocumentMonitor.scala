@@ -143,6 +143,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   override def windowDeactivated (window : IWorkbenchWindow) : Unit = { }
   override def windowOpened (window : IWorkbenchWindow) : Unit = { }
 
+  import dk.itu.sdg.javaparser.{SJInvokable, SJStatement, Loopinvariant, RawSpecification, Specification}
   override def documentChanged (event : DocumentEvent) : Unit = {
     val doc = event.getDocument
     //Console.println("doc " + doc + " changed [@" + event.getOffset + "], len: " + event.getLength)
@@ -160,96 +161,66 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
           if (p1 > p2) {
             val p3 = content.indexOf("%>", off)
             val p4 = content.indexOf("<%", off)
-            if (p4 > p3 || p4 == -1) {
-              var found : Boolean = false
-              var rtr : Boolean = false
-              val l = doc.getLineOfOffset(p1) + 1
-              var offc : Pair[Int, Int] = (0, 0)
-              var offintocoq : Int = 0
-              val nncon = content.drop(p1 + 2).substring(0, p3 - p1 - 2).trim
-              var name : Option[String] = None
-              //Console.println("new content is: " + nncon)
-              if (nncon.startsWith("lvars: ") || nncon.startsWith("precondition: ") || nncon.startsWith("requires: ") ||  nncon.startsWith("postcondition: ") || nncon.startsWith("ensures: ")) {
-                for (x <- proj.specOffsets.keys) {
-                  var i : Int = 0
-                  val coqoffs = proj.specOffsets(x)._2
-                  for (y <- proj.specOffsets(x)._1) {
-                    if (y.line == l) { //gotcha!
-                      found = true
-                      val oldc = proj.getCoqString.getOrElse(" ")
-                      val nnc = nncon.substring(nncon.indexOf(":") + 1).trim
-                      val nc = 
-                        if (nncon.startsWith("lvars: ")) {
-                          val spl = nnc.split(",")
-                          if (spl.length == 0)
-                            ""
-                          else
-                            spl.mkString("[A] ", ", [A]", "")
-                        } else
-                          nnc
-                      //Console.println("setting new content to be " + nc)
-                      val newc = oldc.take(proj.specOffset + coqoffs._1 + coqoffs._2(i)._1) + nc + oldc.drop(proj.specOffset + coqoffs._1 + coqoffs._2(i)._1 + coqoffs._2(i)._2)
-                      //Console.println("new content is " + newc.drop(proj.specOffset + coqoffs._1 + coqoffs._2(i)._1 - 10).take(50))
-                      proj.setCoqString(Some(newc))
-                      DocumentState._content = Some(newc)
-                      offc = (coqoffs._1 + coqoffs._2(i)._1, nc.length - coqoffs._2(i)._2)
-                      offintocoq = coqoffs._1 + coqoffs._2(i)._1 + proj.specOffset
-                      name = Some(x)
-                      rtr = true
-                    }
-                    i = i + 1
+            if (p4 > p3 || p4 == -1)
+              if (p3 - p1 - 2 > 0) {
+                //so, we're inside antiquotes! and we have some positions:
+                // <% .. %> .. <% .CHANGE. %> .. <% .. %>
+                //       p2    p1          p3    p4
+                val l = doc.getLineOfOffset(p1) + 1
+                val c = p1 - doc.getLineOffset(l - 1) + 1
+                var proofscript : Option[SJInvokable] = None
+                var st : Option[Specification] = None
+                //strategy is here:
+                //locate AST of CHANGE! <- we can be either in proof or spec
+                val nncon = content.drop(p1 + 2).substring(0, p3 - p1 - 2).trim
+                //modify content (spec or proof script)
+                if (nncon.startsWith("lvars: ") || nncon.startsWith("precondition: ") || nncon.startsWith("requires: ") ||  nncon.startsWith("postcondition: ") || nncon.startsWith("ensures: ")) {
+                  //change to spec
+                  proj.findSpecOfJavaPos(l, c) match {
+                    case Some(s) => s.data = nncon
+                    case None =>
+                  }
+                } else {
+                  //change to proof script
+                  proj.findProofScriptOfJavaPos(l, c) match {
+                    case Some((li@Loopinvariant(d, f), m)) =>
+                      proofscript = Some(m)
+                      st = Some(li)
+                      Console.println("change the loop invariant...")
+                      //need to parse + decide where we are!
+                    case Some((r@RawSpecification(d), m)) =>
+                      proofscript = Some(m)
+                      st = Some(r)
+                      r.data = nncon
+                    case _ =>
                   }
                 }
-                proj.updateSpecOffsets(offc, name)
-              } else {
-                var name : Option[String] = None
-                for (x <- proj.javaOffsets.keys) {
-                  var i : Int = 0
-                  for (p <- proj.javaOffsets(x)._2) {
-                    //Console.println("checking " + l + " against " + p.line + " in " + x)
-                    if (l == p.line) {
-                      found = true
-                      Console.println("found something! excited! " + x + " i is " + i)
-                      val coqp = proj.coqOffsets(x)._2(i)
-                      val coqoff = coqp._1 + proj.coqOffsets(x)._1
-                      val ncon =
-                        if (nncon.startsWith("invariant")) {
-                          val vals = nncon.drop(10).trim.split("frame:")
-                          assert(vals.length == 2)
-                          "forward (" + vals(0).trim + ") (" + vals(1).trim + ")."
-                        } else
-                          nncon
-                      Console.println("new content: " + ncon)
-                      val oldc = proj.methods(x)
-                      val newc = oldc.take(coqoff) + ncon + oldc.drop(coqoff + coqp._2)
-                      Console.println("new coq buffer: " + newc.drop(scala.math.max(0, coqoff - 10)).take(scala.math.min(coqp._2 + 20, newc.length)))
-                      offc = (proj.coqOffsets(x)._1 + coqp._1, ncon.length - coqp._2)
-                      offintocoq = proj.coqOffsets(x)._1 + coqp._1 + proj.proofOffset
-                      name = Some(x)
-                      proj.methods = proj.methods + (x -> newc)
-                      DocumentState._content = proj.getCoqString
-                      if (JavaPosition.name == x) rtr = true
-                      //DocumentState._content = Some(newc)
-                      //update the javaOffsets table (only if newline)
-                      //if there's a file or editor, rewrite that as well!
-                      // -> maybe do that on ctrl + s in the java buffer?!?
-                      //we might need to backtrack in coq + java!
+
+                proofscript match {
+                  case None =>
+                    //change in spec, reproduce that
+                    //and retract if needed
+                  case Some(x) =>
+                    //invokable x needs to reproduce its coqString
+                    st match {
+                      case None => //we shouldn't be here
+                      case Some(s) => //statement s was changed
+                        val coqp = s.getCoqPos
+                        Console.println("s is " + s.data + " len: " + coqp.length + " newlen: " + s.data.length)
+                        val poff = x.getCoqPos.offset + 1
+                        val mcoq = x.getCoqString.get
+                        x.setCoqString(Some(mcoq.take(poff + coqp.offset) + s.data + mcoq.drop(poff + coqp.offset + coqp.length)))
+                        s.setCoqPos(coqp.offset, s.data.length)
+                        val diff = s.data.length - coqp.length
+                        //modify offsets
+                        proj.updatePSOffsets(x, coqp.offset, diff)
+                        //if s.offset < DocumentState.position, retract!
                     }
-                    i = i + 1
-                  }
                 }
-                proj.updateCoqOffsets(offc, name)
-              }
-              if (found && ! oldval) {
-                Console.println("javaNewerThanSource is false again")
                 proj.javaNewerThanSource = false
-                //retract! XXXX
-                if (rtr && offintocoq < DocumentState.position)
-                  CoqUndoAction.doitReally(offintocoq)
               }
             }
           }
-        }
         ActionDisabler.enableMaybe
       }
       if (proj.isCoqModel(doc)) {
