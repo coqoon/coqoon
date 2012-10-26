@@ -633,15 +633,16 @@ object JavaPosition extends CoqCallback {
           proj.proofShell match {
             case None =>
               //spec!
-              val poff = DocumentState.position - proj.program.get.getSpecOffset
+              val poff = DocumentState.position - proj.program.get.getSpecOffset + 1 + s
+              Console.println("have a spec here... " + poff)
               val ast = findSpecForCoqOffset(poff)
               ast match {
                 case Some(as) =>
                   val soff = doc.getLineOffset(as.pos.line - 1)
-                  //find start of coq complain
                   val content = doc.get(soff, doc.getLineLength(as.pos.line - 1))
                   val offset = content.drop(as.pos.column).indexOf(": ") + 2
-                  val star = soff + offset + as.pos.column + s
+                  val sss = s - as.getCoqPos.offset
+                  val star = soff + offset + sss + as.pos.column
                   mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
                 case None =>
                   mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
@@ -727,6 +728,7 @@ object JavaPosition extends CoqCallback {
     if (proj != null) {
       proj.modelShell = None
       proj.proofShell = None
+      proj.modelNewerThanSource = true
     }
   }
 
@@ -737,6 +739,7 @@ object JavaPosition extends CoqCallback {
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
+      getProj.javaNewerThanSource = true
       annmodel.connect(doc)
       processed match {
         case Some(x) => annmodel.removeAnnotation(x)
@@ -748,6 +751,13 @@ object JavaPosition extends CoqCallback {
         case None =>
       }
       processing = None
+      specprocessing match {
+        case Some(x) => annmodel.removeAnnotation(x)
+        case None =>
+      }
+      specprocessing = None
+      specprocessed.foreach(annmodel.removeAnnotation(_))
+      specprocessed = List[Annotation]()
       annmodel.disconnect(doc)
       PrintActor.deregister(JavaPosition)
       Display.getDefault.asyncExec(
@@ -764,12 +774,15 @@ object JavaPosition extends CoqCallback {
         x match {
           case i : SJInvokable =>
             val soff = i.getSpecOff
-            if (coqoff > soff) {
+            //Console.println("finding? " + coqoff + " > " + soff)
+            if (coqoff >= soff) {
               val off = coqoff - soff
-              for (x <- i.getSpecs)
-                if (x.getCoqPos.offset >= off && x.getCoqPos.length + x.getCoqPos.offset <= off)
+              for (x <- i.getSpecs) {
+                //Console.println("checking bounds: " + off + " >= " + x.getCoqPos.offset + " && " + off + " <= " + (x.getCoqPos.length + x.getCoqPos.offset))
+                if (off >= x.getCoqPos.offset && off <= (x.getCoqPos.length + x.getCoqPos.offset))
                   //win!
                   res = Some(x)
+              }
             }
           case _ =>
         }
@@ -897,10 +910,17 @@ object JavaPosition extends CoqCallback {
       if (proj.modelShell != None) {
         val coqoff = (if (proc) DocumentState.sendlen else 0) + DocumentState.position - proj.program.get.getSpecOffset - method.get.getSpecOff - method.get.getSpecLength - 1
         Console.println("spec? coqoff here is now " + coqoff)
-        if (coqoff == 0) {
-          val annmodel = prov.getAnnotationModel(editor.getEditorInput)
-          annmodel.connect(doc)
+        val annmodel = prov.getAnnotationModel(editor.getEditorInput)
+        annmodel.connect(doc)
+        if ((proc && undo) || (!proc && !undo)) {
+          specprocessing match {
+            case Some(x) => annmodel.removeAnnotation(x)
+            case None =>
+          }
+          specprocessing = None
+        }
 
+        if (coqoff == 0) {
           //search in method specs for min/max
           //mark these!
           var start : Int = Int.MaxValue
@@ -910,12 +930,6 @@ object JavaPosition extends CoqCallback {
               start = s.pos.line
             if (s.pos.line > end)
               end = s.pos.line
-          }
-          specprocessing match {
-            case None =>
-            case Some(x) =>
-              annmodel.removeAnnotation(x)
-              specprocessing = None
           }
 
           val txt =
@@ -932,8 +946,8 @@ object JavaPosition extends CoqCallback {
             specprocessing = Some(sma)
           else
             specprocessed ::= sma
-          annmodel.disconnect(doc)
         }
+        annmodel.disconnect(doc)
       }
     }
   }

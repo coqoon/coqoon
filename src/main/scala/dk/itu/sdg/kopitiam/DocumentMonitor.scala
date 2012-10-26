@@ -97,8 +97,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     } else if (ed.isInstanceOf[JavaEditor]) {
       val txt = ed.asInstanceOf[JavaEditor]
       maybeInsert(txt, txt.getViewer)
-      if (JavaPosition.editor != ed)
-        JavaPosition.editor = ed.asInstanceOf[JavaEditor]
     }
     ActionDisabler.disableAll
     ActionDisabler.enableMaybe

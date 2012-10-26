@@ -91,7 +91,6 @@ abstract class KCoqAction extends KAction {
         PrintActor.deregister(CoqStepNotifier)
         PrintActor.deregister(CoqCommands)
         val shell = CoqState.getShell
-        Console.println("registering CoqStartup")
         PrintActor.register(CoqStartUp)
         CoqStartUp.fini = false
         val initial = DocumentState.positionToShell(0).globalStep
@@ -148,17 +147,11 @@ object ActionDisabler {
           enableStart
           else if (DocumentState.activated.isInstanceOf[JavaEditor])
             if (DocumentState.activated.asInstanceOf[JavaEditor] == JavaPosition.editor) {
-        //always true (due to DocumentMonitor:activateEditor)!
-//              if (JavaPosition.index == -1)
-//                enableStart
-//              else {
-//                if (JavaPosition.getProj == null || JavaPosition.name == "" || ! JavaPosition.getProj.javaOffsets.contains(JavaPosition.name))
-//                  disableAll
-//                else if (JavaPosition.index == JavaPosition.getProj.javaOffsets(JavaPosition.name)._2.length)
-//                  actions.zip(ends).filterNot(_._2).map(_._1).foreach(_.setEnabled(true))
-//                else
-                  actions.foreach(_.setEnabled(true))
-//              }
+              if (JavaPosition.getProj == null)
+                disableAll
+              else if (JavaPosition.getProj.proofShell != None)
+                //we might want to enable only some
+                actions.foreach(_.setEnabled(true))
             } else
               disableAll
   }
@@ -400,6 +393,13 @@ class ProveMethodAction extends KEditorAction {
     val prov = edi.getDocumentProvider
     val doc = prov.getDocument(edi.getEditorInput)
     val proj = EclipseTables.DocToProject(doc)
+    if (JavaPosition.editor != edi) {
+      if (JavaPosition.editor != null) {
+        JavaPosition.retract
+        JavaPosition.retractModel
+      }
+      JavaPosition.editor = edi
+    }
     // c: find method name in java buffer
     val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
     val sl = selection.getStartLine
