@@ -920,7 +920,7 @@ object JavaPosition extends CoqCallback {
           specprocessing = None
         }
 
-        if (coqoff == 0) {
+        if (coqoff == 0 && !(proc && undo)) {
           //search in method specs for min/max
           //mark these!
           var start : Int = Int.MaxValue
