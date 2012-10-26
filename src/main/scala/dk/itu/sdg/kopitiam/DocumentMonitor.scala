@@ -190,13 +190,14 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                       proofscript = Some(m)
                       st = Some(r)
                       r.data = nncon
-                    case _ =>
+                    case x =>
+                      Console.println("PSOJP returned " + x)
                   }
                 }
 
                 proofscript match {
                   case None =>
-                    //change in spec, reproduce that
+                    //reproduce spec output
                     //and retract if needed
                   case Some(x) =>
                     //invokable x needs to reproduce its coqString
@@ -213,9 +214,9 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                         //modify offsets
                         proj.updatePSOffsets(x, coqp.offset, diff)
                         //if s.offset < DocumentState.position, retract!
+                        proj.javaNewerThanSource = false
                     }
                 }
-                proj.javaNewerThanSource = false
               }
             }
           }
