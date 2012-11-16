@@ -2,21 +2,21 @@
 
 package dk.itu.sdg.javaparser
 
-import scala.util.parsing.input.Position
+//import scala.util.parsing.input.Position
+import dk.itu.sdg.parsing.LengthPosition
 import dk.itu.sdg.util.KopitiamLogger
 
-case class SJWarning (message : String, position : Position) { }
+case class SJWarning (message : String, position : LengthPosition) { }
 
 object SimpleJavaChecker extends KopitiamLogger {
   private var warnings : List[SJWarning] = List[SJWarning]()
 
-  def warn (msg : String, pos : Position) : Unit = {
+  def warn (msg : String, pos : LengthPosition) : Unit = {
     warnings ::= new SJWarning(msg, pos)
   }
 
   def check (xs : List[SJDefinition]) : List[SJWarning] = {
     warnings = List[SJWarning]()
-    //Console.println("trollolo checking!!!")
     xs.foreach(checkDefinition(_))
     warnings
   }
@@ -57,25 +57,25 @@ object SimpleJavaChecker extends KopitiamLogger {
   }
 
   import dk.itu.sdg.kopitiam.CoqTop
-  import scala.util.parsing.input.NoPosition
+  import dk.itu.sdg.parsing.NoLengthPosition
   def checkStatements (b : List[SJStatement]) : Unit = {
     var i : Int = 0
     for (x <- b) {
       log.info("AST node" + x + " position: " + x.pos)
       x match {
         case y : SJConditional =>
-          if (y.pos == NoPosition)
+          if (y.pos == NoLengthPosition)
             log.info("no position information for conditional...")
           checkStatements(y.consequent)
           checkStatements(y.alternative)
         case y : SJWhile =>
-          if (y.pos == NoPosition)
+          if (y.pos == NoLengthPosition)
             log.info("no position information for while...")
           if ((i == 0) || (! b(i - 1).isInstanceOf[Loopinvariant]))
             warn("missing loop invariant", y.pos)
           checkStatements(y.body)
         case x@RawSpecification(data) =>
-          if (x.pos == NoPosition)
+          if (x.pos == NoLengthPosition)
             log.info("no position information for spec...")
           if (data.contains("\n"))
             warn("proof script or specification contains a newline, that is invalid", x.pos)
@@ -85,7 +85,7 @@ object SimpleJavaChecker extends KopitiamLogger {
           else if (CoqTop.findNextCommand(data.drop(eoc)) != -1)
             warn("multiple commands found", x.pos)
         case x =>
-          if (x.pos == NoPosition)
+          if (x.pos == NoLengthPosition)
             log.info("no position information for " + x)
       }
       i = i + 1

@@ -12,9 +12,9 @@ package dk.itu.sdg.javaparser
 
 trait JavaTerms
 {
-  import scala.util.parsing.input.Positional
-  //import dk.itu.sdg.parsing.LengthPositional
-  trait Term extends Positional
+  //import scala.util.parsing.input.Positional
+  import dk.itu.sdg.parsing.LengthPositional
+  trait Term extends LengthPositional
 
   // case class PACKAGE(a: Option[ANNOTS], id: QualId) extends Term
 

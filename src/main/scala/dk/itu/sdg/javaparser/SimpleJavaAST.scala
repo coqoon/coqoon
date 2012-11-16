@@ -3,33 +3,42 @@
 package dk.itu.sdg.javaparser
 
 import scala.collection.immutable.HashMap
-import scala.util.parsing.input.Positional
+import dk.itu.sdg.parsing.LengthPositional
+//import scala.util.parsing.input.Positional
 
-sealed trait CoqPosition {
+sealed trait CPosition {
   def offset : Int
   def length : Int
 
   override def toString = "(" + offset + ", " + length + ")"
 }
 
-case object NoCoqPosition extends CoqPosition {
+case object NoCPosition extends CPosition {
   def offset = 0
   def length = 0
 
   override def toString = "(no position)"
 }
 
-case class CoqRegion (offset : Int, length : Int) extends CoqPosition { }
+case class CRegion (offset : Int, length : Int) extends CPosition { }
 
 trait CoqPositional {
-  private var coqPos : CoqPosition = NoCoqPosition
+  private var coqPos : CPosition = NoCPosition
 
   def setCoqPos (o : Int, l : Int) : this.type = {
-    this.coqPos = CoqRegion(o, l)
+    this.coqPos = CRegion(o, l)
     this
   }
 
-  def getCoqPos () : CoqPosition = { this.coqPos }
+  def getCoqPos () : CPosition = { this.coqPos }
+
+  private var javaPos : CPosition = NoCPosition
+  def setJavaPos (o : Int, l : Int) : this.type = {
+    this.javaPos = CRegion(o, l)
+    this
+  }
+
+  def getJavaPos () : CPosition = { this.javaPos }
 }
 
 trait CoqOutput {
@@ -141,7 +150,7 @@ case class SJInterfaceDefinition (
   override val body : List[SJBodyDefinition]
 ) extends SJDefinition
 
-trait SJBodyDefinition extends Positional with CoqPositional with CoqOutput
+trait SJBodyDefinition extends LengthPositional with CoqPositional with CoqOutput
 
 // common interface for methods and constructors
 sealed abstract class SJInvokable() extends SJBodyDefinition {
@@ -185,7 +194,7 @@ case class SJBodyBlock (
 sealed case class SJArgument (id : String, jtype : String)
 
 
-trait SJStatement extends Positional with CoqPositional
+trait SJStatement extends LengthPositional with CoqPositional
 case class SJAssert (assertion : SJExpression) extends SJStatement
 case class SJWhile (test : SJExpression, body : List[SJStatement]) extends SJStatement
 case class SJConditional (test : SJExpression, consequent : List[SJStatement], alternative : List[SJStatement]) extends SJStatement

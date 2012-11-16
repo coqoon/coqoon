@@ -289,8 +289,9 @@ trait JavaToSimpleJava extends KopitiamLogger {
 */
   }
 
-  import scala.util.parsing.input.{Position, NoPosition}
-  def extractHelper (res : Option[SJVariableAccess], x : JExpression, fields : HashMap[String, String], ms : HashMap[String, String], locals : HashMap[String, String], position : Position = NoPosition) : (SJExpression, List[SJStatement], HashMap[String, String]) = x match {
+  import dk.itu.sdg.parsing.{LengthPosition, NoLengthPosition}
+//  import scala.util.parsing.input.{Position, NoPosition}
+  def extractHelper (res : Option[SJVariableAccess], x : JExpression, fields : HashMap[String, String], ms : HashMap[String, String], locals : HashMap[String, String], position : LengthPosition = NoLengthPosition) : (SJExpression, List[SJStatement], HashMap[String, String]) = x match {
       case JBinaryExpression(op, l, r) =>
         val (ri, rii, ls0) = extractHelper(None, r, fields, ms, locals, position)
         val (le, lei, ls1) = extractHelper(None, l, fields, ms, ls0, position)

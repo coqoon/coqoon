@@ -2,9 +2,9 @@
 
 package dk.itu.sdg.javaparser
 
-import scala.util.parsing.input.Positional
-
-sealed abstract class JStatement extends Positional { }
+//import scala.util.parsing.input.Positional
+import dk.itu.sdg.parsing.LengthPositional
+sealed abstract class JStatement extends LengthPositional { }
 
 case class JClassDefinition (modifiers : Set[JModifier], id : String, superclass : String, interfaces : List[String], body : List[JStatement], outerclass : Option[String]) extends JStatement
 case class JInterfaceDefinition (modifiers : Set[JModifier], id : String, interfaces : List[String], body : List[JStatement]) extends JStatement
@@ -18,7 +18,7 @@ case class JConstructorDefinition (modifiers : Set[JModifier], jtype : String, p
 case class JArgument (id : String, jtype : String) extends InnerStatement
 
 trait JBodyStatement extends InnerStatement
-case class JBlock (modifier: Option[Static] = None, body : List[JBodyStatement]) extends JBodyStatement 
+case class JBlock (modifier: Option[Static] = None, body : List[JBodyStatement]) extends JBodyStatement
 case class JAssert(assertion : JBodyStatement) extends JBodyStatement
 case class JAssignment (left : String, right : JExpression) extends JBodyStatement
 case class JFieldWrite (variable : JExpression, field : String, value : JExpression) extends JBodyStatement
@@ -38,16 +38,24 @@ case class JVariableAccess (variable : String) extends JExpression
 case class JFieldAccess (variable : JExpression, field : String) extends JExpression
 case class JSpecExpression (e : String) extends JExpression
 
+import scala.util.parsing.input.CharArrayReader
+class CharArrayReaderX(chars : Array[Char], index: Int) extends CharArrayReader(chars, index) {
+  def this(chars: Array[Char]) = this(chars, 0)
+  def mypos : Int = offset
+}
+
 trait JavaAST extends JavaParser { // with CoqOutputter {
   import scala.util.parsing.input._
 
-  def parse(r: Reader[Char], name : String) : Either[List[SJWarning],Pair[SJClassDefinition,List[SJDefinition]]] = {
+  def parse(r: String, name : String) : Either[List[SJWarning],Pair[SJClassDefinition,List[SJDefinition]]] = {
     FinishAST.doit(parseH(r), name)
   }
 
-  def parseH(r: Reader[Char]) : Any = {
+  def parseH(r: String) : Any = {
     //ClassTable.empty
-    val p = phrase(compilationUnit)(new lexical.Scanner(r))
+    val reader = new CharArrayReaderX(r.toCharArray())
+    Console.println("reader is a " + reader.getClass)
+    val p = phrase(compilationUnit)(new lexical.Scanner(reader))
     p match {
       case Success(x @ ~(_,_), _) =>
         x

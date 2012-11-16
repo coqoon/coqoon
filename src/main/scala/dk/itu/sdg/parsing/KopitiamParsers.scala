@@ -15,6 +15,9 @@ sealed trait LengthPosition {
       this.length < that.length
     else
       this.offset < that.offset
+
+  def line () : Int = 0
+  def column () : Int = 0
 }
 
 case object NoLengthPosition extends LengthPosition {
@@ -39,6 +42,12 @@ trait LengthPositional {
     else this
   }
 
+  def setPos (p : LengthPosition) : this.type= {
+    Console.println("setting position to " + p)
+    this.pos = p
+    this
+  }
+
   //Enable a hack to kill whitespace that the positioned method brings along
   def advancePosStart() : Boolean = advancePosStart(1)
 
@@ -58,6 +67,16 @@ trait LengthPositionParsers extends Parsers {
     Parser { input =>
       p(input) match {
         case Success(t, rest) =>
+          Console.println("input is: " + input.getClass)
+          if (input.isInstanceOf[dk.itu.sdg.javaparser.JavaLexer.Scanner]) {
+            val inpu = input.asInstanceOf[dk.itu.sdg.javaparser.JavaLexer.Scanner]
+            val inputt = inpu.inp
+            Console.println("off is: " + inputt.offset)
+            Console.println("inputt is " + inputt.getClass)
+            if (inputt.isInstanceOf[dk.itu.sdg.javaparser.CharArrayReaderX])
+              Console.println(" mypos: " + inputt.asInstanceOf[dk.itu.sdg.javaparser.CharArrayReaderX].mypos)
+          }
+          Console.println("assigning length: " + input.offset + " (or: " + input.pos + ") rest: " + rest.offset + " (or: " + rest.pos + ") for t " + t + " and rest: " + rest + " (input: " + input + ")")
           Success(if (t.pos == NoLengthPosition) t.setPos(input.offset, rest.offset - input.offset) else t, rest)
         case ns : NoSuccess => ns
       }

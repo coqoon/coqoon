@@ -68,7 +68,7 @@ object SimpleJavaOptimizedMain extends App with JavaAST with JavaOutputter with 
 
   val simpleJavaProg = JavaOutput.parseandoutput(progText)
 
-  val ast = FinishAST.doitHelper(parseH(new CharArrayReader(progText.toArray)))
+  val ast = FinishAST.doitHelper(parseH(progText))
   val optimizedAST = Optimizer.removeDeadVariables(ast)
 
   val optimizedProgText = optimizedAST.map( (x: SJDefinition) => outputDefinition(x,0) ).mkString("")

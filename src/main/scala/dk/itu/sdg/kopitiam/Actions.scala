@@ -443,13 +443,20 @@ class TranslateAction extends KAction {
     val nam = file.getName
     if (nam.endsWith(".java")) {
       val basename = nam.split("\\.")(0)
-      val is = StreamReader(new InputStreamReader(file.getContents, "UTF-8"))
+      //val is = StreamReader(new InputStreamReader(file.getContents, "UTF-8"))
       val proj = EclipseTables.StringToProject(basename)
       val ps = proj.provenMethods.length
-      var success : Boolean = false
-      JavaTC.parse(is, basename) match {
+      proj.provenMethods = List[SJInvokable]()
+      proj.proofShell = None
+
+      val txt : String =
+        try
+      new java.util.Scanner(file.getContents, "UTF-8").useDelimiter("\\A").next()
+      catch
+      { case (e : Throwable) => "" }
+      JavaTC.parse(txt, basename) match {
         case Left(x) =>
-          x.foreach(y => JavaPosition.markPos(y.message, y.position))
+          x.foreach(y => JavaPosition.markPos(y.message, scala.util.parsing.input.NoPosition)) //y.position
         case Right((c, defs)) =>
           proj.program = Some(c)
           Console.println("our program " + c.id + " is there: " + c.getProgram)
@@ -465,53 +472,49 @@ class TranslateAction extends KAction {
                 Console.println("something else " + x)
             }
           proj.definitions = defs
-          success = true
+          proj.modelNewerThanSource = false
+          proj.javaNewerThanSource = false
+          ColoringAST.coloring(defs)
+          if (generate) {
+            val ms = proj.countMethods
+            if (ps < ms - 1)
+              EclipseBoilerPlate.warnUser("Missing proofs", "Sorry, not all methods of the class have been proven, thus I will not certify this class.")
+            else if (ps == ms - 1) {
+              //TODO: find a suitable location!
+              val trfi : IFile = file.getProject.getFile(basename + "Java.v")
+              if (trfi.exists)
+                trfi.delete(true, false, null)
+              trfi.create(null, IResource.NONE, null)
+              trfi.setCharset("UTF-8", null)
+              val model = basename + ".v"
+              val modelfile = file.getProject.getFile(model)
+              Console.println("modelfilename is " + model + " and it exists? " + modelfile.exists)
+              val mod : String =
+                if (modelfile.exists) {
+                  modelfile.setCharset("UTF-8")
+                  try
+                    new java.util.Scanner(modelfile.getContents, "UTF-8").useDelimiter("\\A").next()
+                  catch
+                  { case (e : Throwable) => "" }
+                } else
+                  ""
+              val modbytes = mod.getBytes("UTF-8")
+
+              //Needs rework here!
+
+              //val cont = con.get
+              val content = ""
+
+              // cont._1 + "\n" + cont._2.filter(x => !x._1.equals("class")).map(_._2).mkString("\n") + "\n" + cont._2.filter(x =>  x._1.equals("class")).map(_._2).mkString("\n") + "\nEnd " + nam.substring(0, nam.indexOf(".java")) + "_spec.\n"
+              val conbytes = content.getBytes("UTF-8")
+              val bytessize = modbytes.length + conbytes.length
+              val bs = new Array[Byte](bytessize)
+              System.arraycopy(modbytes, 0, bs, 0, modbytes.length)
+              System.arraycopy(conbytes, 0, bs, modbytes.length, conbytes.length)
+              trfi.setContents(new ByteArrayInputStream(bs), IResource.NONE, null)
+              EclipseBoilerPlate.warnUser("Generated Proof Certificate", "Successfully generated a proof certificate: \"" + basename + "Java.v\" .")
+            } }
       }
-      proj.provenMethods = List[SJInvokable]()
-      proj.proofShell = None
-      if (success) {
-        proj.modelNewerThanSource = false
-        proj.javaNewerThanSource = false
-      }
-      if (generate && success) {
-        val ms = proj.countMethods
-        if (ps < ms - 1)
-          EclipseBoilerPlate.warnUser("Missing proofs", "Sorry, not all methods of the class have been proven, thus I will not certify this class.")
-        else if (ps == ms - 1) {
-        //TODO: find a suitable location!
-        val trfi : IFile = file.getProject.getFile(basename + "Java.v")
-        if (trfi.exists)
-          trfi.delete(true, false, null)
-        trfi.create(null, IResource.NONE, null)
-        trfi.setCharset("UTF-8", null)
-        val model = basename + ".v"
-        val modelfile = file.getProject.getFile(model)
-        Console.println("modelfilename is " + model + " and it exists? " + modelfile.exists)
-        val mod : String =
-          if (modelfile.exists) {
-            modelfile.setCharset("UTF-8")
-            try
-              new java.util.Scanner(modelfile.getContents, "UTF-8").useDelimiter("\\A").next()
-            catch
-            { case (e : Throwable) => "" }
-          } else
-            ""
-        val modbytes = mod.getBytes("UTF-8")
-
-//Needs rework here!
-
-//        val cont = con.get
-        val content = ""
-
-// cont._1 + "\n" + cont._2.filter(x => !x._1.equals("class")).map(_._2).mkString("\n") + "\n" + cont._2.filter(x =>  x._1.equals("class")).map(_._2).mkString("\n") + "\nEnd " + nam.substring(0, nam.indexOf(".java")) + "_spec.\n"
-        val conbytes = content.getBytes("UTF-8")
-        val bytessize = modbytes.length + conbytes.length
-        val bs = new Array[Byte](bytessize)
-        System.arraycopy(modbytes, 0, bs, 0, modbytes.length)
-        System.arraycopy(conbytes, 0, bs, modbytes.length, conbytes.length)
-        trfi.setContents(new ByteArrayInputStream(bs), IResource.NONE, null)
-        EclipseBoilerPlate.warnUser("Generated Proof Certificate", "Successfully generated a proof certificate: \"" + basename + "Java.v\" .")
-      } }
     } else
       Console.println("wasn't a java file")
   }

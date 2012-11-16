@@ -88,6 +88,56 @@ trait EclipseUtils {
   }
 }
 
+object ColoringAST {
+  import dk.itu.sdg.javaparser.{SJDefinition, SJClassDefinition, SJFieldDefinition, SJBodyDefinition, SJInvokable, SJStatement, SJWhile, SJConditional, Specification}
+
+  import org.eclipse.jface.text.source.IAnnotationModel
+  var annmodel : IAnnotationModel = null
+
+  import org.eclipse.jface.text.source.Annotation
+  import org.eclipse.jface.text.Position
+
+  def coloring (d : List[SJDefinition]) = {
+    val prov = JavaPosition.editor.getDocumentProvider
+    annmodel = prov.getAnnotationModel(JavaPosition.editor.getEditorInput)
+    val doc = prov.getDocument(JavaPosition.editor.getEditorInput)
+    annmodel.connect(doc)
+    d.foreach(x => x match {
+      case y : SJClassDefinition => x.body.foreach(rc(_))})
+    annmodel.disconnect(doc)
+  }
+
+  private def rc (x : SJBodyDefinition) = {
+    x match {
+      case y : SJFieldDefinition =>
+        val txt = "dk.itu.sdg.kopitiam.processing"
+        val sma = new Annotation(txt, false, "Proof")
+        annmodel.addAnnotation(sma, new Position(y.pos.offset, y.pos.length))
+      case y : SJInvokable =>
+        y.body.foreach(rcc(_))
+        val txt = "dk.itu.sdg.kopitiam.processed"
+        val sma = new Annotation(txt, false, "Proof")
+        annmodel.addAnnotation(sma, new Position(y.pos.offset, y.pos.length))
+      case y : Specification =>
+        val txt = "dk.itu.sdg.kopitiam.processing"
+        val sma = new Annotation(txt, false, "Proof")
+        annmodel.addAnnotation(sma, new Position(y.pos.offset, y.pos.length))
+      case _ =>
+    }
+  }
+
+  private def rcc (x : SJStatement) : Unit = {
+    x match {
+      case SJConditional(t, c, a) =>
+        c.foreach(rcc(_))
+        a.foreach(rcc(_))
+      case SJWhile(t, b) =>
+        b.foreach(rcc(_))
+      case y =>
+    }
+  }
+}
+
 class CoqJavaProject (basename : String) {
   //foo -> foo.java [Java], foo.v [Model] ~> foo.java.v [Complete]
   import scala.collection.immutable.HashMap

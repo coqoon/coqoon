@@ -34,64 +34,64 @@ trait Expression extends ImplicitConversions
 
   // high level look
 
-  def expression = positioned(assignmentExpression ^^ Expr)
+  def expression = lengthPositioned(assignmentExpression ^^ Expr)
   def expressionList = rep1sep(expression, ",")
   def parExpression = "(" ~> expression <~ ")" ^^ ParExpr
   def arguments = "(" ~> repsep(expression, ",") <~ ")"
 
-  def assignmentExpression: Parser[AnyExpr] = positioned(conditionalExpression ~ opt(assignmentOp ~ assignmentExpression) ^^ {
+  def assignmentExpression: Parser[AnyExpr] = lengthPositioned(conditionalExpression ~ opt(assignmentOp ~ assignmentExpression) ^^ {
     case x~None => x
     case (x : AnyExpr)~Some((op : Key)~(y : AnyExpr)) => BinaryExpr(op, x, y)
   })
 
-  def conditionalExpression: Parser[AnyExpr] = positioned(logicalOrExpression ~ opt("?" ~> assignmentExpression ~ ":" ~ conditionalExpression) ^^ {
+  def conditionalExpression: Parser[AnyExpr] = lengthPositioned(logicalOrExpression ~ opt("?" ~> assignmentExpression ~ ":" ~ conditionalExpression) ^^ {
     case x~None => x
     case (x : AnyExpr)~Some((y : AnyExpr)~":"~(z : AnyExpr)) => Conditional(ParExpr(x), y, Some(z))
   })
 
-  def logicalOrExpression: Parser[AnyExpr] = positioned(logicalAndExpression ~ rep("||" ~ logicalAndExpression) ^^ {
+  def logicalOrExpression: Parser[AnyExpr] = lengthPositioned(logicalAndExpression ~ rep("||" ~ logicalAndExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   })
-  def logicalAndExpression: Parser[AnyExpr] = positioned(inclusiveOrExpression ~ rep("&&" ~ inclusiveOrExpression) ^^ {
+  def logicalAndExpression: Parser[AnyExpr] = lengthPositioned(inclusiveOrExpression ~ rep("&&" ~ inclusiveOrExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   })
-  def inclusiveOrExpression: Parser[AnyExpr] = positioned(exclusiveOrExpression ~ rep("|" ~ exclusiveOrExpression) ^^ {
+  def inclusiveOrExpression: Parser[AnyExpr] = lengthPositioned(exclusiveOrExpression ~ rep("|" ~ exclusiveOrExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   })
-  def exclusiveOrExpression: Parser[AnyExpr] = positioned(andExpression ~ rep("^" ~ andExpression) ^^ {
+  def exclusiveOrExpression: Parser[AnyExpr] = lengthPositioned(andExpression ~ rep("^" ~ andExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   })
-  def andExpression: Parser[AnyExpr] = positioned(equalityExpression ~ rep("&" ~ equalityExpression) ^^ {
+  def andExpression: Parser[AnyExpr] = lengthPositioned(equalityExpression ~ rep("&" ~ equalityExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   })
 
-  def equalityExpression: Parser[AnyExpr] = positioned(instanceOfExpression ~ rep(List("==", "!=") ~ instanceOfExpression) ^^ {
+  def equalityExpression: Parser[AnyExpr] = lengthPositioned(instanceOfExpression ~ rep(List("==", "!=") ~ instanceOfExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   })
-  def instanceOfExpression: Parser[AnyExpr] = positioned(relationalExpression ~ opt("instanceof" ~> jtype) ^^ {
+  def instanceOfExpression: Parser[AnyExpr] = lengthPositioned(relationalExpression ~ opt("instanceof" ~> jtype) ^^ {
     case x~None => x
     case x~Some(y) => InstanceOf(x, y)
   })
-  def relationalExpression: Parser[AnyExpr] = positioned(shiftExpression ~ rep(List("<", ">", "<=", ">=") ~ shiftExpression) ^^ {
+  def relationalExpression: Parser[AnyExpr] = lengthPositioned(shiftExpression ~ rep(List("<", ">", "<=", ">=") ~ shiftExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   })
 
-  def shiftExpression : Parser[AnyExpr] = positioned(additiveExpression ~ rep(List("<<", ">>", ">>>") ~ additiveExpression) ^^ {
+  def shiftExpression : Parser[AnyExpr] = lengthPositioned(additiveExpression ~ rep(List("<<", ">>", ">>>") ~ additiveExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   })
-  def additiveExpression : Parser[AnyExpr] = positioned(multiplicativeExpression ~ rep(List("+", "-") ~ multiplicativeExpression) ^^ {
+  def additiveExpression : Parser[AnyExpr] = lengthPositioned(multiplicativeExpression ~ rep(List("+", "-") ~ multiplicativeExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   })
-  def multiplicativeExpression : Parser[AnyExpr] = positioned(unaryExpression ~ rep(List("*", "/", "%") ~ unaryExpression) ^^ {
+  def multiplicativeExpression : Parser[AnyExpr] = lengthPositioned(unaryExpression ~ rep(List("*", "/", "%") ~ unaryExpression) ^^ {
     case x~List() => x
     case (x : AnyExpr)~(y : List[Any]) => listhelper(x, y)
   })
@@ -111,7 +111,7 @@ trait Expression extends ImplicitConversions
   }
 
   def unaryExpression : Parser[AnyExpr] =
-    positioned(
+    lengthPositioned(
      ( "++" ~ unaryExpression ^^ UnaryExpr
      | "--" ~ unaryExpression ^^ UnaryExpr
      | "-" ~ unaryExpression ^^ UnaryExpr
@@ -119,7 +119,7 @@ trait Expression extends ImplicitConversions
      | unaryExpressionNotPlusOrMinus
    ) ^^ PrimaryExpr)
   def unaryExpressionNotPlusOrMinus : Parser[AnyExpr] =
-    positioned(
+    lengthPositioned(
     ( "~" ~ unaryExpression ^^ UnaryExpr
      | "!" ~ unaryExpression ^^ UnaryExpr
      | "(" ~ jtype ~ ")" ~ unaryExpression ^^ {
@@ -129,7 +129,7 @@ trait Expression extends ImplicitConversions
    ))
 
   // always starts with primary expression, then 0 or more of various things
-  def postfixExpr : Parser[AnyExpr] = positioned(primaryExpression ~
+  def postfixExpr : Parser[AnyExpr] = lengthPositioned(primaryExpression ~
     rep ( "." ~
           ( opt(genericTypeArgumentList) ~> id ~ opt(arguments) ^^ { //that's either call or field access (depending on arguments or no arguments)
             case x~None => x
@@ -149,7 +149,7 @@ trait Expression extends ImplicitConversions
     })
 
   def primaryExpression : Parser[AnyExpr] =
-    positioned(
+    lengthPositioned(
     ( parExpression
      | literal
      | newExpression
@@ -166,7 +166,7 @@ trait Expression extends ImplicitConversions
      | "void" ~ "." ~ "class"
    ) ^^ PrimaryExpr)
 
-  def qualifiedIdExpression : Parser[Term] = positioned(qualifiedId ~
+  def qualifiedIdExpression : Parser[Term] = lengthPositioned(qualifiedId ~
     opt ( bracesList ~ "." ~ "class"
          | arguments //a call!
          | "." ~ ( "class"
@@ -183,7 +183,7 @@ trait Expression extends ImplicitConversions
         x
     })
 
-  def newExpression : Parser[AnyExpr] = positioned("new" ~>
+  def newExpression : Parser[AnyExpr] = lengthPositioned("new" ~>
     ( basicType ~ newArrayConstruction
      | opt(genericTypeArgumentList) ~> qualifiedTypeIdent ~
        (newArrayConstruction | arguments <~ opt(classBody))
@@ -191,7 +191,7 @@ trait Expression extends ImplicitConversions
            case x => NewExpr(x)
         })
 
-  def innerNewExpression : Parser[Term] = positioned("new" ~> opt(genericTypeArgumentList) ~> id ~ arguments <~ opt(classBody) ^^ {
+  def innerNewExpression : Parser[Term] = lengthPositioned("new" ~> opt(genericTypeArgumentList) ~> id ~ arguments <~ opt(classBody) ^^ {
     case ty~(arg : List[AnyExpr]) => NewExpression(ty, arg)
     case x => NewExpr(x)
   })

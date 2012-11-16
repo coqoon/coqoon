@@ -38,6 +38,7 @@ object FinishAST extends JavaTerms
   import scala.util.parsing.input.Position
   def doit (a : Any, name : String) : Either[List[SJWarning],Pair[SJClassDefinition,List[SJDefinition]]] = {
     val w = doitHelper(a)
+    //SimpleJavaASTPositioner.annotatePositions(w, JavaPosition.getDoc)
     val ws = SimpleJavaChecker.check(w)
     if (ws.length > 0)
       Left(ws)
