@@ -61,12 +61,19 @@ object SimpleJavaChecker extends KopitiamLogger {
   def checkStatements (b : List[SJStatement]) : Unit = {
     var i : Int = 0
     for (x <- b) {
+      log.info("AST node" + x + " position: " + x.pos)
       x match {
+        case y : SJConditional =>
+          if (y.pos == NoPosition)
+            log.info("no position information for conditional...")
+          checkStatements(y.consequent)
+          checkStatements(y.alternative)
         case y : SJWhile =>
           if (y.pos == NoPosition)
             log.info("no position information for while...")
           if ((i == 0) || (! b(i - 1).isInstanceOf[Loopinvariant]))
             warn("missing loop invariant", y.pos)
+          checkStatements(y.body)
         case x@RawSpecification(data) =>
           if (x.pos == NoPosition)
             log.info("no position information for spec...")
