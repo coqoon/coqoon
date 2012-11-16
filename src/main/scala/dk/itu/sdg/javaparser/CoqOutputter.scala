@@ -277,10 +277,13 @@ trait CoqOutputter extends JavaToSimpleJava {
                 val spec = spec3 + post.data + " }})."
                 post.setCoqPos(spec3.length, post.data.length)
                 x.addSpec(post)
+                post.method = Some(x)
                 pre.setCoqPos(spec2.length, pre.data.length)
                 x.addSpec(pre)
+                pre.method = Some(x)
                 quant.setCoqPos(spec1.length, quant2.length)
                 x.addSpec(quant)
+                quant.method = Some(x)
                 x.setSpecOff(cd.getSpec.getOrElse("").length)
                 x.setSpecLength(spec.length)
                 cd.appendSpec(spec)

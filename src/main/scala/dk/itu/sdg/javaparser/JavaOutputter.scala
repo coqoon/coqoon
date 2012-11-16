@@ -73,9 +73,9 @@ trait JavaOutputter {
           case Some(x) => "static"
         }
         mod + " {\n" + concatBody(mapi(xs, ind + 2)) + "\n" + indent(ind) + "} "
-      case Quantification(x) => indent(ind) + "<% lvars: " + x + " %>"
-      case Precondition(x) => indent(ind) + "<% requires: " + x + " %>"
-      case Postcondition(x) => indent(ind) + "<% ensures: " + x + " %>"
+      case Quantification(x, m) => indent(ind) + "<% lvars: " + x + " %>"
+      case Precondition(x, m) => indent(ind) + "<% requires: " + x + " %>"
+      case Postcondition(x, m) => indent(ind) + "<% ensures: " + x + " %>"
     }
   }
 

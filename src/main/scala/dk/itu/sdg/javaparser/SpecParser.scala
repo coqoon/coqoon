@@ -2,15 +2,17 @@
 
 package dk.itu.sdg.javaparser
 
-import scala.util.parsing.input.Positional
-
-sealed abstract class Specification () extends SJExpression with SJBodyDefinition with Positional {
+sealed abstract class Specification () extends SJExpression with SJBodyDefinition {
   var data : String
 }
 
-case class Precondition (override var data : String) extends Specification { }
-case class Postcondition (override var data : String) extends Specification { }
-case class Quantification (override var data : String) extends Specification { }
+sealed abstract class TopLevelSpecification () extends Specification {
+  var method : Option[SJInvokable]
+}
+
+case class Precondition (override var data : String, override var method : Option[SJInvokable]) extends TopLevelSpecification { }
+case class Postcondition (override var data : String, override var method : Option[SJInvokable]) extends TopLevelSpecification { }
+case class Quantification (override var data : String, override var method : Option[SJInvokable]) extends TopLevelSpecification { }
 case class Loopinvariant (override var data : String, var frame : String) extends Specification { }
 
 //either proof script or predicate - depending on the context
@@ -27,11 +29,11 @@ object ParseSpecification {
 
   def parse (s : String) : Specification = {
     s.trim match {
-      case Precon(x) => Precondition(x)
-      case Prec(x) => Precondition(x)
-      case Postcon(x) => Postcondition(x)
-      case Postc(x) => Postcondition(x)
-      case Lvar(x) => Quantification(x)
+      case Precon(x) => Precondition(x, None)
+      case Prec(x) => Precondition(x, None)
+      case Postcon(x) => Postcondition(x, None)
+      case Postc(x) => Postcondition(x, None)
+      case Lvar(x) => Quantification(x, None)
       case Invariant(x, y) => Loopinvariant(x, y)
       case x => RawSpecification(x)
     }
