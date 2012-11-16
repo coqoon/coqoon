@@ -137,8 +137,8 @@ class CoqJavaProject (basename : String) {
               todo = todo.pop
               mine match {
                 case SJConditional(t, c, a) =>
-                  todo = todo.pushAll(c.reverse)
                   todo = todo.pushAll(a.reverse)
+                  todo = todo.pushAll(c.reverse)
                 case SJWhile(t, b) =>
                   todo = todo.pushAll(b.reverse)
                 case s =>
