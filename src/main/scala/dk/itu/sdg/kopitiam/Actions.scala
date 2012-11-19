@@ -376,7 +376,7 @@ class CoqRefreshAction extends KCoqAction {
 }
 object CoqRefreshAction extends CoqRefreshAction { }
 
-class ProveMethodAction extends KEditorAction {
+class ProveMethodAction extends KEditorAction with EclipseJavaHelper {
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.text.ITextSelection
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
@@ -391,6 +391,14 @@ class ProveMethodAction extends KEditorAction {
     val edi : JavaEditor = editor.asInstanceOf[JavaEditor]
     val prov = edi.getDocumentProvider
     val doc = prov.getDocument(edi.getEditorInput)
+    val bla = getRoot(edi.getEditorInput)
+    Console.println("bla is " + bla)
+    val cu = getCompilationUnit(bla)
+    Console.println("cu is " + cu)
+    val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
+    val off = selection.getOffset
+    val node = findASTNode(cu, off, 0)
+    Console.println("found a node: " + node)
     val proj = EclipseTables.DocToProject(doc)
     if (JavaPosition.editor != edi) {
       if (JavaPosition.editor != null) {
@@ -400,12 +408,12 @@ class ProveMethodAction extends KEditorAction {
       JavaPosition.editor = edi
     }
     // c: find method name in java buffer
-    val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
+    ///val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
     val sl = selection.getStartLine
 
     // b: if outdated coqString: translate
-    proj.proveMethod(sl)
-    CoqCommands.step
+    ///proj.proveMethod(sl)
+    ///CoqCommands.step
     }
   }
   override def doit () : Unit = { }
