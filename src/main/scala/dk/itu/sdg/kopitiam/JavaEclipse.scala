@@ -75,8 +75,266 @@ trait EclipseJavaHelper {
     }
   }
 
-  import org.eclipse.jdt.core.dom.ASTVisitor
+  def walkAST (root : ASTNode) : Unit = {
+    val co = new CoqOutput()
+    root.accept(co)
+  }
+
   import org.eclipse.jdt.core.dom.{AnnotationTypeDeclaration, AnnotationTypeMemberDeclaration, AnonymousClassDeclaration, ArrayAccess, ArrayCreation, ArrayInitializer, ArrayType, AssertStatement, Assignment, Block, BlockComment, BooleanLiteral, BreakStatement, CastExpression, CatchClause, CharacterLiteral, ClassInstanceCreation, CompilationUnit, ConditionalExpression, ConstructorInvocation, ContinueStatement, DoStatement, EmptyStatement, EnhancedForStatement, EnumConstantDeclaration, EnumDeclaration, ExpressionStatement, FieldAccess, FieldDeclaration, ForStatement, IfStatement, ImportDeclaration, InfixExpression, Initializer, InstanceofExpression, Javadoc, LabeledStatement, LineComment, MarkerAnnotation, MemberRef, MemberValuePair, MethodDeclaration, MethodInvocation, MethodRef, MethodRefParameter, Modifier, NormalAnnotation, NullLiteral, NumberLiteral, PackageDeclaration, ParameterizedType, ParenthesizedExpression, PostfixExpression, PrefixExpression, PrimitiveType, QualifiedName, QualifiedType, ReturnStatement, SimpleName, SimpleType, SingleMemberAnnotation, SingleVariableDeclaration, StringLiteral, SuperConstructorInvocation, SuperFieldAccess, SuperMethodInvocation, SwitchCase, SwitchStatement, SynchronizedStatement, TagElement, TextElement, ThisExpression, ThrowStatement, TryStatement, TypeDeclaration, TypeDeclarationStatement, TypeLiteral, TypeParameter, UnionType, VariableDeclarationExpression, VariableDeclarationFragment, VariableDeclarationStatement, WhileStatement, WildcardType}
+  class CoqOutput () extends Visitor {
+    import scala.collection.immutable.Stack
+    var offset : Int = 0;
+    var specs : List[Initializer] = List[Initializer]()
+    //class|program-wide stuff
+    var program : List[String] = List[String]()
+    var spec : List[String] = List[String]()
+    var specLemmas : List[String] = List[String]()
+
+    //method-local
+    var methodprogram : Stack[List[String]] = Stack[List[String]]()
+    var proof : List[String] = List[String]()
+
+    override def visitNode (node : ASTNode) : Boolean = {
+      node match {
+        case x : TypeDeclaration =>
+          Console.println("type declaration (class definition!?)")
+          methodprogram = methodprogram.push(List[String]())
+        case x : Initializer =>
+          specs = x :: specs
+          Console.println("added spec")
+        case x : MethodDeclaration =>
+          Console.println("got a method declaration. now what? specs: " + specs.size)
+          specs = List[Initializer]()
+          methodprogram = methodprogram.push(List[String]())
+        case x : Block =>
+          Console.println("pushing a block!")
+          methodprogram = methodprogram.push(List[String]())
+        case x : ExpressionStatement =>
+          val e = x.getExpression
+          val res =
+          e match {
+            case x : Assignment =>
+              assert(x.getOperator == Assignment.Operator.ASSIGN)
+              val r = x.getRightHandSide
+              val l = x.getLeftHandSide
+              l match {
+                case y : FieldAccess =>
+                  "(cwrite " + printE(l) + " " + printE(y) + ")"
+                case y =>
+                  r match {
+                    case y : MethodInvocation =>
+                      val st = (y.resolveMethodBinding.getModifiers & Modifier.STATIC) == Modifier.STATIC
+                      val str = if (st) "cscall" else "cdcall"
+                      "(" + str + " " + printE(l) + " " + printE(y) + ")"
+                    case y : ClassInstanceCreation =>
+                      "(calloc " + printE(l) + " " + printE(y) + ")"
+                    case y : FieldAccess =>
+                      "(cread " + printE(l) + " " + printE(y) + ")"
+                    case y =>
+                      "(cassign " + printE(l) + " " + printE(y) + ")"
+                  }
+              }
+          }
+          val li = methodprogram.top
+          methodprogram = methodprogram.pop
+          Console.println("want to write " + res)
+          methodprogram = methodprogram.push(res :: li)
+        case x : IfStatement =>
+          val li = methodprogram.top
+          methodprogram = methodprogram.pop
+          val tst = printE(x.getExpression)
+          Console.println("pushing tst " + tst)
+          methodprogram = methodprogram.push(tst :: li)
+        case x : AssertStatement =>
+          val li = methodprogram.top
+          methodprogram = methodprogram.pop
+          val ass = printE(x.getExpression)
+          Console.println("pushing ass " + ass)
+          methodprogram = methodprogram.push("(cassert " + ass + ")" :: li)
+        case x : EmptyStatement =>
+          Console.println(x)
+        case x : WhileStatement =>
+          val li = methodprogram.top
+          methodprogram = methodprogram.pop
+          val tst = printE(x.getExpression)
+          Console.println("pushing tst " + tst)
+          methodprogram = methodprogram.push(tst :: li)
+        case x : ReturnStatement =>
+          val e = x.getExpression
+          //this is special!
+        case x : VariableDeclarationStatement =>
+          val frags = x.fragments
+          if (frags.size == 1) {
+            val frag = frags.get(0).asInstanceOf[VariableDeclarationFragment]
+            val nam = printE(frag.getName)
+            val init = frag.getInitializer
+            if (init != null) {
+              val inite = printE(init)
+              val li = methodprogram.top
+              methodprogram = methodprogram.pop
+              val ass = "(cassign " + nam + " " + inite + ")"
+              Console.println("pushing ass " + ass)
+              methodprogram = methodprogram.push(ass :: li)
+            }
+          } else
+            if (frags.size != 0)
+              Console.println("wtf am I supposed do to here?")
+        case x =>
+          Console.println("node is " + node.getClass.toString + ": " + node.toString)
+      }
+      true
+    }
+
+    private def printB (bs : List[String]) : String =
+      bs match {
+        case x :: Nil => x
+        case x :: y => "(cseq " + x + " " + printB(y) + ")"
+      }
+
+    private def translateop (op : Any) : String =
+      op match {
+        case InfixExpression.Operator.TIMES => "vtimes"
+        case InfixExpression.Operator.PLUS => "vadd"
+        case InfixExpression.Operator.MINUS => "vminus"
+        case InfixExpression.Operator.LESS => "vlt"
+        case InfixExpression.Operator.LESS_EQUALS => "vle"
+        case InfixExpression.Operator.GREATER => "vgt"
+        case InfixExpression.Operator.GREATER_EQUALS => "vge"
+        case InfixExpression.Operator.EQUALS => "veq"
+        case x =>
+          Console.println("translating " + op)
+          "="
+      }
+
+    private def findClass (x : ASTNode) : TypeDeclaration =
+      x match {
+        case y : TypeDeclaration => y
+        case y => findClass(y.getParent)
+      }
+
+    import org.eclipse.jdt.core.dom.Expression
+    private def printEev (x : Expression) : String =
+      x match {
+        //only true for variable names... bindings...
+        case y : SimpleName => "\"" + y.getIdentifier + "\"/V"
+        //literals
+        case y : BooleanLiteral => printE(y)
+        case y : NullLiteral => printE(y)
+        case y : NumberLiteral => printE(y)
+        case y : StringLiteral => printE(y)
+        case y => Console.println("dunno how to print " + y); ""
+      }
+
+    private def printE (e : Expression) : String = {
+      Console.println("printe with " + e)
+      e match {
+        case x : BooleanLiteral =>
+          val v = x.booleanValue
+          if (v)
+            "`true"
+          else
+            "`false"
+        case x : ClassInstanceCreation =>
+          val n = x.getType.toString
+          val a = scala.collection.JavaConversions.asBuffer(x.arguments)
+          assert(a.size == 0) //for now!
+          //val as = a.map(printE(_)).mkString("[", "; ", "]")
+          "\"" + n + "\""
+        case x : FieldAccess =>
+          val e = x.getExpression
+          val n = x.getName
+          printEev(e) + " \"" + printE(n) + "\""
+        case x : InfixExpression =>
+          val l = x.getLeftOperand
+          val r = x.getRightOperand
+          val op = x.getOperator
+          val (opstr, opend) =
+            if (op == InfixExpression.Operator.NOT_EQUALS)
+              ("enot (lift2 eeq_ptr_up ", ")")
+            else
+              ("lift2 " + translateop(op), "")
+          "(" + opstr + " " + printEev(l) + " " + printEev(r) + opend + ")"
+        case x : MethodInvocation =>
+          val n = x.getName
+          val e = x.getExpression
+          val a = scala.collection.JavaConversions.asBuffer(x.arguments).map(_.asInstanceOf[Expression])
+          val as = a.map(printE(_)).mkString("[", "; ", "]")
+          val st = (x.resolveMethodBinding.getModifiers & Modifier.STATIC) == Modifier.STATIC
+          Console.println("st is: " + st + " mods: " + x.resolveMethodBinding.getModifiers + " static: " + Modifier.STATIC)
+          val expr =
+            if (e != null)
+              printE(e)
+            else
+              if (st)
+                printE(findClass(x).getName)
+              else
+                "this"
+          expr + " " + printE(n) + " " + as
+        case x : SimpleName =>
+          "\"" + x.getIdentifier + "\""
+        case x : NullLiteral =>
+          "`null"
+        case x : NumberLiteral =>
+          "`" + x.getToken
+        case x : ParenthesizedExpression =>
+          printE(x.getExpression)
+        case x : StringLiteral =>
+          "\"" + x.getLiteralValue + "\""
+        case x : ThisExpression =>
+          "`this"
+        case x =>
+          Console.println("got " + x)
+          Console.println("dunno how to print " + x.getClass.toString)
+          ""
+      }
+    }
+
+    override def endVisitNode (node : ASTNode) : Unit = {
+      node match {
+        case x : TypeDeclaration =>
+          Console.println("type decl done!")
+        case x : MethodDeclaration =>
+          val eles = methodprogram.top
+          Console.println("method decl done!, stack size is " + methodprogram.length + " eles size is " + eles.length)
+          Console.println("top is: " + printB(eles.reverse))
+        case x : Block =>
+          val eles = methodprogram.top
+          methodprogram = methodprogram.pop
+          val t = methodprogram.top
+          methodprogram = methodprogram.pop
+          val e =
+            if (eles.length == 0)
+              "(cskip)"
+            else
+              printB(eles.reverse)
+          methodprogram = methodprogram.push(e :: t)
+        case x : IfStatement =>
+          Console.println("hit if!")
+          //what's the plan here?
+          //pop alternative, consequence and test from the list
+          //replace with a cif instead
+          var list = methodprogram.top
+          methodprogram = methodprogram.pop
+          val alt =
+            if (x.getElseStatement == null)
+              "(cskip)"
+            else {
+              val t = list.head
+              list = list.tail
+              t
+            }
+          val cons = list.head
+          list = list.tail
+          val tst = list.head
+          list = list.tail
+          val cond = "(cif " + tst + " " + cons + " " + alt + ")"
+          methodprogram = methodprogram.push(cond :: list)
+        case _ =>
+      }
+    }
+  }
+
+  import org.eclipse.jdt.core.dom.ASTVisitor
 
   class Visitor extends ASTVisitor {
     def visitNode (node : ASTNode) : Boolean = { true }
@@ -253,5 +511,11 @@ trait EclipseJavaHelper {
     override def endVisit (node : WhileStatement) : Unit = { endVisitNode(node) }
     override def endVisit (node : WildcardType) : Unit = { endVisitNode(node) }
   }
+}
+
+object EclipseJavaASTProperties {
+  val coqString : String = "dk.itu.sdg.kopitiam.coqoutput"
+  val coqLength : String = "dk.itu.sdg.kopitiam.coqlength"
+  val coqOffset : String = "dk.itu.sdg.kopitiam.coqoffset"
 }
 
