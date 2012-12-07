@@ -41,8 +41,8 @@ trait EclipseJavaHelper {
   }
 
 
-  import org.eclipse.jdt.core.dom.ASTNode
-  def findASTNode (root : ASTNode, offset : Int, length : Int) : ASTNode = {
+  import org.eclipse.jdt.core.dom.{ASTNode, Statement}
+  def findASTNode (root : ASTNode, offset : Int, length : Int) : Statement = {
     val nf = new NodeFinder(offset, length)
     root.accept(nf)
     val result = nf.coveredNode
@@ -54,25 +54,28 @@ trait EclipseJavaHelper {
 
 
   class NodeFinder (off : Int, len : Int) extends Visitor {
-    var coveringNode : ASTNode = null
-    var coveredNode : ASTNode = null
-    override def visitNode (node : ASTNode) : Boolean = {
-      val ns = node.getStartPosition
-      val ne = ns + node.getLength
-      if (ne < off || off + len < ns)
-        false
-      else if (ns <= off && off + len <= ne)
-        coveringNode = node
-      if (off <= ns && ne <= off + len) {
-        if (coveringNode == node) {
-          coveredNode = node
-          true
-        } else if (coveredNode == null)
-          coveredNode = node
-        false
-      } else
-        true
-    }
+    var coveringNode : Statement = null
+    var coveredNode : Statement = null
+    override def visitNode (node : ASTNode) : Boolean =
+      node match {
+        case node : Statement =>
+          val ns = node.getStartPosition
+          val ne = ns + node.getLength
+          if (ne < off || off + len < ns)
+            false
+          else if (ns <= off && off + len <= ne)
+            coveringNode = node
+          if (off <= ns && ne <= off + len) {
+            if (coveringNode == node) {
+              coveredNode = node
+              true
+            } else if (coveredNode == null)
+              coveredNode = node
+            false
+          } else
+            true
+        case _ => true
+      }
   }
 
   def walkAST (root : ASTNode) : Unit = {
