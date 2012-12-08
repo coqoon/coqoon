@@ -125,7 +125,6 @@ trait EclipseJavaHelper {
               case _ =>
             }
             x.setProperty(EclipseJavaASTProperties.returnValue, ret)
-            Console.println("method has body string: " + bd)
           }
           specs = List[Initializer]()
         case x =>

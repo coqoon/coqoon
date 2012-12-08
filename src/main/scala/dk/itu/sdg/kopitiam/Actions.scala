@@ -392,9 +392,7 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper {
     val prov = edi.getDocumentProvider
     val doc = prov.getDocument(edi.getEditorInput)
     val bla = getRoot(edi.getEditorInput)
-    Console.println("bla is " + bla)
     val cu = getCompilationUnit(bla)
-    Console.println("cu is " + cu)
     val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
     val off = selection.getOffset
     val node = findASTNode(cu, off, 0)
