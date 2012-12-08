@@ -224,7 +224,7 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
           assert(e.isInstanceOf[SimpleName] || e.isInstanceOf[BooleanLiteral] ||
                  e.isInstanceOf[NullLiteral] || e.isInstanceOf[NumberLiteral] ||
                  e.isInstanceOf[StringLiteral])
-          assert(ret == "`0")
+          assert(ret == "`0") //avoid multiple return statements
           if (e.isInstanceOf[BooleanLiteral] ||
               e.isInstanceOf[NullLiteral] || e.isInstanceOf[NumberLiteral] ||
               e.isInstanceOf[StringLiteral])
