@@ -139,14 +139,14 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
     override def endVisitNode (node : ASTNode) : Unit =
       node match {
         case x : TypeDeclaration =>
-          var methods = List[String]()
-          val ms = x.getMethods
-          for (m <- ms) {
+          var prog : String = ""
+          var methods : List[String] = List[String]()
+          for (m <- x.getMethods) {
             val defi = m.getProperty(EclipseJavaASTProperties.coqDefinition).asInstanceOf[String]
             val nam = m.getName.getIdentifier
             val id = nam + "M"
             methods ::= "\"" + nam + "\" " + id
-            Console.println(defi)
+            prog = prog + "\n" + defi
             //spec!
           }
           //class def (Build_Class) - fields + methods
@@ -154,10 +154,11 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
           val fieldnames = x.getFields.map(x => scala.collection.JavaConversions.asBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList.map(_.getName.getIdentifier)).flatten
           val fields = fieldnames.foldRight("(SS.empty)")("(SS.add \"" + _ + "\" " + _ + ")")
           val metstring = methods.foldRight("(SM.empty _)")("(SM.add " + _ + " " + _ + ")")
-          Console.println("Definition " + nam + " := Build_Class " + fields + " " + metstring + ".")
+          prog = prog + "\n" + "Definition " + nam + " := Build_Class " + fields + " " + metstring + "."
           //program def (Build_Program) - classes
           val classes = List("\"" + nam + "\" " + nam).foldRight("(SM.empty _)")("(SM.add " + _ + " " + _ + ")")
-          Console.println("Definition Prog := Build_Program " + classes + ".")
+          prog = prog + "\n" + "Definition Prog := Build_Program " + classes + "."
+          Console.println(prog)
           //x.setProperty(EclipseJavaASTProperties.coqDefinition, _)
         case _ =>
       }
