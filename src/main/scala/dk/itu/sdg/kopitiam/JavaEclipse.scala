@@ -136,22 +136,32 @@ trait EclipseJavaHelper {
     override def endVisitNode (node : ASTNode) : Unit =
       node match {
         case x : TypeDeclaration =>
+          var methods = List[String]()
           val ms = x.getMethods
           for (m <- ms) {
             val defi = m.getProperty(EclipseJavaASTProperties.coqDefinition).asInstanceOf[String]
             val nam = m.getName.getIdentifier
+            val id = nam + "M"
+            methods ::= "\"" + nam + "\" " + id
             Console.println("Definition " + nam + "_body := " + defi + ".")
             val arguments = scala.collection.JavaConversions.asBuffer(m.parameters).map(_.asInstanceOf[SingleVariableDeclaration]).toList
             val arglist = arguments.map(_.getName).map(printE(_)).mkString("[", ",", "]")
             val returnvar = m.getProperty(EclipseJavaASTProperties.returnValue).asInstanceOf[String]
-            Console.println("Definition " + nam + "M := Build_Method (" + arglist + ") " + nam + "_body " + returnvar + ".")
+            Console.println("Definition " + id + " := Build_Method " + arglist + " " + nam + "_body " + returnvar + ".")
             //spec!
           }
-          //class def (Build_Class/Build_Program) - fields + methods
+          //class def (Build_Class) - fields + methods
+          val nam = x.getName.getIdentifier
+          val fieldnames = x.getFields.map(x => scala.collection.JavaConversions.asBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList.map(_.getName.getIdentifier)).flatten
+          val fields = fieldnames.foldRight("(SS.empty)")("(SS.add \"" + _ + "\" " + _ + ")")
+          val metstring = methods.foldRight("(SM.empty _)")("(SM.add " + _ + " " + _ + ")")
+          Console.println("Definition " + nam + " := Build_Class " + fields + " " + metstring + ".")
+          //program def (Build_Program) - classes
+          val classes = List("\"" + nam + "\" " + nam).foldRight("(SM.empty _)")("(SM.add " + _ + " " + _ + ")")
+          Console.println("Definition Prog := Build_Program " + classes + ".")
           //x.setProperty(EclipseJavaASTProperties.coqDefinition, _)
         case _ =>
       }
-
 
     import org.eclipse.jdt.core.dom.Statement
     import org.eclipse.jdt.core.dom.StructuralPropertyDescriptor
