@@ -7,6 +7,7 @@ object EclipseJavaASTProperties {
   val coqLength : String = "dk.itu.sdg.kopitiam.coqLength"
   val coqOffset : String = "dk.itu.sdg.kopitiam.coqOffset"
   val coqDefinition : String = "dk.itu.sdg.kopitiam.coqDefinition"
+  val coqSpecification : String = "dk.itu.sdg.kopitiam.coqSpecification"
 }
 
 trait EclipseJavaHelper {
@@ -106,6 +107,18 @@ trait EclipseJavaHelper {
 
     var ret : String = "`0"
 
+    private def extractString (x : Option[Pair[Initializer, String]]) : String = {
+      x match {
+        case Some(x) =>
+          Console.println("string is " + x._2)
+          val idx = x._2.indexOf(":")
+          val r = x._2.substring(idx + 1, x._2.length - 2).trim
+          Console.println("r is " + r)
+          r
+        case None => ""
+      }
+    }
+
     override def visitNode (node : ASTNode) : Boolean = {
       node match {
         case x : TypeDeclaration =>
@@ -116,20 +129,73 @@ trait EclipseJavaHelper {
           ret = "`0"
           Console.println("got a method declaration. now what? specs: " + specs.size)
           val body = x.getBody
+          val name = x.getName.getIdentifier
+          val arguments = scala.collection.JavaConversions.asBuffer(x.parameters).map(_.asInstanceOf[SingleVariableDeclaration]).toList.map(_.getName)
+          val arglist = arguments.map(printE(_)).mkString("[", ";", "]")
           if (body != null) {
             val bd = getBodyString(body)
             bd match {
               case Some(y) =>
-                val name = x.getName.getIdentifier
                 val id = name + "M"
-                val arguments = scala.collection.JavaConversions.asBuffer(x.parameters).map(_.asInstanceOf[SingleVariableDeclaration]).toList
-                val arglist = arguments.map(_.getName).map(printE(_)).mkString("[", ",", "]")
                 val defs = "Definition " + name + "_body := " + y + """.
 Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + ret + "."
                 x.setProperty(EclipseJavaASTProperties.coqDefinition, defs)
               case _ =>
             }
           }
+
+          var quant : Option[Pair[Initializer, String]] = None;
+          var pre : Option[Pair[Initializer, String]] = None;
+          var post : Option[Pair[Initializer, String]] = None;
+
+          for (x <- specs) {
+            val spectxt = doc.get(x.getStartPosition, x.getLength)
+            val lvaridx = spectxt.indexOf("lvars:")
+            if (lvaridx > -1) {
+              assert(quant == None)
+              quant = Some((x, spectxt))
+            } else {
+              val preidx = scala.math.max(spectxt.indexOf("precondition:"), spectxt.indexOf("requires:"))
+              if (preidx > -1) {
+                assert(pre == None)
+                pre = Some((x, spectxt))
+              } else {
+                val postidx = scala.math.max(spectxt.indexOf("postcondition:"), spectxt.indexOf("ensures:"))
+                if (postidx > -1) {
+                  assert(post == None)
+                  post = Some((x, spectxt))
+                }
+              }
+            }
+          }
+          assert(quant != None && pre != None && post != None)
+          var spec1 = "Definition " + name + """_spec :=
+  ("""
+
+          val quant1 = extractString(quant).split(",")
+          val quant2 =
+            if (quant1.length == 0)
+              ""
+            else
+              quant1.mkString("[A] ", ", [A]", "")
+
+          val clazz = printE(findClass(x).getName)
+          val spec2 = spec1 + quant2 + ", " + clazz + " :.: \"" + name + "\" |-> " + arglist + """
+  {{ """
+
+          val rtype = x.getReturnType2
+          val rets =
+            if (rtype != null && rtype.isInstanceOf[PrimitiveType] && rtype.asInstanceOf[PrimitiveType].getPrimitiveTypeCode == PrimitiveType.VOID)
+              "\"\", "
+            else
+              ""
+
+          val spec3 = spec2 + extractString(pre) + " }}-{{ " + rets
+          val spec = spec3 + extractString(post) + " }})."
+          //set offsets for quant._1, pre._1, post._1
+
+          Console.println("spec: " + spec)
+          x.setProperty(EclipseJavaASTProperties.coqSpecification, spec)
           specs = List[Initializer]()
         case x =>
       }
