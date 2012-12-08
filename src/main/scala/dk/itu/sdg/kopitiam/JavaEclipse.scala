@@ -2,6 +2,14 @@
 
 package dk.itu.sdg.kopitiam
 
+object EclipseJavaASTProperties {
+  val coqString : String = "dk.itu.sdg.kopitiam.coqString"
+  val coqLength : String = "dk.itu.sdg.kopitiam.coqLength"
+  val coqOffset : String = "dk.itu.sdg.kopitiam.coqOffset"
+  val coqDefinition : String = "dk.itu.sdg.kopitiam.coqDefinition"
+  val returnValue : String = "dk.itu.sdg.kopitiam.returnValue"
+}
+
 trait EclipseJavaHelper {
   import org.eclipse.jdt.core.ITypeRoot
   import org.eclipse.ui.IEditorInput
@@ -78,13 +86,14 @@ trait EclipseJavaHelper {
       }
   }
 
-  def walkAST (root : ASTNode) : Unit = {
-    val co = new CoqOutput()
+  import org.eclipse.jface.text.IDocument
+  def walkAST (root : ASTNode, doc : IDocument) : Unit = {
+    val co = new CoqOutput(doc)
     root.accept(co)
   }
 
   import org.eclipse.jdt.core.dom.{AnnotationTypeDeclaration, AnnotationTypeMemberDeclaration, AnonymousClassDeclaration, ArrayAccess, ArrayCreation, ArrayInitializer, ArrayType, AssertStatement, Assignment, Block, BlockComment, BooleanLiteral, BreakStatement, CastExpression, CatchClause, CharacterLiteral, ClassInstanceCreation, CompilationUnit, ConditionalExpression, ConstructorInvocation, ContinueStatement, DoStatement, EmptyStatement, EnhancedForStatement, EnumConstantDeclaration, EnumDeclaration, ExpressionStatement, FieldAccess, FieldDeclaration, ForStatement, IfStatement, ImportDeclaration, InfixExpression, Initializer, InstanceofExpression, Javadoc, LabeledStatement, LineComment, MarkerAnnotation, MemberRef, MemberValuePair, MethodDeclaration, MethodInvocation, MethodRef, MethodRefParameter, Modifier, NormalAnnotation, NullLiteral, NumberLiteral, PackageDeclaration, ParameterizedType, ParenthesizedExpression, PostfixExpression, PrefixExpression, PrimitiveType, QualifiedName, QualifiedType, ReturnStatement, SimpleName, SimpleType, SingleMemberAnnotation, SingleVariableDeclaration, StringLiteral, SuperConstructorInvocation, SuperFieldAccess, SuperMethodInvocation, SwitchCase, SwitchStatement, SynchronizedStatement, TagElement, TextElement, ThisExpression, ThrowStatement, TryStatement, TypeDeclaration, TypeDeclarationStatement, TypeLiteral, TypeParameter, UnionType, VariableDeclarationExpression, VariableDeclarationFragment, VariableDeclarationStatement, WhileStatement, WildcardType}
-  class CoqOutput () extends Visitor {
+  class CoqOutput (doc : IDocument) extends Visitor {
     import scala.collection.immutable.Stack
     var offset : Int = 0;
     var specs : List[Initializer] = List[Initializer]()
@@ -96,28 +105,56 @@ trait EclipseJavaHelper {
     //method-local
     var proof : List[String] = List[String]()
 
+    var ret : String = "`0"
+
     override def visitNode (node : ASTNode) : Boolean = {
       node match {
         case x : TypeDeclaration =>
           Console.println("type declaration (class definition!?)")
         case x : Initializer =>
           specs = x :: specs
-          Console.println("added spec")
         case x : MethodDeclaration =>
+          ret = "`0"
           Console.println("got a method declaration. now what? specs: " + specs.size)
-          specs = List[Initializer]()
           val body = x.getBody
           if (body != null) {
             val bd = getBodyString(body)
+            bd match {
+              case Some(y) =>
+                x.setProperty(EclipseJavaASTProperties.coqDefinition, y)
+              case _ =>
+            }
+            x.setProperty(EclipseJavaASTProperties.returnValue, ret)
             Console.println("method has body string: " + bd)
           }
+          specs = List[Initializer]()
         case x =>
-          Console.println("node is " + node.getClass.toString + ": " + node.toString)
       }
       true
     }
 
+    override def endVisitNode (node : ASTNode) : Unit =
+      node match {
+        case x : TypeDeclaration =>
+          val ms = x.getMethods
+          for (m <- ms) {
+            val defi = m.getProperty(EclipseJavaASTProperties.coqDefinition).asInstanceOf[String]
+            val nam = m.getName.getIdentifier
+            Console.println("Definition " + nam + "_body := " + defi + ".")
+            val arguments = scala.collection.JavaConversions.asBuffer(m.parameters).map(_.asInstanceOf[SingleVariableDeclaration]).toList
+            val arglist = arguments.map(_.getName).map(printE(_)).mkString("[", ",", "]")
+            val returnvar = m.getProperty(EclipseJavaASTProperties.returnValue).asInstanceOf[String]
+            Console.println("Definition " + nam + "M := Build_Method (" + arglist + ") " + nam + "_body " + returnvar + ".")
+            //spec!
+          }
+          //class def (Build_Class/Build_Program) - fields + methods
+          //x.setProperty(EclipseJavaASTProperties.coqDefinition, _)
+        case _ =>
+      }
+
+
     import org.eclipse.jdt.core.dom.Statement
+    import org.eclipse.jdt.core.dom.StructuralPropertyDescriptor
     private def getBodyString (b : Statement) : Option[String] =
       b match {
         case x : Block =>
@@ -150,11 +187,9 @@ trait EclipseJavaHelper {
                     }
                 }
             }
-          Console.println("want to write " + res)
           Some(res)
         case x : IfStatement =>
           val tst = printE(x.getExpression)
-          Console.println("pushing tst " + tst)
           val alt =
             if (x.getElseStatement == null)
               Some("(cskip)")
@@ -164,14 +199,13 @@ trait EclipseJavaHelper {
           Some("(cif " + tst + " " + con.get + " " + alt.get + ")")
         case x : AssertStatement =>
           val ass = printE(x.getExpression)
-          Console.println("pushing ass " + ass)
           Some("(cassert " + ass + ")")
         case x : EmptyStatement =>
-          Console.println(x)
+          Console.println("got emptystatement (" + x.getClass.toString + "): " + x)
+          Console.println("raw: " + doc.get(x.getStartPosition, x.getLength))
           None
         case x : WhileStatement =>
           val tst = printE(x.getExpression)
-          Console.println("pushing tst " + tst)
           val bod = getBodyString(x.getBody)
           Some("(cwhile " + tst + " " + bod.get + ")")
         case x : ReturnStatement =>
@@ -180,7 +214,13 @@ trait EclipseJavaHelper {
           assert(e.isInstanceOf[SimpleName] || e.isInstanceOf[BooleanLiteral] ||
                  e.isInstanceOf[NullLiteral] || e.isInstanceOf[NumberLiteral] ||
                  e.isInstanceOf[StringLiteral])
-          //ret = printE(e)
+          assert(ret == "`0")
+          if (e.isInstanceOf[BooleanLiteral] ||
+              e.isInstanceOf[NullLiteral] || e.isInstanceOf[NumberLiteral] ||
+              e.isInstanceOf[StringLiteral])
+            ret = printE(e)
+          else //if e.isInstanceOf[SimpleName]
+            ret = "(var_expr " + printE(e) + ")"
           None
         case x : VariableDeclarationStatement =>
           val frags = x.fragments
@@ -191,7 +231,6 @@ trait EclipseJavaHelper {
             if (init != null) {
               val inite = printE(init)
               val ass = "(cassign " + nam + " " + inite + ")"
-              Console.println("pushing ass " + ass)
               Some(ass)
             } else None
           } else {
@@ -203,6 +242,7 @@ trait EclipseJavaHelper {
 
     private def printB (bs : List[String]) : String =
       bs match {
+        case Nil => "(cskip)"
         case x :: Nil => x
         case x :: y => "(cseq " + x + " " + printB(y) + ")"
       }
@@ -218,7 +258,7 @@ trait EclipseJavaHelper {
         case InfixExpression.Operator.GREATER_EQUALS => "vge"
         case InfixExpression.Operator.EQUALS => "veq"
         case x =>
-          Console.println("translating " + op)
+          Console.println("translating " + op + " to =")
           "="
       }
 
@@ -242,7 +282,6 @@ trait EclipseJavaHelper {
       }
 
     private def printE (e : Expression) : String = {
-      Console.println("printe with " + e)
       e match {
         case x : BooleanLiteral =>
           val v = x.booleanValue
@@ -276,7 +315,6 @@ trait EclipseJavaHelper {
           val a = scala.collection.JavaConversions.asBuffer(x.arguments).map(_.asInstanceOf[Expression])
           val as = a.map(printE(_)).mkString("[", "; ", "]")
           val st = (x.resolveMethodBinding.getModifiers & Modifier.STATIC) == Modifier.STATIC
-          Console.println("st is: " + st + " mods: " + x.resolveMethodBinding.getModifiers + " static: " + Modifier.STATIC)
           val expr =
             if (e != null)
               printE(e)
@@ -299,13 +337,14 @@ trait EclipseJavaHelper {
         case x : ThisExpression =>
           "`this"
         case x =>
-          Console.println("got " + x)
-          Console.println("dunno how to print " + x.getClass.toString)
+          Console.println("dunno how to print (" + x.getClass.toString + "): " + x)
           ""
       }
     }
   }
 
+
+  //beware of the boilerplate. nothing interesting to see below.
   import org.eclipse.jdt.core.dom.ASTVisitor
 
   class Visitor extends ASTVisitor {
@@ -484,10 +523,3 @@ trait EclipseJavaHelper {
     override def endVisit (node : WildcardType) : Unit = { endVisitNode(node) }
   }
 }
-
-object EclipseJavaASTProperties {
-  val coqString : String = "dk.itu.sdg.kopitiam.coqoutput"
-  val coqLength : String = "dk.itu.sdg.kopitiam.coqlength"
-  val coqOffset : String = "dk.itu.sdg.kopitiam.coqoffset"
-}
-
