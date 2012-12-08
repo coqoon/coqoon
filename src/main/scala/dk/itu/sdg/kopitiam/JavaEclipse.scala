@@ -7,7 +7,6 @@ object EclipseJavaASTProperties {
   val coqLength : String = "dk.itu.sdg.kopitiam.coqLength"
   val coqOffset : String = "dk.itu.sdg.kopitiam.coqOffset"
   val coqDefinition : String = "dk.itu.sdg.kopitiam.coqDefinition"
-  val returnValue : String = "dk.itu.sdg.kopitiam.returnValue"
 }
 
 trait EclipseJavaHelper {
@@ -121,10 +120,15 @@ trait EclipseJavaHelper {
             val bd = getBodyString(body)
             bd match {
               case Some(y) =>
-                x.setProperty(EclipseJavaASTProperties.coqDefinition, y)
+                val name = x.getName.getIdentifier
+                val id = name + "M"
+                val arguments = scala.collection.JavaConversions.asBuffer(x.parameters).map(_.asInstanceOf[SingleVariableDeclaration]).toList
+                val arglist = arguments.map(_.getName).map(printE(_)).mkString("[", ",", "]")
+                val defs = "Definition " + name + "_body := " + y + """.
+Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + ret + "."
+                x.setProperty(EclipseJavaASTProperties.coqDefinition, defs)
               case _ =>
             }
-            x.setProperty(EclipseJavaASTProperties.returnValue, ret)
           }
           specs = List[Initializer]()
         case x =>
@@ -142,11 +146,7 @@ trait EclipseJavaHelper {
             val nam = m.getName.getIdentifier
             val id = nam + "M"
             methods ::= "\"" + nam + "\" " + id
-            Console.println("Definition " + nam + "_body := " + defi + ".")
-            val arguments = scala.collection.JavaConversions.asBuffer(m.parameters).map(_.asInstanceOf[SingleVariableDeclaration]).toList
-            val arglist = arguments.map(_.getName).map(printE(_)).mkString("[", ",", "]")
-            val returnvar = m.getProperty(EclipseJavaASTProperties.returnValue).asInstanceOf[String]
-            Console.println("Definition " + id + " := Build_Method " + arglist + " " + nam + "_body " + returnvar + ".")
+            Console.println(defi)
             //spec!
           }
           //class def (Build_Class) - fields + methods
