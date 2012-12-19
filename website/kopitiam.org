@@ -48,7 +48,7 @@ Coq. On the right the goal viewer shows the current proof state.
  #+end_html
 
 ** [[http://coq.inria.fr][Coq]] - currently Coq-8.3 ([[http://coq.inria.fr/coq-8.3][direct link]]) is required
-** [[file:charge-coq8.3-20121017.tar.gz][Charge!]] - Java semantics, higher-order separation logic and tactics in Coq
+** [[file:charge-coq8.3-20121219.tar.gz][Charge!]] - Java semantics, higher-order separation logic and tactics in Coq
 *** Unpack the tarball and use 'make' to compile
 ** [[http://eclipse.org][Eclipse]] - currently a 32bit version of Indigo (3.7) ([[http://www.eclipse.org/downloads/packages/release/indigo/sr2][direct link]]) is required
 ** Start Eclipse
