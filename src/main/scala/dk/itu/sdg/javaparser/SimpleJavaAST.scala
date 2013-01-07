@@ -38,11 +38,11 @@ trait CoqOutput {
   def setCoqString (s : Option[String]) : Unit = { coqString = s }
   def getCoqString () : Option[String] = coqString
   def prependCoqString (s : String) : Unit = {
-    coqString = Some(s + "\n" + coqString.getOrElse(""))
+    coqString = Some(s + coqString.getOrElse(""))
   }
   def appendCoqString (s : String) : Unit = {
     coqString match {
-      case None => coqString = Some(s)
+      case None => coqString = Some("\n" + s)
       case Some(x) => coqString = Some(x + "\n" + s)
     }
   }

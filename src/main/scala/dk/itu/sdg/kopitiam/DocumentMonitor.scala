@@ -208,7 +208,9 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                         Console.println("s is " + s.data + " len: " + coqp.length + " newlen: " + s.data.length)
                         val poff = x.getCoqPos.offset + 1
                         val mcoq = x.getCoqString.get
-                        x.setCoqString(Some(mcoq.take(poff + coqp.offset) + s.data + mcoq.drop(poff + coqp.offset + coqp.length)))
+                        val newstr = mcoq.take(poff + coqp.offset) + s.data + mcoq.drop(poff + coqp.offset + coqp.length)
+                        Console.println("newstr is " + newstr.drop(poff + coqp.offset - 10).take(20))
+                        x.setCoqString(Some(newstr))
                         s.setCoqPos(coqp.offset, s.data.length)
                         val diff = s.data.length - coqp.length
                         //modify offsets
