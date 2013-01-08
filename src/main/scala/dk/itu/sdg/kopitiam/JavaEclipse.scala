@@ -8,6 +8,7 @@ object EclipseJavaASTProperties {
   val coqOffset : String = "dk.itu.sdg.kopitiam.coqOffset"
   val coqDefinition : String = "dk.itu.sdg.kopitiam.coqDefinition"
   val coqSpecification : String = "dk.itu.sdg.kopitiam.coqSpecification"
+  val coqProof : String = "dk.itu.sdg.kopitiam.coqProof"
 }
 
 trait EclipseJavaHelper {
@@ -106,6 +107,7 @@ trait EclipseJavaHelper {
 
     //method-local
     var proof : List[String] = List[String]()
+    var deps : Set[String] = Set[String]()
 
     var ret : String = "`0"
 
@@ -129,11 +131,16 @@ trait EclipseJavaHelper {
           specs = x :: specs
         case x : MethodDeclaration =>
           ret = "`0"
+          proof = List[String]()
+          deps = Set[String]()
           Console.println("got a method declaration. now what? specs: " + specs.size)
           val body = x.getBody
           val name = x.getName.getIdentifier
+          val st = (x.getModifiers & Modifier.STATIC) == Modifier.STATIC
           val arguments = scala.collection.JavaConversions.asBuffer(x.parameters).map(_.asInstanceOf[SingleVariableDeclaration]).toList.map(_.getName)
-          val arglist = arguments.map(printE(_)).mkString("[", ";", "]")
+          val argli = arguments.map(printE(_))
+          val arglis = if (st) argli else "\"this\"" :: argli
+          val arglist = arglis.mkString("[", ";", "]")
           if (body != null) {
             val bd = getBodyString(body)
             bd match {
@@ -199,6 +206,22 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
           Console.println("spec: " + spec)
           x.setProperty(EclipseJavaASTProperties.coqSpecification, spec)
           specs = List[Initializer]()
+
+
+          val rdep = deps.map(_ + "_spec")
+          val rdeps =
+            if (rdep.size == 0) ""
+            else if (rdep.size == 1) "|> " + rdep.last
+            else
+              "|> " + rdep.mkString("(", "[/\\]", ")")
+          val suff = if (deps.contains(name)) " at 2 " else ""
+          val prfhead = "Lemma valid_" + name + "_" + clazz.drop(1).dropRight(1) + ": " + rdeps + " |= " + name + """_spec.
+Proof.
+  unfold """ + name + "_spec" + suff + "; unfold_spec.\n"
+          val prf = prfhead + proof.reverse.mkString("\n") + "\nQed.\n"
+          Console.println("proof is " + prf)
+          x.setProperty(EclipseJavaASTProperties.coqProof, prf)
+
         case x =>
       }
       true
@@ -257,6 +280,7 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
                       case y : MethodInvocation =>
                         val st = (y.resolveMethodBinding.getModifiers & Modifier.STATIC) == Modifier.STATIC
                         val str = if (st) "cscall" else "cdcall"
+                        deps = deps + y.getName.getIdentifier
                         "(" + str + " " + printE(l) + " " + printE(y) + ")"
                       case y : ClassInstanceCreation =>
                         "(calloc " + printE(l) + " " + printE(y) + ")"
@@ -268,6 +292,12 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
                         "(cassign " + printE(l) + " " + printE(y) + ")"
                     }
                 }
+              case x : MethodInvocation =>
+                val st = (x.resolveMethodBinding.getModifiers & Modifier.STATIC) == Modifier.STATIC
+                val str = if (st) "cscall" else "cdcall"
+                deps = deps + x.getName.getIdentifier
+                //XXX: is null right here?
+                "(" + str + " `null " + printE(x) + ")"
             }
           Some(res)
         case x : IfStatement =>
@@ -283,7 +313,22 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
           val ass = printE(x.getExpression)
           Some("(cassert " + ass + ")")
         case x : EmptyStatement =>
-          Console.println("raw: " + doc.get(x.getStartPosition, x.getLength))
+          val script = doc.get(x.getStartPosition, x.getLength)
+          val con =
+            if (script.contains("invariant:")) {
+              val i1 = script.indexOf(":")
+              val i2 = script.indexOf("frame:")
+              val i3 = if (i2 == -1) script.length - 2 else i2
+              val i = script.substring(i1 + 1, i3).trim
+              val f = if (i2 == -1)
+                        "`true"
+                      else
+                        script.substring(i3 + 6, script.length - 2).trim
+              "forward (" + i + ") (" + f + ")."
+            } else
+              script.drop(2).dropRight(2).trim
+          proof ::= con
+          Console.println("raw: " + con)
           None
         case x : WhileStatement =>
           val tst = printE(x.getExpression)
@@ -412,7 +457,8 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
               if (st)
                 printE(findClass(x).getName)
               else
-                "this"
+                "\"this\""
+          deps = deps + n.getIdentifier
           expr + " " + printE(n) + " " + as
         case x : SimpleName =>
           "\"" + x.getIdentifier + "\""
