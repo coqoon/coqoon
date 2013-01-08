@@ -54,9 +54,9 @@ trait EclipseJavaHelper {
     val nf = new NodeFinder(offset, length)
     root.accept(nf)
     val result = nf.coveredNode
-    if (result == null || result.getStartPosition() != offset || result.getLength() != length) {
+    if (result == null || result.getStartPosition() != offset || result.getLength() != length)
       nf.coveringNode
-    } else
+    else
       result
   }
 
@@ -82,7 +82,9 @@ trait EclipseJavaHelper {
             false
           } else
             true
-        case _ => true
+        case x =>
+          Console.println("visitNode: not using " + x)
+          true
       }
   }
 
@@ -110,10 +112,10 @@ trait EclipseJavaHelper {
     private def extractString (x : Option[Pair[Initializer, String]]) : String = {
       x match {
         case Some(x) =>
-          Console.println("string is " + x._2)
+          //Console.println("string is " + x._2)
           val idx = x._2.indexOf(":")
           val r = x._2.substring(idx + 1, x._2.length - 2).trim
-          Console.println("r is " + r)
+          //Console.println("r is " + r)
           r
         case None => ""
       }
@@ -247,7 +249,9 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
                 val l = x.getLeftHandSide
                 l match {
                   case y : FieldAccess =>
-                    "(cwrite " + printE(l) + " " + printE(y) + ")"
+                    "(cwrite " + printE(y) + " " + printE(r) + ")"
+                  case y : QualifiedName =>
+                    "(cwrite " + printE(y) + " " + printE(r) + ")"
                   case y =>
                     r match {
                       case y : MethodInvocation =>
@@ -257,6 +261,8 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
                       case y : ClassInstanceCreation =>
                         "(calloc " + printE(l) + " " + printE(y) + ")"
                       case y : FieldAccess =>
+                        "(cread " + printE(l) + " " + printE(y) + ")"
+                      case y : QualifiedName =>
                         "(cread " + printE(l) + " " + printE(y) + ")"
                       case y =>
                         "(cassign " + printE(l) + " " + printE(y) + ")"
@@ -277,7 +283,6 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
           val ass = printE(x.getExpression)
           Some("(cassert " + ass + ")")
         case x : EmptyStatement =>
-          Console.println("got emptystatement (" + x.getClass.toString + "): " + x)
           Console.println("raw: " + doc.get(x.getStartPosition, x.getLength))
           None
         case x : WhileStatement =>
@@ -306,7 +311,13 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
             val init = frag.getInitializer
             if (init != null) {
               val inite = printE(init)
-              val ass = "(cassign " + nam + " " + inite + ")"
+              Console.println("init is a " + init.getClass.toString)
+              val str =
+                if (init.isInstanceOf[QualifiedName] || init.isInstanceOf[FieldAccess])
+                  "cread"
+                else
+                  "cassign"
+              val ass = "(" + str + " " + nam + " " + inite + ")"
               Some(ass)
             } else None
           } else {
@@ -354,10 +365,13 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
         case y : NullLiteral => printE(y)
         case y : NumberLiteral => printE(y)
         case y : StringLiteral => printE(y)
-        case y => Console.println("dunno how to print " + y); ""
+        case y : ThisExpression => "\"this\""
+        case y => Console.println("dunno how to print (" + y.getClass.toString + ")" + y); ""
       }
 
     private def printE (e : Expression) : String = {
+      Console.println("printE with (" + e.getClass.toString + ") " + e);
+      val r =
       e match {
         case x : BooleanLiteral =>
           val v = x.booleanValue
@@ -374,14 +388,14 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
         case x : FieldAccess =>
           val e = x.getExpression
           val n = x.getName
-          printEev(e) + " \"" + printE(n) + "\""
+          printEev(e) + " " + printE(n)
         case x : InfixExpression =>
           val l = x.getLeftOperand
           val r = x.getRightOperand
           val op = x.getOperator
           val (opstr, opend) =
             if (op == InfixExpression.Operator.NOT_EQUALS)
-              ("enot (lift2 eeq_ptr_up ", ")")
+              ("enot (lift2 eeq_ptr_up", ")")
             else
               ("lift2 " + translateop(op), "")
           "(" + opstr + " " + printEev(l) + " " + printEev(r) + opend + ")"
@@ -402,6 +416,8 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
           expr + " " + printE(n) + " " + as
         case x : SimpleName =>
           "\"" + x.getIdentifier + "\""
+        case x : QualifiedName =>
+          printE(x.getQualifier) + " " + printE(x.getName)
         case x : NullLiteral =>
           "`null"
         case x : NumberLiteral =>
@@ -416,6 +432,8 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
           Console.println("dunno how to print (" + x.getClass.toString + "): " + x)
           ""
       }
+      Console.println("result is " + r)
+      r
     }
   }
 
