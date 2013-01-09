@@ -34,7 +34,7 @@ trait EclipseJavaHelper {
     if (input.isInstanceOf[ICompilationUnit]) {
       val cu : ICompilationUnit = input.asInstanceOf[ICompilationUnit]
       Console.println("getting root from the shared AST")
-      root = SharedASTProvider.getAST(cu, SharedASTProvider.WAIT_NO, null)
+      root = SharedASTProvider.getAST(cu, SharedASTProvider.WAIT_YES, null)
     } else {
       val parser : ASTParser = ASTParser.newParser(AST.JLS4)
       parser.setResolveBindings(true)
@@ -84,7 +84,7 @@ trait EclipseJavaHelper {
           } else
             true
         case x =>
-          Console.println("visitNode: not using " + x)
+          //Console.println("visitNode: not using " + x)
           true
       }
   }
@@ -107,7 +107,6 @@ trait EclipseJavaHelper {
     var classes : List[String] = List[String]()
 
     //method-local
-    var proof : List[String] = List[String]()
     var deps : Set[String] = Set[String]()
 
     var ret : String = "`0"
@@ -132,7 +131,6 @@ trait EclipseJavaHelper {
           specs = x :: specs
         case x : MethodDeclaration =>
           ret = "`0"
-          proof = List[String]()
           deps = Set[String]()
           Console.println("got a method declaration. now what? specs: " + specs.size)
           val body = x.getBody
@@ -219,9 +217,8 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
           val prfhead = "Lemma valid_" + name + "_" + clazz.drop(1).dropRight(1) + ": " + rdeps + " |= " + name + """_spec.
 Proof.
   unfold """ + name + "_spec" + suff + "; unfold_spec.\n"
-          val prf = prfhead + proof.reverse.mkString("\n") + "\nQed.\n"
-          Console.println("proof is " + prf)
-          x.setProperty(EclipseJavaASTProperties.coqProof, prf)
+          Console.println("proof is " + prfhead)
+          x.setProperty(EclipseJavaASTProperties.coqProof, prfhead)
 
         case x => //Console.println("found here: " + x.getClass.toString)
       }
@@ -336,7 +333,7 @@ Opaque unique_method_names.
               "forward (" + i + ") (" + f + ")."
             } else
               script.drop(2).dropRight(2).trim
-          proof ::= con
+          //proof ::= con
           //Console.println("raw: " + con)
           None
         case x : WhileStatement =>
@@ -365,7 +362,7 @@ Opaque unique_method_names.
             val init = frag.getInitializer
             if (init != null) {
               val inite = printE(init)
-              Console.println("init is a " + init.getClass.toString)
+              //Console.println("init is a " + init.getClass.toString)
               val str =
                 if (init.isInstanceOf[QualifiedName] || init.isInstanceOf[FieldAccess])
                   "cread"
