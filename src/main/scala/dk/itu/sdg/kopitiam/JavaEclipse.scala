@@ -296,8 +296,7 @@ Proof.
                 val st = (x.resolveMethodBinding.getModifiers & Modifier.STATIC) == Modifier.STATIC
                 val str = if (st) "cscall" else "cdcall"
                 deps = deps + x.getName.getIdentifier
-                //XXX: is null right here?
-                "(" + str + " `null " + printE(x) + ")"
+                "(" + str + " \"\" " + printE(x) + ")"
             }
           Some(res)
         case x : IfStatement =>
@@ -321,7 +320,7 @@ Proof.
               val i3 = if (i2 == -1) script.length - 2 else i2
               val i = script.substring(i1 + 1, i3).trim
               val f = if (i2 == -1)
-                        "`true"
+                        "<true>"
                       else
                         script.substring(i3 + 6, script.length - 2).trim
               "forward (" + i + ") (" + f + ")."
