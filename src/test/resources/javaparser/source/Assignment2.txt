@@ -1,6 +1,0 @@
-class Foo {
-  void bar () {
-    int a = 10;
-    a = a + 20;
-  }
-}

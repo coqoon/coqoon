@@ -428,9 +428,6 @@ class TranslateAction extends KAction {
   import java.io.{InputStreamReader,ByteArrayInputStream}
   import scala.util.parsing.input.StreamReader
 
-  import dk.itu.sdg.javaparser.JavaAST
-  object JavaTC extends JavaAST { }
-
   import org.eclipse.jdt.core.ICompilationUnit
   override def execute (ev : ExecutionEvent) : Object = {
     Console.println("execute translation!")
@@ -444,16 +441,16 @@ class TranslateAction extends KAction {
   }
 
   import scala.util.parsing.input.Position
-  import dk.itu.sdg.javaparser.{SJFieldDefinition, SJInvokable}
   def translate (file : IFile, generate : Boolean) : Unit = {
     val nam = file.getName
     if (nam.endsWith(".java")) {
       val basename = nam.split("\\.")(0)
       val is = StreamReader(new InputStreamReader(file.getContents, "UTF-8"))
       val proj = EclipseTables.StringToProject(basename)
-      val ps = proj.provenMethods.length
+      //val ps = proj.provenMethods.length
       var success : Boolean = false
-      JavaTC.parse(is, basename) match {
+      //XXX: need to rework this here!
+/*      JavaTC.parse(is, basename) match {
         case Left(x) =>
           x.foreach(y => JavaPosition.markPos(y.message, y.position))
         case Right((c, defs)) =>
@@ -517,7 +514,7 @@ class TranslateAction extends KAction {
         System.arraycopy(conbytes, 0, bs, modbytes.length, conbytes.length)
         trfi.setContents(new ByteArrayInputStream(bs), IResource.NONE, null)
         EclipseBoilerPlate.warnUser("Generated Proof Certificate", "Successfully generated a proof certificate: \"" + basename + "Java.v\" .")
-      } }
+      } } */
     } else
       Console.println("wasn't a java file")
   }
@@ -545,7 +542,6 @@ class TranslateToSimpleJavaAction extends KAction {
     null
   }
 
-  import dk.itu.sdg.javaparser.JavaOutput
   def translate (file : IFile) : Unit = {
     val con : Option[String]=
       try
@@ -554,6 +550,8 @@ class TranslateToSimpleJavaAction extends KAction {
       { case (e : Throwable) => None }
     con match {
       case Some(x) =>
+        //XXX: need to rework translation
+        /*
         val newcon = JavaOutput.parseandoutput(x)
         val fn = file.getName
         val nffm = file.getProjectRelativePath.removeLastSegments(1).toString + "/" + fn.substring(0, fn.length - 5) + "Simple.java"
@@ -566,6 +564,7 @@ class TranslateToSimpleJavaAction extends KAction {
         val ncon = newcon.getBytes("UTF-8")
 
         translatedfile.setContents(new ByteArrayInputStream(ncon), IResource.NONE, null)
+        */
       case None =>
     }
   }

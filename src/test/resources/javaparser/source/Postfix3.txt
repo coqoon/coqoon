@@ -1,6 +1,0 @@
-class Foo {
-  int a;
-  void bar () {
-    a++;
-  }
-}

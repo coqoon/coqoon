@@ -1,7 +1,0 @@
-class List {
-    Cell head = null;
-    
-    void add(Object e) {
-        head = new Cell(e, head);
-    }
-}

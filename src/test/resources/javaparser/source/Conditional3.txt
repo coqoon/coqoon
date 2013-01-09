@@ -1,7 +1,0 @@
-class Foo {
-  int c;
-  int b;
-  void bar (int a) {
-   b = a == c ? 20 : 30;
-  }
-}
