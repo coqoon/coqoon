@@ -104,6 +104,7 @@ trait EclipseJavaHelper {
     var program : List[String] = List[String]()
     var spec : List[String] = List[String]()
     var specLemmas : List[String] = List[String]()
+    var classes : List[String] = List[String]()
 
     //method-local
     var proof : List[String] = List[String]()
@@ -222,7 +223,7 @@ Proof.
           Console.println("proof is " + prf)
           x.setProperty(EclipseJavaASTProperties.coqProof, prf)
 
-        case x =>
+        case x => Console.println("found here: " + x.getClass.toString)
       }
       true
     }
@@ -246,11 +247,16 @@ Proof.
           val fields = fieldnames.foldRight("(SS.empty)")("(SS.add \"" + _ + "\" " + _ + ")")
           val metstring = methods.foldRight("(SM.empty _)")("(SM.add " + _ + " " + _ + ")")
           prog = prog + "\n" + "Definition " + nam + " := Build_Class " + fields + " " + metstring + "."
-          //program def (Build_Program) - classes
-          val classes = List("\"" + nam + "\" " + nam).foldRight("(SM.empty _)")("(SM.add " + _ + " " + _ + ")")
-          prog = prog + "\n" + "Definition Prog := Build_Program " + classes + "."
+
+          classes ::= nam
           Console.println(prog)
-          //x.setProperty(EclipseJavaASTProperties.coqDefinition, _)
+          x.setProperty(EclipseJavaASTProperties.coqDefinition, prog)
+        case x : CompilationUnit =>
+          //program def (Build_Program) - classes
+          val clazz = classes.foldRight("(SM.empty _)")((x, y) => "(SM.add \"" + x + "\" " + x + " " + y + ")")
+          val prog = "Definition Prog := Build_Program " + clazz + "."
+          Console.println(prog)
+          x.setProperty(EclipseJavaASTProperties.coqDefinition, prog)
         case _ =>
       }
 
