@@ -223,7 +223,7 @@ Proof.
           Console.println("proof is " + prf)
           x.setProperty(EclipseJavaASTProperties.coqProof, prf)
 
-        case x => Console.println("found here: " + x.getClass.toString)
+        case x => //Console.println("found here: " + x.getClass.toString)
       }
       true
     }
@@ -255,8 +255,12 @@ Proof.
           //program def (Build_Program) - classes
           val clazz = classes.foldRight("(SM.empty _)")((x, y) => "(SM.add \"" + x + "\" " + x + " " + y + ")")
           val prog = "Definition Prog := Build_Program " + clazz + "."
-          Console.println(prog)
-          x.setProperty(EclipseJavaASTProperties.coqDefinition, prog)
+          val umn = """
+Definition unique_method_names := option_proof (search_unique_names Prog).
+Opaque unique_method_names.
+"""
+          Console.println(prog + umn)
+          x.setProperty(EclipseJavaASTProperties.coqDefinition, prog + umn)
         case _ =>
       }
 
@@ -333,7 +337,7 @@ Proof.
             } else
               script.drop(2).dropRight(2).trim
           proof ::= con
-          Console.println("raw: " + con)
+          //Console.println("raw: " + con)
           None
         case x : WhileStatement =>
           val tst = printE(x.getExpression)
@@ -420,7 +424,7 @@ Proof.
       }
 
     private def printE (e : Expression) : String = {
-      Console.println("printE with (" + e.getClass.toString + ") " + e);
+      //Console.println("printE with (" + e.getClass.toString + ") " + e);
       val r =
       e match {
         case x : BooleanLiteral =>
@@ -483,7 +487,7 @@ Proof.
           Console.println("dunno how to print (" + x.getClass.toString + "): " + x)
           ""
       }
-      Console.println("result is " + r)
+      //Console.println("result is " + r)
       r
     }
   }
