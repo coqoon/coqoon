@@ -386,33 +386,33 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper {
     if (! ActionDisabler.ready)
       EclipseBoilerPlate.warnUser("Not ready", "Sorry, the Eclipse preference store is not yet ready. Wait a few seconds")
     else {
-    //plan:
-    // a: get project
-    val edi : JavaEditor = editor.asInstanceOf[JavaEditor]
-    val prov = edi.getDocumentProvider
-    val doc = prov.getDocument(edi.getEditorInput)
-    val bla = getRoot(edi.getEditorInput)
-    val cu = getCompilationUnit(bla)
-    val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
-    val off = selection.getOffset
-    val node = findASTNode(cu, off, 0)
-    Console.println("found a node (" + node.getClass.toString + "): " + node.toString)
-    walkAST(cu, doc)
-    val proj = EclipseTables.DocToProject(doc)
-    if (JavaPosition.editor != edi) {
-      if (JavaPosition.editor != null) {
-        JavaPosition.retract
-        JavaPosition.retractModel
+      //plan:
+      // a: get project
+      val edi : JavaEditor = editor.asInstanceOf[JavaEditor]
+      val prov = edi.getDocumentProvider
+      val doc = prov.getDocument(edi.getEditorInput)
+      val bla = getRoot(edi.getEditorInput)
+      val cu = getCompilationUnit(bla)
+      walkAST(cu, doc) //side effects: properties: coq output, spec ptr to method
+      val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
+      val off = selection.getOffset
+      val node = findASTNode(cu, off, 0)
+      Console.println("found a node (" + node.getClass.toString + ")")
+      val md = findMethod(node)
+      Console.println("method is " + md.getClass.toString)
+      val proj = EclipseTables.DocToProject(doc)
+      if (JavaPosition.editor != edi) {
+        if (JavaPosition.editor != null) {
+          JavaPosition.retract
+          JavaPosition.retractModel
+        }
+        JavaPosition.editor = edi
       }
-      JavaPosition.editor = edi
-    }
-    // c: find method name in java buffer
-    ///val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
-    val sl = selection.getStartLine
+      // c: find method name in java buffer
 
-    // b: if outdated coqString: translate
-    ///proj.proveMethod(sl)
-    ///CoqCommands.step
+      // b: if outdated coqString: translate
+      ///proj.proveMethod(sl)
+      ///CoqCommands.step
     }
   }
   override def doit () : Unit = { }

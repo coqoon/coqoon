@@ -9,6 +9,7 @@ object EclipseJavaASTProperties {
   val coqDefinition : String = "dk.itu.sdg.kopitiam.coqDefinition"
   val coqSpecification : String = "dk.itu.sdg.kopitiam.coqSpecification"
   val coqProof : String = "dk.itu.sdg.kopitiam.coqProof"
+  val method : String = "dk.itu.sdg.kopitiam.method"
 }
 
 trait EclipseJavaHelper {
@@ -45,48 +46,65 @@ trait EclipseJavaHelper {
       Console.println("running the parser")
       root = parser.createAST(null).asInstanceOf[CompilationUnit]
     }
-    Console.println("root (which we return) is " + root)
+    Console.println("root (which we return) is " + root.getClass.toString)
     return root
   }
 
+  import org.eclipse.jdt.core.dom.{ASTNode, MethodDeclaration, Statement, Initializer}
+  def findMethod (x : ASTNode) : MethodDeclaration =
+    x match {
+      case y : MethodDeclaration => y
+      case y : Initializer =>
+        val m = y.getProperty(EclipseJavaASTProperties.method)
+        if (m != null) m.asInstanceOf[MethodDeclaration] else null
+      case y => findMethod(y.getParent)
+    }
 
-  import org.eclipse.jdt.core.dom.{ASTNode, Statement}
-  def findASTNode (root : ASTNode, offset : Int, length : Int) : Statement = {
+  def findASTNode (root : ASTNode, offset : Int, length : Int) : ASTNode = {
     val nf = new NodeFinder(offset, length)
     root.accept(nf)
     val result = nf.coveredNode
-    if (result == null || result.getStartPosition() != offset || result.getLength() != length)
-      nf.coveringNode
-    else
-      result
+    val sr : ASTNode = nf.coveringNode.getOrElse(null)
+    result match {
+      case Some(x) =>
+        if (x.getStartPosition != offset || x.getLength != length)
+          sr
+        else
+          x
+      case None => sr
+    }
   }
 
-
   class NodeFinder (off : Int, len : Int) extends Visitor {
-    var coveringNode : Statement = null
-    var coveredNode : Statement = null
-    override def visitNode (node : ASTNode) : Boolean =
-      node match {
-        case node : Statement =>
-          val ns = node.getStartPosition
-          val ne = ns + node.getLength
-          if (ne < off || off + len < ns)
-            false
-          else if (ns <= off && off + len <= ne)
-            coveringNode = node
-          if (off <= ns && ne <= off + len) {
-            if (coveringNode == node) {
-              coveredNode = node
-              true
-            } else if (coveredNode == null)
-              coveredNode = node
-            false
-          } else
+    var coveringNode : Option[ASTNode] = None
+    var coveredNode : Option[ASTNode] = None
+    override def visitNode (node : ASTNode) : Boolean = {
+      val f = (node : ASTNode) => {
+        val ns = node.getStartPosition
+        val ne = ns + node.getLength
+        if (ne < off || off + len < ns)
+          false
+        else if (ns <= off && off + len <= ne)
+          coveringNode = Some(node)
+        if (off <= ns && ne <= off + len) {
+          if (coveringNode == node) {
+            coveredNode = Some(node)
             true
+          } else if (coveredNode == None)
+            coveredNode = Some(node)
+          false
+        } else
+          true
+      }
+      node match {
+        case node : Statement => f(node)
+        case md : MethodDeclaration => f(md)
+        case i : Initializer => f(i)
         case x =>
           //Console.println("visitNode: not using " + x)
           true
       }
+    }
   }
 
   import org.eclipse.jface.text.IDocument
@@ -125,14 +143,12 @@ trait EclipseJavaHelper {
 
     override def visitNode (node : ASTNode) : Boolean = {
       node match {
-        case x : TypeDeclaration =>
-          Console.println("type declaration (class definition!?)")
         case x : Initializer =>
           specs = x :: specs
         case x : MethodDeclaration =>
           ret = "`0"
           deps = Set[String]()
-          Console.println("got a method declaration. now what? specs: " + specs.size)
+          //Console.println("got a method declaration. now what? specs: " + specs.size)
           val body = x.getBody
           val name = x.getName.getIdentifier
           val st = (x.getModifiers & Modifier.STATIC) == Modifier.STATIC
@@ -156,22 +172,24 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
           var pre : Option[Pair[Initializer, String]] = None;
           var post : Option[Pair[Initializer, String]] = None;
 
-          for (x <- specs) {
-            val spectxt = doc.get(x.getStartPosition, x.getLength)
+          for (s <- specs) {
+            //adjust pointers!
+            s.setProperty(EclipseJavaASTProperties.method, x)
+            val spectxt = doc.get(s.getStartPosition, s.getLength)
             val lvaridx = spectxt.indexOf("lvars:")
             if (lvaridx > -1) {
               assert(quant == None)
-              quant = Some((x, spectxt))
+              quant = Some((s, spectxt))
             } else {
               val preidx = scala.math.max(spectxt.indexOf("precondition:"), spectxt.indexOf("requires:"))
               if (preidx > -1) {
                 assert(pre == None)
-                pre = Some((x, spectxt))
+                pre = Some((s, spectxt))
               } else {
                 val postidx = scala.math.max(spectxt.indexOf("postcondition:"), spectxt.indexOf("ensures:"))
                 if (postidx > -1) {
                   assert(post == None)
-                  post = Some((x, spectxt))
+                  post = Some((s, spectxt))
                 }
               }
             }
