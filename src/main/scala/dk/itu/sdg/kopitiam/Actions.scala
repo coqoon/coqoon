@@ -393,14 +393,18 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper {
       val doc = prov.getDocument(edi.getEditorInput)
       val bla = getRoot(edi.getEditorInput)
       val cu = getCompilationUnit(bla)
+      // b: if outdated coqString: translate -- need to verify outdated...
       walkAST(cu, doc) //side effects: properties: coq output, spec ptr to method
+      // c: find method and statement we want to prove
       val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
       val off = selection.getOffset
       val node = findASTNode(cu, off, 0)
       Console.println("found a node (" + node.getClass.toString + ")")
       val md = findMethod(node)
       Console.println("method is " + md.getClass.toString)
+      JavaPosition.method = Some(md)
       val proj = EclipseTables.DocToProject(doc)
+      proj.program = Some(cu)
       if (JavaPosition.editor != edi) {
         if (JavaPosition.editor != null) {
           JavaPosition.retract
@@ -408,11 +412,8 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper {
         }
         JavaPosition.editor = edi
       }
-      // c: find method name in java buffer
-
-      // b: if outdated coqString: translate
-      ///proj.proveMethod(sl)
-      ///CoqCommands.step
+      //proj.proveMethod(node)
+      //CoqCommands.step
     }
   }
   override def doit () : Unit = { }

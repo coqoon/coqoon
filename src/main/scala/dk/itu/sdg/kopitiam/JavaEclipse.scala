@@ -8,6 +8,8 @@ object EclipseJavaASTProperties {
   val coqOffset : String = "dk.itu.sdg.kopitiam.coqOffset"
   val coqDefinition : String = "dk.itu.sdg.kopitiam.coqDefinition"
   val coqSpecification : String = "dk.itu.sdg.kopitiam.coqSpecification"
+  val coqProgramLength : String = "dk.itu.sdg.kopitiam.coqProgramLength"
+  val coqSpecLength : String = "dk.itu.sdg.kopitiam.coqSpecLength"
   val coqProof : String = "dk.itu.sdg.kopitiam.coqProof"
   val method : String = "dk.itu.sdg.kopitiam.method"
 }
@@ -46,7 +48,7 @@ trait EclipseJavaHelper {
       Console.println("running the parser")
       root = parser.createAST(null).asInstanceOf[CompilationUnit]
     }
-    Console.println("root (which we return) is " + root.getClass.toString)
+    //Console.println("root (which we return) is " + root.getClass.toString)
     return root
   }
 
@@ -113,20 +115,14 @@ trait EclipseJavaHelper {
     root.accept(co)
   }
 
-  import org.eclipse.jdt.core.dom.{AnnotationTypeDeclaration, AnnotationTypeMemberDeclaration, AnonymousClassDeclaration, ArrayAccess, ArrayCreation, ArrayInitializer, ArrayType, AssertStatement, Assignment, Block, BlockComment, BooleanLiteral, BreakStatement, CastExpression, CatchClause, CharacterLiteral, ClassInstanceCreation, CompilationUnit, ConditionalExpression, ConstructorInvocation, ContinueStatement, DoStatement, EmptyStatement, EnhancedForStatement, EnumConstantDeclaration, EnumDeclaration, ExpressionStatement, FieldAccess, FieldDeclaration, ForStatement, IfStatement, ImportDeclaration, InfixExpression, Initializer, InstanceofExpression, Javadoc, LabeledStatement, LineComment, MarkerAnnotation, MemberRef, MemberValuePair, MethodDeclaration, MethodInvocation, MethodRef, MethodRefParameter, Modifier, NormalAnnotation, NullLiteral, NumberLiteral, PackageDeclaration, ParameterizedType, ParenthesizedExpression, PostfixExpression, PrefixExpression, PrimitiveType, QualifiedName, QualifiedType, ReturnStatement, SimpleName, SimpleType, SingleMemberAnnotation, SingleVariableDeclaration, StringLiteral, SuperConstructorInvocation, SuperFieldAccess, SuperMethodInvocation, SwitchCase, SwitchStatement, SynchronizedStatement, TagElement, TextElement, ThisExpression, ThrowStatement, TryStatement, TypeDeclaration, TypeDeclarationStatement, TypeLiteral, TypeParameter, UnionType, VariableDeclarationExpression, VariableDeclarationFragment, VariableDeclarationStatement, WhileStatement, WildcardType}
+  import org.eclipse.jdt.core.dom.{AbstractTypeDeclaration, AnnotationTypeDeclaration, AnnotationTypeMemberDeclaration, AnonymousClassDeclaration, ArrayAccess, ArrayCreation, ArrayInitializer, ArrayType, AssertStatement, Assignment, Block, BlockComment, BooleanLiteral, BreakStatement, CastExpression, CatchClause, CharacterLiteral, ClassInstanceCreation, CompilationUnit, ConditionalExpression, ConstructorInvocation, ContinueStatement, DoStatement, EmptyStatement, EnhancedForStatement, EnumConstantDeclaration, EnumDeclaration, ExpressionStatement, FieldAccess, FieldDeclaration, ForStatement, IfStatement, ImportDeclaration, InfixExpression, Initializer, InstanceofExpression, Javadoc, LabeledStatement, LineComment, MarkerAnnotation, MemberRef, MemberValuePair, MethodDeclaration, MethodInvocation, MethodRef, MethodRefParameter, Modifier, NormalAnnotation, NullLiteral, NumberLiteral, PackageDeclaration, ParameterizedType, ParenthesizedExpression, PostfixExpression, PrefixExpression, PrimitiveType, QualifiedName, QualifiedType, ReturnStatement, SimpleName, SimpleType, SingleMemberAnnotation, SingleVariableDeclaration, StringLiteral, SuperConstructorInvocation, SuperFieldAccess, SuperMethodInvocation, SwitchCase, SwitchStatement, SynchronizedStatement, TagElement, TextElement, ThisExpression, ThrowStatement, TryStatement, TypeDeclaration, TypeDeclarationStatement, TypeLiteral, TypeParameter, UnionType, VariableDeclarationExpression, VariableDeclarationFragment, VariableDeclarationStatement, WhileStatement, WildcardType}
   class CoqOutput (doc : IDocument) extends Visitor {
     import scala.collection.immutable.Stack
     var offset : Int = 0;
     var specs : List[Initializer] = List[Initializer]()
-    //class|program-wide stuff
-    var program : List[String] = List[String]()
-    var spec : List[String] = List[String]()
-    var specLemmas : List[String] = List[String]()
-    var classes : List[String] = List[String]()
 
-    //method-local
+    //method local
     var deps : Set[String] = Set[String]()
-
     var ret : String = "`0"
 
     private def extractString (x : Option[Pair[Initializer, String]]) : String = {
@@ -220,7 +216,7 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
           val spec = spec3 + extractString(post) + " }})."
           //set offsets for quant._1, pre._1, post._1
 
-          Console.println("spec: " + spec)
+          //Console.println("spec: " + spec)
           x.setProperty(EclipseJavaASTProperties.coqSpecification, spec)
           specs = List[Initializer]()
 
@@ -235,7 +231,7 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
           val prfhead = "Lemma valid_" + name + "_" + clazz.drop(1).dropRight(1) + ": " + rdeps + " |= " + name + """_spec.
 Proof.
   unfold """ + name + "_spec" + suff + "; unfold_spec.\n"
-          Console.println("proof is " + prfhead)
+          //Console.println("proof is " + prfhead)
           x.setProperty(EclipseJavaASTProperties.coqProof, prfhead)
 
         case x => //Console.println("found here: " + x.getClass.toString)
@@ -243,39 +239,93 @@ Proof.
       true
     }
 
+    import scala.collection.immutable.Stack
     override def endVisitNode (node : ASTNode) : Unit =
       node match {
         case x : TypeDeclaration =>
-          var prog : String = ""
           var methods : List[String] = List[String]()
           for (m <- x.getMethods) {
-            val defi = m.getProperty(EclipseJavaASTProperties.coqDefinition).asInstanceOf[String]
             val nam = m.getName.getIdentifier
             val id = nam + "M"
             methods ::= "\"" + nam + "\" " + id
-            prog = prog + "\n" + defi
-            //spec!
           }
           //class def (Build_Class) - fields + methods
           val nam = x.getName.getIdentifier
           val fieldnames = x.getFields.map(x => scala.collection.JavaConversions.asBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList.map(_.getName.getIdentifier)).flatten
           val fields = fieldnames.foldRight("(SS.empty)")("(SS.add \"" + _ + "\" " + _ + ")")
           val metstring = methods.foldRight("(SM.empty _)")("(SM.add " + _ + " " + _ + ")")
-          prog = prog + "\n" + "Definition " + nam + " := Build_Class " + fields + " " + metstring + "."
+          val cd = "Definition " + nam + " := Build_Class " + fields + " " + metstring + "."
 
-          classes ::= nam
-          Console.println(prog)
-          x.setProperty(EclipseJavaASTProperties.coqDefinition, prog)
+          //Console.println(cd)
+          x.setProperty(EclipseJavaASTProperties.coqDefinition, cd)
         case x : CompilationUnit =>
-          //program def (Build_Program) - classes
+          var spec : List[String] = List[String]()
+          var prog : List[String] = List[String]()
+          var classes : Set[String] = Set[String]()
+          var pname : Option[String] = None
+          var todo : Stack[AbstractTypeDeclaration] = Stack[AbstractTypeDeclaration]()
+          todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.types).map(_.asInstanceOf[AbstractTypeDeclaration]))
+          while (!todo.isEmpty) {
+            val t = todo.top
+            todo = todo.pop
+            t match {
+              case x : TypeDeclaration =>
+                //Console.println("got typedecl " + x.getName.getIdentifier)
+                if (pname == None) pname = Some(x.getName.getIdentifier)
+                classes += x.getName.getIdentifier
+                todo = todo.pushAll(x.getTypes)
+                val p = x.getProperty(EclipseJavaASTProperties.coqDefinition)
+                if (p != null)
+                  prog ::= p.asInstanceOf[String]
+                for (x <- x.getMethods) {
+                  val sp = x.getProperty(EclipseJavaASTProperties.coqSpecification)
+                  if (sp != null)
+                    spec ::= sp.asInstanceOf[String]
+                  val p = x.getProperty(EclipseJavaASTProperties.coqDefinition)
+                  if (p != null)
+                    prog ::= p.asInstanceOf[String]
+                  //Console.println("  got m " + x.getName.getIdentifier)
+                }
+              case y =>
+            }
+          }
+
+          val n = pname.get
           val clazz = classes.foldRight("(SM.empty _)")((x, y) => "(SM.add \"" + x + "\" " + x + " " + y + ")")
-          val prog = "Definition Prog := Build_Program " + clazz + "."
+          val pr = "Definition Prog := Build_Program " + clazz + "."
           val umn = """
 Definition unique_method_names := option_proof (search_unique_names Prog).
-Opaque unique_method_names.
-"""
-          Console.println(prog + umn)
-          x.setProperty(EclipseJavaASTProperties.coqDefinition, prog + umn)
+Opaque unique_method_names."""
+          prog = List("""
+Require Import AbstractAsn.
+Require Import Tactics.
+
+Open Scope string_scope.
+Open Scope hasn_scope.
+
+Module """ + n + " <: PROGRAM.") ++ prog ++ List(pr, umn, "End " + n + ".")
+
+          spec = List("""
+Module """ + n + """_spec.
+Import """ + n + """.
+Import """ + n + """_model.
+Module Import SC := Tac """ + n + """.
+
+Open Scope spec_scope.
+Open Scope asn_scope.
+""") ++ spec
+
+          val p = prog.mkString("\n") + "\n"
+          val s = spec.mkString("\n") + "\n"
+          Console.println("SPEC: " + s)
+          Console.println("PROG: " + p)
+          Console.println("End of line")
+
+
+          x.setProperty(EclipseJavaASTProperties.coqDefinition, p)
+          x.setProperty(EclipseJavaASTProperties.coqProgramLength, p.size)
+          x.setProperty(EclipseJavaASTProperties.coqSpecification, s)
+          x.setProperty(EclipseJavaASTProperties.coqSpecLength, s.size)
         case _ =>
       }
 

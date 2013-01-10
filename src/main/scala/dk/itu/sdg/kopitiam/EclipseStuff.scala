@@ -97,7 +97,8 @@ class CoqJavaProject (basename : String) {
   var modelShell : Option[CoqShellTokens] = None
   var proofShell : Option[CoqShellTokens] = None
 
-  //var program : Option[SJClassDefinition] = None
+  import org.eclipse.jdt.core.dom.CompilationUnit
+  var program : Option[CompilationUnit] = None
 
   def gotClosed (doc : IDocument) : Unit = {
     javaSource match {
@@ -143,7 +144,8 @@ class CoqJavaProject (basename : String) {
   import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.core.resources.{IFile, IMarker, IProject}
   import org.eclipse.swt.widgets.Display
-  def proveMethod (sourceline : Int) : Unit = {
+  import org.eclipse.jdt.core.dom.ASTNode
+  def proveMethod (n : ASTNode) : Unit = {
     modelShell match {
       case Some(x) =>
         if (x.globalStep > CoqState.getShell.globalStep)
@@ -156,7 +158,7 @@ class CoqJavaProject (basename : String) {
           proofShell = None
       case None =>
     }
-    Console.println("provemethod called with " + sourceline + " modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " modelshell " + modelShell + " proofshell " + proofShell)
+    Console.println("provemethod called! modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " modelshell " + modelShell + " proofshell " + proofShell)
     if (modelNewerThanSource || modelShell == None) {
       modelNewerThanSource = false
       var open : Boolean = false
@@ -268,16 +270,14 @@ class CoqJavaProject (basename : String) {
       CoqCommands.step
     })
     CoqCommands.doLater(() => {
-      val meth : Option[Any] = None //MethodDeclaration] = None
       proofShell match {
         case None =>
           Console.println("sending defs + spec")
           DocumentState._content = getCoqString
           PrintActor.register(JavaPosition)
-          JavaPosition.method = meth
           CoqStepAllAction.doit
         case Some(x) =>
-          if (x.globalStep < CoqState.getShell.globalStep) {
+/*          if (x.globalStep < CoqState.getShell.globalStep)
             if (JavaPosition.method != meth) {
               DocumentState.setBusy
               Console.println("backtracking to proofshell " + x)
@@ -290,7 +290,7 @@ class CoqJavaProject (basename : String) {
           } else {
             JavaPosition.method = meth
             CoqCommands.step
-          }
+          } */
       }
     })
     CoqCommands.doLater(() => {
@@ -436,7 +436,8 @@ object JavaPosition extends CoqCallback {
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   var editor : JavaEditor = null
 
-  var method : Option[Any] = None //SJInvokable] = None
+  import org.eclipse.jdt.core.dom.MethodDeclaration
+  var method : Option[MethodDeclaration] = None
 
   import org.eclipse.jface.text.Position
   import org.eclipse.jface.text.source.Annotation
@@ -467,7 +468,7 @@ object JavaPosition extends CoqCallback {
   def getCoqString () : Option[String] = {
     val proj = getProj
     if (proj != null) {
-      proj.proveMethod(-1)
+      //proj.proveMethod(-1)
       proj.getCoqString
     } else None
   }
