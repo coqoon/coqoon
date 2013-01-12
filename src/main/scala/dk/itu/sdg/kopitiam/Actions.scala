@@ -249,6 +249,8 @@ def countSubstring (str1 : String, str2 : String) : Int={
     Console.println("CoqStepAction.doit called, ready? " + DocumentState.readyForInput)
     if (DocumentState.readyForInput) {
       val con = DocumentState.content
+      //why is this here?
+      //log says "changing model while proving java code works now"
       CoqCommands.step
       val content = con.drop(DocumentState.position)
       if (content.length > 0) {
@@ -412,8 +414,8 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper {
         }
         JavaPosition.editor = edi
       }
-      //proj.proveMethod(node)
-      //CoqCommands.step
+      proj.proveMethod(node)
+      CoqCommands.step
     }
   }
   override def doit () : Unit = { }
@@ -648,9 +650,13 @@ object CoqStepNotifier extends CoqCallback {
             fini
           else {
             val nc = CoqTop.findNextCommand(DocumentState.content.drop(DocumentState.position))
-            if ((test.isDefined && test.get(DocumentState.position, DocumentState.position + nc)) || nc == -1)
+            val bl = if (test.isDefined) test.get(DocumentState.position, DocumentState.position + nc) else "no test"
+            Console.println("nc is " + nc + " tstres " + bl)
+            if ((test.isDefined && test.get(DocumentState.position, DocumentState.position + nc)) || nc == -1) {
+              Console.println("finishing")
               fini
-            else if (monoton) {
+            } else if (monoton) {
+              Console.println("one more step")
               CoqStepAction.doit
             } else
               fini

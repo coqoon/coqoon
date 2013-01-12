@@ -58,7 +58,7 @@ object PrintActor {
   def deregister (c : CoqCallback) : Unit = { callbacks = callbacks.filterNot(_ == c) }
 
   def distribute (c : CoqResponse) : Unit = {
-    Console.println("distributing response to all callbacks (" + callbacks.length + ")")
+    Console.println("distributing response to all callbacks (" + callbacks.length + "): " + c)
     callbacks.foreach(x => {
       Console.println("  distributing to " + x)
       x.dispatch(c)
