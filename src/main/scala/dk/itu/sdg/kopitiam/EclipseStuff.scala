@@ -634,46 +634,64 @@ object JavaPosition extends CoqCallback {
   }
 
   var proofoffset : Int = -1
-  var index : Int = 0
-  var nextidx : Int = 0
-  import org.eclipse.jdt.core.dom.{Statement, EmptyStatement}
 
+  import org.eclipse.jdt.core.dom.Statement
+  var cur : Option[Statement] = None
+  var next : Option[Statement] = None
+
+  import org.eclipse.jdt.core.dom.{EmptyStatement, WhileStatement, IfStatement, Block}
+  import scala.collection.immutable.Stack
   def getCoqCommand () : Option[String] = {
     val prov = editor.getDocumentProvider
     val doc = prov.getDocument(editor.getEditorInput)
-    val statements = scala.collection.JavaConversions.asBuffer(method.get.getBody.statements).map(_.asInstanceOf[Statement])
-    //index is wrong! need to go to children of while/if as well!
     var res : Option[String] = None
-    var i : Int = index + 1
-    while (res == None && i < statements.length - 1) {
-      val nextst = statements(i)
+    var todo : Stack[Statement] = Stack[Statement]()
+    var active : Boolean = (cur == None)
+    todo = todo.push(method.get.getBody)
+    while (res == None && !todo.isEmpty) {
+      val nextst = todo.top
+      todo = todo.pop
       res = nextst match {
         case x : EmptyStatement =>
-          val script = doc.get(x.getStartPosition, x.getLength)
-          val con =
-            if (script.contains("invariant:")) {
-              val i1 = script.indexOf(":")
-              val i2 = script.indexOf("frame:")
-              val i3 = if (i2 == -1) script.length - 2 else i2
-              val i = script.substring(i1 + 1, i3).trim
-              val f = if (i2 == -1)
-                        "<true>"
-                      else
-                        script.substring(i3 + 6, script.length - 2).trim
-              "forward (" + i + ") (" + f + ")."
-            } else
-              script.drop(2).dropRight(2).trim
-          Console.println("found ES: " + con)
-          Some(con)
+          if (active) {
+            val script = doc.get(x.getStartPosition, x.getLength)
+            Console.println("script is " + script + " (size: " + script.length + ")")
+            val con =
+              if (script.contains("invariant:")) {
+                val i1 = script.indexOf(":")
+                val i2 = script.indexOf("frame:")
+                val i3 = if (i2 == -1) script.length - 3 else i2
+                val i = script.substring(i1 + 1, i3).trim
+                val f =
+                  if (i2 == -1)
+                    "<true>"
+                  else
+                    script.substring(i3 + 6, script.length - 3).trim
+                Console.println("inv: " + i1 + " " + i2 + " " + i3 + " f " + f)
+                "forward (" + i + ") (" + f + ")."
+              } else
+                script.drop(2).dropRight(2).trim
+            Console.println("found ES: " + con)
+            next = Some(x)
+            Some(con)
+          } else None
+        case x : WhileStatement =>
+          todo = todo.push(x.getBody)
+          None
+        case x : IfStatement =>
+          todo = todo.push(x.getElseStatement)
+          todo = todo.push(x.getThenStatement)
+          None
+        case x : Block =>
+          todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]).reverse)
+          None
         case _ =>
           Console.println("found nth")
           None
       }
-      if (res == None)
-        i = i + 1
+      if (!active && cur.get == nextst)
+        active = true
     }
-    if (res != None)
-      nextidx = i
     res
   }
 
@@ -693,19 +711,23 @@ object JavaPosition extends CoqCallback {
         val coqoff = (if (proc) DocumentState.sendlen else 0) + DocumentState.position - proofoffset
         Console.println("coqoff here is now " + coqoff)
 
-        val statements = scala.collection.JavaConversions.asBuffer(method.get.getBody.statements).map(_.asInstanceOf[Statement])
-
         val start = method.get.getStartPosition
 
-        Console.println(" reAnn " + nextidx + " proc " + proc + " undo " + undo)
-        if (nextidx != -1 && !proc && !undo) {
-          Console.println("  ass " + index + " now " + nextidx)
-          index = nextidx
-          nextidx = -1
+        Console.println(" reAnn " + next + " proc " + proc + " undo " + undo)
+        if (next != None && !proc && !undo) {
+          Console.println("  ass " + cur + " now " + next)
+          cur = next
+          next = None
         }
 
-        val statement = statements(index)
-        val end = statement.getStartPosition + statement.getLength
+        val end =
+          cur match {
+            case None =>
+              val c1 = doc.getLineOfOffset(start)
+              doc.getLineOffset(c1 + 1) - 2
+            case Some(x) =>
+              x.getStartPosition + x.getLength
+          }
 
         val annmodel = prov.getAnnotationModel(editor.getEditorInput)
         annmodel.connect(doc)
