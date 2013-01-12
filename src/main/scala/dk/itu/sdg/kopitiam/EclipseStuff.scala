@@ -642,6 +642,7 @@ object JavaPosition extends CoqCallback {
     val prov = editor.getDocumentProvider
     val doc = prov.getDocument(editor.getEditorInput)
     val statements = scala.collection.JavaConversions.asBuffer(method.get.getBody.statements).map(_.asInstanceOf[Statement])
+    //index is wrong! need to go to children of while/if as well!
     var res : Option[String] = None
     var i : Int = index + 1
     while (res == None && i < statements.length - 1) {
@@ -695,6 +696,13 @@ object JavaPosition extends CoqCallback {
         val statements = scala.collection.JavaConversions.asBuffer(method.get.getBody.statements).map(_.asInstanceOf[Statement])
 
         val start = method.get.getStartPosition
+
+        Console.println(" reAnn " + nextidx + " proc " + proc + " undo " + undo)
+        if (nextidx != -1 && !proc && !undo) {
+          Console.println("  ass " + index + " now " + nextidx)
+          index = nextidx
+          nextidx = -1
+        }
 
         val statement = statements(index)
         val end = statement.getStartPosition + statement.getLength
@@ -959,12 +967,23 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         }
         _content.getOrElse("  ") //not happy with this hack
       case Some(x) =>
-        Console.println("p: " + position  + " size: " + x.size + " JP meth " + JavaPosition.method + " JP ed " + JavaPosition.editor)
-        if (position + 1 == x.size && JavaPosition.editor != null)
-          JavaPosition.getCoqCommand
         x
     }
   }
+
+  def nextCommand () : Option[String] = {
+    val cont = content.drop(DocumentState.position)
+    if (cont.length > 0) {
+      val eoc = CoqTop.findNextCommand(cont)
+      if (eoc > 0) {
+        val cmd = cont.take(eoc).trim
+        sendlen = eoc
+        Some(cmd)
+      } else None
+    } else None
+  }
+
+
 
   import scala.collection.mutable.HashMap
   var positionToShell : HashMap[Int,CoqShellTokens] = new HashMap[Int,CoqShellTokens]()
@@ -1017,6 +1036,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqShellReady(monoton, token) =>
+        Console.println(" DS dispatch: " + monoton)
         if (monoton) {
           commit
           if (positionToShell.get(position) == None) {

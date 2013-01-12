@@ -248,38 +248,52 @@ def countSubstring (str1 : String, str2 : String) : Int={
   override def doit () : Unit = {
     Console.println("CoqStepAction.doit called, ready? " + DocumentState.readyForInput)
     if (DocumentState.readyForInput) {
-      val con = DocumentState.content
       //why is this here?
       //log says "changing model while proving java code works now"
       CoqCommands.step
-      val content = con.drop(DocumentState.position)
-      if (content.length > 0) {
-        val eoc = CoqTop.findNextCommand(content)
-        //Console.println("eoc is " + eoc)
-        if (eoc > 0) {
-          val cmd = content.take(eoc).trim
-          DocumentState.sendlen = eoc
-          val cmd2 = CoqTop.filterComments(cmd)
-          if (countSubstring(cmd2, "\"") % 2 == 1) {
-            DocumentState.undo
-            Console.println("not sending anything here!")
-            EclipseBoilerPlate.mark("unterminated string!")
-            PrintActor.distribute(CoqShellReady(false, CoqState.getShell))
-          } else if (cmd2.contains("Add LoadPath") && ! new File(cmd2.substring(cmd2.indexOf("\"") + 1, cmd2.lastIndexOf("\""))).exists) {
-            DocumentState.undo
-            EclipseBoilerPlate.mark("LoadPath does not exist!")
-            PrintActor.distribute(CoqShellReady(false, CoqState.getShell))
-          } else {
-            DocumentState.setBusy
-            DocumentState.process
-            Console.println("command is (" + eoc + "): " + cmd)
-            //CoqProgressMonitor.actor.tell(("START", cmd))
-            CoqTop.writeToCoq(cmd) //sends comments over the line
-          }
+      //input protocol is too complex -- or rather too ad-hoc...
+      val cmd = DocumentState.nextCommand
+      val rcmd =
+        cmd match {
+          case Some(cmd) =>
+            val cmd2 = CoqTop.filterComments(cmd)
+            if (countSubstring(cmd2, "\"") % 2 == 1) {
+              DocumentState.undo
+              Console.println("not sending anything here!")
+              EclipseBoilerPlate.mark("unterminated string!")
+              PrintActor.distribute(CoqShellReady(false, CoqState.getShell))
+              ""
+            } else if (cmd2.contains("Add LoadPath") && ! new File(cmd2.substring(cmd2.indexOf("\"") + 1, cmd2.lastIndexOf("\""))).exists) {
+              DocumentState.undo
+              EclipseBoilerPlate.mark("LoadPath does not exist!")
+              PrintActor.distribute(CoqShellReady(false, CoqState.getShell))
+              ""
+            } else
+              cmd
+          case None =>
+            Console.println("trying my luck with JP")
+            if (DocumentState.position + 1 >= DocumentState.content.size && JavaPosition.editor != null)
+              JavaPosition.getCoqCommand match {
+                case None =>
+                  Console.println("no luck")
+                  ""
+                case Some(x) =>
+                  Console.println("luck! " + x)
+                  DocumentState.sendlen = x.size
+                  x
+              }
+            else ""
         }
+      if (rcmd.size > 0) {
+        Console.println("command is: " + rcmd)
+        DocumentState.setBusy
+        DocumentState.process
+        //CoqProgressMonitor.actor.tell(("START", cmd))
+        CoqTop.writeToCoq(rcmd) //sends comments over the line
       }
     }
   }
+
   override def start () : Boolean = false
   override def end () : Boolean = true
 }
