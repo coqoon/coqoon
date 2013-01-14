@@ -11,6 +11,7 @@ object EclipseJavaASTProperties {
   val coqProgramLength : String = "dk.itu.sdg.kopitiam.coqProgramLength"
   val coqSpecLength : String = "dk.itu.sdg.kopitiam.coqSpecLength"
   val coqProof : String = "dk.itu.sdg.kopitiam.coqProof"
+  val coqShell : String = "dk.itu.sdg.kopitiam.coqShell"
   val method : String = "dk.itu.sdg.kopitiam.method"
 }
 

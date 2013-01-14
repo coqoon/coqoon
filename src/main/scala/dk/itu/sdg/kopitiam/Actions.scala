@@ -174,31 +174,50 @@ class CoqUndoAction extends KCoqAction {
       // this implies that the table (positionToShell) is fully populated until p
       // this also implies that the previous content is not messed up!
       val curshell = CoqState.getShell
-      //curshell is head of prevs, so we better have one more thing
-      val prevs = DocumentState.positionToShell.keys.toList.sortWith(_ > _)
-      assert(prevs.length > 0)
-      Console.println("working (pos: " + pos + ") on the following keys " + prevs)
-      //now we have the current state (curshell): g cs l
-      //we look into lastmost shell, either:
-      //g-- cs l or g-- cs l-- <- we're fine
-      //g-- cs+c l++ <- we need to find something with cs (just jumped into a proof)
-      var i : Int = prevs.filter(_ >= pos).length
-      if (i == prevs.length) //special case, go to lastmost
-        i = i - 1
-      var prevshell : CoqShellTokens = DocumentState.positionToShell(prevs(i))
-      //Console.println("prevshell: " + prevshell + "\ncurshell: " + curshell)
-      assert(prevshell.globalStep < curshell.globalStep) //we're decreasing!
-      while (! prevshell.context.toSet.subsetOf(curshell.context.toSet) && prevs.length > (i + 1)) {
-        i += 1
-        prevshell = DocumentState.positionToShell(prevs(i))
-      }
-      val ctxdrop = curshell.context.length - prevshell.context.length
+
+      val prevshell : CoqShellTokens =
+        if (JavaPosition.cur == None) {
+          //curshell is head of prevs, so we better have one more thing
+          val prevs = DocumentState.positionToShell.keys.toList.sortWith(_ > _)
+          assert(prevs.length > 0)
+          Console.println("working (pos: " + pos + ") on the following keys " + prevs)
+          //now we have the current state (curshell): g cs l
+          //we look into lastmost shell, either:
+          //g-- cs l or g-- cs l-- <- we're fine
+          //g-- cs+c l++ <- we need to find something with cs (just jumped into a proof)
+          var i : Int = prevs.filter(_ >= pos).length
+          if (i == prevs.length) //special case, go to lastmost
+            i = i - 1
+          var prevshell : CoqShellTokens = DocumentState.positionToShell(prevs(i))
+          //Console.println("prevshell: " + prevshell + "\ncurshell: " + curshell)
+          assert(prevshell.globalStep < curshell.globalStep) //we're decreasing!
+          while (! prevshell.context.toSet.subsetOf(curshell.context.toSet) && prevs.length > (i + 1)) {
+            i += 1
+            prevshell = DocumentState.positionToShell(prevs(i))
+          }
+          DocumentState.sendlen = DocumentState.position - prevs(i)
+          prevs.take(i).foreach(DocumentState.positionToShell.remove(_))
+          assert(DocumentState.positionToShell.contains(0) == true)
+          prevshell
+        } else {
+          //we're java mode here...
+          //find most recent statement which was send over the wire
+          val last = JavaPosition.getLastCoqStatement
+          last match {
+            case None =>
+              Console.println("last is none, unfortunately... shouldn't be here")
+              null
+            case Some(x) =>
+              val sh = x.getProperty(EclipseJavaASTProperties.coqShell)
+              assert(sh != null && sh.isInstanceOf[CoqShellTokens])
+              sh.asInstanceOf[CoqShellTokens]
+          }
+        }
+
       DocumentState.realundo = true
       EclipseBoilerPlate.unmarkReally
       JavaPosition.unmark
-      DocumentState.sendlen = DocumentState.position - prevs(i)
-      prevs.take(i).foreach(DocumentState.positionToShell.remove(_))
-      assert(DocumentState.positionToShell.contains(0) == true)
+      val ctxdrop = curshell.context.length - prevshell.context.length
       CoqTop.writeToCoq("Backtrack " + prevshell.globalStep + " " + prevshell.localStep + " " + ctxdrop + ".")
     }
   }

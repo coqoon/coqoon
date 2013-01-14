@@ -641,6 +641,44 @@ object JavaPosition extends CoqCallback {
 
   import org.eclipse.jdt.core.dom.{EmptyStatement, WhileStatement, IfStatement, Block}
   import scala.collection.immutable.Stack
+
+  def getLastCoqStatement () : Option[Statement] = {
+    assert(next == None)
+    var todo : Stack[Statement] = Stack[Statement]()
+    todo = todo.push(method.get.getBody)
+    while (!todo.isEmpty && next == None) {
+      val st = todo.top
+      todo = todo.pop
+      st match {
+        case x : Block =>
+          todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]))
+        case x : IfStatement =>
+          todo = todo.push(x.getThenStatement)
+          todo = todo.push(x.getElseStatement)
+        case x : WhileStatement =>
+          todo = todo.push(x.getBody)
+        case x : Statement =>
+          val sh = x.getProperty(EclipseJavaASTProperties.coqShell)
+          if (sh != null)
+            cur match {
+              case None => //not sure what to do here....
+              case Some(y) =>
+                if (x != y) {
+                  Console.println("found sth exciting: " + x + ", which is not " + y)
+                  next = Some(x)
+                }
+                val she = y.getProperty(EclipseJavaASTProperties.coqShell).asInstanceOf[CoqShellTokens]
+                val sh1 = sh.asInstanceOf[CoqShellTokens]
+                if (she == sh1)
+                  Console.println("CST are the same " + she)
+                else
+                  Console.println("CST are different: " + she + " vs " + sh1)
+            }
+      }
+    }
+    next
+  }
+
   def getCoqCommand () : Option[String] = {
     val prov = editor.getDocumentProvider
     val doc = prov.getDocument(editor.getEditorInput)
@@ -697,7 +735,7 @@ object JavaPosition extends CoqCallback {
 
 
   def reAnnotate (proc : Boolean, undo : Boolean) : Unit = {
-    Console.println("reannotate called with proc " + proc + " undo " + undo)
+    Console.println("reannotate called with proc " + proc + " undo " + undo + " proofoff " + proofoffset + " method " + method + " editor " + editor)
     //4 cases:
     // #t #f =>                  remove nothing, mark yellow
     // #t #t => problem marker - remove yellow, mark nothing
@@ -708,13 +746,19 @@ object JavaPosition extends CoqCallback {
       val doc = prov.getDocument(editor.getEditorInput)
       if (proofoffset != -1) {
         //we're in proof mode!
-        val coqoff = (if (proc) DocumentState.sendlen else 0) + DocumentState.position - proofoffset
-        Console.println("coqoff here is now " + coqoff)
 
         val start = method.get.getStartPosition
 
+        if (!proc && undo)
+          cur match {
+            case Some(x) =>
+              Console.println("removing coqshell property")
+              x.setProperty(EclipseJavaASTProperties.coqShell, null)
+            case None =>
+          }
+
         Console.println(" reAnn " + next + " proc " + proc + " undo " + undo)
-        if (next != None && !proc && !undo) {
+        if (next != None && !proc) { // && !undo) {
           Console.println("  ass " + cur + " now " + next)
           cur = next
           next = None
@@ -726,6 +770,11 @@ object JavaPosition extends CoqCallback {
               val c1 = doc.getLineOfOffset(start)
               doc.getLineOffset(c1 + 1) - 2
             case Some(x) =>
+              //preserve current shell -- if success!
+              if (!proc && !undo) {
+                Console.println("preserving for " + x + " shell " + CoqState.getShell)
+                x.setProperty(EclipseJavaASTProperties.coqShell, CoqState.getShell)
+              }
               x.getStartPosition + x.getLength
           }
 
@@ -1082,7 +1131,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   import org.eclipse.swt.widgets.Display
   def undo () : Unit = {
     //Console.println("undo (@" + position + ", sendlen: " + sendlen + ") real: " + realundo)
-    if (sendlen != 0) {
+    //if (sendlen != 0) {
       if (realundo) {
         val start = scala.math.max(position - sendlen, 0)
         realundo = false
@@ -1115,7 +1164,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         sendlen = 0
         JavaPosition.reAnnotate(true, true)
       }
-    }
+    //}
   }
 
   def process () : Unit = {
