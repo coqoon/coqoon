@@ -501,6 +501,7 @@ object JavaPosition extends CoqCallback {
               //spec!
               val poff = DocumentState.position //- proj.program.get.getSpecOffset + 1 + s
               Console.println("have a spec here... " + poff)
+              mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
 /*              val ast = findSpecForCoqOffset(poff)
               ast match {
                 case Some(as) =>
@@ -511,21 +512,18 @@ object JavaPosition extends CoqCallback {
                   val star = soff + offset + sss + as.pos.column
                   mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
                 case None =>
-                  mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
               } */
             case Some(x) =>
               //proof!
-/*              val poff = DocumentState.position - proj.program.get.getProofOffset - method.get.getCoqPos.offset
-              val (ast, prev) = findStatementForCoqOffset(poff)
-              ast match {
-                case Some(as) =>
-                  val soff = doc.getLineOffset(as.pos.line - 1)
-                  //not entirely correct computation... ("<%" "invariant:")
-                  val star = s + soff + as.pos.column
+              next match {
+                case Some(st) =>
+                  //not entirely correct computation... ("invariant:" and "frame:")
+                  val star = s + st.getStartPosition + 3 //"<% "
+                  Console.println("marking at " + star + " (s: " + s + " sp: " + st.getStartPosition + ")")
                   mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
                 case None =>
                   mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
-              } */
+              }
           }
         }
       case _ =>
