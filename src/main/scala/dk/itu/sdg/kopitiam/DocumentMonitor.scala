@@ -15,6 +15,7 @@ package dk.itu.sdg.kopitiam
 
 import org.eclipse.jface.text.IDocumentListener
 import org.eclipse.ui.{IPartListener2,IWindowListener}
+import org.eclipse.jface.text.IPainter
 
 object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumentListener with EclipseUtils {
   import org.eclipse.ui.{IWorkbenchPartReference,IWorkbenchPart,IWorkbenchWindow,PlatformUI}
@@ -57,6 +58,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     activateEditor(ed)
   }
 
+  import org.eclipse.jface.text.{IPainter, ITextViewerExtension4}
   import org.eclipse.jface.text.source.{AnnotationPainter, IAnnotationAccess, Annotation, ISourceViewer}
   def maybeInsert (ed : ITextEditor, viewer : ISourceViewer) : Unit = {
     val edi = ed.getEditorInput
@@ -77,13 +79,14 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         def isTemporary (ann : Annotation) : Boolean = true
       }
       val painter = new AnnotationPainter(viewer, access)
-      painter.addDrawingStrategy("dk.itu.sdg.kopitiam.ProofDrawingStrategy", new ProofDrawingStrategy)
-      painter.addAnnotationType("dk.itu.sdg.kopitiam.processed", "dk.itu.sdg.kopitiam.ProofDrawingStrategy")
-      painter.addAnnotationType("dk.itu.sdg.kopitiam.processing", "dk.itu.sdg.kopitiam.ProofDrawingStrategy")
+      if (viewer.isInstanceOf[ITextViewerExtension4])
+        viewer.asInstanceOf[ITextViewerExtension4].addTextPresentationListener(painter)
+      painter.addHighlightAnnotationType("dk.itu.sdg.kopitiam.processed")
+      painter.addHighlightAnnotationType("dk.itu.sdg.kopitiam.processing")
       painter.setAnnotationTypeColor("dk.itu.sdg.kopitiam.processed", getPrefColor("coqSentBg"))
       painter.setAnnotationTypeColor("dk.itu.sdg.kopitiam.processing", getPrefColor("coqSentProcessBg"))
       Console.println("installed painter " + painter + " is painting? " + painter.isPaintingAnnotations)
-      painter.paint(2) //in order to activate it - better idea?
+      painter.paint(IPainter.TEXT_CHANGE) //in order to activate it - better idea?
     }
   }
 
