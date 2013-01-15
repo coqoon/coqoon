@@ -279,97 +279,6 @@ object EclipseTables {
   val StringToProject = new HashMap[String, CoqJavaProject]()
 }
 
-/*
-import akka.actor._
-class MyTimer extends Actor {
-  def receive = {
-    case ("START", x : Int) =>
-      Thread.sleep(1000);
-      if (CoqProgressMonitor.tick == x) {
-        //Console.println("tick " + CoqProgressMonitor.tick + " is equal to x " + x)
-        CoqProgressMonitor.actor.tell("REALLY")
-      }
-  }
-}
-
-object CoqProgressMonitor {
-  var tick : Int = 0
-  var timer : ActorRef = null
-  var actor : ActorRef = null
-  var multistep : Boolean = false
-}
-
-class CoqProgressMonitorImplementation extends Actor {
-  import org.eclipse.core.runtime.IProgressMonitor
-  import org.eclipse.jface.dialogs.ProgressMonitorDialog
-  import org.eclipse.swt.widgets.Shell
-  import org.eclipse.swt.widgets.Display
-  class MyProgressMonitorDialog (parent : Shell) extends ProgressMonitorDialog(parent) {
-    import org.eclipse.swt.widgets.Button
-    def getC () : Button = cancel
-  }
-
-  import org.eclipse.swt.events.{MouseListener, MouseEvent}
-  private var p : IProgressMonitor = null
-  private var pmd : MyProgressMonitorDialog = null
-  private val nam = "Coq interaction: "
-  private var title : String = ""
-
-  def receive = {
-    case ("START", n : String) =>
-      title = n
-      //Console.println("Starting progress monitor")
-      if (p == null)
-        if (CoqProgressMonitor.multistep)
-          this.self.tell("REALLY")
-        else
-          CoqProgressMonitor.timer.tell(("START", CoqProgressMonitor.tick))
-      else
-        Display.getDefault.asyncExec(
-          new Runnable() {
-            def run() = {
-              if (p != null)
-                p.setTaskName(nam + ": " + n)
-            }})
-    case "REALLY" =>
-      //assert(pmd == null)
-      Display.getDefault.asyncExec(
-        new Runnable() {
-          def run() = {
-            pmd = new MyProgressMonitorDialog(Display.getDefault.getActiveShell)
-            pmd.setCancelable(true)
-            pmd.open
-            pmd.getC.addMouseListener(new MouseListener() {
-              override def mouseDoubleClick (m : MouseEvent) : Unit = ()
-              override def mouseDown (m : MouseEvent) : Unit = CoqTop.interruptCoq
-              override def mouseUp (m : MouseEvent) : Unit = ()
-            })
-            p = pmd.getProgressMonitor
-            p.beginTask(nam + title, IProgressMonitor.UNKNOWN)
-          }})
-    case "FINISHED" =>
-      CoqProgressMonitor.tick = CoqProgressMonitor.tick + 1
-      //Console.println("Finished progress monitor " + p)
-      if (p != null && !CoqProgressMonitor.multistep) {
-        val oldp = p
-        val oldpmd = pmd
-        p = null
-        pmd = null
-        Display.getDefault.asyncExec(
-          new Runnable() {
-            def run() = {
-              oldp.done
-              oldpmd.close
-              //Clients should not call this method (the workbench calls this method at appropriate times). To have the workbench activate a part, use IWorkbenchPage.activate(IWorkbenchPart) instead.
-              DocumentState.activeEditor.setFocus
-            }
-          })
-      }
-    case x => Console.println("fell through receive of CoqProgressMonitor " + x)
-  }
-}
-*/
-
 object JavaPosition extends CoqCallback {
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   var editor : JavaEditor = null
@@ -1296,14 +1205,10 @@ object GoalViewer extends GoalViewer { }
 
 import org.eclipse.ui.IStartup
 class Startup extends IStartup {
-//  import akka.actor.ActorSystem
   override def earlyStartup () : Unit = {
     Console.println("earlyStartup called")
     ActionDisabler.disableAll
     DocumentMonitor.init
-    //val system = ActorSystem("Kopitiam")
-    //CoqProgressMonitor.actor = system.actorOf(Props[CoqProgressMonitorImplementation], name = "ProgressMonitor")
-    //CoqProgressMonitor.timer = system.actorOf(Props[MyTimer], name = "MyTimer")
     CoqTop.init
     PrintActor.register(DocumentState)
     CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + System.getProperty("file.separator")

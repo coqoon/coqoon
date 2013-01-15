@@ -311,7 +311,6 @@ def countSubstring (str1 : String, str2 : String) : Int={
         Console.println("command is: " + rcmd)
         DocumentState.setBusy
         DocumentState.process
-        //CoqProgressMonitor.actor.tell(("START", cmd))
         CoqTop.writeToCoq(rcmd) //sends comments over the line
       }
     }
@@ -327,7 +326,6 @@ class CoqStepAllAction extends KCoqAction {
     val nc = CoqTop.findNextCommand(DocumentState.content.drop(DocumentState.position))
     Console.println("step step step " + nc)
     if (nc != -1) {
-      //CoqProgressMonitor.multistep = true
       DocumentState.reveal = false
       CoqStepNotifier.active = true
       //we need to provoke first message to start callback loops
@@ -361,7 +359,6 @@ class CoqStepUntilAction extends KCoqAction {
       if (unt > DocumentState.position) {
         DocumentState.until = unt
         DocumentState.process
-        //CoqProgressMonitor.multistep = true
         DocumentState.reveal = false
         CoqStepNotifier.test = Some((x : Int, y : Int) => y >= togo)
         CoqStepNotifier.active = true
@@ -708,8 +705,6 @@ object CoqStepNotifier extends CoqCallback {
     test = None
     DocumentState.reveal = true
     DocumentState.until = -1
-    //CoqProgressMonitor.multistep = false
-    //CoqProgressMonitor.actor.tell("FINISHED")
   }
 }
 
@@ -783,7 +778,6 @@ object CoqOutputDispatcher extends CoqCallback {
     //Console.println("received in dispatch " + x)
     x match {
       case CoqShellReady(monoton, token) =>
-        //CoqProgressMonitor.actor.tell("FINISHED")
         if (monoton) {
           EclipseBoilerPlate.unmark
           JavaPosition.unmark
