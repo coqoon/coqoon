@@ -3,13 +3,8 @@
 package dk.itu.sdg.kopitiam
 
 object EclipseJavaASTProperties {
-  val coqString : String = "dk.itu.sdg.kopitiam.coqString"
-  val coqLength : String = "dk.itu.sdg.kopitiam.coqLength"
-  val coqOffset : String = "dk.itu.sdg.kopitiam.coqOffset"
   val coqDefinition : String = "dk.itu.sdg.kopitiam.coqDefinition"
   val coqSpecification : String = "dk.itu.sdg.kopitiam.coqSpecification"
-  val coqProgramLength : String = "dk.itu.sdg.kopitiam.coqProgramLength"
-  val coqSpecLength : String = "dk.itu.sdg.kopitiam.coqSpecLength"
   val coqProof : String = "dk.itu.sdg.kopitiam.coqProof"
   val coqShell : String = "dk.itu.sdg.kopitiam.coqShell"
   val method : String = "dk.itu.sdg.kopitiam.method"
@@ -324,9 +319,7 @@ Open Scope asn_scope.
 
 
           x.setProperty(EclipseJavaASTProperties.coqDefinition, p)
-          x.setProperty(EclipseJavaASTProperties.coqProgramLength, p.size)
           x.setProperty(EclipseJavaASTProperties.coqSpecification, s)
-          x.setProperty(EclipseJavaASTProperties.coqSpecLength, s.size)
         case _ =>
       }
 
