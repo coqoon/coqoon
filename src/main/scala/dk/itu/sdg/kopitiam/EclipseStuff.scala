@@ -303,15 +303,6 @@ object JavaPosition extends CoqCallback {
   }
 
   import org.eclipse.ui.IFileEditorInput
-  def getCoqString () : Option[String] = {
-    val proj = getProj
-    if (proj != null) {
-      //proj.proveMethod(-1)
-      proj.getCoqString
-    } else None
-  }
-
-  import org.eclipse.ui.IFileEditorInput
   import org.eclipse.core.resources.IMarker
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
@@ -871,13 +862,9 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   def content () : String = {
     _content match {
       case None =>
-        Console.println("no content. activeeditor is " + activeEditor + " javapos is " + JavaPosition.editor)
+        Console.println("no content. activeeditor is " + activeEditor)
         if (activeEditor != null)
           _content = Some(activeDocument.get)
-        else if (JavaPosition.editor != null) {
-          Console.println("calling JP.getCS here...")
-          _content = JavaPosition.getCoqString
-        }
         _content.getOrElse("  ") //not happy with this hack
       case Some(x) =>
         x
