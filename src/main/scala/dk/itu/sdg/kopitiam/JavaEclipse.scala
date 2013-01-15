@@ -381,22 +381,6 @@ Open Scope asn_scope.
           val ass = printE(x.getExpression)
           Some("(cassert " + ass + ")")
         case x : EmptyStatement =>
-          val script = doc.get(x.getStartPosition, x.getLength)
-          val con =
-            if (script.contains("invariant:")) {
-              val i1 = script.indexOf(":")
-              val i2 = script.indexOf("frame:")
-              val i3 = if (i2 == -1) script.length - 2 else i2
-              val i = script.substring(i1 + 1, i3).trim
-              val f = if (i2 == -1)
-                        "<true>"
-                      else
-                        script.substring(i3 + 6, script.length - 2).trim
-              "forward (" + i + ") (" + f + ")."
-            } else
-              script.drop(2).dropRight(2).trim
-          //proof ::= con
-          //Console.println("raw: " + con)
           None
         case x : WhileStatement =>
           val tst = printE(x.getExpression)

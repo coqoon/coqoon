@@ -587,7 +587,7 @@ object JavaPosition extends CoqCallback {
 
 
   def reAnnotate (proc : Boolean, undo : Boolean) : Unit = {
-    Console.println("reannotate called with proc " + proc + " undo " + undo + " proofoff " + proofoffset + " method " + method + " editor " + editor)
+    Console.println("reannotate called with proc " + proc + " undo " + undo + " proofoff " + proofoffset + " editor " + editor)
     //4 cases:
     // #t #f =>                  remove nothing, mark yellow
     // #t #t => problem marker - remove yellow, mark nothing
