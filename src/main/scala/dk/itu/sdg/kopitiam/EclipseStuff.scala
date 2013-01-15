@@ -999,7 +999,6 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   import org.eclipse.ui.{IFileEditorInput,IURIEditorInput}
   import org.eclipse.core.resources.{IFile,IResource,ResourcesPlugin}
   import org.eclipse.core.runtime.Path
-  import java.net.URI
   def resource () : IFile = {
     if (activeEditor != null) {
       val input = activeEditor.getEditorInput
@@ -1098,9 +1097,10 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     //Console.println("position updated to " + x)
   }
 
+  private var _readyForInput : Boolean = false
   def readyForInput () : Boolean = { _readyForInput }
   def setBusy () : Unit = { _readyForInput = false }
-  private var _readyForInput : Boolean = false
+
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqShellReady(monoton, token) =>
@@ -1119,9 +1119,6 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   }
 
   var oldsendlen : Int = 0
-  import org.eclipse.jface.text.{ Region, TextPresentation }
-  import org.eclipse.swt.custom.StyleRange
-
   var reveal : Boolean = true
   var autoreveal : Boolean = false
 
