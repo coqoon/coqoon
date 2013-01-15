@@ -438,7 +438,6 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper {
       Console.println("found a node (" + node.getClass.toString + ")")
       val md = findMethod(node)
       Console.println("method is " + md.getClass.toString)
-      JavaPosition.method = Some(md)
       val proj = EclipseTables.DocToProject(doc)
       proj.program = Some(cu)
       if (JavaPosition.editor != edi) {
@@ -448,7 +447,7 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper {
         }
         JavaPosition.editor = edi
       }
-      proj.proveMethod(node)
+      proj.proveMethod(md)
       CoqCommands.step
     }
   }

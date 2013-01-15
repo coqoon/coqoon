@@ -89,8 +89,8 @@ class CoqJavaProject (basename : String) {
   import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.core.resources.{IFile, IMarker, IProject}
   import org.eclipse.swt.widgets.Display
-  import org.eclipse.jdt.core.dom.ASTNode
-  def proveMethod (n : ASTNode) : Unit = {
+  import org.eclipse.jdt.core.dom.MethodDeclaration
+  def proveMethod (meth : MethodDeclaration) : Unit = {
     modelShell match {
       case Some(x) =>
         if (x.globalStep > CoqState.getShell.globalStep)
@@ -215,20 +215,20 @@ class CoqJavaProject (basename : String) {
           PrintActor.register(JavaPosition)
           CoqStepAllAction.doit
         case Some(x) =>
-/*          if (x.globalStep < CoqState.getShell.globalStep)
-            if (JavaPosition.method != meth) {
-              DocumentState.setBusy
-              Console.println("backtracking to proofshell " + x)
-              CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
-              JavaPosition.method = None
-              DocumentState.position = getCoqString.get.length
-              JavaPosition.method = meth
-            } else
-              CoqCommands.step
-          } else {
-            JavaPosition.method = meth
-            CoqCommands.step
-          } */
+          if (x.globalStep < CoqState.getShell.globalStep)
+            JavaPosition.method match {
+              case None =>
+                DocumentState.setBusy
+                Console.println("backtracking to proofshell " + x)
+                CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
+              case Some(y) =>
+                if (y != meth) {
+                  DocumentState.setBusy
+                  Console.println("backtracking to proofshell (y not meth) " + x)
+                  CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
+                }
+            }
+          CoqCommands.step
       }
     })
     CoqCommands.doLater(() => {
@@ -237,22 +237,13 @@ class CoqJavaProject (basename : String) {
         proofShell = Some(CoqState.getShell)
       }
       //story so far: model is now updated, java might be newly generated!
-      //all has been sent! - hasn't it?
-      JavaPosition.method match {
-        case Some(x) =>
-          val prf = x.getProperty(EclipseJavaASTProperties.coqProof)
-          assert(prf != null)
-          val p = prf.asInstanceOf[String]
-          JavaPosition.proofoffset = DocumentState.position
-          val off = DocumentState.position + p.size + 2 //why 2 here?
-          //locate index of given ASTNode and go there!
-          DocumentState._content = Some(DocumentState._content.get + p)
-          PrintActor.register(JavaPosition)
-          if (DocumentState.position < off)
-            CoqStepUntilAction.reallydoit(off)
-        case None =>
-          CoqCommands.step
-      }
+      JavaPosition.method = Some(meth)
+      val prf = meth.getProperty(EclipseJavaASTProperties.coqProof)
+      assert(prf != null)
+      val p = prf.asInstanceOf[String]
+      DocumentState._content = Some(DocumentState._content.get + p)
+      PrintActor.register(JavaPosition)
+      CoqStepAllAction.doit
     })
   }
 
@@ -485,8 +476,6 @@ object JavaPosition extends CoqCallback {
     }
   }
 
-  var proofoffset : Int = -1
-
   import org.eclipse.jdt.core.dom.Statement
   var cur : Option[Statement] = None
   var next : Option[Statement] = None
@@ -587,7 +576,7 @@ object JavaPosition extends CoqCallback {
 
 
   def reAnnotate (proc : Boolean, undo : Boolean) : Unit = {
-    Console.println("reannotate called with proc " + proc + " undo " + undo + " proofoff " + proofoffset + " editor " + editor)
+    Console.println("reannotate called with proc " + proc + " undo " + undo + " editor " + editor)
     //4 cases:
     // #t #f =>                  remove nothing, mark yellow
     // #t #t => problem marker - remove yellow, mark nothing
@@ -596,7 +585,8 @@ object JavaPosition extends CoqCallback {
     if (editor != null && method != None) {
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
-      if (proofoffset != -1) {
+      val proj = getProj
+      if (proj.proofShell != None) {
         //we're in proof mode!
 
         val start = method.get.getStartPosition
