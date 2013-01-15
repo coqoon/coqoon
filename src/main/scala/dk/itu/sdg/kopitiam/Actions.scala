@@ -205,8 +205,13 @@ class CoqUndoAction extends KCoqAction {
           val last = JavaPosition.getLastCoqStatement
           last match {
             case None =>
-              Console.println("last is none, unfortunately... shouldn't be here")
-              null
+              //not completely correct though
+              JavaPosition.getProj.proofShell match {
+                case Some(x) => x
+                case None =>
+                  Console.println("last is none - and no proofShell")
+                  null
+              }
             case Some(x) =>
               val sh = x.getProperty(EclipseJavaASTProperties.coqShell)
               assert(sh != null && sh.isInstanceOf[CoqShellTokens])

@@ -552,14 +552,6 @@ object JavaPosition extends CoqCallback {
     markers = List[IMarker]()
   }
 
-  def markPos (message : String, position : scala.util.parsing.input.Position) = {
-    val doc = getDoc
-    val pos = doc.getLineOffset(position.line - 1) + position.column
-    val pos2 = doc.getLineOffset(position.line) - 1
-    Console.println("marking java at " + pos + " with: " + message)
-    mark(message, pos, pos2 - pos, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
-  }
-
   def mark (message : String, spos : Int, len : Int, typ : String, severity : Int) : Unit = {
     markHelper(message, spos, len, typ, severity) match {
       case Some(x) => markers ::= x
