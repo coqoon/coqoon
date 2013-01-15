@@ -1,61 +1,6 @@
 /* (c) 2010-2012 Hannes Mehnert and David Christiansen */
 
 package dk.itu.sdg.kopitiam
-import dk.itu.sdg.util.KopitiamLogger
-
-import org.eclipse.ui.editors.text.TextEditor
-
-import org.eclipse.jdt.internal.ui.javaeditor.CompilationUnitEditor
-
-class SimpleJavaEditor extends CompilationUnitEditor {
-  //setEditorContextMenuId("#CompilationUnitEditorContext"); //$NON-NLS-1$
-  //setRulerContextMenuId("#CompilationUnitRulerContext"); //$NON-NLS-1$
-  //setOutlinerContextMenuId("#CompilationUnitOutlinerContext"); //$NON-NLS-1$
-  // don't set help contextId, we install our own help context
-  //fSavePolicy= null;
-
-  //fJavaEditorErrorTickUpdater= new JavaEditorErrorTickUpdater(this);
-  //fCorrectionCommands= null;
-  setDocumentProvider(SimpleJavaDocumentProvider);
-
-
-  override def initializeEditor () : Unit = {
-    Console.println("initializing SimpleJavaEditor!")
-    setDocumentProvider(SimpleJavaDocumentProvider)
-    Console.println("set document provider")
-    super.initializeEditor()
-    Console.println("called super")
-    setDocumentProvider(SimpleJavaDocumentProvider)
-    Console.println("initialized SimpleJavaEditor!")
-  }
-}
-
-import org.eclipse.ui.editors.text.FileDocumentProvider
-
-object SimpleJavaDocumentProvider extends FileDocumentProvider {
-  import org.eclipse.ui.part.FileEditorInput
-  import org.eclipse.jface.text.IDocument
-  import scala.collection.mutable.HashMap
-
-  val docs : HashMap[String,IDocument] = new HashMap[String,IDocument]()
-
-  override def getDefaultEncoding () : String = "UTF-8"
-
-  override def getDocument (ele : Object) : IDocument = {
-    Console.println("get document called on SimpleJavaDocumentProvider")
-    assert(ele.isInstanceOf[FileEditorInput])
-    val elem = ele.asInstanceOf[FileEditorInput]
-    val nam = elem.getName
-    if (docs.contains(nam))
-      docs(nam)
-    else {
-      val document = super.getDocument(ele)
-      //Console.println("getdocument received " + document.get)
-      Console.println("SimpleJava getDocument called, translated")
-      document
-    }
-  }
-}
 
 trait EclipseUtils {
   //Handy implicits and functions that make dealing with Eclipse less verbose
@@ -969,6 +914,7 @@ object EclipseBoilerPlate {
   }
 }
 
+import dk.itu.sdg.util.KopitiamLogger
 object DocumentState extends CoqCallback with KopitiamLogger {
   import org.eclipse.ui.IWorkbenchPart
   var activated : IWorkbenchPart = null
