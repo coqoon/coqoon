@@ -226,9 +226,11 @@ class CoqJavaProject (basename : String) {
                   DocumentState.setBusy
                   Console.println("backtracking to proofshell (y not meth) " + x)
                   CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
-                }
+                } else
+                  CoqCommands.step
             }
-          CoqCommands.step
+          else
+            CoqCommands.step
       }
     })
     CoqCommands.doLater(() => {
