@@ -219,7 +219,6 @@ class CoqUndoAction extends KCoqAction {
           }
         }
 
-      DocumentState.realundo = true
       EclipseBoilerPlate.unmarkReally
       JavaPosition.unmark
       val ctxdrop = curshell.context.length - prevshell.context.length

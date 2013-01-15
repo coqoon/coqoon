@@ -143,6 +143,10 @@ object CoqState {
     lastc
   }
 
+  def lastWasUndo () : Boolean = {
+    lastc.startsWith("Backtrack ")
+  }
+
   def sendCommand (c : String) : Unit = {
     //Console.println("not ready :/")
     lastc = c

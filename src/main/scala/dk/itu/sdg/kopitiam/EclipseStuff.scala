@@ -526,6 +526,14 @@ object JavaPosition extends CoqCallback {
               }
           }
         }
+      case CoqShellReady(monoton, tokens) =>
+        if (monoton)
+          reAnnotate(false, false)
+        else
+          if (CoqState.lastWasUndo)
+            reAnnotate(false, true)
+          else
+            reAnnotate(true, true)
       case _ =>
     }
   }
@@ -1051,7 +1059,6 @@ object DocumentState extends CoqCallback with KopitiamLogger {
 
   var sendlen : Int = 0
   var until : Int = -1
-  var realundo : Boolean = false
 
   import org.eclipse.core.resources.IMarker
   import org.eclipse.core.runtime.CoreException
@@ -1120,11 +1127,10 @@ object DocumentState extends CoqCallback with KopitiamLogger {
 
   import org.eclipse.swt.widgets.Display
   def undo () : Unit = {
-    //Console.println("undo (@" + position + ", sendlen: " + sendlen + ") real: " + realundo)
-    //if (sendlen != 0) {
-      if (realundo) {
+    //Console.println("undo (@" + position + ", sendlen: " + sendlen + ")
+    if (sendlen != 0) {
+      if (CoqState.lastWasUndo) {
         val start = scala.math.max(position - sendlen, 0)
-        realundo = false
         if (activeEditor != null) {
           activeEditor.addAnnotations(start, 0)
           activeEditor.invalidate
@@ -1142,7 +1148,6 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         }
         position = start
         sendlen = 0
-        JavaPosition.reAnnotate(false, true)
       } else { //just an error
         //Console.println("undo: barf")
         //kill off process colored thingies
@@ -1152,9 +1157,8 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         }
         oldsendlen = sendlen
         sendlen = 0
-        JavaPosition.reAnnotate(true, true)
       }
-    //}
+    }
   }
 
   def process () : Unit = {
@@ -1180,7 +1184,6 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       //Console.println("commited - and doing some work")
       val end = scala.math.min(sendlen, content.length - position)
       position += end
-      JavaPosition.reAnnotate(false, false)
       sendlen = 0
       //XXX: that's wrong! sendlen is 0!!!!
       if (activeEditor != null) {
