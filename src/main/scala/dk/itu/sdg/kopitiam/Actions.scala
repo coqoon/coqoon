@@ -92,11 +92,11 @@ abstract class KCoqAction extends KAction {
         PrintActor.deregister(CoqCommands)
         val shell = CoqState.getShell
         PrintActor.register(CoqStartUp)
-        CoqStartUp.fini = false
-        val initial = DocumentState.positionToShell(0).globalStep
-        CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
-        while (! CoqStartUp.fini) { }
-        CoqStartUp.fini = false
+        CoqStartUp.synchronized {
+	      val initial = DocumentState.positionToShell(0).globalStep
+	      CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
+	      CoqStartUp.wait
+        }
       }
     } else
       if (! coqstarted)
@@ -352,7 +352,6 @@ class RestartCoqAction extends KAction {
     JavaPosition.retract
     CoqCommands.empty
     PrintActor.deregister(CoqOutputDispatcher)
-    CoqStartUp.fini = false
     CoqStartUp.start
   }
 }
@@ -571,9 +570,8 @@ object TranslateToSimpleJavaAction extends TranslateToSimpleJavaAction { }
 
 object CoqStartUp extends CoqCallback {
   private var initialize : Int = 0
-  var fini : Boolean = false
-
-  def start () : Unit = {
+  
+  def start () : Unit = synchronized {
     if (! CoqTop.isStarted) {
       PrintActor.deregister(CoqCommands)
       PrintActor.register(CoqStartUp)
@@ -583,8 +581,7 @@ object CoqStartUp extends CoqCallback {
       if (! CoqTop.startCoq)
         EclipseBoilerPlate.warnUser("No Coq", "No Coq binary found, please specify one in the Kopitiam preferences page")
       else {
-        while (!fini) { }
-        fini = false
+        wait
       }
       PrintActor.deregister(CoqStartUp)
     }
@@ -619,7 +616,9 @@ object CoqStartUp extends CoqCallback {
           if (CoqCommands.nonempty)
             PrintActor.register(CoqCommands)
           initialize = 0
-          fini = true
+          synchronized {
+            notifyAll
+          }
           ActionDisabler.enableMaybe
         }
       case y =>
