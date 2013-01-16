@@ -541,24 +541,6 @@ class CoqProgressMonitorImplementation extends Actor {
 }
 */
 
-import org.eclipse.jface.text.source.AnnotationPainter.IDrawingStrategy
-class ProofDrawingStrategy extends IDrawingStrategy with EclipseUtils {
-  import org.eclipse.jface.text.source.Annotation
-  import org.eclipse.swt.graphics.{GC, Color}
-  import org.eclipse.swt.custom.{StyledText, StyleRange}
-
-  def draw (ann : Annotation, gc : GC, text : StyledText, off : Int, len : Int, color : Color) = {
-    val col =
-      if (ann.getType == "dk.itu.sdg.kopitiam.processed")
-        getPrefColor("coqSentBg")
-      else if (ann.getType == "dk.itu.sdg.kopitiam.processing")
-        getPrefColor("coqSentProcessBg")
-      else
-        null
-    text.replaceStyleRanges(off, len, Array(new StyleRange(off, len, null, col)))
-  }
-}
-
 object JavaPosition extends CoqCallback {
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   var editor : JavaEditor = null
