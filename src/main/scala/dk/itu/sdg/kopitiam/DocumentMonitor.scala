@@ -187,8 +187,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         proj.modelNewerThanSource = true
         DocumentState._content = None
       }
-      if (proj.isCoqSource(doc))
-        Console.println("oh noez, someone edited the generated code")
     }
     if (DocumentState.activeDocument == doc) {
       val off = event.getOffset

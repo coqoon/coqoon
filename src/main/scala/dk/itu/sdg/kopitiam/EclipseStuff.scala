@@ -30,13 +30,13 @@ trait EclipseUtils {
 }
 
 class CoqJavaProject (basename : String) {
-  //foo -> foo.java [Java], foo.v [Model] ~> foo.java.v [Complete]
+  //foo -> foo.java [Java]
+  //foo -> foo.v [Model]
   import scala.collection.immutable.HashMap
   import org.eclipse.jface.text.IDocument
 
   var javaSource : Option[IDocument] = None
   var coqModel : Option[IDocument] = None
-  var coqSource : Option[IDocument] = None
   var modelNewerThanSource : Boolean = true
   var javaNewerThanSource : Boolean = true
   var modelShell : Option[CoqShellTokens] = None
@@ -54,10 +54,6 @@ class CoqJavaProject (basename : String) {
       case Some(d) => if (d == doc) coqModel = None
       case _ =>
     }
-    coqSource match {
-      case Some(d) => if (d == doc) coqSource = None
-      case _ =>
-    }
   }
 
   def setDocument (doc : IDocument, name : String) : Unit = {
@@ -67,9 +63,6 @@ class CoqJavaProject (basename : String) {
     } else if (name.equals(basename + ".v")) {
       assert(coqModel == None)
       coqModel = Some(doc)
-    } else if (name.equals(basename + ".java.v")) {
-      assert(coqSource == None)
-      coqSource = Some(doc)
     } else
       Console.println("huh? " + name)
   }
@@ -83,7 +76,6 @@ class CoqJavaProject (basename : String) {
 
   def isJava (doc : IDocument) : Boolean = { optEq(javaSource, doc) }
   def isCoqModel (doc : IDocument) : Boolean = { optEq(coqModel, doc) }
-  def isCoqSource (doc : IDocument) : Boolean = { optEq(coqSource, doc) }
 
   import org.eclipse.ui.{IFileEditorInput, PlatformUI}
   import org.eclipse.ui.part.FileEditorInput
@@ -514,6 +506,7 @@ object JavaPosition extends CoqCallback {
   }
 
   def getCoqCommand () : Option[String] = {
+    //hold on if javaNewerThanSource or modelNewerThanSource!
     val prov = editor.getDocumentProvider
     val doc = prov.getDocument(editor.getEditorInput)
     var res : Option[String] = None
