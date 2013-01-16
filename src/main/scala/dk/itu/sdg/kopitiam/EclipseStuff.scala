@@ -567,13 +567,13 @@ object JavaPosition extends CoqCallback {
     res
   }
 
-
+  import org.eclipse.jface.text.source.IAnnotationModelExtension
   def reAnnotate (proc : Boolean, undo : Boolean) : Unit = {
     Console.println("reannotate called with proc " + proc + " undo " + undo + " editor " + editor)
     //4 cases:
-    // #t #f =>                  remove nothing, mark yellow
-    // #t #t => problem marker - remove yellow, mark nothing
-    // #f #t => real undo -      remove last green, remark green
+    // #t #f => processing       remove nothing, mark yellow
+    // #t #t => problem marker   remove yellow, mark nothing
+    // #f #t => real undo        remove green, mark green
     // #f #f => processed!       remove yellow & green, mark green
     if (editor != null && method != None) {
       val prov = editor.getDocumentProvider
@@ -625,38 +625,37 @@ object JavaPosition extends CoqCallback {
           }
           processing = None
         }
+
         if ((!proc && undo) || (!proc && !undo)) {
+          //re-mark green!
+          val p = new Position(start, end - start)
           processed match {
-            case Some(x) => {
-              Console.println("removing processed")
-              annmodel.removeAnnotation(x)
-              if (undo)
-                Display.getDefault.asyncExec(
-                  new Runnable() {
-                    def run() = { editor.getViewer.invalidateTextPresentation }})
-            }
+            case Some(x) =>
+              annmodel.asInstanceOf[IAnnotationModelExtension].modifyAnnotationPosition(x, p)
             case None =>
+              val ann = new Annotation("dk.itu.sdg.kopitiam.processed", false, "Proof")
+              annmodel.addAnnotation(ann, p)
+              processed = Some(ann)
           }
-          processed = None
         }
 
-        if (!(proc && undo) && (end > start)) {
-          val txt =
-            if (proc)
-              "dk.itu.sdg.kopitiam.processing"
-            else
-              "dk.itu.sdg.kopitiam.processed"
-          val l1 = doc.getLineOfOffset(start)
-          val c1 = start - doc.getLineOffset(l1)
-          val l2 = doc.getLineOfOffset(end)
-          val c2 = end - doc.getLineOffset(l2)
-          Console.println("adding " + txt + " annotation for: " + start + " -- " + end + " (len: " + (end - start) + "): (" + l1 + ", " + c1 + ") -- (" + l2 + ", " + c2 + ")")
+        if (proc && !undo) {
+          val pp : Int = processed match {
+            case None =>
+              start
+            case Some(x) =>
+              val p = annmodel.getPosition(x)
+              p.getOffset + p.getLength
+          }
+          val rend : Int =
+            next match {
+              case None => end
+              case Some(x) => x.getStartPosition + x.getLength
+            }
+          val txt = "dk.itu.sdg.kopitiam.processing"
           val sma = new Annotation(txt, false, "Proof")
-          annmodel.addAnnotation(sma, new Position(start, end - start))
-          if (proc)
-            processing = Some(sma)
-          else
-            processed = Some(sma)
+          annmodel.addAnnotation(sma, new Position(pp, rend - pp))
+          processing = Some(sma)
         }
         annmodel.disconnect(doc)
       }
