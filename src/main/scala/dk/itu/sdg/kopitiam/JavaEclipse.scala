@@ -408,13 +408,22 @@ Open Scope asn_scope.
             val init = frag.getInitializer
             if (init != null) {
               val inite = printE(init)
-              //Console.println("init is a " + init.getClass.toString)
-              val str =
-                if (init.isInstanceOf[QualifiedName] || init.isInstanceOf[FieldAccess])
-                  "cread"
-                else
-                  "cassign"
-              val ass = "(" + str + " " + nam + " " + inite + ")"
+              val ass =
+                init match {
+                  case y : MethodInvocation =>
+                    val st = (y.resolveMethodBinding.getModifiers & Modifier.STATIC) == Modifier.STATIC
+                    val str = if (st) "cscall" else "cdcall"
+                    deps = deps + y.getName.getIdentifier
+                    "(" + str + " " + nam + " " + inite + ")"
+                  case y : ClassInstanceCreation =>
+                    "(calloc " + nam + " " + inite + ")"
+                  case y : QualifiedName =>
+                    "(cread " + nam + " " + inite + ")"
+                  case y : FieldAccess =>
+                    "(cread " + nam + " " + inite + ")"
+                  case y =>
+                    "(cassign " + nam + " " + inite + ")"
+                }
               Some(ass)
             } else None
           } else {
