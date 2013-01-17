@@ -180,6 +180,7 @@ class CoqJavaProject (basename : String) {
         modelShell match {
           case None => Console.println("how did I get here?")
           case Some(x) =>
+            Console.println("retracting model...")
             DocumentState.resetState
             JavaPosition.retract
             if (x.globalStep < CoqState.getShell.globalStep) {
@@ -207,21 +208,22 @@ class CoqJavaProject (basename : String) {
           PrintActor.register(JavaPosition)
           CoqStepAllAction.doit
         case Some(x) =>
-          if (x.globalStep < CoqState.getShell.globalStep)
+          Console.println("have a PS: " + x.globalStep + " < " + CoqState.getShell.globalStep)
+          if (x.globalStep < CoqState.getShell.globalStep) {
+            JavaPosition.cur = None
+            JavaPosition.next = None
+            JavaPosition.emptyCoqShells
             JavaPosition.method match {
               case None =>
                 DocumentState.setBusy
                 Console.println("backtracking to proofshell " + x)
                 CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
               case Some(y) =>
-                if (y != meth) {
-                  DocumentState.setBusy
-                  Console.println("backtracking to proofshell (y not meth) " + x)
-                  CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
-                } else
-                  CoqCommands.step
+                DocumentState.setBusy
+                Console.println("backtracking to proofshell (y not meth) " + x)
+                CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
             }
-          else
+          } else
             CoqCommands.step
       }
     })
@@ -418,19 +420,21 @@ object JavaPosition extends CoqCallback {
   }
 
   def retractModel () : Unit = {
+    Console.println("retracting model")
     val proj = getProj
     if (proj != null) {
       proj.modelShell = None
       proj.proofShell = None
-      proj.modelNewerThanSource = true
     }
   }
 
   import org.eclipse.swt.widgets.Display
   def retract () : Unit = {
-    if (editor != null) {
+    val mn = (method == None)
+    Console.println("retracting with " + editor + " and method? " + mn)
+    if (editor != null && method != None) {
       Console.println("hello my friend, NONONONO")
-      //method = None
+      method = None
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
@@ -454,6 +458,9 @@ object JavaPosition extends CoqCallback {
       specprocessed.foreach(annmodel.removeAnnotation(_))
       specprocessed = List[Annotation]()
       annmodel.disconnect(doc)
+      cur = None
+      next = None
+      //also need to remove all properties of the AST nodes..
       PrintActor.deregister(JavaPosition)
       Display.getDefault.asyncExec(
         new Runnable() {
@@ -467,6 +474,26 @@ object JavaPosition extends CoqCallback {
 
   import org.eclipse.jdt.core.dom.{EmptyStatement, WhileStatement, IfStatement, Block}
   import scala.collection.immutable.Stack
+
+  def emptyCoqShells () : Unit = {
+    var todo : Stack[Statement] = Stack[Statement]()
+    todo = todo.push(method.get.getBody)
+    while (!todo.isEmpty) {
+      val st = todo.top
+      todo = todo.pop
+      st match {
+        case x : Block =>
+          todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]))
+        case x : IfStatement =>
+          todo = todo.push(x.getThenStatement)
+          todo = todo.push(x.getElseStatement)
+        case x : WhileStatement =>
+          todo = todo.push(x.getBody)
+        case x : Statement =>
+          x.setProperty(EclipseJavaASTProperties.coqShell, null)
+      }
+    }
+  }
 
   def getLastCoqStatement () : Option[Statement] = {
     assert(next == None)
@@ -560,6 +587,7 @@ object JavaPosition extends CoqCallback {
     res
   }
 
+  import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.text.source.IAnnotationModelExtension
   def reAnnotate (proc : Boolean, undo : Boolean) : Unit = {
     Console.println("reannotate called with proc " + proc + " undo " + undo + " editor " + editor)
@@ -585,7 +613,7 @@ object JavaPosition extends CoqCallback {
             case None =>
           }
 
-        Console.println(" reAnn " + next + " proc " + proc + " undo " + undo)
+        Console.println(" reAnn (cur: " + cur + " next: " + next + ") proc " + proc + " undo " + undo)
         if (next != None && !proc) { // && !undo) {
           Console.println("  ass " + cur + " now " + next)
           cur = next
@@ -624,8 +652,15 @@ object JavaPosition extends CoqCallback {
           val p = new Position(start, end - start)
           processed match {
             case Some(x) =>
+              val op = annmodel.getPosition(x)
+              val tst = ((op.getLength > p.getLength) || (op.getOffset != p.getOffset))
               annmodel.asInstanceOf[IAnnotationModelExtension].modifyAnnotationPosition(x, p)
+              if (tst)
+                Display.getDefault.asyncExec(
+                  new Runnable() {
+                    def run() = { editor.getViewer.invalidateTextPresentation }})
             case None =>
+              Console.println("new processed annotation")
               val ann = new Annotation("dk.itu.sdg.kopitiam.processed", false, "Proof")
               annmodel.addAnnotation(ann, p)
               processed = Some(ann)
@@ -647,6 +682,7 @@ object JavaPosition extends CoqCallback {
             }
           val txt = "dk.itu.sdg.kopitiam.processing"
           val sma = new Annotation(txt, false, "Proof")
+          Console.println("new processing annotation")
           annmodel.addAnnotation(sma, new Position(pp, rend - pp))
           processing = Some(sma)
         }
