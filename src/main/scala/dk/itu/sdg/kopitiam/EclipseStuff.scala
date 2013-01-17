@@ -233,7 +233,7 @@ class CoqJavaProject (basename : String) {
       assert(prf != null)
       val p = prf.asInstanceOf[String]
       Console.println("p is " + p)
-      DocumentState._content = Some(DocumentState._content.get + p)
+      DocumentState._content = Some(DocumentState._content.getOrElse("") + p)
       PrintActor.register(JavaPosition)
       CoqStepAllAction.doit
     })
@@ -431,7 +431,6 @@ object JavaPosition extends CoqCallback {
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
-      getProj.javaNewerThanSource = true
       annmodel.connect(doc)
       processed match {
         case Some(x) => annmodel.removeAnnotation(x)
@@ -470,7 +469,11 @@ object JavaPosition extends CoqCallback {
 
   def emptyCoqShells () : Unit = {
     var todo : Stack[Statement] = Stack[Statement]()
-    todo = todo.push(method.get.getBody)
+    method match {
+      case Some(x) =>
+        todo = todo.push(x.getBody)
+      case None =>
+    }
     while (!todo.isEmpty) {
       val st = todo.top
       todo = todo.pop
