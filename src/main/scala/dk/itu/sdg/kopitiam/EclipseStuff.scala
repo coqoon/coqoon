@@ -213,16 +213,10 @@ class CoqJavaProject (basename : String) {
             JavaPosition.cur = None
             JavaPosition.next = None
             JavaPosition.emptyCoqShells
-            JavaPosition.method match {
-              case None =>
-                DocumentState.setBusy
-                Console.println("backtracking to proofshell " + x)
-                CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
-              case Some(y) =>
-                DocumentState.setBusy
-                Console.println("backtracking to proofshell (y not meth) " + x)
-                CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
-            }
+            JavaPosition.method = None
+            DocumentState.setBusy
+            Console.println("backtracking to proofshell " + x)
+            CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
           } else
             CoqCommands.step
       }
@@ -232,11 +226,13 @@ class CoqJavaProject (basename : String) {
         Console.println("preserving proof shell: " + CoqState.getShell)
         proofShell = Some(CoqState.getShell)
       }
+      Console.println("assigning method to JP " + meth)
       //story so far: model is now updated, java might be newly generated!
       JavaPosition.method = Some(meth)
       val prf = meth.getProperty(EclipseJavaASTProperties.coqProof)
       assert(prf != null)
       val p = prf.asInstanceOf[String]
+      Console.println("p is " + p)
       DocumentState._content = Some(DocumentState._content.get + p)
       PrintActor.register(JavaPosition)
       CoqStepAllAction.doit
@@ -495,6 +491,22 @@ object JavaPosition extends CoqCallback {
           x.setProperty(EclipseJavaASTProperties.coqShell, null)
       }
     }
+
+    val prov = editor.getDocumentProvider
+    val doc = prov.getDocument(editor.getEditorInput)
+    val annmodel = prov.getAnnotationModel(editor.getEditorInput)
+    annmodel.connect(doc)
+    processed match {
+      case Some(x) => annmodel.removeAnnotation(x)
+      case None =>
+    }
+    processed = None
+    processing match {
+      case Some(x) => annmodel.removeAnnotation(x)
+      case None =>
+    }
+    processing = None
+    annmodel.disconnect(doc)
   }
 
   def getLastCoqStatement () : Option[Statement] = {
@@ -596,7 +608,8 @@ object JavaPosition extends CoqCallback {
   import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.text.source.IAnnotationModelExtension
   def reAnnotate (proc : Boolean, undo : Boolean) : Unit = {
-    Console.println("reannotate called with proc " + proc + " undo " + undo + " editor " + editor)
+    val m = (method != None)
+    Console.println("reannotate called with proc " + proc + " undo " + undo + " method " + m + " editor " + editor)
     //4 cases:
     // #t #f => processing       remove nothing, mark yellow
     // #t #t => problem marker   remove yellow, mark nothing
@@ -648,6 +661,9 @@ object JavaPosition extends CoqCallback {
             case Some(x) =>
               Console.println("removing processing")
               annmodel.removeAnnotation(x)
+              Display.getDefault.asyncExec(
+                new Runnable() {
+                  def run() = { editor.getViewer.invalidateTextPresentation }})
             case None =>
           }
           processing = None
@@ -659,6 +675,7 @@ object JavaPosition extends CoqCallback {
           processed match {
             case Some(x) =>
               val op = annmodel.getPosition(x)
+              Console.println("adjusting processed: was " + op.getLength + " now " + p.getLength)
               val tst = ((op.getLength > p.getLength) || (op.getOffset != p.getOffset))
               annmodel.asInstanceOf[IAnnotationModelExtension].modifyAnnotationPosition(x, p)
               if (tst)
@@ -678,6 +695,7 @@ object JavaPosition extends CoqCallback {
             case None =>
               start
             case Some(x) =>
+              Console.println("found a processed!")
               val p = annmodel.getPosition(x)
               p.getOffset + p.getLength
           }
@@ -688,8 +706,14 @@ object JavaPosition extends CoqCallback {
             }
           val txt = "dk.itu.sdg.kopitiam.processing"
           val sma = new Annotation(txt, false, "Proof")
-          Console.println("new processing annotation")
+          Console.println("new processing annotation (st " + start + " pp " + pp + " end " + end + ") meth " + method)
           annmodel.addAnnotation(sma, new Position(pp, rend - pp))
+          processing match {
+            case Some(x) =>
+              Console.println("remove processing again")
+              annmodel.removeAnnotation(x)
+            case None =>
+          }
           processing = Some(sma)
         }
         annmodel.disconnect(doc)
