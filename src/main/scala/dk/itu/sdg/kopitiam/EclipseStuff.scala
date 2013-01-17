@@ -486,7 +486,9 @@ object JavaPosition extends CoqCallback {
           todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]))
         case x : IfStatement =>
           todo = todo.push(x.getThenStatement)
-          todo = todo.push(x.getElseStatement)
+          val el = x.getElseStatement
+          if (el != null)
+            todo = todo.push(el)
         case x : WhileStatement =>
           todo = todo.push(x.getBody)
         case x : Statement =>
@@ -507,7 +509,9 @@ object JavaPosition extends CoqCallback {
           todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]))
         case x : IfStatement =>
           todo = todo.push(x.getThenStatement)
-          todo = todo.push(x.getElseStatement)
+          val el = x.getElseStatement
+          if (el != null)
+            todo = todo.push(el)
         case x : WhileStatement =>
           todo = todo.push(x.getBody)
         case x : Statement =>
@@ -571,7 +575,9 @@ object JavaPosition extends CoqCallback {
           todo = todo.push(x.getBody)
           None
         case x : IfStatement =>
-          todo = todo.push(x.getElseStatement)
+          val el = x.getElseStatement
+          if (el != null)
+            todo = todo.push(el)
           todo = todo.push(x.getThenStatement)
           None
         case x : Block =>
