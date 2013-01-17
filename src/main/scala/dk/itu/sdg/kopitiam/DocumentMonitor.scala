@@ -144,7 +144,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   override def windowDeactivated (window : IWorkbenchWindow) : Unit = { }
   override def windowOpened (window : IWorkbenchWindow) : Unit = { }
 
-  import dk.itu.sdg.javaparser.{SJInvokable, SJStatement, Loopinvariant, RawSpecification, Specification}
   override def documentChanged (event : DocumentEvent) : Unit = {
     val doc = event.getDocument
     //Console.println("doc " + doc + " changed [@" + event.getOffset + "], len: " + event.getLength)
@@ -169,58 +168,14 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                 //       p2    p1          p3    p4
                 val l = doc.getLineOfOffset(p1) + 1
                 val c = p1 - doc.getLineOffset(l - 1) + 1
-                var proofscript : Option[SJInvokable] = None
-                var st : Option[Specification] = None
                 //strategy is here:
                 //locate AST of CHANGE! <- we can be either in proof or spec
                 val nncon = content.drop(p1 + 2).substring(0, p3 - p1 - 2).trim
                 //modify content (spec or proof script)
                 if (nncon.startsWith("lvars: ") || nncon.startsWith("precondition: ") || nncon.startsWith("requires: ") ||  nncon.startsWith("postcondition: ") || nncon.startsWith("ensures: ")) {
                   //change to spec
-                  proj.findSpecOfJavaPos(l, c) match {
-                    case Some(s) => s.data = nncon
-                    case None =>
-                  }
                 } else {
                   //change to proof script
-                  proj.findProofScriptOfJavaPos(l, c) match {
-                    case Some((li@Loopinvariant(d, f), m)) =>
-                      proofscript = Some(m)
-                      st = Some(li)
-                      Console.println("change the loop invariant...")
-                      //need to parse + decide where we are!
-                    case Some((r@RawSpecification(d), m)) =>
-                      proofscript = Some(m)
-                      st = Some(r)
-                      r.data = nncon
-                    case x =>
-                      Console.println("PSOJP returned " + x)
-                  }
-                }
-
-                proofscript match {
-                  case None =>
-                    //reproduce spec output
-                    //and retract if needed
-                  case Some(x) =>
-                    //invokable x needs to reproduce its coqString
-                    st match {
-                      case None => //we shouldn't be here
-                      case Some(s) => //statement s was changed
-                        val coqp = s.getCoqPos
-                        Console.println("s is " + s.data + " len: " + coqp.length + " newlen: " + s.data.length)
-                        val poff = x.getCoqPos.offset + 1
-                        val mcoq = x.getCoqString.get
-                        val newstr = mcoq.take(poff + coqp.offset) + s.data + mcoq.drop(poff + coqp.offset + coqp.length)
-                        Console.println("newstr is " + newstr.drop(poff + coqp.offset - 10).take(20))
-                        x.setCoqString(Some(newstr))
-                        s.setCoqPos(coqp.offset, s.data.length)
-                        val diff = s.data.length - coqp.length
-                        //modify offsets
-                        proj.updatePSOffsets(x, coqp.offset, diff)
-                        //if s.offset < DocumentState.position, retract!
-                        proj.javaNewerThanSource = false
-                    }
                 }
               }
             }
@@ -232,8 +187,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         proj.modelNewerThanSource = true
         DocumentState._content = None
       }
-      if (proj.isCoqSource(doc))
-        Console.println("oh noez, someone edited the generated code")
     }
     if (DocumentState.activeDocument == doc) {
       val off = event.getOffset

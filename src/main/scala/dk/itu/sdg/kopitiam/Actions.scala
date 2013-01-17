@@ -174,31 +174,54 @@ class CoqUndoAction extends KCoqAction {
       // this implies that the table (positionToShell) is fully populated until p
       // this also implies that the previous content is not messed up!
       val curshell = CoqState.getShell
-      //curshell is head of prevs, so we better have one more thing
-      val prevs = DocumentState.positionToShell.keys.toList.sortWith(_ > _)
-      assert(prevs.length > 0)
-      Console.println("working (pos: " + pos + ") on the following keys " + prevs)
-      //now we have the current state (curshell): g cs l
-      //we look into lastmost shell, either:
-      //g-- cs l or g-- cs l-- <- we're fine
-      //g-- cs+c l++ <- we need to find something with cs (just jumped into a proof)
-      var i : Int = prevs.filter(_ >= pos).length
-      if (i == prevs.length) //special case, go to lastmost
-        i = i - 1
-      var prevshell : CoqShellTokens = DocumentState.positionToShell(prevs(i))
-      //Console.println("prevshell: " + prevshell + "\ncurshell: " + curshell)
-      assert(prevshell.globalStep < curshell.globalStep) //we're decreasing!
-      while (! prevshell.context.toSet.subsetOf(curshell.context.toSet) && prevs.length > (i + 1)) {
-        i += 1
-        prevshell = DocumentState.positionToShell(prevs(i))
-      }
-      val ctxdrop = curshell.context.length - prevshell.context.length
-      DocumentState.realundo = true
+
+      val prevshell : CoqShellTokens =
+        if (JavaPosition.cur == None) {
+          //curshell is head of prevs, so we better have one more thing
+          val prevs = DocumentState.positionToShell.keys.toList.sortWith(_ > _)
+          assert(prevs.length > 0)
+          Console.println("working (pos: " + pos + ") on the following keys " + prevs)
+          //now we have the current state (curshell): g cs l
+          //we look into lastmost shell, either:
+          //g-- cs l or g-- cs l-- <- we're fine
+          //g-- cs+c l++ <- we need to find something with cs (just jumped into a proof)
+          var i : Int = prevs.filter(_ >= pos).length
+          if (i == prevs.length) //special case, go to lastmost
+            i = i - 1
+          var prevshell : CoqShellTokens = DocumentState.positionToShell(prevs(i))
+          //Console.println("prevshell: " + prevshell + "\ncurshell: " + curshell)
+          assert(prevshell.globalStep < curshell.globalStep) //we're decreasing!
+          while (! prevshell.context.toSet.subsetOf(curshell.context.toSet) && prevs.length > (i + 1)) {
+            i += 1
+            prevshell = DocumentState.positionToShell(prevs(i))
+          }
+          DocumentState.sendlen = DocumentState.position - prevs(i)
+          prevs.take(i).foreach(DocumentState.positionToShell.remove(_))
+          assert(DocumentState.positionToShell.contains(0) == true)
+          prevshell
+        } else {
+          //we're java mode here...
+          //find most recent statement which was send over the wire
+          val last = JavaPosition.getLastCoqStatement
+          last match {
+            case None =>
+              //not completely correct though
+              JavaPosition.getProj.proofShell match {
+                case Some(x) => x
+                case None =>
+                  Console.println("last is none - and no proofShell")
+                  null
+              }
+            case Some(x) =>
+              val sh = x.getProperty(EclipseJavaASTProperties.coqShell)
+              assert(sh != null && sh.isInstanceOf[CoqShellTokens])
+              sh.asInstanceOf[CoqShellTokens]
+          }
+        }
+
       EclipseBoilerPlate.unmarkReally
       JavaPosition.unmark
-      DocumentState.sendlen = DocumentState.position - prevs(i)
-      prevs.take(i).foreach(DocumentState.positionToShell.remove(_))
-      assert(DocumentState.positionToShell.contains(0) == true)
+      val ctxdrop = curshell.context.length - prevshell.context.length
       CoqTop.writeToCoq("Backtrack " + prevshell.globalStep + " " + prevshell.localStep + " " + ctxdrop + ".")
     }
   }
@@ -248,36 +271,51 @@ def countSubstring (str1 : String, str2 : String) : Int={
   override def doit () : Unit = {
     Console.println("CoqStepAction.doit called, ready? " + DocumentState.readyForInput)
     if (DocumentState.readyForInput) {
-      val con = DocumentState.content
+      //why is this here?
+      //log says "changing model while proving java code works now"
       CoqCommands.step
-      val content = con.drop(DocumentState.position)
-      if (content.length > 0) {
-        val eoc = CoqTop.findNextCommand(content)
-        //Console.println("eoc is " + eoc)
-        if (eoc > 0) {
-          val cmd = content.take(eoc).trim
-          DocumentState.sendlen = eoc
-          val cmd2 = CoqTop.filterComments(cmd)
-          if (countSubstring(cmd2, "\"") % 2 == 1) {
-            DocumentState.undo
-            Console.println("not sending anything here!")
-            EclipseBoilerPlate.mark("unterminated string!")
-            PrintActor.distribute(CoqShellReady(false, CoqState.getShell))
-          } else if (cmd2.contains("Add LoadPath") && ! new File(cmd2.substring(cmd2.indexOf("\"") + 1, cmd2.lastIndexOf("\""))).exists) {
-            DocumentState.undo
-            EclipseBoilerPlate.mark("LoadPath does not exist!")
-            PrintActor.distribute(CoqShellReady(false, CoqState.getShell))
-          } else {
-            DocumentState.setBusy
-            DocumentState.process
-            Console.println("command is (" + eoc + "): " + cmd)
-            //CoqProgressMonitor.actor.tell(("START", cmd))
-            CoqTop.writeToCoq(cmd) //sends comments over the line
-          }
+      //input protocol is too complex -- or rather too ad-hoc...
+      val cmd = DocumentState.nextCommand
+      val rcmd =
+        cmd match {
+          case Some(cmd) =>
+            val cmd2 = CoqTop.filterComments(cmd)
+            if (countSubstring(cmd2, "\"") % 2 == 1) {
+              DocumentState.undo
+              Console.println("not sending anything here!")
+              EclipseBoilerPlate.mark("unterminated string!")
+              PrintActor.distribute(CoqShellReady(false, CoqState.getShell))
+              ""
+            } else if (cmd2.contains("Add LoadPath") && ! new File(cmd2.substring(cmd2.indexOf("\"") + 1, cmd2.lastIndexOf("\""))).exists) {
+              DocumentState.undo
+              EclipseBoilerPlate.mark("LoadPath does not exist!")
+              PrintActor.distribute(CoqShellReady(false, CoqState.getShell))
+              ""
+            } else
+              cmd
+          case None =>
+            Console.println("trying my luck with JP")
+            if (DocumentState.position + 1 >= DocumentState.content.size && JavaPosition.editor != null)
+              JavaPosition.getCoqCommand match {
+                case None =>
+                  Console.println("no luck")
+                  ""
+                case Some(x) =>
+                  Console.println("luck! " + x)
+                  DocumentState.sendlen = x.size
+                  x
+              }
+            else ""
         }
+      if (rcmd.size > 0) {
+        Console.println("command is: " + rcmd)
+        DocumentState.setBusy
+        DocumentState.process
+        CoqTop.writeToCoq(rcmd) //sends comments over the line
       }
     }
   }
+
   override def start () : Boolean = false
   override def end () : Boolean = true
 }
@@ -288,7 +326,6 @@ class CoqStepAllAction extends KCoqAction {
     val nc = CoqTop.findNextCommand(DocumentState.content.drop(DocumentState.position))
     Console.println("step step step " + nc)
     if (nc != -1) {
-      //CoqProgressMonitor.multistep = true
       DocumentState.reveal = false
       CoqStepNotifier.active = true
       //we need to provoke first message to start callback loops
@@ -322,7 +359,6 @@ class CoqStepUntilAction extends KCoqAction {
       if (unt > DocumentState.position) {
         DocumentState.until = unt
         DocumentState.process
-        //CoqProgressMonitor.multistep = true
         DocumentState.reveal = false
         CoqStepNotifier.test = Some((x : Int, y : Int) => y >= togo)
         CoqStepNotifier.active = true
@@ -376,7 +412,7 @@ class CoqRefreshAction extends KCoqAction {
 }
 object CoqRefreshAction extends CoqRefreshAction { }
 
-class ProveMethodAction extends KEditorAction {
+class ProveMethodAction extends KEditorAction with EclipseJavaHelper {
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.text.ITextSelection
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
@@ -386,26 +422,33 @@ class ProveMethodAction extends KEditorAction {
     if (! ActionDisabler.ready)
       EclipseBoilerPlate.warnUser("Not ready", "Sorry, the Eclipse preference store is not yet ready. Wait a few seconds")
     else {
-    //plan:
-    // a: get project
-    val edi : JavaEditor = editor.asInstanceOf[JavaEditor]
-    val prov = edi.getDocumentProvider
-    val doc = prov.getDocument(edi.getEditorInput)
-    val proj = EclipseTables.DocToProject(doc)
-    if (JavaPosition.editor != edi) {
-      if (JavaPosition.editor != null) {
-        JavaPosition.retract
-        JavaPosition.retractModel
+      //plan:
+      // a: get project
+      val edi : JavaEditor = editor.asInstanceOf[JavaEditor]
+      val prov = edi.getDocumentProvider
+      val doc = prov.getDocument(edi.getEditorInput)
+      val bla = getRoot(edi.getEditorInput)
+      val cu = getCompilationUnit(bla)
+      // b: if outdated coqString: translate -- need to verify outdated...
+      walkAST(cu, doc) //side effects: properties: coq output, spec ptr to method
+      // c: find method and statement we want to prove
+      val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
+      val off = selection.getOffset
+      val node = findASTNode(cu, off, 0)
+      Console.println("found a node (" + node.getClass.toString + ")")
+      val md = findMethod(node)
+      Console.println("method is " + md.getClass.toString)
+      val proj = EclipseTables.DocToProject(doc)
+      proj.program = Some(cu)
+      if (JavaPosition.editor != edi) {
+        if (JavaPosition.editor != null) {
+          JavaPosition.retract
+          JavaPosition.retractModel
+        }
+        JavaPosition.editor = edi
       }
-      JavaPosition.editor = edi
-    }
-    // c: find method name in java buffer
-    val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
-    val sl = selection.getStartLine
-
-    // b: if outdated coqString: translate
-    proj.proveMethod(sl)
-    CoqCommands.step
+      proj.proveMethod(md)
+      CoqCommands.step
     }
   }
   override def doit () : Unit = { }
@@ -421,9 +464,6 @@ class TranslateAction extends KAction {
   import java.io.{InputStreamReader,ByteArrayInputStream}
   import scala.util.parsing.input.StreamReader
 
-  import dk.itu.sdg.javaparser.JavaAST
-  object JavaTC extends JavaAST { }
-
   import org.eclipse.jdt.core.ICompilationUnit
   override def execute (ev : ExecutionEvent) : Object = {
     Console.println("execute translation!")
@@ -437,16 +477,16 @@ class TranslateAction extends KAction {
   }
 
   import scala.util.parsing.input.Position
-  import dk.itu.sdg.javaparser.{SJFieldDefinition, SJInvokable}
   def translate (file : IFile, generate : Boolean) : Unit = {
     val nam = file.getName
     if (nam.endsWith(".java")) {
       val basename = nam.split("\\.")(0)
       val is = StreamReader(new InputStreamReader(file.getContents, "UTF-8"))
       val proj = EclipseTables.StringToProject(basename)
-      val ps = proj.provenMethods.length
+      //val ps = proj.provenMethods.length
       var success : Boolean = false
-      JavaTC.parse(is, basename) match {
+      //XXX: need to rework this here!
+/*      JavaTC.parse(is, basename) match {
         case Left(x) =>
           x.foreach(y => JavaPosition.markPos(y.message, y.position))
         case Right((c, defs)) =>
@@ -510,7 +550,7 @@ class TranslateAction extends KAction {
         System.arraycopy(conbytes, 0, bs, modbytes.length, conbytes.length)
         trfi.setContents(new ByteArrayInputStream(bs), IResource.NONE, null)
         EclipseBoilerPlate.warnUser("Generated Proof Certificate", "Successfully generated a proof certificate: \"" + basename + "Java.v\" .")
-      } }
+      } } */
     } else
       Console.println("wasn't a java file")
   }
@@ -538,7 +578,6 @@ class TranslateToSimpleJavaAction extends KAction {
     null
   }
 
-  import dk.itu.sdg.javaparser.JavaOutput
   def translate (file : IFile) : Unit = {
     val con : Option[String]=
       try
@@ -547,6 +586,8 @@ class TranslateToSimpleJavaAction extends KAction {
       { case (e : Throwable) => None }
     con match {
       case Some(x) =>
+        //XXX: need to rework translation
+        /*
         val newcon = JavaOutput.parseandoutput(x)
         val fn = file.getName
         val nffm = file.getProjectRelativePath.removeLastSegments(1).toString + "/" + fn.substring(0, fn.length - 5) + "Simple.java"
@@ -559,6 +600,7 @@ class TranslateToSimpleJavaAction extends KAction {
         val ncon = newcon.getBytes("UTF-8")
 
         translatedfile.setContents(new ByteArrayInputStream(ncon), IResource.NONE, null)
+        */
       case None =>
     }
   }
@@ -641,9 +683,13 @@ object CoqStepNotifier extends CoqCallback {
             fini
           else {
             val nc = CoqTop.findNextCommand(DocumentState.content.drop(DocumentState.position))
-            if ((test.isDefined && test.get(DocumentState.position, DocumentState.position + nc)) || nc == -1)
+            val bl = if (test.isDefined) test.get(DocumentState.position, DocumentState.position + nc) else "no test"
+            Console.println("nc is " + nc + " tstres " + bl)
+            if ((test.isDefined && test.get(DocumentState.position, DocumentState.position + nc)) || nc == -1) {
+              Console.println("finishing")
               fini
-            else if (monoton) {
+            } else if (monoton) {
+              Console.println("one more step")
               CoqStepAction.doit
             } else
               fini
@@ -658,8 +704,6 @@ object CoqStepNotifier extends CoqCallback {
     test = None
     DocumentState.reveal = true
     DocumentState.until = -1
-    //CoqProgressMonitor.multistep = false
-    //CoqProgressMonitor.actor.tell("FINISHED")
   }
 }
 
@@ -733,7 +777,6 @@ object CoqOutputDispatcher extends CoqCallback {
     //Console.println("received in dispatch " + x)
     x match {
       case CoqShellReady(monoton, token) =>
-        //CoqProgressMonitor.actor.tell("FINISHED")
         if (monoton) {
           EclipseBoilerPlate.unmark
           JavaPosition.unmark

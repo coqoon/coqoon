@@ -1,9 +1,0 @@
-class Foo {
-  void bar () {
-    int a = 10;
-    a = foobar();
-  }
-  int foobar () {
-    return 10;
-  }
-}

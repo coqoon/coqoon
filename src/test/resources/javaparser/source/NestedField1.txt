@@ -1,7 +1,0 @@
-class Foo { int a; }
-class Bar {
-  Foo f;
-  void bar () {
-    int b = f.a;
-  }
-}
