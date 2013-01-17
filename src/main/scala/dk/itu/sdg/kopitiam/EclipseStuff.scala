@@ -300,19 +300,16 @@ object JavaPosition extends CoqCallback {
     x match {
       case CoqProofCompleted() =>
         if (editor != null) {
-          Console.println("proof completed - not sending Qed? " + CoqStepNotifier.active)
-          if (! CoqStepNotifier.active) {
-            while (! DocumentState.readyForInput) { } //XXX: bad busy loop
-            CoqStepAction.doit()
-          }
+          DocumentState.setBusy
+          Console.println("writing qed")
+          CoqTop.writeToCoq("Qed.")
         }
       case CoqTheoremDefined(x) =>
         if (editor != null && x.startsWith("valid_")) { // + method.get.id)) {
-          val doc = getDoc
           //what about specifications!?
-          val spos = 0 //doc.getLineOffset(method.get.pos.line - 1)
-          val epos = 0 //doc.getLineOffset(method.get.body.last.pos.line + 1) - 1
-          markproven(spos, epos - spos)
+          val spos = method.get.getStartPosition
+          val length = method.get.getLength
+          markproven(spos, length)
           //generate proof certificate IF last method!
           retract
           ActionDisabler.enableStart
