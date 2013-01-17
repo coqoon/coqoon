@@ -1,65 +1,6 @@
 /* (c) 2010-2012 Hannes Mehnert and David Christiansen */
 
 package dk.itu.sdg.kopitiam
-import dk.itu.sdg.util.KopitiamLogger
-
-import org.eclipse.ui.editors.text.TextEditor
-
-import org.eclipse.jdt.internal.ui.javaeditor.CompilationUnitEditor
-
-class SimpleJavaEditor extends CompilationUnitEditor {
-  //setEditorContextMenuId("#CompilationUnitEditorContext"); //$NON-NLS-1$
-  //setRulerContextMenuId("#CompilationUnitRulerContext"); //$NON-NLS-1$
-  //setOutlinerContextMenuId("#CompilationUnitOutlinerContext"); //$NON-NLS-1$
-  // don't set help contextId, we install our own help context
-  //fSavePolicy= null;
-
-  //fJavaEditorErrorTickUpdater= new JavaEditorErrorTickUpdater(this);
-  //fCorrectionCommands= null;
-  setDocumentProvider(SimpleJavaDocumentProvider);
-
-
-  override def initializeEditor () : Unit = {
-    Console.println("initializing SimpleJavaEditor!")
-    setDocumentProvider(SimpleJavaDocumentProvider)
-    Console.println("set document provider")
-    super.initializeEditor()
-    Console.println("called super")
-    setDocumentProvider(SimpleJavaDocumentProvider)
-    Console.println("initialized SimpleJavaEditor!")
-  }
-}
-
-import org.eclipse.ui.editors.text.FileDocumentProvider
-
-object SimpleJavaDocumentProvider extends FileDocumentProvider {
-  import dk.itu.sdg.javaparser.JavaOutput
-  import org.eclipse.ui.part.FileEditorInput
-  import org.eclipse.jface.text.IDocument
-  import scala.collection.mutable.HashMap
-
-  val docs : HashMap[String,IDocument] = new HashMap[String,IDocument]()
-
-  override def getDefaultEncoding () : String = "UTF-8"
-
-  override def getDocument (ele : Object) : IDocument = {
-    Console.println("get document called on SimpleJavaDocumentProvider")
-    assert(ele.isInstanceOf[FileEditorInput])
-    val elem = ele.asInstanceOf[FileEditorInput]
-    val nam = elem.getName
-    if (docs.contains(nam))
-      docs(nam)
-    else {
-      val document = super.getDocument(ele)
-      //Console.println("getdocument received " + document.get)
-      val newt = JavaOutput.parseandoutput(document.get)
-      Console.println("SimpleJava getDocument called, translated")
-      document.set(newt)
-      docs += nam -> document
-      document
-    }
-  }
-}
 
 trait EclipseUtils {
   //Handy implicits and functions that make dealing with Eclipse less verbose
@@ -89,94 +30,20 @@ trait EclipseUtils {
 }
 
 class CoqJavaProject (basename : String) {
-  //foo -> foo.java [Java], foo.v [Model] ~> foo.java.v [Complete]
+  //foo -> foo.java [Java]
+  //foo -> foo.v [Model]
   import scala.collection.immutable.HashMap
   import org.eclipse.jface.text.IDocument
-  import scala.util.parsing.input.Position
-  import dk.itu.sdg.javaparser.{SJClassDefinition, SJMethodDefinition, SJDefinition, Specification, SJStatement, SJInvokable, SJConditional, SJWhile}
 
   var javaSource : Option[IDocument] = None
   var coqModel : Option[IDocument] = None
-  var coqSource : Option[IDocument] = None
   var modelNewerThanSource : Boolean = true
   var javaNewerThanSource : Boolean = true
   var modelShell : Option[CoqShellTokens] = None
   var proofShell : Option[CoqShellTokens] = None
 
-  var program : Option[SJClassDefinition] = None
-  var definitions : List[SJDefinition] = List[SJDefinition]()
-
-  def countMethods () : Int = {
-    definitions.map(_.body.filter(_.isInstanceOf[SJMethodDefinition])).flatten.length
-  }
-
-  def findSpecOfJavaPos (line : Int, column : Int) : Option[Specification] = {
-    var res : Option[Specification] = None
-    for (d <- definitions)
-      for (b <- d.body)
-        b match {
-          case x : Specification =>
-            if (x.pos.line == line)
-              res = Some(x)
-          case _ =>
-        }
-    res
-  }
-
-  import scala.collection.immutable.Stack
-  def findProofScriptOfJavaPos (line : Int, column : Int) : Option[Pair[SJStatement,SJInvokable]] = {
-    var res : Option[Pair[SJStatement,SJInvokable]] = None
-    for (d <- definitions)
-      for (b <- d.body)
-        b match {
-          case x : SJInvokable =>
-            var todo : Stack[SJStatement] = Stack[SJStatement]()
-            todo = todo.pushAll(x.body.reverse)
-            while (res == None && !todo.isEmpty) {
-              val mine = todo.top
-              todo = todo.pop
-              mine match {
-                case SJConditional(t, c, a) =>
-                  todo = todo.pushAll(a.reverse)
-                  todo = todo.pushAll(c.reverse)
-                case SJWhile(t, b) =>
-                  todo = todo.pushAll(b.reverse)
-                case s =>
-                  if (s.pos.line == line) {
-                    //Console.println("s is nearby: " + s + " scol" + s.pos.column + " c" + column)
-                    if (s.pos.column == column) {
-                      //Console.println("s is there!!!!")
-                      res = Some((s, x))
-                    }
-                  }
-              }
-            }
-          case _ =>
-        }
-    res
-  }
-
-  def updatePSOffsets (m : SJInvokable, off : Int, diff : Int) = {
-    var todo : Stack[SJStatement] = Stack[SJStatement]()
-    todo = todo.pushAll(m.body.reverse)
-    while (!todo.isEmpty) {
-      val mine = todo.top
-      todo = todo.pop
-      if (mine.getCoqPos.offset > off)
-        mine.setCoqPos(mine.getCoqPos.offset + diff, mine.getCoqPos.length)
-      mine match {
-        case SJConditional(t, c, a) =>
-          todo = todo.pushAll(c.reverse)
-          todo = todo.pushAll(a.reverse)
-        case SJWhile(t, b) =>
-          todo = todo.pushAll(b.reverse)
-        case _ =>
-      }
-    }
-  }
-
-
-  var provenMethods : List[SJInvokable] = List[SJInvokable]()
+  import org.eclipse.jdt.core.dom.CompilationUnit
+  var program : Option[CompilationUnit] = None
 
   def gotClosed (doc : IDocument) : Unit = {
     javaSource match {
@@ -185,10 +52,6 @@ class CoqJavaProject (basename : String) {
     }
     coqModel match {
       case Some(d) => if (d == doc) coqModel = None
-      case _ =>
-    }
-    coqSource match {
-      case Some(d) => if (d == doc) coqSource = None
       case _ =>
     }
   }
@@ -200,9 +63,6 @@ class CoqJavaProject (basename : String) {
     } else if (name.equals(basename + ".v")) {
       assert(coqModel == None)
       coqModel = Some(doc)
-    } else if (name.equals(basename + ".java.v")) {
-      assert(coqSource == None)
-      coqSource = Some(doc)
     } else
       Console.println("huh? " + name)
   }
@@ -216,14 +76,13 @@ class CoqJavaProject (basename : String) {
 
   def isJava (doc : IDocument) : Boolean = { optEq(javaSource, doc) }
   def isCoqModel (doc : IDocument) : Boolean = { optEq(coqModel, doc) }
-  def isCoqSource (doc : IDocument) : Boolean = { optEq(coqSource, doc) }
 
   import org.eclipse.ui.{IFileEditorInput, PlatformUI}
   import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.core.resources.{IFile, IMarker, IProject}
   import org.eclipse.swt.widgets.Display
-  import dk.itu.sdg.javaparser.SJInvokable
-  def proveMethod (sourceline : Int) : Unit = {
+  import org.eclipse.jdt.core.dom.MethodDeclaration
+  def proveMethod (meth : MethodDeclaration) : Unit = {
     modelShell match {
       case Some(x) =>
         if (x.globalStep > CoqState.getShell.globalStep)
@@ -236,7 +95,7 @@ class CoqJavaProject (basename : String) {
           proofShell = None
       case None =>
     }
-    Console.println("provemethod called with " + sourceline + " modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " modelshell " + modelShell + " proofshell " + proofShell)
+    Console.println("provemethod called! modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " modelshell " + modelShell + " proofshell " + proofShell)
     if (modelNewerThanSource || modelShell == None) {
       modelNewerThanSource = false
       var open : Boolean = false
@@ -317,17 +176,11 @@ class CoqJavaProject (basename : String) {
               if (JavaPosition.editor.isDirty)
                 JavaPosition.editor.doSave(null)
             }})
-        val fei = JavaPosition.editor.getEditorInput
-        if (fei.isInstanceOf[IFileEditorInput]) {
-          Console.println("translating file....")
-          JavaPosition.unmark
-          TranslateAction.translate(fei.asInstanceOf[IFileEditorInput].getFile, false)
-        } else
-          Console.println("fei not a IFEI")
         //retract up until model
         modelShell match {
           case None => Console.println("how did I get here?")
           case Some(x) =>
+            Console.println("retracting model...")
             DocumentState.resetState
             JavaPosition.retract
             if (x.globalStep < CoqState.getShell.globalStep) {
@@ -348,54 +201,24 @@ class CoqJavaProject (basename : String) {
       CoqCommands.step
     })
     CoqCommands.doLater(() => {
-      val meth : Option[SJInvokable] =
-        if (sourceline == -1)
-          JavaPosition.method
-        else {
-          //try to find sourceline (+ 1) in javaOffsets, get name!
-          var distName : Pair[Option[SJInvokable], Int] = (None, Int.MaxValue)
-          for (x <- definitions)
-            for (m <- x.body) {
-              m match {
-                case m : SJInvokable =>
-                  //why 4? -- well, 1 is for counting from 1 instead of 0,
-                  // the 3 others are for spec!
-                  //lets filter ghosts
-                  //Console.println("oeff: " + (javaOffsets(x)._1.line - 4))
-                  val dist = sourceline - (m.pos.line - 4)
-                  //look into barf
-                  if (dist >= 0 && distName._2 > dist) {
-                    Console.println("maybe verifying: " + m.id + " distance is " + dist)
-                    distName = (Some(m), dist)
-                  }
-                case _ =>
-              }
-            }
-          Console.println("found an approximation: " + distName._1.get.id)
-          distName._1
-        }
       proofShell match {
         case None =>
           Console.println("sending defs + spec")
           DocumentState._content = getCoqString
           PrintActor.register(JavaPosition)
-          JavaPosition.method = meth
           CoqStepAllAction.doit
         case Some(x) =>
+          Console.println("have a PS: " + x.globalStep + " < " + CoqState.getShell.globalStep)
           if (x.globalStep < CoqState.getShell.globalStep) {
-            if (JavaPosition.method != meth) {
-              DocumentState.setBusy
-              Console.println("backtracking to proofshell " + x)
-              CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
-              JavaPosition.method = None
-              DocumentState.position = getCoqString.get.length
-              JavaPosition.method = meth
-            } else
-              CoqCommands.step
-          } else {
-            JavaPosition.method = meth
+            JavaPosition.cur = None
+            JavaPosition.next = None
+            JavaPosition.emptyCoqShells
+            JavaPosition.method = None
+            DocumentState.setBusy
+            Console.println("backtracking to proofshell " + x)
+            CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
+          } else
             CoqCommands.step
-          }
       }
     })
     CoqCommands.doLater(() => {
@@ -403,40 +226,29 @@ class CoqJavaProject (basename : String) {
         Console.println("preserving proof shell: " + CoqState.getShell)
         proofShell = Some(CoqState.getShell)
       }
+      Console.println("assigning method to JP " + meth)
       //story so far: model is now updated, java might be newly generated!
-      JavaPosition.method match {
-        case Some(x) =>
-          var off = x.getCoqPos.offset + program.get.getProofOffset
-          Console.println("woosh woosh -- going to " + x.id + " whose off is " + off + "(DocumentState.position: " + DocumentState.position + ")")
-          DocumentState._content = getCoqString
-          PrintActor.register(JavaPosition)
-          if (DocumentState.position < off)
-            CoqStepUntilAction.reallydoit(off)
-        case None =>
-          CoqCommands.step
-      }
+      JavaPosition.method = Some(meth)
+      val prf = meth.getProperty(EclipseJavaASTProperties.coqProof)
+      assert(prf != null)
+      val p = prf.asInstanceOf[String]
+      Console.println("p is " + p)
+      DocumentState._content = Some(DocumentState._content.getOrElse("") + p)
+      PrintActor.register(JavaPosition)
+      CoqStepAllAction.doit
     })
   }
 
-  def setCoqString (s : Option[String]) : Unit = {
-    //this has to go away!
-    //coqString = s
-  }
-
-  import dk.itu.sdg.javaparser.SJMethodDefinition
   def getCoqString () : Option[String] = {
     program match {
       case None =>
         Console.println("no program!")
         None
       case Some(x) =>
-        val suffix : Option[String] =
-          JavaPosition.method match {
-            case None => None
-            case Some(x) => x.getCoqString
-          }
-        val res = x.getProgram.getOrElse("") + x.getSpec.getOrElse("") + "\n" + suffix.getOrElse("")
-        //Console.println("getcoqstring returns " + res)
+        val pdef = x.getProperty(EclipseJavaASTProperties.coqDefinition).asInstanceOf[String]
+        val spec = x.getProperty(EclipseJavaASTProperties.coqSpecification).asInstanceOf[String]
+        val res = pdef + spec
+        Console.println("getcoqstring returns " + res)
         Some(res)
     }
   }
@@ -450,103 +262,12 @@ object EclipseTables {
   val StringToProject = new HashMap[String, CoqJavaProject]()
 }
 
-/*
-import akka.actor._
-class MyTimer extends Actor {
-  def receive = {
-    case ("START", x : Int) =>
-      Thread.sleep(1000);
-      if (CoqProgressMonitor.tick == x) {
-        //Console.println("tick " + CoqProgressMonitor.tick + " is equal to x " + x)
-        CoqProgressMonitor.actor.tell("REALLY")
-      }
-  }
-}
-
-object CoqProgressMonitor {
-  var tick : Int = 0
-  var timer : ActorRef = null
-  var actor : ActorRef = null
-  var multistep : Boolean = false
-}
-
-class CoqProgressMonitorImplementation extends Actor {
-  import org.eclipse.core.runtime.IProgressMonitor
-  import org.eclipse.jface.dialogs.ProgressMonitorDialog
-  import org.eclipse.swt.widgets.Shell
-  import org.eclipse.swt.widgets.Display
-  class MyProgressMonitorDialog (parent : Shell) extends ProgressMonitorDialog(parent) {
-    import org.eclipse.swt.widgets.Button
-    def getC () : Button = cancel
-  }
-
-  import org.eclipse.swt.events.{MouseListener, MouseEvent}
-  private var p : IProgressMonitor = null
-  private var pmd : MyProgressMonitorDialog = null
-  private val nam = "Coq interaction: "
-  private var title : String = ""
-
-  def receive = {
-    case ("START", n : String) =>
-      title = n
-      //Console.println("Starting progress monitor")
-      if (p == null)
-        if (CoqProgressMonitor.multistep)
-          this.self.tell("REALLY")
-        else
-          CoqProgressMonitor.timer.tell(("START", CoqProgressMonitor.tick))
-      else
-        Display.getDefault.asyncExec(
-          new Runnable() {
-            def run() = {
-              if (p != null)
-                p.setTaskName(nam + ": " + n)
-            }})
-    case "REALLY" =>
-      //assert(pmd == null)
-      Display.getDefault.asyncExec(
-        new Runnable() {
-          def run() = {
-            pmd = new MyProgressMonitorDialog(Display.getDefault.getActiveShell)
-            pmd.setCancelable(true)
-            pmd.open
-            pmd.getC.addMouseListener(new MouseListener() {
-              override def mouseDoubleClick (m : MouseEvent) : Unit = ()
-              override def mouseDown (m : MouseEvent) : Unit = CoqTop.interruptCoq
-              override def mouseUp (m : MouseEvent) : Unit = ()
-            })
-            p = pmd.getProgressMonitor
-            p.beginTask(nam + title, IProgressMonitor.UNKNOWN)
-          }})
-    case "FINISHED" =>
-      CoqProgressMonitor.tick = CoqProgressMonitor.tick + 1
-      //Console.println("Finished progress monitor " + p)
-      if (p != null && !CoqProgressMonitor.multistep) {
-        val oldp = p
-        val oldpmd = pmd
-        p = null
-        pmd = null
-        Display.getDefault.asyncExec(
-          new Runnable() {
-            def run() = {
-              oldp.done
-              oldpmd.close
-              //Clients should not call this method (the workbench calls this method at appropriate times). To have the workbench activate a part, use IWorkbenchPage.activate(IWorkbenchPart) instead.
-              DocumentState.activeEditor.setFocus
-            }
-          })
-      }
-    case x => Console.println("fell through receive of CoqProgressMonitor " + x)
-  }
-}
-*/
-
 object JavaPosition extends CoqCallback {
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   var editor : JavaEditor = null
 
-  import dk.itu.sdg.javaparser.SJInvokable
-  var method : Option[SJInvokable] = None
+  import org.eclipse.jdt.core.dom.MethodDeclaration
+  var method : Option[MethodDeclaration] = None
 
   import org.eclipse.jface.text.Position
   import org.eclipse.jface.text.source.Annotation
@@ -574,33 +295,21 @@ object JavaPosition extends CoqCallback {
   }
 
   import org.eclipse.ui.IFileEditorInput
-  def getCoqString () : Option[String] = {
-    val proj = getProj
-    if (proj != null) {
-      proj.proveMethod(-1)
-      proj.getCoqString
-    } else None
-  }
-
-  import org.eclipse.ui.IFileEditorInput
   import org.eclipse.core.resources.IMarker
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqProofCompleted() =>
         if (editor != null) {
-          Console.println("proof completed - not sending Qed? " + CoqStepNotifier.active)
-          if (! CoqStepNotifier.active) {
-            while (! DocumentState.readyForInput) { } //XXX: bad busy loop
-            CoqStepAction.doit()
-          }
+          DocumentState.setBusy
+          Console.println("writing qed")
+          CoqTop.writeToCoq("Qed.")
         }
       case CoqTheoremDefined(x) =>
-        if (editor != null && x.startsWith("valid_" + method.get.id)) {
-          val doc = getDoc
+        if (editor != null && x.startsWith("valid_")) { // + method.get.id)) {
           //what about specifications!?
-          val spos = doc.getLineOffset(method.get.pos.line - 1)
-          val epos = doc.getLineOffset(method.get.body.last.pos.line + 1) - 1
-          markproven(spos, epos - spos)
+          val spos = method.get.getStartPosition
+          val length = method.get.getLength
+          markproven(spos, length)
           //generate proof certificate IF last method!
           retract
           ActionDisabler.enableStart
@@ -615,9 +324,10 @@ object JavaPosition extends CoqCallback {
           proj.proofShell match {
             case None =>
               //spec!
-              val poff = DocumentState.position - proj.program.get.getSpecOffset + 1 + s
+              val poff = DocumentState.position //- proj.program.get.getSpecOffset + 1 + s
               Console.println("have a spec here... " + poff)
-              val ast = findSpecForCoqOffset(poff)
+              mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+/*              val ast = findSpecForCoqOffset(poff)
               ast match {
                 case Some(as) =>
                   val soff = doc.getLineOffset(as.pos.line - 1)
@@ -627,29 +337,34 @@ object JavaPosition extends CoqCallback {
                   val star = soff + offset + sss + as.pos.column
                   mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
                 case None =>
-                  mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
-              }
+              } */
             case Some(x) =>
               //proof!
-              val poff = DocumentState.position - proj.program.get.getProofOffset - method.get.getCoqPos.offset
-              val (ast, prev) = findStatementForCoqOffset(poff)
-              ast match {
-                case Some(as) =>
-                  val soff = doc.getLineOffset(as.pos.line - 1)
-                  //not entirely correct computation... ("<%" "invariant:")
-                  val star = s + soff + as.pos.column
+              next match {
+                case Some(st) =>
+                  //not entirely correct computation... ("invariant:" and "frame:")
+                  val star = s + st.getStartPosition + 3 //"<% "
+                  Console.println("marking at " + star + " (s: " + s + " sp: " + st.getStartPosition + ")")
                   mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
                 case None =>
                   mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
               }
           }
         }
+      case CoqShellReady(monoton, tokens) =>
+        if (monoton)
+          reAnnotate(false, false)
+        else
+          if (CoqState.lastWasUndo)
+            reAnnotate(false, true)
+          else
+            reAnnotate(true, true)
       case _ =>
     }
   }
 
   def markproven (s : Int, l : Int) = {
-    getProj.provenMethods ::= method.get
+    //getProj.provenMethods ::= method.get
     markHelper("Verified", s, l, "dk.itu.sdg.kopitiam.provenmarker", IMarker.SEVERITY_ERROR) match {
       case Some(x) => proofmarkers ::= x
       case None =>
@@ -668,14 +383,6 @@ object JavaPosition extends CoqCallback {
   def unmark () : Unit = {
     markers.foreach(_.delete)
     markers = List[IMarker]()
-  }
-
-  def markPos (message : String, position : scala.util.parsing.input.Position) = {
-    val doc = getDoc
-    val pos = doc.getLineOffset(position.line - 1) + position.column
-    val pos2 = doc.getLineOffset(position.line) - 1
-    Console.println("marking java at " + pos + " with: " + message)
-    mark(message, pos, pos2 - pos, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
   }
 
   def mark (message : String, spos : Int, len : Int, typ : String, severity : Int) : Unit = {
@@ -706,22 +413,24 @@ object JavaPosition extends CoqCallback {
   }
 
   def retractModel () : Unit = {
+    Console.println("retracting model")
     val proj = getProj
     if (proj != null) {
       proj.modelShell = None
       proj.proofShell = None
-      proj.modelNewerThanSource = true
     }
   }
 
   import org.eclipse.swt.widgets.Display
   def retract () : Unit = {
-    if (editor != null) {
+    val mn = (method == None)
+    Console.println("retracting with " + editor + " and method? " + mn)
+    if (editor != null && method != None) {
+      Console.println("hello my friend, NONONONO")
       method = None
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
-      getProj.javaNewerThanSource = true
       annmodel.connect(doc)
       processed match {
         case Some(x) => annmodel.removeAnnotation(x)
@@ -741,6 +450,9 @@ object JavaPosition extends CoqCallback {
       specprocessed.foreach(annmodel.removeAnnotation(_))
       specprocessed = List[Annotation]()
       annmodel.disconnect(doc)
+      cur = None
+      next = None
+      //also need to remove all properties of the AST nodes..
       PrintActor.deregister(JavaPosition)
       Display.getDefault.asyncExec(
         new Runnable() {
@@ -748,149 +460,266 @@ object JavaPosition extends CoqCallback {
     }
   }
 
-  import dk.itu.sdg.javaparser.Specification
-  def findSpecForCoqOffset (coqoff : Int) : Option[Specification] = {
-    var res : Option[Specification] = None
-    for (d <- getProj.definitions)
-      for (x <- d.body)
-        x match {
-          case i : SJInvokable =>
-            val soff = i.getSpecOff
-            //Console.println("finding? " + coqoff + " > " + soff)
-            if (coqoff >= soff) {
-              val off = coqoff - soff
-              for (x <- i.getSpecs) {
-                //Console.println("checking bounds: " + off + " >= " + x.getCoqPos.offset + " && " + off + " <= " + (x.getCoqPos.length + x.getCoqPos.offset))
-                if (off >= x.getCoqPos.offset && off <= (x.getCoqPos.length + x.getCoqPos.offset))
-                  //win!
-                  res = Some(x)
-              }
+  import org.eclipse.jdt.core.dom.Statement
+  var cur : Option[Statement] = None
+  var next : Option[Statement] = None
+
+  import org.eclipse.jdt.core.dom.{EmptyStatement, WhileStatement, IfStatement, Block}
+  import scala.collection.immutable.Stack
+
+  def emptyCoqShells () : Unit = {
+    var todo : Stack[Statement] = Stack[Statement]()
+    method match {
+      case Some(x) =>
+        todo = todo.push(x.getBody)
+      case None =>
+    }
+    while (!todo.isEmpty) {
+      val st = todo.top
+      todo = todo.pop
+      st match {
+        case x : Block =>
+          todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]))
+        case x : IfStatement =>
+          todo = todo.push(x.getThenStatement)
+          val el = x.getElseStatement
+          if (el != null)
+            todo = todo.push(el)
+        case x : WhileStatement =>
+          todo = todo.push(x.getBody)
+        case x : Statement =>
+          x.setProperty(EclipseJavaASTProperties.coqShell, null)
+      }
+    }
+
+    val prov = editor.getDocumentProvider
+    val doc = prov.getDocument(editor.getEditorInput)
+    val annmodel = prov.getAnnotationModel(editor.getEditorInput)
+    annmodel.connect(doc)
+    processed match {
+      case Some(x) => annmodel.removeAnnotation(x)
+      case None =>
+    }
+    processed = None
+    processing match {
+      case Some(x) => annmodel.removeAnnotation(x)
+      case None =>
+    }
+    processing = None
+    annmodel.disconnect(doc)
+  }
+
+  def getLastCoqStatement () : Option[Statement] = {
+    assert(next == None)
+    var todo : Stack[Statement] = Stack[Statement]()
+    todo = todo.push(method.get.getBody)
+    while (!todo.isEmpty && next == None) {
+      val st = todo.top
+      todo = todo.pop
+      st match {
+        case x : Block =>
+          todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]))
+        case x : IfStatement =>
+          todo = todo.push(x.getThenStatement)
+          val el = x.getElseStatement
+          if (el != null)
+            todo = todo.push(el)
+        case x : WhileStatement =>
+          todo = todo.push(x.getBody)
+        case x : Statement =>
+          val sh = x.getProperty(EclipseJavaASTProperties.coqShell)
+          if (sh != null)
+            cur match {
+              case None => //not sure what to do here....
+              case Some(y) =>
+                if (x != y) {
+                  Console.println("found sth exciting: " + x + ", which is not " + y)
+                  next = Some(x)
+                }
+                val she = y.getProperty(EclipseJavaASTProperties.coqShell).asInstanceOf[CoqShellTokens]
+                val sh1 = sh.asInstanceOf[CoqShellTokens]
+                if (she == sh1)
+                  Console.println("CST are the same " + she)
+                else
+                  Console.println("CST are different: " + she + " vs " + sh1)
             }
-          case _ =>
-        }
+      }
+    }
+    next
+  }
+
+  def getCoqCommand () : Option[String] = {
+    //hold on if javaNewerThanSource or modelNewerThanSource!
+    val prov = editor.getDocumentProvider
+    val doc = prov.getDocument(editor.getEditorInput)
+    var res : Option[String] = None
+    var todo : Stack[Statement] = Stack[Statement]()
+    var active : Boolean = (cur == None)
+    todo = todo.push(method.get.getBody)
+    while (res == None && !todo.isEmpty) {
+      val nextst = todo.top
+      todo = todo.pop
+      res = nextst match {
+        case x : EmptyStatement =>
+          if (active) {
+            val script = doc.get(x.getStartPosition, x.getLength)
+            Console.println("script is " + script + " (size: " + script.length + ")")
+            val con =
+              if (script.contains("invariant:")) {
+                val i1 = script.indexOf(":")
+                val i2 = script.indexOf("frame:")
+                val i3 = if (i2 == -1) script.length - 3 else i2
+                val i = script.substring(i1 + 1, i3).trim
+                val f =
+                  if (i2 == -1)
+                    "<true>"
+                  else
+                    script.substring(i3 + 6, script.length - 3).trim
+                Console.println("inv: " + i1 + " " + i2 + " " + i3 + " f " + f)
+                "forward (" + i + ") (" + f + ")."
+              } else
+                script.drop(2).dropRight(2).trim
+            Console.println("found ES: " + con)
+            next = Some(x)
+            Some(con)
+          } else None
+        case x : WhileStatement =>
+          todo = todo.push(x.getBody)
+          None
+        case x : IfStatement =>
+          val el = x.getElseStatement
+          if (el != null)
+            todo = todo.push(el)
+          todo = todo.push(x.getThenStatement)
+          None
+        case x : Block =>
+          todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]).reverse)
+          None
+        case _ =>
+          Console.println("found nth")
+          None
+      }
+      if (!active && cur.get == nextst)
+        active = true
+    }
     res
   }
 
-  import dk.itu.sdg.javaparser.{SJStatement, SJConditional, SJWhile}
-  import scala.collection.immutable.Stack
-  //coqoff -> [match, previous]
-  def findStatementForCoqOffset (coqoff : Int) : Pair[Option[SJStatement],Option[SJStatement]] = {
-    var todo : Stack[SJStatement] = new Stack[SJStatement]()
-    todo = todo.pushAll(method.get.body).reverse
-    var latestStatement : Option[SJStatement] = None
-    var statement : Option[SJStatement] = None
-    while (statement == None && ! todo.isEmpty) {
-      val st : SJStatement = todo.top
-      todo = todo.pop
-      st match {
-        case SJConditional(t, c, a) =>
-          todo = todo.pushAll(c.reverse)
-          todo = todo.pushAll(a.reverse)
-        case SJWhile(t, l) =>
-          todo = todo.pushAll(l.reverse)
-        case x =>
-          val offstart = st.getCoqPos.offset
-          val offend = offstart + st.getCoqPos.length
-          if (offstart != offend && offstart <= coqoff && coqoff <= offend)
-            statement = Some(st)
-          else if (offstart > coqoff) {
-            statement = latestStatement
-            latestStatement = None
-          } else if (offstart != offend)
-            latestStatement = Some(st)
-          else if (todo.isEmpty)
-            statement = Some(st)
-      }
-    }
-    Pair(statement, latestStatement)
-  }
-
+  import org.eclipse.swt.widgets.Display
+  import org.eclipse.jface.text.source.IAnnotationModelExtension
   def reAnnotate (proc : Boolean, undo : Boolean) : Unit = {
-    Console.println("reannotate called with proc " + proc + " undo " + undo)
+    val m = (method != None)
+    Console.println("reannotate called with proc " + proc + " undo " + undo + " method " + m + " editor " + editor)
     //4 cases:
-    // #t #f =>                  remove nothing, mark yellow
-    // #t #t => problem marker - remove yellow, mark nothing
-    // #f #t => real undo -      remove last green, remark green
+    // #t #f => processing       remove nothing, mark yellow
+    // #t #t => problem marker   remove yellow, mark nothing
+    // #f #t => real undo        remove green, mark green
     // #f #f => processed!       remove yellow & green, mark green
     if (editor != null && method != None) {
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
-      val proj = EclipseTables.DocToProject(doc)
+      val proj = getProj
       if (proj.proofShell != None) {
         //we're in proof mode!
-        val coqoff = (if (proc) DocumentState.sendlen else 0) + DocumentState.position - proj.program.get.getProofOffset - method.get.getCoqPos.offset - 1
-        Console.println("coqoff here is now " + coqoff)
-        var start : Int = doc.getLineOffset(method.get.pos.line - 1)
-        var end : Int = 0
-        if (coqoff == -1) //I wish we wouldn't need to special case this
-          end = doc.getLineOffset(method.get.pos.line) - 1
-        else if (coqoff < 0)
-          //maybe should do sth more sophisticated...
-          Console.println("coqoff too low for me")
-        else {
-          val (st, lst) = findStatementForCoqOffset(coqoff)
-          Console.println("found st " + st + " and lst " + lst)
-          if (proc) {
-            val loff =
-              lst match {
-                case None => method.get.pos.line - 1
-                case Some(x) => x.pos.line - 1
-              }
-            start = doc.getLineOffset(loff)
-          }
-          st match {
+
+        val start = method.get.getStartPosition
+
+        if (!proc && undo)
+          cur match {
             case Some(x) =>
-              end = doc.getLineOffset(x.pos.line - 1) + x.pos.column - 1
+              Console.println("removing coqshell property")
+              x.setProperty(EclipseJavaASTProperties.coqShell, null)
             case None =>
           }
+
+        Console.println(" reAnn (cur: " + cur + " next: " + next + ") proc " + proc + " undo " + undo)
+        if (next != None && !proc) { // && !undo) {
+          Console.println("  ass " + cur + " now " + next)
+          cur = next
+          next = None
         }
+
+        val end =
+          cur match {
+            case None =>
+              val c1 = doc.getLineOfOffset(start)
+              doc.getLineOffset(c1 + 1) - 2
+            case Some(x) =>
+              //preserve current shell -- if success!
+              if (!proc && !undo) {
+                Console.println("preserving for " + x + " shell " + CoqState.getShell)
+                x.setProperty(EclipseJavaASTProperties.coqShell, CoqState.getShell)
+              }
+              x.getStartPosition + x.getLength
+          }
 
         val annmodel = prov.getAnnotationModel(editor.getEditorInput)
         annmodel.connect(doc)
 
         if ((proc && undo) || (!proc && !undo)) {
           processing match {
-            case Some(x) => annmodel.removeAnnotation(x)
+            case Some(x) =>
+              Console.println("removing processing")
+              annmodel.removeAnnotation(x)
+              Display.getDefault.asyncExec(
+                new Runnable() {
+                  def run() = { editor.getViewer.invalidateTextPresentation }})
             case None =>
           }
           processing = None
         }
+
         if ((!proc && undo) || (!proc && !undo)) {
+          //re-mark green!
+          val p = new Position(start, end - start)
           processed match {
-            case Some(x) => {
-              annmodel.removeAnnotation(x)
-              if (undo)
+            case Some(x) =>
+              val op = annmodel.getPosition(x)
+              Console.println("adjusting processed: was " + op.getLength + " now " + p.getLength)
+              val tst = ((op.getLength > p.getLength) || (op.getOffset != p.getOffset))
+              annmodel.asInstanceOf[IAnnotationModelExtension].modifyAnnotationPosition(x, p)
+              if (tst)
                 Display.getDefault.asyncExec(
                   new Runnable() {
                     def run() = { editor.getViewer.invalidateTextPresentation }})
-            }
             case None =>
+              Console.println("new processed annotation")
+              val ann = new Annotation("dk.itu.sdg.kopitiam.processed", false, "Proof")
+              annmodel.addAnnotation(ann, p)
+              processed = Some(ann)
           }
-          processed = None
         }
 
-        if (!(proc && undo) && (end > start)) {
-          val txt =
-            if (proc)
-              "dk.itu.sdg.kopitiam.processing"
-            else
-              "dk.itu.sdg.kopitiam.processed"
-          val l1 = doc.getLineOfOffset(start)
-          val c1 = start - doc.getLineOffset(l1)
-          val l2 = doc.getLineOfOffset(end)
-          val c2 = end - doc.getLineOffset(l2)
-          Console.println("adding " + txt + " annotation for: " + start + " -- " + end + " (len: " + (end - start) + "): (" + l1 + ", " + c1 + ") -- (" + l2 + ", " + c2 + ")")
+        if (proc && !undo) {
+          val pp : Int = processed match {
+            case None =>
+              start
+            case Some(x) =>
+              Console.println("found a processed!")
+              val p = annmodel.getPosition(x)
+              p.getOffset + p.getLength
+          }
+          val rend : Int =
+            next match {
+              case None => end
+              case Some(x) => x.getStartPosition + x.getLength
+            }
+          val txt = "dk.itu.sdg.kopitiam.processing"
           val sma = new Annotation(txt, false, "Proof")
-          annmodel.addAnnotation(sma, new Position(start, end - start))
-          if (proc)
-            processing = Some(sma)
-          else
-            processed = Some(sma)
+          Console.println("new processing annotation (st " + start + " pp " + pp + " end " + end + ") meth " + method)
+          annmodel.addAnnotation(sma, new Position(pp, rend - pp))
+          processing match {
+            case Some(x) =>
+              Console.println("remove processing again")
+              annmodel.removeAnnotation(x)
+            case None =>
+          }
+          processing = Some(sma)
         }
         annmodel.disconnect(doc)
       }
-      if (proj.modelShell != None) {
-        val coqoff = (if (proc) DocumentState.sendlen else 0) + DocumentState.position - proj.program.get.getSpecOffset - method.get.getSpecOff - method.get.getSpecLength - 1
+/*      if (proj.modelShell != None) {
+        val coqoff = (if (proc) DocumentState.sendlen else 0) + DocumentState.position //- proj.program.get.getSpecOffset - method.get.getSpecOff - method.get.getSpecLength - 1
         Console.println("spec? coqoff here is now " + coqoff)
         val annmodel = prov.getAnnotationModel(editor.getEditorInput)
         annmodel.connect(doc)
@@ -907,13 +736,13 @@ object JavaPosition extends CoqCallback {
           //mark these!
           var start : Int = Int.MaxValue
           var end : Int = 0
-          for (s <- method.get.getSpecs) {
+/*          for (s <- method.get.getSpecs) {
             if (s.pos.line < start)
               start = s.pos.line
             if (s.pos.line > end)
               end = s.pos.line
           }
-
+*/
           val txt =
             if (proc)
               "dk.itu.sdg.kopitiam.processing"
@@ -930,7 +759,7 @@ object JavaPosition extends CoqCallback {
             specprocessed ::= sma
         }
         annmodel.disconnect(doc)
-      }
+      } */
     }
   }
 }
@@ -1035,6 +864,7 @@ object EclipseBoilerPlate {
   }
 }
 
+import dk.itu.sdg.util.KopitiamLogger
 object DocumentState extends CoqCallback with KopitiamLogger {
   import org.eclipse.ui.IWorkbenchPart
   var activated : IWorkbenchPart = null
@@ -1065,7 +895,6 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   import org.eclipse.ui.{IFileEditorInput,IURIEditorInput}
   import org.eclipse.core.resources.{IFile,IResource,ResourcesPlugin}
   import org.eclipse.core.runtime.Path
-  import java.net.URI
   def resource () : IFile = {
     if (activeEditor != null) {
       val input = activeEditor.getEditorInput
@@ -1093,25 +922,34 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   def content () : String = {
     _content match {
       case None =>
-        Console.println("no content. activeeditor is " + activeEditor + " javapos is " + JavaPosition.editor)
+        Console.println("no content. activeeditor is " + activeEditor)
         if (activeEditor != null)
           _content = Some(activeDocument.get)
-        else if (JavaPosition.editor != null) {
-          Console.println("calling JP.getCS here...")
-          _content = JavaPosition.getCoqString
-        }
         _content.getOrElse("  ") //not happy with this hack
       case Some(x) =>
         x
     }
   }
 
+  def nextCommand () : Option[String] = {
+    val cont = content.drop(DocumentState.position)
+    if (cont.length > 0) {
+      val eoc = CoqTop.findNextCommand(cont)
+      if (eoc > 0) {
+        val cmd = cont.take(eoc).trim
+        sendlen = eoc
+        Some(cmd)
+      } else None
+    } else None
+  }
+
+
+
   import scala.collection.mutable.HashMap
   var positionToShell : HashMap[Int,CoqShellTokens] = new HashMap[Int,CoqShellTokens]()
 
   var sendlen : Int = 0
   var until : Int = -1
-  var realundo : Boolean = false
 
   import org.eclipse.core.resources.IMarker
   import org.eclipse.core.runtime.CoreException
@@ -1151,12 +989,14 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     //Console.println("position updated to " + x)
   }
 
+  private var _readyForInput : Boolean = false
   def readyForInput () : Boolean = { _readyForInput }
   def setBusy () : Unit = { _readyForInput = false }
-  private var _readyForInput : Boolean = false
+
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqShellReady(monoton, token) =>
+        Console.println(" DS dispatch: " + monoton)
         if (monoton) {
           commit
           if (positionToShell.get(position) == None) {
@@ -1171,19 +1011,15 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   }
 
   var oldsendlen : Int = 0
-  import org.eclipse.jface.text.{ Region, TextPresentation }
-  import org.eclipse.swt.custom.StyleRange
-
   var reveal : Boolean = true
   var autoreveal : Boolean = false
 
   import org.eclipse.swt.widgets.Display
   def undo () : Unit = {
-    //Console.println("undo (@" + position + ", sendlen: " + sendlen + ") real: " + realundo)
+    //Console.println("undo (@" + position + ", sendlen: " + sendlen + ")
     if (sendlen != 0) {
-      if (realundo) {
+      if (CoqState.lastWasUndo) {
         val start = scala.math.max(position - sendlen, 0)
-        realundo = false
         if (activeEditor != null) {
           activeEditor.addAnnotations(start, 0)
           activeEditor.invalidate
@@ -1201,7 +1037,6 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         }
         position = start
         sendlen = 0
-        JavaPosition.reAnnotate(false, true)
       } else { //just an error
         //Console.println("undo: barf")
         //kill off process colored thingies
@@ -1211,7 +1046,6 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         }
         oldsendlen = sendlen
         sendlen = 0
-        JavaPosition.reAnnotate(true, true)
       }
     }
   }
@@ -1239,7 +1073,6 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       //Console.println("commited - and doing some work")
       val end = scala.math.min(sendlen, content.length - position)
       position += end
-      JavaPosition.reAnnotate(false, false)
       sendlen = 0
       //XXX: that's wrong! sendlen is 0!!!!
       if (activeEditor != null) {
@@ -1409,14 +1242,10 @@ object GoalViewer extends GoalViewer { }
 
 import org.eclipse.ui.IStartup
 class Startup extends IStartup {
-//  import akka.actor.ActorSystem
   override def earlyStartup () : Unit = {
     Console.println("earlyStartup called")
     ActionDisabler.disableAll
     DocumentMonitor.init
-    //val system = ActorSystem("Kopitiam")
-    //CoqProgressMonitor.actor = system.actorOf(Props[CoqProgressMonitorImplementation], name = "ProgressMonitor")
-    //CoqProgressMonitor.timer = system.actorOf(Props[MyTimer], name = "MyTimer")
     CoqTop.init
     PrintActor.register(DocumentState)
     CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + System.getProperty("file.separator")

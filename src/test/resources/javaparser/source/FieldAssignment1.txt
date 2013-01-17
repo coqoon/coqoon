@@ -1,6 +1,0 @@
-class Foo {
-  int b;
-  void set () {
-    b = 10;
-  }
-}

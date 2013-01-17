@@ -1,3 +1,0 @@
-private abstract class A {
-    
-}

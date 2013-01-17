@@ -57,7 +57,7 @@ class CoqEditor extends TextEditor with EclipseUtils {
     viewer
   }
 
-  import org.eclipse.jface.text.source.Annotation
+  import org.eclipse.jface.text.source.{Annotation, IAnnotationModelExtension}
   private var processed : Option[Annotation] = None
   private var processing : Option[Annotation] = None
 
@@ -66,27 +66,34 @@ class CoqEditor extends TextEditor with EclipseUtils {
   def addAnnotations (first : Int, second : Int) : Unit = {
     val provider = getDocumentProvider
     val doc = provider.getDocument(getEditorInput)
+    //I get IAnnotationModel here, but need IAnnotationModelExtension
+    //(for modifyAnnotationPosition) - disjoint from IAnnotationModel
     val annmodel = provider.getAnnotationModel(getEditorInput)
     annmodel.connect(doc)
+    val p = new Position(0, first)
     processed match {
       case None =>
+        val ann = new Annotation("dk.itu.sdg.kopitiam.processed", false, "Processed Proof")
+        annmodel.addAnnotation(ann, p)
+        processed = Some(ann)
       case Some(x) =>
-        annmodel.removeAnnotation(x)
-        processed = None
+        annmodel.asInstanceOf[IAnnotationModelExtension].modifyAnnotationPosition(x, p)
     }
+    val p2 = if (second > 0) new Position(first, second) else null
     processing match {
       case None =>
+        if (second > 0) {
+          val ann2 = new Annotation("dk.itu.sdg.kopitiam.processing", false, "Processing Proof")
+          annmodel.addAnnotation(ann2, p2)
+          processing = Some(ann2)
+        }
       case Some(x) =>
-        annmodel.removeAnnotation(x)
-        processing = None
-    }
-    val ann = new Annotation("dk.itu.sdg.kopitiam.processed", false, "Processed Proof")
-    annmodel.addAnnotation(ann, new Position(0, first))
-    processed = Some(ann)
-    if (second > 0) {
-      val ann2 = new Annotation("dk.itu.sdg.kopitiam.processing", false, "Processing Proof")
-      annmodel.addAnnotation(ann2, new Position(first, second))
-      processing = Some(ann2)
+        if (second > 0)
+          annmodel.asInstanceOf[IAnnotationModelExtension].modifyAnnotationPosition(x, p2)
+        else {
+          annmodel.removeAnnotation(x)
+          processing = None
+        }
     }
     annmodel.disconnect(doc)
   }
