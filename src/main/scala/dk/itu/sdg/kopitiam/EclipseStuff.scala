@@ -427,7 +427,6 @@ object JavaPosition extends CoqCallback {
     Console.println("retracting with " + editor + " and method? " + mn)
     if (editor != null && method != None) {
       Console.println("hello my friend, NONONONO")
-      method = None
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
@@ -452,7 +451,8 @@ object JavaPosition extends CoqCallback {
       annmodel.disconnect(doc)
       cur = None
       next = None
-      //also need to remove all properties of the AST nodes..
+      emptyCoqShells
+      method = None
       PrintActor.deregister(JavaPosition)
       Display.getDefault.asyncExec(
         new Runnable() {
