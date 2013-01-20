@@ -427,7 +427,6 @@ object JavaPosition extends CoqCallback {
     Console.println("retracting with " + editor + " and method? " + mn)
     if (editor != null && method != None) {
       Console.println("hello my friend, NONONONO")
-      method = None
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
@@ -452,7 +451,8 @@ object JavaPosition extends CoqCallback {
       annmodel.disconnect(doc)
       cur = None
       next = None
-      //also need to remove all properties of the AST nodes..
+      emptyCoqShells
+      method = None
       PrintActor.deregister(JavaPosition)
       Display.getDefault.asyncExec(
         new Runnable() {
@@ -595,9 +595,16 @@ object JavaPosition extends CoqCallback {
         case x : Block =>
           todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]).reverse)
           None
-        case _ =>
-          Console.println("found nth")
-          None
+        case x : Statement =>
+          if (active) {
+            val fwd = Activator.getDefault.getPreferenceStore.getBoolean("implicit")
+            Console.println("found nth, using forward? " + fwd + " for " + x.getClass.toString)
+            if (fwd) {
+              next = Some(x)
+              Some("forward.")
+            } else
+              None
+          } else None
       }
       if (!active && cur.get == nextst)
         active = true
