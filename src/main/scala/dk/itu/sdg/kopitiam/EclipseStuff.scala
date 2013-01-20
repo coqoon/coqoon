@@ -227,7 +227,7 @@ class CoqJavaProject (basename : String) {
         Console.println("preserving proof shell: " + CoqState.getShell)
         proofShell = Some(CoqState.getShell)
       }
-      Console.println("assigning method to JP " + meth)
+      Console.println("assigning method to JP ")
       //story so far: model is now updated, java might be newly generated!
       JavaPosition.method = Some(meth)
       val prf = meth.getProperty(EclipseJavaASTProperties.coqProof)
@@ -347,6 +347,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
                   val star = s + st.getStartPosition + 3 //"<% "
                   Console.println("marking at " + star + " (s: " + s + " sp: " + st.getStartPosition + ")")
                   mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+                  next = None
                 case None =>
                   mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
               }
@@ -600,10 +601,85 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
     next
   }
 
+  def copyProps (from : MethodDeclaration, to : MethodDeclaration) : Unit = {
+    //implicit assumption is that structure up until cur is the same!
+    var newcur : Option[Statement] = None
+    var todof : Stack[Statement] = Stack[Statement]()
+    todof = todof.push(from.getBody)
+    var todot : Stack[Statement] = Stack[Statement]()
+    todot = todot.push(to.getBody)
+    var end : Boolean = false
+    while (!end && !todof.isEmpty) {
+      val nextfrom = todof.top
+      todof = todof.pop
+      val nextto = todot.top
+      todot = todot.pop
+      nextfrom match {
+        case x : WhileStatement =>
+          assert(nextto.isInstanceOf[WhileStatement])
+          todof = todof.push(x.getBody)
+          todot = todot.push(nextto.asInstanceOf[WhileStatement].getBody)
+        case x : IfStatement =>
+          assert(nextto.isInstanceOf[IfStatement])
+          val y = nextto.asInstanceOf[IfStatement]
+          val el = x.getElseStatement
+          val elt = y.getElseStatement
+          if (el != null)
+            todof = todof.push(el)
+          if (elt != null)
+            todot = todot.push(elt)
+          todof = todof.push(x.getThenStatement)
+          todot = todot.push(y.getThenStatement)
+        case x : Block =>
+          assert(nextto.isInstanceOf[Block])
+          todof = todof.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]).reverse)
+          todot = todot.pushAll(scala.collection.JavaConversions.asBuffer(nextto.asInstanceOf[Block].statements).map(_.asInstanceOf[Statement]).reverse)
+        case x : Statement =>
+          assert(x.getClass == nextto.getClass)
+          val cs = x.getProperty(EclipseJavaASTProperties.coqShell)
+          if (cs != null)
+            nextto.setProperty(EclipseJavaASTProperties.coqShell, cs)
+          cur match {
+            case Some(y) =>
+              if (x == y) {
+                end = true
+                cur = Some(nextto)
+              }
+            case None =>
+              end = true
+              Console.println("how did that happen?, cur is none here :/")
+              //how did that happen?
+          }
+      }
+    }
+  }
+
+  import org.eclipse.jface.text.ITextSelection
   def getCoqCommand () : Option[String] = {
-    //hold on if javaNewerThanSource or modelNewerThanSource!
     val prov = editor.getDocumentProvider
-    val doc = prov.getDocument(editor.getEditorInput)
+    val ei = editor.getEditorInput
+    val doc = prov.getDocument(ei)
+    //hold on if ASTdirty or modelNewerThanSource!
+    assert(next == None)
+    if (getProj.ASTdirty) {
+      //good news: we do not need to backtrack (already done)
+      //bad news: we need to update our internal representation
+      // and copy over properties (at least CoqShell)
+      val bla = getRoot(ei)
+      val cu = getCompilationUnit(bla)
+      walkAST(cu, doc)
+
+      val selection = editor.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
+      val off = selection.getOffset
+      val node = findASTNode(cu, off, 0)
+      val md = findMethod(node)
+
+      //copy over
+      copyProps(method.get, md)
+      getProj.program = Some(cu)
+      method = Some(md)
+      getProj.ASTdirty = false
+    }
     var res : Option[String] = None
     var todo : Stack[Statement] = Stack[Statement]()
     var active : Boolean = (cur == None)
@@ -765,7 +841,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
             }
           val txt = "dk.itu.sdg.kopitiam.processing"
           val sma = new Annotation(txt, false, "Proof")
-          Console.println("new processing annotation (st " + start + " pp " + pp + " end " + end + ") meth " + method)
+          Console.println("new processing annotation (st " + start + " pp " + pp + " end " + end + ")")
           annmodel.addAnnotation(sma, new Position(pp, rend - pp))
           processing match {
             case Some(x) =>
