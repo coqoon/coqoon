@@ -595,9 +595,16 @@ object JavaPosition extends CoqCallback {
         case x : Block =>
           todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]).reverse)
           None
-        case _ =>
-          Console.println("found nth")
-          None
+        case x : Statement =>
+          if (active) {
+            val fwd = Activator.getDefault.getPreferenceStore.getBoolean("implicit")
+            Console.println("found nth, using forward? " + fwd + " for " + x.getClass.toString)
+            if (fwd) {
+              next = Some(x)
+              Some("forward.")
+            } else
+              None
+          } else None
       }
       if (!active && cur.get == nextst)
         active = true

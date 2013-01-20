@@ -12,10 +12,11 @@ class KopitiamPreferencePage extends FieldEditorPreferencePage with IWorkbenchPr
     setPreferenceStore(Activator.getDefault.getPreferenceStore)
   }
 
-  import org.eclipse.jface.preference.DirectoryFieldEditor
+  import org.eclipse.jface.preference.{BooleanFieldEditor, DirectoryFieldEditor}
   override def createFieldEditors () : Unit = {
     addField(new DirectoryFieldEditor("coqpath", "Path to Coq", getFieldEditorParent))
     addField(new DirectoryFieldEditor("loadpath", "Path to Load", getFieldEditorParent))
+    addField(new BooleanFieldEditor("implicit", "Implicitly generate 'forward' proof script for each statement", getFieldEditorParent))
   }
 
   import java.io.File
