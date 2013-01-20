@@ -39,6 +39,7 @@ class CoqJavaProject (basename : String) {
   var coqModel : Option[IDocument] = None
   var modelNewerThanSource : Boolean = true
   var javaNewerThanSource : Boolean = true
+  var ASTdirty : Boolean = false
   var modelShell : Option[CoqShellTokens] = None
   var proofShell : Option[CoqShellTokens] = None
 
@@ -262,7 +263,7 @@ object EclipseTables {
   val StringToProject = new HashMap[String, CoqJavaProject]()
 }
 
-object JavaPosition extends CoqCallback {
+object JavaPosition extends CoqCallback with EclipseJavaHelper {
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   var editor : JavaEditor = null
 
@@ -507,6 +508,57 @@ object JavaPosition extends CoqCallback {
     }
     processing = None
     annmodel.disconnect(doc)
+  }
+
+  def getASTbeforeOff (off : Int) : Option[Statement] = {
+    Console.println("Called with off " + off)
+    assert(next == None)
+    getProj.program match {
+      case None => None
+      case Some(x) =>
+        val n = findASTNode(x, off, 0)
+        Console.println("n is " + n.getClass.toString + ": " + n)
+        val m = findMethod(n)
+        Console.println("Is the method the same? " + (m == method.get))
+        if (m == method.get) {
+          Console.println("YEP")
+          var todo : Stack[Statement] = Stack[Statement]()
+          todo = todo.push(method.get.getBody)
+          var nx : Boolean = false
+          while (!todo.isEmpty && next == None) {
+            val st = todo.top
+            todo = todo.pop
+            st match {
+              case x : Block =>
+                todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]))
+              case x : IfStatement =>
+                todo = todo.push(x.getThenStatement)
+                val el = x.getElseStatement
+                if (el != null)
+                  todo = todo.push(el)
+              case x : WhileStatement =>
+                todo = todo.push(x.getBody)
+              case x : Statement =>
+                Console.println("have a statement here " + x.getClass.toString + ": " + x)
+                if (nx) {
+                  val cs = x.getProperty(EclipseJavaASTProperties.coqShell)
+                  Console.println("and nx, cs " + cs)
+                  if (cs != null)
+                    next = Some(x)
+                }
+                if (n == x) {
+                  Console.println("and is n")
+                  nx = true
+                }
+                if (!nx) {
+                  Console.println("resetting shell!")
+                  x.setProperty(EclipseJavaASTProperties.coqShell, null)
+                }
+            }
+          }
+        }
+    }
+    next
   }
 
   def getLastCoqStatement () : Option[Statement] = {

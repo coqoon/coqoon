@@ -149,11 +149,10 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     //Console.println("doc " + doc + " changed [@" + event.getOffset + "], len: " + event.getLength)
     if (EclipseTables.DocToProject.contains(doc)) {
       val proj = EclipseTables.DocToProject(doc)
-      DocumentState._content = None
       if (proj.isJava(doc)) {
-        val oldval = proj.javaNewerThanSource
-        proj.javaNewerThanSource = true
-        if (proj.getCoqString != None) {
+        var foundchange : Boolean = false
+        if (proj.proofShell != None) {
+          //we're in proof mode and actually care!
           val content = doc.get
           val off = event.getOffset
           val p1 = content.lastIndexOf("<%", off)
@@ -166,25 +165,61 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                 //so, we're inside antiquotes! and we have some positions:
                 // <% .. %> .. <% .CHANGE. %> .. <% .. %>
                 //       p2    p1          p3    p4
-                val l = doc.getLineOfOffset(p1) + 1
-                val c = p1 - doc.getLineOffset(l - 1) + 1
                 //strategy is here:
                 //locate AST of CHANGE! <- we can be either in proof or spec
+                //backtrack to before change
                 val nncon = content.drop(p1 + 2).substring(0, p3 - p1 - 2).trim
-                //modify content (spec or proof script)
                 if (nncon.startsWith("lvars: ") || nncon.startsWith("precondition: ") || nncon.startsWith("requires: ") ||  nncon.startsWith("postcondition: ") || nncon.startsWith("ensures: ")) {
+                  Console.println("it's the spec you changed... (to " + nncon + ")")
                   //change to spec
+                  //here we nevertheless have to backtrack (to modelShell)
+                  //so we can also re-parse everything
+
+                  //handled below in the !foundchange case - equivalent to
+                  //changes to java source code
                 } else {
-                  //change to proof script
+                  Console.println("it's the proof you changed... (to " + nncon + ")")
+                  //change to proof script - might need to backtrack
+                  JavaPosition.cur match {
+                    case None => //we're lucky! but how can that happen?
+                    case Some(x) =>
+                      Console.println("Is " + (x.getStartPosition + x.getLength) + " > " + off + "?")
+                      if (x.getStartPosition + x.getLength > off)
+                        //backtrack!
+                        //also removes the coqShell props!
+                        JavaPosition.getASTbeforeOff(off) match {
+                          case Some(bt) =>
+                            Console.println("backtracking to " + bt)
+                            val csss = bt.getProperty(EclipseJavaASTProperties.coqShell)
+                            assert(csss != null)
+                            //invalidate! everything!
+                            val css = csss.asInstanceOf[CoqShellTokens]
+                            DocumentState.setBusy
+                            val cs = CoqState.getShell
+                            CoqTop.writeToCoq("Backtrack " + css.globalStep + " " + css.localStep + " " + (cs.context.length - css.context.length) + ".")
+                          case None =>
+                            //start of method...
+                        }
+                  }
+                  proj.ASTdirty = true
+                  foundchange = true
                 }
               }
-            }
           }
+        }
+        if (!foundchange) {
+          //change to actual java code!
+          DocumentState.setBusy
+          proj.proofShell = None
+          JavaPosition.retract
+          CoqTop.writeToCoq("Backtrack " + proj.modelShell)
+        }
         ActionDisabler.enableMaybe
       }
       if (proj.isCoqModel(doc)) {
         Console.println("model updated, setting boolean")
         proj.modelNewerThanSource = true
+        //backtrack! everything... (both coq and java sides)
         DocumentState._content = None
       }
     }
