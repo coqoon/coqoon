@@ -425,7 +425,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
 
   import org.eclipse.swt.widgets.Display
   def retract () : Unit = {
-    val mn = (method == None)
+    val mn = (method != None)
     Console.println("retracting with " + editor + " and method? " + mn)
     if (editor != null && method != None) {
       Console.println("hello my friend, NONONONO")

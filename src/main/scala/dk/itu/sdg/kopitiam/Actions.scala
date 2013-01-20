@@ -388,6 +388,7 @@ class RestartCoqAction extends KAction {
     JavaPosition.retract
     CoqCommands.empty
     PrintActor.deregister(CoqOutputDispatcher)
+    PrintActor.deregister(JavaPosition)
     CoqStartUp.start
   }
 }
