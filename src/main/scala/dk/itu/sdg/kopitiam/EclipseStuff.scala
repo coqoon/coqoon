@@ -1416,8 +1416,9 @@ class CoqCompileJob (name : String) extends Job (name : String) {
           "-I " + loadp
         else
           ""
-      Console.println("found coqc in " + coqc + ", running with (arg " + arg + "): " + name)
-      Runtime.getRuntime.exec(coqc + " " + arg + " " + name).waitFor
+      val arg2 = "-I " + EclipseBoilerPlate.getProjectDir
+      Console.println("found coqc in " + coqc + ", running with (" + arg2 + ";" + arg + "): " + name)
+      Runtime.getRuntime.exec(coqc + " " + arg2 + " " + arg + " " + name).waitFor
       //what/where to do with output?
     }
     Status.OK_STATUS
