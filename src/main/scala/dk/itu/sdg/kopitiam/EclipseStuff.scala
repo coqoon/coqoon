@@ -1211,6 +1211,14 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       sendlen = 0
       //XXX: that's wrong! sendlen is 0!!!!
       if (activeEditor != null) {
+        if (nextCommand == None) {
+          //getFullPath is relative to Workspace
+          val nam = resource.getRawLocation.toString
+          Console.println("no next command in here, starting a ccj! (with " + nam + ")")
+          new CoqCompileJob(nam).schedule
+        }
+
+
         activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
         if (reveal)
           Display.getDefault.asyncExec(
@@ -1385,5 +1393,33 @@ class Startup extends IStartup {
     PrintActor.register(DocumentState)
     CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + System.getProperty("file.separator")
     ActionDisabler.initializationFinished
+  }
+}
+
+import org.eclipse.core.runtime.jobs.Job
+class CoqCompileJob (name : String) extends Job (name : String) {
+
+  import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status}
+  import java.io.File
+  override def run (mon : IProgressMonitor) : IStatus = {
+    Console.println("hello, world!, " + name)
+    val la = if (CoqTop.isWin) ".exe" else ""
+    val coqc = CoqTop.coqpath + "coqc" + la
+    //what about dependencies
+    //what is our cwd?
+    if (new File(coqc).exists) {
+
+      val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
+      val lp = new File(loadp).exists
+      val arg =
+        if (lp)
+          "-I " + loadp
+        else
+          ""
+      Console.println("found coqc in " + coqc + ", running with (arg " + arg + "): " + name)
+      Runtime.getRuntime.exec(coqc + " " + arg + " " + name).waitFor
+      //what/where to do with output?
+    }
+    Status.OK_STATUS
   }
 }
