@@ -1385,13 +1385,22 @@ object GoalViewer extends GoalViewer { }
 
 import org.eclipse.ui.IStartup
 class Startup extends IStartup {
+  import org.eclipse.core.runtime.Platform
+
   override def earlyStartup () : Unit = {
     Console.println("earlyStartup called")
     ActionDisabler.disableAll
     DocumentMonitor.init
     CoqTop.init
     PrintActor.register(DocumentState)
-    CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + System.getProperty("file.separator")
+    val sep = System.getProperty("file.separator")
+    CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + sep
+    val loc = Platform.getLocation.toString
+    if (CoqTop.coqpath == "") {
+      Console.println("empty coqpath F" + CoqTop.coqpath + "FF, setting to: F" + loc + sep + "coq" + sep + "bin" + sep + "FF")
+      CoqTop.coqpath = loc + sep + "coq" + sep + "bin" + sep
+    }
+    Console.println("non-empty coqpath " + CoqTop.coqpath + " eclipse installation: F" + loc + sep + "coq" + sep + "bin" + sep + "FF")
     ActionDisabler.initializationFinished
   }
 }
