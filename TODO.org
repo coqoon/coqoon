@@ -1,4 +1,10 @@
 * General
+** notes from SVARM:
+ interface/java standard library annotations
+ defer to runtime checking!?
+** useful notes:
+      val bun = Platform.getBundle("dk.itu.sdg.kopitiam")
+      val loc = FileLocator.getBundleFile(bun).getParentFile.getParentFile.toString
 ** move global loadpath into project-specific settings (similar to referenced libraries in eclipse)!
 ** future: incrementally run proofer in the background, annoy user then with unproven stuff (when code is changed)
 ** incremental combinator parsers, done in yi http://yi-editor.blogspot.com/2008/11/incremental-parsing-in-yi.html

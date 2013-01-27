@@ -1217,7 +1217,8 @@ object DocumentState extends CoqCallback with KopitiamLogger {
           Console.println("no next command in here, starting a ccj! (with " + nam + ")")
           new CoqCompileJob(nam).schedule
         }
-
+        //mutated in nextCommand
+        sendlen = 0
 
         activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
         if (reveal)
@@ -1393,14 +1394,7 @@ class Startup extends IStartup {
     DocumentMonitor.init
     CoqTop.init
     PrintActor.register(DocumentState)
-    val sep = System.getProperty("file.separator")
-    CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + sep
-    val loc = Platform.getLocation.toString
-    if (CoqTop.coqpath == "") {
-      Console.println("empty coqpath F" + CoqTop.coqpath + "FF, setting to: F" + loc + sep + "coq" + sep + "bin" + sep + "FF")
-      CoqTop.coqpath = loc + sep + "coq" + sep + "bin" + sep
-    }
-    Console.println("non-empty coqpath " + CoqTop.coqpath + " eclipse installation: F" + loc + sep + "coq" + sep + "bin" + sep + "FF")
+    CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + System.getProperty("file.separator")
     ActionDisabler.initializationFinished
   }
 }
