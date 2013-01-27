@@ -53,7 +53,7 @@ Coq. On the right the goal viewer shows the current proof state.
 ** [[http://eclipse.org][Eclipse]] - currently a 32bit version of Indigo (3.7) ([[http://www.eclipse.org/downloads/packages/release/indigo/sr2][direct link]]) is required
 ** Start Eclipse
 ** Click on the "Help -> Install New Software" menu item
-** Enter "http://itu.dk/people/hame/kopitiam/" as update site
+** Enter "http://www.itu.dk/research/tomeso/kopitiam/eclipse" as update site
 ** Select Kopitiam and follow the dialogs
 ** Restart Eclipse
 ** Go to Preferences -> Kopitiam and configure the path to coqtop and the loadpath to your downloaded Charge!
