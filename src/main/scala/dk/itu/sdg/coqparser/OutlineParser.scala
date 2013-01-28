@@ -154,7 +154,7 @@ class OutlineLexer extends Lexical with VernacularReserved with OutlineTokens wi
   type Tokens <: OutlineTokens
   override type Elem = Char
 
-  def whitespace = rep('('~'*'~commentContents | '\t' | '\r' | '\n' | ' ')
+  def whitespace = rep('('~'*'~cLit | '\t' | '\r' | '\n' | ' ')
 
   def ident : Parser[Token] = """[\p{L}_][\p{L}_0-9']*""".r ^^ Tok //TODO: unicode-id-part from Coq reference
 
@@ -171,13 +171,33 @@ class OutlineLexer extends Lexical with VernacularReserved with OutlineTokens wi
     )
 
   def comment : Parser[Token] =
-    ('('~'*')~>commentContents ^^ { chars => Tok("(*" + chars.mkString) }
-  private def commentContents : Parser[List[Char]] =
-    ( '('~'*'~commentContents~commentContents ^^ { case '('~'*'~nested~rest => '(' :: '*' :: (nested ++ rest) }
-    | '*'~')' ^^^ List('*', ')')
-    | chrExcept(EofCh)~commentContents ^^ { case char~contents => char :: contents }
-    | failure("Comment not finished")
-    )
+    ('('~'*')~>cLit ^^ { chars => Tok("(*" + chars.mkString) }
+
+  implicit def cLit() : Parser[List[Char]] = new Parser[List[Char]] {
+    def apply(in : Input) = {
+      val source = in.source
+      val offset = in.offset
+      var j : Int = offset
+      var level : Int = 0
+      var cont : Boolean = true
+      while ((j + 1) < source.length && cont) {
+        if (source.charAt(j) == '*' && source.charAt(j + 1) == ')') {
+          j += 1
+          if (level == 0)
+            cont = false
+          else
+            level -= 1
+        }
+        if (source.charAt(j) == '(' && source.charAt(j + 1) == '*') {
+          j += 1
+          level += 1
+        }
+        j += 1
+      }
+      val comm = source.subSequence(offset, j).toString
+      Success(comm.toCharArray.toList, in.drop(j - offset))
+    }
+  }
 
   // Based on technique from scala/util/parsing/combinator/lexical/StdLexical.scala
   private lazy val _delim : Parser[String] = {
