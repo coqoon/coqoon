@@ -266,7 +266,7 @@
         	commandId="Kopitiam.translatetocoq">
        	</command>
       </menuContribution>
-      <menuContribution
+<!--      <menuContribution
             locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
          <command
                commandId="Kopitiam.translatetosimplejava">
@@ -277,7 +277,7 @@
         <command
         	commandId="Kopitiam.translatetosimplejava">
        	</command>
-      </menuContribution>
+      </menuContribution> -->
    </extension>
    <extension
          point="org.eclipse.ui.newWizards">
