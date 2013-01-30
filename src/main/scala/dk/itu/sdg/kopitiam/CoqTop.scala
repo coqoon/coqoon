@@ -110,7 +110,7 @@ object ValidCoqShell {
 
 object CoqState {
   private var readyforinput : Boolean = false
-  private var context : CoqShellTokens = new CoqShellTokens("Coq", 0, List(), 0)
+  private var shell : CoqShellTokens = new CoqShellTokens("Coq", 0, List(), 0)
 
   //danger! lions! do not come here!
   def setReady () : Unit = {
@@ -121,11 +121,11 @@ object CoqState {
 
   def readyForInput () : Boolean = { readyforinput }
 
-  def getShell () : CoqShellTokens = context
+  def getShell () : CoqShellTokens = shell
 
   def setShell (tokens : CoqShellTokens) : Unit = synchronized {
-    val oldc = context
-    context = tokens
+    val oldc = shell
+    shell = tokens
     //Console.println("ready!")
     readyforinput = true
     var monotonic = false
@@ -145,6 +145,11 @@ object CoqState {
 
   def lastWasUndo () : Boolean = {
     lastc.startsWith("Backtrack ")
+  }
+
+  def proofMode () : Boolean = {
+    Console.println("con is " + shell.context)
+    shell.context.size > 0
   }
 
   def sendCommand (c : String) : Unit = {

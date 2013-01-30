@@ -703,7 +703,8 @@ object CoqStepNotifier extends CoqCallback {
             } else {
               //we got into an error state
               fini
-              CoqRefreshAction.doit
+              if (CoqState.proofMode)
+                CoqRefreshAction.doit
             }
           }
       case x => //Console.println("got something, try again player 1 " + x)
