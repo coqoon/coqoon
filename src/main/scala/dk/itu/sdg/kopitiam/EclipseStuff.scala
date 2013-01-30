@@ -1381,10 +1381,10 @@ class GoalViewer extends ViewPart {
   //  viewer.getControl.setFocus
   }
 }
-
 object GoalViewer extends GoalViewer { }
 
 import org.eclipse.ui.IStartup
+import akka.actor.Props
 class Startup extends IStartup {
   import org.eclipse.core.runtime.Platform
 
@@ -1393,9 +1393,19 @@ class Startup extends IStartup {
     ActionDisabler.disableAll
     DocumentMonitor.init
     CoqTop.init
+    CoqTop.consoleprinter = CoqTop.system.actorOf(Props[ConsolePrinter], name = "ConsolePrinter")
     PrintActor.register(DocumentState)
     CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + System.getProperty("file.separator")
     ActionDisabler.initializationFinished
+  }
+}
+
+import akka.actor.{Actor, ActorRef}
+class ConsolePrinter extends Actor {
+  def receive = {
+    case msg : String =>
+      EclipseConsole.out.println(msg)
+    case _ =>
   }
 }
 
@@ -1417,8 +1427,8 @@ class CoqCompileJob (path : File, name : String) extends Job (name : String) {
       val err = coqcp.getErrorStream
       val bs = new BusyStreamReader(ou)
       val bs2 = new BusyStreamReader(err)
-      bs.addActor(CoqTop.printactor)
-      bs2.addActor(CoqTop.erroroutputactor)
+      bs.addActor(CoqTop.consoleprinter)
+      bs2.addActor(CoqTop.consoleprinter)
       new Thread(bs).start
       new Thread(bs2).start
       coqcp.waitFor

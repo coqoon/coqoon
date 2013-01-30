@@ -262,11 +262,13 @@ object CoqTop {
 
   var printactor : ActorRef = null
   var erroroutputactor : ActorRef = null
+  var consoleprinter : ActorRef = null
 
   import akka.actor.ActorSystem
   import akka.actor.Props
+  var system : ActorSystem = null
   def init () : Unit = {
-    val system = ActorSystem("Kopitiam")
+    system = ActorSystem("Kopitiam")
     printactor = system.actorOf(Props[PrintActorImplementation], name = "PrintActor")
     erroroutputactor = system.actorOf(Props[ErrorOutputActor], name = "ErrorOutputActor")
   }
