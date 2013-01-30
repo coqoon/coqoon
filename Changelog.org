@@ -1,3 +1,5 @@
+
+** don't busy wait for output of no longer existing process(es)
 ** don't update goal viewer on multiple steps
 ** update goal viewer on error and multiple steps
 ** force redraw of annotations in CoqEditor if the size decreased

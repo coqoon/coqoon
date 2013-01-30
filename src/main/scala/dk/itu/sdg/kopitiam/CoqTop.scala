@@ -273,6 +273,12 @@ object CoqTop {
 
   def killCoq () : Unit = {
     started = false
+    if (coqout != null)
+      coqout.act = false
+    coqout = null
+    if (coqerr != null)
+      coqerr.act = false
+    coqerr = null
     if (coqprocess != null)
       coqprocess.destroy
     coqprocess = null
