@@ -1213,9 +1213,10 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       if (activeEditor != null) {
         if (nextCommand == None) {
           //getFullPath is relative to Workspace
-          val nam = resource.getRawLocation.toString
+          val cwd = resource.getProject.getLocation.toFile
+          val nam = resource.getName
           Console.println("no next command in here, starting a ccj! (with " + nam + ")")
-          new CoqCompileJob(nam).schedule
+          new CoqCompileJob(cwd, nam).schedule
         }
         //mutated in nextCommand
         sendlen = 0
@@ -1400,7 +1401,8 @@ class Startup extends IStartup {
 }
 
 import org.eclipse.core.runtime.jobs.Job
-class CoqCompileJob (name : String) extends Job (name : String) {
+import java.io.File
+class CoqCompileJob (path : File, name : String) extends Job (name : String) {
 
   import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status}
   import java.io.File
@@ -1408,21 +1410,20 @@ class CoqCompileJob (name : String) extends Job (name : String) {
     Console.println("hello, world!, " + name)
     val la = if (CoqTop.isWin) ".exe" else ""
     val coqc = CoqTop.coqpath + "coqc" + la
-    //what about dependencies
-    //what is our cwd?
+    //what about dependencies?? <- need Add LoadPath explicitly in .v!
     if (new File(coqc).exists) {
-
-      val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-      val lp = new File(loadp).exists
-      val arg =
-        if (lp)
-          "-I " + loadp
-        else
-          ""
-      val arg2 = "-I " + EclipseBoilerPlate.getProjectDir
-      Console.println("found coqc in " + coqc + ", running with (" + arg2 + ";" + arg + "): " + name)
-      Runtime.getRuntime.exec(coqc + " " + arg2 + " " + arg + " " + name).waitFor
-      //what/where to do with output?
+      val cmdarr = Array(coqc, name)
+      val coqcp = Runtime.getRuntime.exec(cmdarr, null, path)
+      val ou = coqcp.getInputStream
+      val err = coqcp.getErrorStream
+      val bs = new BusyStreamReader(ou)
+      val bs2 = new BusyStreamReader(err)
+      bs.addActor(CoqTop.printactor)
+      bs2.addActor(CoqTop.erroroutputactor)
+      new Thread(bs).start
+      new Thread(bs2).start
+      coqcp.waitFor
+      Console.println("done")
     }
     Status.OK_STATUS
   }

@@ -8,6 +8,14 @@
             label="Kopitiam Action Set"
             visible="true">
          <action
+               class="dk.itu.sdg.kopitiam.CompileCoqAction"
+               icon="icons/compile.gif"
+               id="kopitiam.actions.CompileAction"
+               label="&amp;Compile"
+               toolbarPath="CoqGroup"
+               tooltip="Compile">
+         </action>
+         <action
                class="dk.itu.sdg.kopitiam.InterruptCoqAction"
                icon="icons/stop.gif"
                id="kopitiam.actions.InterruptAction"
@@ -217,6 +225,12 @@
             defaultHandler="dk.itu.sdg.kopitiam.RestartCoqAction"
             id="Kopitiam.restart_coq"
             name="Restart Coq command">
+      </command>
+      <command
+            categoryId="Kopitiam.category"
+            defaultHandler="dk.itu.sdg.kopitiam.CompileCoqAction"
+            id="Kopitiam.compile_coq"
+            name="Compile Coq">
       </command>
       <command
             defaultHandler="dk.itu.sdg.kopitiam.TranslateAction"

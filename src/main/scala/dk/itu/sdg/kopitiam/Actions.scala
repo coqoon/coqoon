@@ -377,6 +377,14 @@ class CoqStepUntilAction extends KCoqAction {
 }
 object CoqStepUntilAction extends CoqStepUntilAction { }
 
+class CompileCoqAction extends KAction {
+  override def doit () : Unit = {
+    val r = DocumentState.resource
+    new CoqCompileJob(r.getProject.getLocation.toFile, r.getName).schedule
+  }
+}
+object CompileCoqAction extends CompileCoqAction { }
+
 class RestartCoqAction extends KAction {
   override def doit () : Unit = {
     CoqTop.killCoq
