@@ -39,7 +39,6 @@
 ** dependency graph of coq files, run coqc as background task
 ** syntax highlighting in GoalViewer
 * Java side
-** highlight verified/proven method in green or however
 ** Report Warnings/Errors instead of Console.println during parsing and simplification
 ** update on save rather than edit (and only if it typechecks/compiles ok)
 ** SimpleJava optimizations
