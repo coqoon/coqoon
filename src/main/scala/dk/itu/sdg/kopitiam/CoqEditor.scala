@@ -77,7 +77,11 @@ class CoqEditor extends TextEditor with EclipseUtils {
         annmodel.addAnnotation(ann, p)
         processed = Some(ann)
       case Some(x) =>
+        val op = annmodel.getPosition(x)
+        val tst = ((op.getLength > p.getLength) || (op.getOffset != p.getOffset))
         annmodel.asInstanceOf[IAnnotationModelExtension].modifyAnnotationPosition(x, p)
+        if (tst)
+          invalidate
     }
     val p2 = if (second > 0) new Position(first, second) else null
     processing match {
