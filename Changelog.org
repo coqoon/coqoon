@@ -1,3 +1,64 @@
+** don't update goal viewer on multiple steps
+** update goal viewer on error and multiple steps
+** force redraw of annotations in CoqEditor if the size decreased
+* Kopitiam 0.2.11 [29 January 2013]
+** fix outline parser to use a loop instead of recursive calls, this fixes a stack overflow on windows
+** make compilation (with coqc) more robust, add an icon
+* Kopitiam 0.2.[3-10] [27 January 2013]
+** move to new update site (http://www.itu.dk/research/tomeso/kopitiam/eclipse)
+** various attempts to bundle coq with Kopitiam
+** this does not work since coq needs to know at its compile time where its library is
+** there used to be a -libdir option for coq, but that's no longer around
+* Kopitiam 0.2.2 [27 January 2013]
+** Compile (using coqc) when at end of file
+* Kopitiam 0.2.1 [21 January 2013]
+** implicit forward for every statement (optional via preferences)
+** reimplement changes to Java code and backtracking properly
+* Kopitiam 0.2.0 [17 January 2013]
+** remove custom java parser, rather use eclipse JavaAST (major rewrite): precise offset and length information
+** allows several antiquotes on a single line
+** use ITextStyleStrategy rather than IDrawingStrategy - huge performance win
+** do not busy-wait for coq to start
+
+** various enhancements to robustness of Java parser, its output
+** attempt to record length of statements in parser combinator
+* Kopitiam 0.1.7 [19 October 2012]
+** rename proof certificate file
+** use fewer annotations for processing and processed
+** support to prove method using line number instead of requiring to have the cursor on the method name
+* Kopitiam 0.1.6 [17 October 2012]
+** fix discharging class correctness lemma
+* Kopitiam 0.1.5 [14 October 2012]
+** initialization: wait until actors and preference store are available
+** error reporting: parse only once
+** check existence of LoadPath before passing to Coq
+** error reporting: report errors in specification
+** generate proof certificate action
+* Kopitiam 0.1.4 [12 October 2012]
+** fix dependencies
+* Kopitiam 0.1.3 [12 October 2012]
+** handle non-ending strings properly (when sending to Coq)
+** icon/marker for "method proven"
+** record dependencies of method calls (and recursive methods)
+* Kopitiam 0.1.2 [11 October 2012]
+** use 'calloc' instead of call to (empty) constructor
+** more asynchronous work
+* Kopitiam 0.1.1 [11 October 2012]
+** Coq 8.4 compatibility
+** new Charge! release
+** support requires/ensures
+** rename "Prove Method" to "Verify Method"
+** safety: only produce complete file if Java translation was successful
+* Kopitiam 0.1.0 [30 September 2012]
+** introduce KopitiamAspects plugin which extends the JDT lexer and parser
+** proof directly in JavaEditor, using antiquotes (and comments in proof script)
+** introduce "Prove Method" action in JavaEditor
+** error reporting for antiquoted proof script
+** Proof suggestions
+** fix nested comments in OutlineParser
+** fix deprecation warnings (scala-2.10 ready)
+** decrease global state
+** refactor
 * Kopitiam 0.0.26 [06 June 2012]
 ** fix parsing of subgoals
 * Kopitiam 0.0.25 [24 May 2012]
