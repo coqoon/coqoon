@@ -1422,6 +1422,8 @@ class CoqCompileJob (path : File, name : String) extends Job (name : String) {
       new Thread(bs).start
       new Thread(bs2).start
       coqcp.waitFor
+      bs.act = false
+      bs2.act = false
       Console.println("done")
     }
     Status.OK_STATUS

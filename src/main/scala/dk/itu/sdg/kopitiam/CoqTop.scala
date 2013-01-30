@@ -11,9 +11,11 @@ class BusyStreamReader (input : InputStream) extends Runnable {
   def addActor (c : ActorRef) : Unit = { callbacks = c :: callbacks }
   def removeActor (c : ActorRef) : Unit = { callbacks = callbacks.filterNot(_ == c) }
 
+  var act : Boolean = true
+
   override def run () : Unit = {
     try {
-      while (input.available >= 0) {
+      while (input.available >= 0 && act) {
         val f = input.read //blocking
         val avail = input.available
         val inbuf = new Array[Byte](avail + 1)
