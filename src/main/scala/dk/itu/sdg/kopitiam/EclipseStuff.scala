@@ -1131,7 +1131,6 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqShellReady(monoton, token) =>
-        Console.println(" DS dispatch: " + monoton)
         if (monoton) {
           commit
           if (positionToShell.get(position) == None) {
