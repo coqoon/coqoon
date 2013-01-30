@@ -700,8 +700,11 @@ object CoqStepNotifier extends CoqCallback {
             } else if (monoton) {
               Console.println("one more step")
               CoqStepAction.doit
-            } else
+            } else {
+              //we got into an error state
               fini
+              CoqRefreshAction.doit
+            }
           }
       case x => //Console.println("got something, try again player 1 " + x)
     }
@@ -769,7 +772,6 @@ object CoqCommands extends CoqCallback {
       case _ =>
     }
   }
-  
 }
 
 object CoqOutputDispatcher extends CoqCallback {
@@ -794,33 +796,31 @@ object CoqOutputDispatcher extends CoqCallback {
         if (!monoton && token.context.length == 0 && goalviewer != null)
           goalviewer.clear
       case CoqGoal(n, goals) =>
-        //Console.println("outputdispatcher, n is " + n + ", goals:\n" + goals)
-        val (hy, res) = goals.splitAt(goals.indexWhere(_.contains("======")))
-        val ht = stripAndReduce(hy)
-        var subgoals : List[String] = List[String]()
-        var index : Int = 0
-        while (index < res.length) {
-          val rr = res.drop(index)
-          //Console.println("index: " + index + " res.length: " + res.length + " list stuff: " + rr)
-          val subd = rr.drop(1).indexWhere(_.contains("subgoal ")) + 1
-          //Console.println("subd is " + subd)
-          val (g, r) = if (subd > 0) rr.splitAt(subd) else (rr, List[String]())
-          //Console.println("g is " + g + " r is " + r)
-          val gt = if (g.length > 1) stripAndReduce(g.drop(1)).trim else ""
-          //Console.println("gt " + gt)
-          subgoals = gt :: subgoals
-          if (subd > 0)
-            index = index + subd
-          else
-            index = res.length
-        }
-        if (goalviewer != null) {
-          Console.println("calling writegoal") // with " + subgoals.reverse)
+        if (!CoqStepNotifier.active && goalviewer != null) {
+          //Console.println("outputdispatcher, n is " + n + ", goals:\n" + goals)
+          val (hy, res) = goals.splitAt(goals.indexWhere(_.contains("======")))
+          val ht = stripAndReduce(hy)
+          var subgoals : List[String] = List[String]()
+          var index : Int = 0
+          while (index < res.length) {
+            val rr = res.drop(index)
+            //Console.println("index: " + index + " res.length: " + res.length + " list stuff: " + rr)
+            val subd = rr.drop(1).indexWhere(_.contains("subgoal ")) + 1
+            //Console.println("subd is " + subd)
+            val (g, r) = if (subd > 0) rr.splitAt(subd) else (rr, List[String]())
+            //Console.println("g is " + g + " r is " + r)
+            val gt = if (g.length > 1) stripAndReduce(g.drop(1)).trim else ""
+            //Console.println("gt " + gt)
+            subgoals = gt :: subgoals
+            if (subd > 0)
+              index = index + subd
+            else
+              index = res.length
+          }
           goalviewer.writeGoal(ht, subgoals.reverse)
-          Console.println("done!")
         }
       case CoqProofCompleted() =>
-        if (goalviewer != null)
+        if (!CoqStepNotifier.active && goalviewer != null)
           goalviewer.writeGoal("Proof completed", List[String]())
       case CoqError(msg, msgnonl, start, len) =>
         if (len != 0)
