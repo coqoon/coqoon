@@ -1,4 +1,5 @@
-
+* Kopitiam 0.2.12 [30 January 2013]
+** support coq compilation without coq interaction
 ** don't busy wait for output of no longer existing process(es)
 ** don't update goal viewer on multiple steps
 ** update goal viewer on error and multiple steps
