@@ -69,7 +69,7 @@ abstract class KCoqAction extends KAction {
     ActionDisabler.disableAll
     JavaPosition.unmark
     val coqstarted = CoqTop.isStarted
-    var acted = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.getActiveEditor
+    val acted = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.getActiveEditor
     if (DocumentState.activeEditor != acted && acted.isInstanceOf[CoqEditor]) {
       if (DocumentState.resource != null)
         EclipseBoilerPlate.unmarkReally
@@ -378,8 +378,14 @@ class CoqStepUntilAction extends KCoqAction {
 object CoqStepUntilAction extends CoqStepUntilAction { }
 
 class CompileCoqAction extends KAction {
+  import org.eclipse.ui.{IFileEditorInput, PlatformUI}
   override def doit () : Unit = {
-    val r = DocumentState.resource
+    val acted = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.getActiveEditor
+    val ip = acted.getEditorInput
+    assert(ip.isInstanceOf[IFileEditorInput])
+    val r = ip.asInstanceOf[IFileEditorInput].getFile
+    if (EclipseConsole.out == null)
+      EclipseConsole.initConsole
     new CoqCompileJob(r.getProject.getLocation.toFile, r.getName).schedule
   }
 }
