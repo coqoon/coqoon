@@ -1,8 +1,0 @@
-import java.lang.*;
-
-public class HelloWorld {
-    public static void main(String[] args) {
-	int i = 9 + (3 * (4 + (7 / 2 + 9 * 45)) * 4 * 5 * 6);
-    }
-}
-
