@@ -380,7 +380,8 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
 
   def markproven (s : Int, l : Int) = {
     //getProj.provenMethods ::= method.get
-    markHelper("Verified", s, l, "dk.itu.sdg.kopitiam.provenmarker", IMarker.SEVERITY_ERROR) match {
+    val ps = proofScript(method.get)
+    markHelper("Verified using: " + ps, s, l, "dk.itu.sdg.kopitiam.provenmarker", IMarker.SEVERITY_ERROR) match {
       case Some(x) => proofmarkers ::= x
       case None =>
     }
@@ -481,6 +482,53 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
 
   import org.eclipse.jdt.core.dom.{EmptyStatement, WhileStatement, IfStatement, Block}
   import scala.collection.immutable.Stack
+
+  def proofScript (m : MethodDeclaration) : String = {
+    val prov = editor.getDocumentProvider
+    val ei = editor.getEditorInput
+    val doc = prov.getDocument(ei)
+    val prf = m.getProperty(EclipseJavaASTProperties.coqProof)
+    assert(prf != null)
+    var res : String = prf.asInstanceOf[String]
+    var todo : Stack[Statement] = Stack[Statement]()
+    todo = todo.push(m.getBody)
+    while (!todo.isEmpty) {
+      val st = todo.top
+      todo = todo.pop
+      st match {
+        case x : Block =>
+          todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]).reverse)
+        case x : IfStatement =>
+          val el = x.getElseStatement
+          if (el != null)
+            todo = todo.push(el)
+          todo = todo.push(x.getThenStatement)
+        case x : WhileStatement =>
+          todo = todo.push(x.getBody)
+        case x : EmptyStatement =>
+          val script = doc.get(x.getStartPosition, x.getLength)
+          val con =
+            if (script.contains("invariant:")) {
+              val i1 = script.indexOf(":")
+              val i2 = script.indexOf("frame:")
+              val i3 = if (i2 == -1) script.length - 3 else i2
+              val i = script.substring(i1 + 1, i3).trim
+              val f =
+                if (i2 == -1)
+                  "<true>"
+                else
+                  script.substring(i3 + 6, script.length - 3).trim
+              "forward (" + i + ") (" + f + ")."
+            } else
+              script.drop(2).dropRight(2).trim
+          res = res + con + "\n"
+        case x : Statement =>
+          if (Activator.getDefault.getPreferenceStore.getBoolean("implicit"))
+            res = res + "forward.\n"
+      }
+    }
+    res
+  }
 
   def emptyCoqShells () : Unit = {
     var todo : Stack[Statement] = Stack[Statement]()

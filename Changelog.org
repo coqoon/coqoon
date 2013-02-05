@@ -1,3 +1,4 @@
+** annotate verified method(s) with proof script
 ** introduce sentinel shell for start of method
 ** bugfix: refresh goal viewer on step until
 ** preference whether to compile when at end of vernacular

@@ -76,7 +76,6 @@
 ** warn if method does not contain a specification
 ** proper enabling and disabling of actions (esp during prove method)
 ** field initializers - during constructor - translate that - and/or infer specification
-** put coq proof as annotation to proven method!
 ** prove method: what if model or spec changes!
 ** use compiled model!
 ** constructors (currently calloc instead of call to constructor)
