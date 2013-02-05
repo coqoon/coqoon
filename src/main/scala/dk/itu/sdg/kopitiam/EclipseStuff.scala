@@ -1210,7 +1210,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       sendlen = 0
       //XXX: that's wrong! sendlen is 0!!!!
       if (activeEditor != null) {
-        if (nextCommand == None) {
+        if (nextCommand == None && Activator.getDefault.getPreferenceStore.getBoolean("smartcompilation")) {
           //getFullPath is relative to Workspace
           val cwd = resource.getProject.getLocation.toFile
           val nam = resource.getName

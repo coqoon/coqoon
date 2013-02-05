@@ -17,6 +17,7 @@ class KopitiamPreferencePage extends FieldEditorPreferencePage with IWorkbenchPr
     addField(new DirectoryFieldEditor("coqpath", "Path to Coq", getFieldEditorParent))
     addField(new DirectoryFieldEditor("loadpath", "Path to Load", getFieldEditorParent))
     addField(new BooleanFieldEditor("implicit", "Implicitly generate 'forward' proof script for each statement", getFieldEditorParent))
+    addField(new BooleanFieldEditor("smartcompilation", "'Smart' compile vernacular when stepped to the end", getFieldEditorParent))
   }
 
   import java.io.File
