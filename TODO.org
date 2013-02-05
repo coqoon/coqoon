@@ -35,6 +35,7 @@
 ** error reporting when command preceeded by comments is broken
 ** folding broken due to comments
 ** coq 8.4 - filter dependent vars output
+** Notation: "Print Grammar constr." <- useful!?!? also: "Set Printing Notations."
 
 
 ** CoqOutputter: find disjoint definition names (newR, newM,...)

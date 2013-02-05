@@ -199,26 +199,13 @@ class CoqUndoAction extends KCoqAction {
           prevs.take(i).foreach(DocumentState.positionToShell.remove(_))
           assert(DocumentState.positionToShell.contains(0) == true)
           prevshell
-        } else {
+        } else
           //we're java mode here...
           //find most recent statement which was send over the wire
-          val last = JavaPosition.getLastCoqStatement
-          last match {
-            case None =>
-              //not completely correct though
-              JavaPosition.getProj.proofShell match {
-                case Some(x) => x
-                case None =>
-                  Console.println("last is none - and no proofShell")
-                  null
-              }
-            case Some(x) =>
-              val sh = x.getProperty(EclipseJavaASTProperties.coqShell)
-              assert(sh != null && sh.isInstanceOf[CoqShellTokens])
-              sh.asInstanceOf[CoqShellTokens]
+          JavaPosition.getLastCoqStatement match {
+            case Some(x) => x
+            case None => Console.println("how did that happen???"); null
           }
-        }
-
       EclipseBoilerPlate.unmarkReally
       JavaPosition.unmark
       val ctxdrop = curshell.context.length - prevshell.context.length
@@ -723,6 +710,8 @@ object CoqStepNotifier extends CoqCallback {
     test = None
     DocumentState.reveal = true
     DocumentState.until = -1
+    if (CoqState.proofMode)
+      CoqRefreshAction.doit
   }
 }
 

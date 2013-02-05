@@ -7,7 +7,7 @@ trait EclipseUtils {
   import org.eclipse.jface.text.Position
   import org.eclipse.swt.graphics.{Color, RGB}
   import org.eclipse.swt.widgets.Display
-  import dk.itu.sdg.parsing._
+  import dk.itu.sdg.parsing.{NoLengthPosition, LengthPosition, RegionPosition}
 
   private def display = Display.getCurrent
   def color (r : Int, g : Int, b : Int) = new Color(display, r, g, b)
@@ -32,7 +32,6 @@ trait EclipseUtils {
 class CoqJavaProject (basename : String) {
   //foo -> foo.java [Java]
   //foo -> foo.v [Model]
-  import scala.collection.immutable.HashMap
   import org.eclipse.jface.text.IDocument
 
   var javaSource : Option[IDocument] = None
@@ -209,15 +208,26 @@ class CoqJavaProject (basename : String) {
           PrintActor.register(JavaPosition)
           CoqStepAllAction.doit
         case Some(x) =>
-          Console.println("have a PS: " + x.globalStep + " < " + CoqState.getShell.globalStep)
-          if (x.globalStep < CoqState.getShell.globalStep) {
+          val sh : CoqShellTokens = JavaPosition.method match {
+            case None => x
+            case Some(y) =>
+              if (y == meth) {
+                val sh = y.getProperty(EclipseJavaASTProperties.coqShell)
+                if (sh != null && sh.isInstanceOf[CoqShellTokens])
+                  sh.asInstanceOf[CoqShellTokens]
+                else
+                  x
+              } else x
+          }
+          Console.println("have a PS: " + sh.globalStep + " < " + CoqState.getShell.globalStep)
+          if (sh.globalStep < CoqState.getShell.globalStep) {
             JavaPosition.cur = None
             JavaPosition.next = None
             JavaPosition.emptyCoqShells
             JavaPosition.method = None
             DocumentState.setBusy
-            Console.println("backtracking to proofshell " + x)
-            CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
+            Console.println("backtracking to shell " + sh)
+            CoqTop.writeToCoq("Backtrack " + sh.globalStep + " 0 " + CoqState.getShell.context.length + ".")
           } else
             CoqCommands.step
       }
@@ -227,16 +237,19 @@ class CoqJavaProject (basename : String) {
         Console.println("preserving proof shell: " + CoqState.getShell)
         proofShell = Some(CoqState.getShell)
       }
-      Console.println("assigning method to JP ")
-      //story so far: model is now updated, java might be newly generated!
-      JavaPosition.method = Some(meth)
-      val prf = meth.getProperty(EclipseJavaASTProperties.coqProof)
-      assert(prf != null)
-      val p = prf.asInstanceOf[String]
-      Console.println("p is " + p)
-      DocumentState._content = Some(DocumentState._content.getOrElse("") + p)
-      PrintActor.register(JavaPosition)
-      CoqStepAllAction.doit
+      if (JavaPosition.method == None) {
+        Console.println("assigning method to JP ")
+        //story so far: model is now updated, java might be newly generated!
+        JavaPosition.method = Some(meth)
+        val prf = meth.getProperty(EclipseJavaASTProperties.coqProof)
+        assert(prf != null)
+        val p = prf.asInstanceOf[String]
+        Console.println("p is " + p)
+        DocumentState._content = Some(DocumentState._content.getOrElse("") + p)
+        PrintActor.register(JavaPosition)
+        CoqStepAllAction.doit
+      } else
+        CoqCommands.step
     })
   }
 
@@ -474,6 +487,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
     method match {
       case Some(x) =>
         todo = todo.push(x.getBody)
+        x.setProperty(EclipseJavaASTProperties.coqShell, null)
       case None =>
     }
     while (!todo.isEmpty) {
@@ -562,7 +576,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
     next
   }
 
-  def getLastCoqStatement () : Option[Statement] = {
+  def getLastCoqStatement () : Option[CoqShellTokens] = {
     assert(next == None)
     var todo : Stack[Statement] = Stack[Statement]()
     todo = todo.push(method.get.getBody)
@@ -598,7 +612,18 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
             }
       }
     }
-    next
+    next match {
+      case None =>
+        val sh = method.get.getProperty(EclipseJavaASTProperties.coqShell)
+        if (sh != null)
+          Some(sh.asInstanceOf[CoqShellTokens])
+        else
+          JavaPosition.getProj.proofShell
+      case Some(x) =>
+        val sh = x.getProperty(EclipseJavaASTProperties.coqShell)
+        assert(sh != null && sh.isInstanceOf[CoqShellTokens])
+        Some(sh.asInstanceOf[CoqShellTokens])
+    }
   }
 
   def copyProps (from : MethodDeclaration, to : MethodDeclaration) : Unit = {
@@ -608,6 +633,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
     todof = todof.push(from.getBody)
     var todot : Stack[Statement] = Stack[Statement]()
     todot = todot.push(to.getBody)
+    to.setProperty(EclipseJavaASTProperties.coqShell, from.getProperty(EclipseJavaASTProperties.coqShell))
     var end : Boolean = false
     while (!end && !todof.isEmpty) {
       val nextfrom = todof.top
@@ -759,20 +785,35 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
 
         val start = method.get.getStartPosition
 
-        if (!proc && undo)
+        if (!proc && undo) {
           cur match {
             case Some(x) =>
               Console.println("removing coqshell property")
               x.setProperty(EclipseJavaASTProperties.coqShell, null)
             case None =>
           }
+          cur = next
+          next = None
+        }
 
         Console.println(" reAnn (cur: " + cur + " next: " + next + ") proc " + proc + " undo " + undo)
-        if (next != None && !proc) { // && !undo) {
+        if (next != None && !proc && !undo) {
           Console.println("  ass " + cur + " now " + next)
           cur = next
           next = None
         }
+
+        //preserve current shell -- if success!
+        if (!proc && !undo)
+          cur match {
+            case None =>
+              Console.println("preserving initial coq shell")
+              method.get.setProperty(EclipseJavaASTProperties.coqShell, CoqState.getShell)
+            case Some(x) =>
+              Console.println("preserving for " + x + " shell " + CoqState.getShell)
+              x.setProperty(EclipseJavaASTProperties.coqShell, CoqState.getShell)
+          }
+
 
         val end =
           cur match {
@@ -780,11 +821,6 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
               val c1 = doc.getLineOfOffset(start)
               doc.getLineOffset(c1 + 1) - 2
             case Some(x) =>
-              //preserve current shell -- if success!
-              if (!proc && !undo) {
-                Console.println("preserving for " + x + " shell " + CoqState.getShell)
-                x.setProperty(EclipseJavaASTProperties.coqShell, CoqState.getShell)
-              }
               x.getStartPosition + x.getLength
           }
 

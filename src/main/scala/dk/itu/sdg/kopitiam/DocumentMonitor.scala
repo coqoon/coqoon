@@ -184,22 +184,40 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                     case None => //we're lucky! but how can that happen?
                     case Some(x) =>
                       Console.println("Is " + (x.getStartPosition + x.getLength) + " > " + off + "?")
-                      if (x.getStartPosition + x.getLength > off)
+                      if (x.getStartPosition + x.getLength > off) {
                         //backtrack!
                         //also removes the coqShell props!
-                        JavaPosition.getASTbeforeOff(off) match {
-                          case Some(bt) =>
-                            Console.println("backtracking to " + bt)
-                            val csss = bt.getProperty(EclipseJavaASTProperties.coqShell)
-                            assert(csss != null)
-                            //invalidate! everything!
-                            val css = csss.asInstanceOf[CoqShellTokens]
+                        val css =
+                          JavaPosition.getASTbeforeOff(off) match {
+                            case Some(bt) =>
+                              Console.println("backtracking to " + bt)
+                              val csss = bt.getProperty(EclipseJavaASTProperties.coqShell)
+                              if (csss != null)
+                                //invalidate! everything!
+                                Some(csss.asInstanceOf[CoqShellTokens])
+                              else
+                                None
+                            case None =>
+                              //start of method...
+                              val bla = JavaPosition.method
+                              bla match {
+                                case Some(x) =>
+                                  val csss = x.getProperty(EclipseJavaASTProperties.coqShell)
+                                  if (csss != null)
+                                    Some(csss.asInstanceOf[CoqShellTokens])
+                                  else
+                                    None
+                                case None => None
+                              }
+                          }
+                        css match {
+                          case None =>
+                          case Some(x) =>
                             DocumentState.setBusy
                             val cs = CoqState.getShell
-                            CoqTop.writeToCoq("Backtrack " + css.globalStep + " " + css.localStep + " " + (cs.context.length - css.context.length) + ".")
-                          case None =>
-                            //start of method...
+                            CoqTop.writeToCoq("Backtrack " + x.globalStep + " " + x.localStep + " " + (cs.context.length - x.context.length) + ".")
                         }
+                      }
                   }
                   proj.ASTdirty = true
                   foundchange = true
