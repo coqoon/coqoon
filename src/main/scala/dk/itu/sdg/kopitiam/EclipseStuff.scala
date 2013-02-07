@@ -98,99 +98,31 @@ class CoqJavaProject (basename : String) {
     Console.println("provemethod called! modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " modelshell " + modelShell + " proofshell " + proofShell)
     if (modelNewerThanSource || modelShell == None) {
       modelNewerThanSource = false
-      var open : Boolean = false
       var model : IFile = null
-      coqModel match {
-        case None => //need to open editor and run
-          if (JavaPosition.editor == null)
-            Console.println("this should not happen - no coqmodel and no java editor...")
+      if (JavaPosition.editor == null)
+        Console.println("this should not happen - no java editor...")
+      else {
+        val fei = JavaPosition.editor.getEditorInput
+        if (fei.isInstanceOf[IFileEditorInput]) {
+          val proj : IProject = fei.asInstanceOf[IFileEditorInput].getFile.getProject
+          val maybemodel = proj.getFile(basename + "_model.v")
+          if (maybemodel.exists)
+            model = maybemodel
           else {
-            val fei = JavaPosition.editor.getEditorInput
-            if (fei.isInstanceOf[IFileEditorInput]) {
-              val proj : IProject = fei.asInstanceOf[IFileEditorInput].getFile.getProject
-              val maybemodel = proj.getFile(basename + ".v")
-              if (maybemodel.exists)
-                model = maybemodel
-              else {
-                val maybemodel = proj.getFile("src/" + basename + ".v")
-                if (maybemodel.exists)
-                  model = maybemodel
-              }
-            } else
-              JavaPosition.mark("something went wrong reading the Java file", 0, 10, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
-            if (model == null || ! model.exists)
-              JavaPosition.mark("Please write a model file for this java file with a Module named '" + basename + "_model'.", 0, 10, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
-            else
-              open = true
+            val maybemodel = proj.getFile("src/" + basename + "_model.v")
+            if (maybemodel.exists)
+              model = maybemodel
           }
-        case Some(x) =>
-      }
-      CoqCommands.doLater(() => {
-        Console.println("activating model editor for " + basename + " with open " + open)
-        DocumentState._content = None
-        Display.getDefault.syncExec(
-          new Runnable() {
-            def run() = {
-              val wbp = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage
-              if (open)
-                wbp.openEditor(new FileEditorInput(model), "kopitiam.CoqEditor")
-              else
-                for (y <- wbp.getEditorReferences) {
-                  val z = y.getEditorInput
-                  if (z.isInstanceOf[IFileEditorInput])
-                    if (z.asInstanceOf[IFileEditorInput].getFile.getName.equals(basename + ".v"))
-                      wbp.activate(y.getEditor(true))
-                }
-            }})
-        Console.println("stepping over model! ")
-        CoqStepAllAction.doitH
-      })
-      CoqCommands.doLater(() => {
-        modelShell = Some(CoqState.getShell)
-        DocumentState.resetState
-        Console.println("preserving checkpoint " + modelShell)
-        CoqCommands.step
-      })
-      if (! javaNewerThanSource) {
-        CoqCommands.doLater(() => {
-          Console.println("now back to java editor")
-          Display.getDefault.syncExec(
-            new Runnable() {
-              def run() = {
-                PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.activate(JavaPosition.editor)
-              }})
-          CoqCommands.step
-        })
-      }
-    }
-    if (javaNewerThanSource) {
-      javaNewerThanSource = false
-      //safety first
-      CoqCommands.doLater(() => {
-        Console.println("activating javaeditor")
-        Display.getDefault.syncExec(
-          new Runnable() {
-            def run() = {
-              PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.activate(JavaPosition.editor)
-              //TODO: shouldn't work on a file-basis here anyways
-              if (JavaPosition.editor.isDirty)
-                JavaPosition.editor.doSave(null)
-            }})
-        //retract up until model
-        modelShell match {
-          case None => Console.println("how did I get here?")
-          case Some(x) =>
-            Console.println("retracting model...")
-            DocumentState.resetState
-            JavaPosition.retract
-            if (x.globalStep < CoqState.getShell.globalStep) {
-              DocumentState.setBusy
-              Console.println("backtracking to " + x)
-              CoqTop.writeToCoq("Backtrack " + x.globalStep + " 0 " + CoqState.getShell.context.length + ".")
-            } else
-              CoqCommands.step
+        } else {
+          JavaPosition.mark("something went wrong reading the Java file", 0, 10, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
+          return
         }
-      })
+        if (model == null || ! model.exists) {
+          JavaPosition.mark("Please write a model file for this Java file named '" + basename + "_model'.", 0, 10, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
+          return
+        }
+      }
+      new CoqCompileJob(model.getProject.getLocation.toFile, model.getName, true).schedule
     }
     CoqCommands.doLater(() => {
       if (DocumentState.activeEditor != null) {
@@ -206,7 +138,7 @@ class CoqJavaProject (basename : String) {
           Console.println("sending defs + spec")
           DocumentState._content = getCoqString
           PrintActor.register(JavaPosition)
-          CoqStepAllAction.doit
+          CoqStepAllAction.doitH
         case Some(x) =>
           val sh : CoqShellTokens = JavaPosition.method match {
             case None => x
@@ -247,7 +179,7 @@ class CoqJavaProject (basename : String) {
         Console.println("p is " + p)
         DocumentState._content = Some(DocumentState._content.getOrElse("") + p)
         PrintActor.register(JavaPosition)
-        CoqStepAllAction.doit
+        CoqStepAllAction.doitH
       } else
         CoqCommands.step
     })
@@ -1299,7 +1231,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
           val cwd = resource.getProject.getLocation.toFile
           val nam = resource.getName
           Console.println("no next command in here, starting a ccj! (with " + nam + ")")
-          new CoqCompileJob(cwd, nam).schedule
+          new CoqCompileJob(cwd, nam, false).schedule
         }
         //mutated in nextCommand
         sendlen = 0
@@ -1495,17 +1427,25 @@ class ConsolePrinter extends Actor {
 
 import org.eclipse.core.runtime.jobs.Job
 import java.io.File
-class CoqCompileJob (path : File, name : String) extends Job (name : String) {
+class CoqCompileJob (path : File, name : String, requiressuccess : Boolean) extends Job (name : String) {
 
   import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status}
   import java.io.File
   override def run (mon : IProgressMonitor) : IStatus = {
     Console.println("hello, world!, " + name)
+    if (EclipseConsole.out == null)
+      EclipseConsole.initConsole
     val la = if (CoqTop.isWin) ".exe" else ""
     val coqc = CoqTop.coqpath + "coqc" + la
     //what about dependencies?? <- need Add LoadPath explicitly in .v!
     if (new File(coqc).exists) {
-      val cmdarr = Array(coqc, name)
+      val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
+      val lp = new File(loadp).exists
+      val cmdarr =
+        if (lp)
+          Array(coqc, "-I", loadp, name)
+        else
+          Array(coqc, name)
       val coqcp = Runtime.getRuntime.exec(cmdarr, null, path)
       val ou = coqcp.getInputStream
       val err = coqcp.getErrorStream
@@ -1516,6 +1456,11 @@ class CoqCompileJob (path : File, name : String) extends Job (name : String) {
       new Thread(bs).start
       new Thread(bs2).start
       coqcp.waitFor
+      if (requiressuccess)
+        if (coqcp.exitValue != 0)
+          Console.println("errrrrrrrrror")
+        else
+          CoqCommands.step
       bs.act = false
       bs2.act = false
       Console.println("done")

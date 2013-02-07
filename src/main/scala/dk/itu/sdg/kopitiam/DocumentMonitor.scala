@@ -65,7 +65,12 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     val nam = edi.getName
     val doc = ed.getDocumentProvider.getDocument(edi)
     if (! EclipseTables.DocToProject.contains(doc)) {
-      val basename = nam.split("\\.")(0)
+      val basenam = nam.split("\\.")(0)
+      val basename =
+        if (basenam.endsWith("_model"))
+          basenam.substring(0, basenam.size - 6)
+        else
+          basenam
       val proj = EclipseTables.StringToProject.getOrElse(basename, { val p = new CoqJavaProject(basename); EclipseTables.StringToProject += basename -> p; Console.println("....instantiated new project...."); p })
       proj.setDocument(doc, nam)
 

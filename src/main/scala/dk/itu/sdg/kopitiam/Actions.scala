@@ -66,43 +66,47 @@ abstract class KCoqAction extends KAction {
     if (! ActionDisabler.ready)
       EclipseBoilerPlate.warnUser("Not ready", "Eclipse preference is not ready yet, please wait a moment")
     else {
-    ActionDisabler.disableAll
-    JavaPosition.unmark
-    val coqstarted = CoqTop.isStarted
-    val acted = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.getActiveEditor
-    if (DocumentState.activeEditor != acted && acted.isInstanceOf[CoqEditor]) {
-      if (DocumentState.resource != null)
-        EclipseBoilerPlate.unmarkReally
-      DocumentState.resetState
-      JavaPosition.retract
-      JavaPosition.retractModel
-      if (DocumentState.activeEditor != null)
-        DocumentState.processUndo
-      DocumentState.activeEditor = acted.asInstanceOf[CoqEditor]
+      ActionDisabler.disableAll
+      JavaPosition.unmark
+      val coqstarted = CoqTop.isStarted
+      val acted1 = PlatformUI.getWorkbench
+      val acted2 = if (acted1 != null) acted1.getActiveWorkbenchWindow else null
+      val acted3 = if (acted2 != null) acted2.getActivePage else null
+      val acted = if (acted3 != null) acted3.getActiveEditor else null
+      if (DocumentState.activeEditor != acted && acted.isInstanceOf[CoqEditor]) {
+        if (DocumentState.resource != null)
+          EclipseBoilerPlate.unmarkReally
+        DocumentState.resetState
+        JavaPosition.retract
+        JavaPosition.retractModel
+        if (DocumentState.activeEditor != null)
+          DocumentState.processUndo
+        DocumentState.activeEditor = acted.asInstanceOf[CoqEditor]
 
-      if (CoqOutputDispatcher.goalviewer != null)
-        CoqOutputDispatcher.goalviewer.clear
+        if (CoqOutputDispatcher.goalviewer != null)
+          CoqOutputDispatcher.goalviewer.clear
 
-      if (! coqstarted)
-        CoqStartUp.start
-      if (coqstarted) {
-        DocumentState.setBusy
-        PrintActor.deregister(CoqOutputDispatcher)
-        PrintActor.deregister(CoqStepNotifier)
-        PrintActor.deregister(CoqCommands)
-        val shell = CoqState.getShell
-        PrintActor.register(CoqStartUp)
-        CoqStartUp.synchronized {
-	      val initial = DocumentState.positionToShell(0).globalStep
-	      CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
-	      CoqStartUp.wait
+        if (! coqstarted)
+          CoqStartUp.start
+        if (coqstarted) {
+          DocumentState.setBusy
+          PrintActor.deregister(CoqOutputDispatcher)
+          PrintActor.deregister(CoqStepNotifier)
+          PrintActor.deregister(CoqCommands)
+          val shell = CoqState.getShell
+          PrintActor.register(CoqStartUp)
+          CoqStartUp.synchronized {
+	    val initial = DocumentState.positionToShell(0).globalStep
+	    CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
+	    CoqStartUp.wait
+          }
         }
-      }
-    } else
-      if (! coqstarted)
+      } else if (! coqstarted) {
+        Console.println("starting my own coqtop!")
         CoqStartUp.start
-    doit
-  }
+      }
+      doit
+    }
   }
 
   def start () : Boolean
@@ -371,9 +375,7 @@ class CompileCoqAction extends KAction {
     val ip = acted.getEditorInput
     assert(ip.isInstanceOf[IFileEditorInput])
     val r = ip.asInstanceOf[IFileEditorInput].getFile
-    if (EclipseConsole.out == null)
-      EclipseConsole.initConsole
-    new CoqCompileJob(r.getProject.getLocation.toFile, r.getName).schedule
+    new CoqCompileJob(r.getProject.getLocation.toFile, r.getName, false).schedule
   }
 }
 object CompileCoqAction extends CompileCoqAction { }

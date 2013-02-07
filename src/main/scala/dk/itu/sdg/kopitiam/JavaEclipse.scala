@@ -304,7 +304,7 @@ Module """ + n + " <: PROGRAM.") ++ prog ++ List(pr, umn, "End " + n + ".")
           spec = List("""
 Module """ + n + """_spec.
 Import """ + n + """.
-Import """ + n + """_model.
+Require Import """ + n + """_model.
 Module Import SC := Tac """ + n + """.
 
 Open Scope spec_scope.
