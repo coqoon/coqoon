@@ -796,7 +796,12 @@ object CoqOutputDispatcher extends CoqCallback {
       case CoqGoal(n, goals) =>
         if (!CoqStepNotifier.active && goalviewer != null) {
           //Console.println("outputdispatcher, n is " + n + ", goals:\n" + goals)
-          val (hy, res) = goals.splitAt(goals.indexWhere(_.contains("======")))
+          val goal =
+            if (goals.last.startsWith("(dependent evars:"))
+              goals.dropRight(1)
+            else
+              goals
+          val (hy, res) = goal.splitAt(goal.indexWhere(_.contains("======")))
           val ht = stripAndReduce(hy)
           var subgoals : List[String] = List[String]()
           var index : Int = 0
