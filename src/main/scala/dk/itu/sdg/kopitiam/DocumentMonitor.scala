@@ -234,20 +234,14 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
           //change to actual java code!
           proj.proofShell = None
           JavaPosition.retract
-          proj.modelShell match {
-            case None => //uhm... go along!
-            case Some(x) =>
-              DocumentState.setBusy
-              val cs = CoqState.getShell
-              CoqTop.writeToCoq("Backtrack " + x.globalStep + " " + x.localStep + " " + (cs.context.length - x.context.length) + ".")
-          }
+          //backtrack!
         }
         ActionDisabler.enableMaybe
       }
       if (proj.isCoqModel(doc)) {
         Console.println("model updated, setting boolean")
         proj.modelNewerThanSource = true
-        //backtrack! everything... (both coq and java sides)
+        //backtrack!
         DocumentState._content = None
       }
     }

@@ -39,7 +39,6 @@ class CoqJavaProject (basename : String) {
   var modelNewerThanSource : Boolean = true
   var javaNewerThanSource : Boolean = true
   var ASTdirty : Boolean = false
-  var modelShell : Option[CoqShellTokens] = None
   var proofShell : Option[CoqShellTokens] = None
 
   import org.eclipse.jdt.core.dom.CompilationUnit
@@ -83,20 +82,14 @@ class CoqJavaProject (basename : String) {
   import org.eclipse.swt.widgets.Display
   import org.eclipse.jdt.core.dom.MethodDeclaration
   def proveMethod (meth : MethodDeclaration) : Unit = {
-    modelShell match {
-      case Some(x) =>
-        if (x.globalStep > CoqState.getShell.globalStep)
-          modelShell = None
-      case None =>
-    }
     proofShell match {
       case Some(x) =>
         if (x.globalStep > CoqState.getShell.globalStep)
           proofShell = None
       case None =>
     }
-    Console.println("provemethod called! modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " modelshell " + modelShell + " proofshell " + proofShell)
-    if (modelNewerThanSource || modelShell == None) {
+    Console.println("provemethod called! modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " proofshell " + proofShell)
+    if (modelNewerThanSource) {
       modelNewerThanSource = false
       var model : IFile = null
       if (JavaPosition.editor == null)
@@ -363,10 +356,8 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
   def retractModel () : Unit = {
     Console.println("retracting model")
     val proj = getProj
-    if (proj != null) {
-      proj.modelShell = None
+    if (proj != null)
       proj.proofShell = None
-    }
   }
 
   import org.eclipse.swt.widgets.Display
@@ -1457,9 +1448,10 @@ class CoqCompileJob (path : File, name : String, requiressuccess : Boolean) exte
       new Thread(bs2).start
       coqcp.waitFor
       if (requiressuccess)
-        if (coqcp.exitValue != 0)
+        if (coqcp.exitValue != 0) {
           Console.println("errrrrrrrrror")
-        else
+          CoqCommands.empty
+        } else
           CoqCommands.step
       bs.act = false
       bs2.act = false
