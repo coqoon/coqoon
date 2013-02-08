@@ -31,11 +31,9 @@
 ** disable refresh action if not inside of proof (CoqState.proofMode)
 ** error reporting when command preceeded by comments is broken
 ** folding broken due to comments
-** coq 8.4 - filter dependent vars output
 ** Notation: "Print Grammar constr." <- useful!?!? also: "Set Printing Notations."
 
 
-** CoqOutputter: find disjoint definition names (newR, newM,...)
 ** Undo from just after End should jump to start of Section/Module/whatever
 ** remove hack that searches for '. ' to send command
 ** retract proof/leave for later
@@ -63,7 +61,7 @@
 - Nested classes
 - prefix/postfix statements (which might be on stack or fields!)
 (there might be more - https://github.com/hannesm/Kopitiam/tree/before-using-Eclipse-AST/src/test/resources/javaparser/source)
-** Multiple coq statements in a antiquote
+** Multiple coq statements in a single antiquote
 ** Error reporting for specifications
 ** Keybindings for Coq actions
 ** Step All / Step Until
