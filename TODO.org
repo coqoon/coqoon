@@ -23,13 +23,12 @@
 ** lazily run coqc when required (SfLib - just run coqc on Import SfLib)
 ** syntax highlighting in GoalViewer
 ** indicate when Qed
-** run coqtop from project dir, rather than "Add LoadPath"
+** run coqtop from project dir, rather than "Add LoadPath" <- implies one coqtop for each project!
 ** Jump to definition -- jface.text.hyperlink
 ** get help (source of lemma) <- in suggestions
 ** completion for arguments "apply foo with (x := y + 1)" <- x is argument name of lemma
 ** cleanup outline - and add icons
 ** disable refresh action if not inside of proof (CoqState.proofMode)
-** error reporting when command preceeded by comments is broken
 ** folding broken due to comments
 ** Notation: "Print Grammar constr." <- useful!?!? also: "Set Printing Notations."
 

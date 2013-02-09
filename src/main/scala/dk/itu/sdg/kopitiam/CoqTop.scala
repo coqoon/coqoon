@@ -199,20 +199,29 @@ object CoqTop {
   def computeCommentOffset (x : String, off : Int) : Int = {
     val st = x.indexOf("(*")
     val end = x.indexOf("*)")
+    //Console.println("commentoff: " + st + " till " + end)
     var rst : Int = st
     var isend : Boolean = false
     while (rst < end && isend == false) {
       val ni = x.indexOf("(*", rst + 1)
-      if (ni != -1 && ni < end) rst = ni
-      else isend = true
+      if (ni != -1 && ni < end)
+        rst = ni
+      else
+        isend = true
+      //Console.println("rst " + rst + " isend " + isend)
     }
+    //Console.println("finished: st " + st + " end " + end + " rst " + rst + " off " + off)
     if (st == -1 && end == -1)
       0
     else
-      if (rst >= off)
+      if (rst == off)
+        end
+      else if (rst > off)
         0
-      else
+      else {
+        //Console.println("recursively calling myself")
         end + 2 - rst + computeCommentOffset(x.substring(0, rst) + x.substring(end + 2), off)
+      }
   }
 
   def filterComments (x : String) : String = {

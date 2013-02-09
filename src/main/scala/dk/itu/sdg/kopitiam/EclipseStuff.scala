@@ -979,8 +979,9 @@ object EclipseBoilerPlate {
       marker.setAttribute(IMarker.MESSAGE, text)
       marker.setAttribute(IMarker.LOCATION, file.getName)
       val commentoff = CoqTop.computeCommentOffset(con.drop(DocumentState.position), spos - DocumentState.position)
+      //Console.println("searched for comments in: " + con.drop(DocumentState.position - 10).take(20) + " spos: " + (spos - DocumentState.position) + " commentoff " + commentoff + " con at spos: " + con.drop(spos).take(10))
       marker.setAttribute(IMarker.CHAR_START, spos + commentoff)
-      marker.setAttribute(IMarker.CHAR_END, epos + commentoff) //for tha whitespace
+      marker.setAttribute(IMarker.CHAR_END, epos) //for tha whitespace
       marker.setAttribute(IMarker.SEVERITY, severity)
       marker.setAttribute(IMarker.TRANSIENT, true)
     }
