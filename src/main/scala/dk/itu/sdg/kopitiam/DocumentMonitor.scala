@@ -232,16 +232,23 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         }
         if (!foundchange) {
           //change to actual java code!
-          proj.proofShell = None
+          proj.ASTdirty = true
+          JavaPosition.unmark
           JavaPosition.retract
-          //backtrack!
+          CoqRetractAction.doitH
         }
         ActionDisabler.enableMaybe
       }
       if (proj.isCoqModel(doc)) {
         Console.println("model updated, setting boolean")
         proj.modelNewerThanSource = true
-        //backtrack!
+        proj.proofShell match {
+          case None =>
+          case Some(x) =>
+            JavaPosition.unmark
+            JavaPosition.retract
+            CoqRetractAction.doitH
+        }
         DocumentState._content = None
       }
     }

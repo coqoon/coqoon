@@ -353,13 +353,6 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
     }
   }
 
-  def retractModel () : Unit = {
-    Console.println("retracting model")
-    val proj = getProj
-    if (proj != null)
-      proj.proofShell = None
-  }
-
   import org.eclipse.swt.widgets.Display
   def retract () : Unit = {
     val mn = (method != None)
@@ -392,6 +385,8 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
       next = None
       emptyCoqShells
       method = None
+      if (getProj != null)
+        getProj.proofShell = None
       PrintActor.deregister(JavaPosition)
       Display.getDefault.asyncExec(
         new Runnable() {
@@ -596,6 +591,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
       method = Some(md)
       getProj.ASTdirty = false
     }
+
     var active : Boolean = (cur == None)
 
     val print : Statement => Option[String] = x =>
