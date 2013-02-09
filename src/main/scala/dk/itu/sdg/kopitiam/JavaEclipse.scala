@@ -9,6 +9,11 @@ object EclipseJavaASTProperties {
   val coqEnd : String = "dk.itu.sdg.kopitiam.coqEnd"
   val coqShell : String = "dk.itu.sdg.kopitiam.coqShell"
   val method : String = "dk.itu.sdg.kopitiam.method"
+  val precondition : String = "dk.itu.sdg.kopitiam.precondition"
+  val postcondition : String = "dk.itu.sdg.kopitiam.postcondition"
+  val quantification : String = "dk.itu.sdg.kopitiam.quantification"
+  val coqOffset : String = "dk.itu.sdg.kopitiam.coqOffset"
+  val specOffset : String = "dk.itu.sdg.kopitiam.specOffset"
 }
 
 trait EclipseJavaHelper {
@@ -175,18 +180,21 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
             if (lvaridx > -1) {
               if (quant != None)
                 reportError("multiple logical variable statements, only one supported", s)
+              x.setProperty(EclipseJavaASTProperties.quantification, s)
               quant = Some((s, spectxt))
             } else {
               val preidx = scala.math.max(spectxt.indexOf("precondition:"), spectxt.indexOf("requires:"))
               if (preidx > -1) {
                 if (pre != None)
                   reportError("multiple precondition statements, only one supported", s)
+                x.setProperty(EclipseJavaASTProperties.precondition, s)
                 pre = Some((s, spectxt))
               } else {
                 val postidx = scala.math.max(spectxt.indexOf("postcondition:"), spectxt.indexOf("ensures:"))
                 if (postidx > -1) {
                   if (post != None)
                     reportError("multiple postcondition statements, only one supported", s)
+                  x.setProperty(EclipseJavaASTProperties.postcondition, s)
                   post = Some((s, spectxt))
                 }
               }
@@ -199,6 +207,7 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
             quant match {
               case None => ""
               case Some(x) =>
+                x._1.setProperty(EclipseJavaASTProperties.coqOffset, spec1.length)
                 val q1 = extractString(x).split(",")
                 val q2 = q1.mkString("[A] ", ", [A]", "")
                 q2 + ", "
@@ -218,7 +227,9 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
           val pr =
             pre match {
               case None => reportError("no precondition provided", x); ""
-              case Some(x) => extractString(x)
+              case Some(x) =>
+                x._1.setProperty(EclipseJavaASTProperties.coqOffset, spec2.length)
+                extractString(x)
             }
 
           val spec3 = spec2 + pr + " }}-{{ " + rets
@@ -226,7 +237,9 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
           val po =
             post match {
               case None => reportError("no postcondition provided", x); ""
-              case Some(x) => extractString(x)
+              case Some(x) =>
+                x._1.setProperty(EclipseJavaASTProperties.coqOffset, spec3.length)
+                extractString(x)
             }
 
           val spec = spec3 + po + " }})."
@@ -295,6 +308,8 @@ Proof.
                 if (p != null)
                   prog ::= p.asInstanceOf[String]
                 for (x <- x.getMethods) {
+                  //Console.println("setting offset for method [" + x.getName.getIdentifier + "]: " + spec.mkString("\n").length)
+                  x.setProperty(EclipseJavaASTProperties.coqOffset, spec.mkString("\n").length)
                   val sp = x.getProperty(EclipseJavaASTProperties.coqSpecification)
                   if (sp != null)
                     spec ::= sp.asInstanceOf[String]
@@ -322,7 +337,7 @@ Open Scope hasn_scope.
 
 Module """ + n + " <: PROGRAM.") ++ prog ++ List(pr, umn, "End " + n + ".")
 
-          spec = List("""
+          val specpre = """
 Module """ + n + """_spec.
 Import """ + n + """.
 Require Import """ + n + """_model.
@@ -330,11 +345,12 @@ Module Import SC := Tac """ + n + """.
 
 Open Scope spec_scope.
 Open Scope asn_scope.
-""") ++ spec
-
+"""
+          spec = List(specpre) ++ spec.reverse
           val p = prog.mkString("\n") + "\n"
           val s = spec.mkString("\n") + "\n"
 
+          x.setProperty(EclipseJavaASTProperties.specOffset, p.length + specpre.length + 1)
           x.setProperty(EclipseJavaASTProperties.coqDefinition, p)
           x.setProperty(EclipseJavaASTProperties.coqSpecification, s)
           x.setProperty(EclipseJavaASTProperties.coqEnd, "End " + n + "_spec.")

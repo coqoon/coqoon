@@ -432,8 +432,11 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper {
       val cu = getCompilationUnit(bla)
       //assign JavaPosition.editor - for error reporting in walkAST
       if (JavaPosition.editor != edi) {
-        if (JavaPosition.editor != null)
+        if (JavaPosition.editor != null) {
+          if (CoqTop.isStarted)
+            CoqRetractAction.doitH
           JavaPosition.retract
+        }
         JavaPosition.editor = edi
       }
       JavaPosition.unmark

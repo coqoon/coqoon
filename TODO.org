@@ -52,7 +52,6 @@
 ** update provenmarkers when method is updated
 ** warn if an antiquote contains multiple statements!
 ** Error reporting for specifications
-** Report Warnings/Errors instead of Console.println during parsing and simplification
 ** report if Java is not SimpleJava
 ** Re-Implement translation of Java to SimpleJava
 - introduction of temporary variables on nested field access

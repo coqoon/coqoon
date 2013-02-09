@@ -1,3 +1,5 @@
+** error reporting for specifications
+** warn on bad specifications
 ** generate Proof Certificate once last method of a program is proven
 ** coq 8.4: output '(dependent evars:)' is removed from goal(s)!
 ** compile model and use that instead of opening editor and stepping over this

@@ -252,12 +252,12 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
   import org.eclipse.ui.IFileEditorInput
   import org.eclipse.core.resources.{IFile, IMarker, IResource}
   import java.io.ByteArrayInputStream
+  import org.eclipse.jdt.core.dom.Initializer
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqProofCompleted() =>
         if (editor != null) {
           DocumentState.setBusy
-          Console.println("writing qed")
           CoqTop.writeToCoq("Qed.")
         }
       case CoqTheoremDefined(x) =>
@@ -300,31 +300,73 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
           //have coq position, need java position!
           //might either be spec or proof script (or neither of them)
           val proj = getProj
-          val doc = getDoc
           proj.proofShell match {
             case None =>
-              //spec!
-              val poff = DocumentState.position //- proj.program.get.getSpecOffset + 1 + s
-              Console.println("have a spec here... " + poff)
-              mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
-/*              val ast = findSpecForCoqOffset(poff)
-              ast match {
-                case Some(as) =>
-                  val soff = doc.getLineOffset(as.pos.line - 1)
-                  val content = doc.get(soff, doc.getLineLength(as.pos.line - 1))
-                  val offset = content.drop(as.pos.column).indexOf(": ") + 2
-                  val sss = s - as.getCoqPos.offset
-                  val star = soff + offset + sss + as.pos.column
-                  mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
-                case None =>
-              } */
+              //spec -- or code!
+              assert(proj.program != None)
+              val pro = proj.program.get
+              val spof = pro.getProperty(EclipseJavaASTProperties.specOffset)
+              val spoff =
+                if (spof != null && spof.isInstanceOf[Int])
+                  spof.asInstanceOf[Int]
+                else
+                  0
+              //not sure why 2 here... but otherwise might fail...
+              val poff = DocumentState.position + 2 - spoff
+              //Console.println("poff is " + poff + ", we're looking at " + DocumentState._content.get.drop(DocumentState.position).take(30) + " specoff points to " + DocumentState._content.get.drop(spoff).take(30))
+              //walk over specs, find the one in the right range
+              var mym : Option[MethodDeclaration] = None
+              var curdist : Int = Integer.MAX_VALUE
+              val findM : MethodDeclaration => Unit = x => {
+                val off = x.getProperty(EclipseJavaASTProperties.coqOffset)
+                assert(off != null)
+                assert(off.isInstanceOf[Int])
+                val dist = poff - off.asInstanceOf[Int]
+                //Console.println("dist here is " + dist + " [" + x.getName.getIdentifier + "]")
+                if (dist >= 0 && dist < curdist) {
+                  curdist = dist
+                  mym = Some(x)
+                }
+              }
+              traverseCU(pro, findM)
+
+              mym match {
+                case None => mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+                case Some(x) =>
+                  val doc = getDoc
+                  val markOrNot : Any => Boolean = x => {
+                    if (x == null || !x.isInstanceOf[Initializer])
+                      false
+                    else {
+                      val xi = x.asInstanceOf[Initializer]
+                      val xoff = xi.getProperty(EclipseJavaASTProperties.coqOffset)
+                      if (xoff == null || !xoff.isInstanceOf[Int])
+                        false
+                      else {
+                        val mydist = s - xoff.asInstanceOf[Int]
+                        Console.println("mydist is " + mydist)
+                        if (mydist >= 0) {
+                          val offtocolon = doc.get(xi.getStartPosition, xi.getLength).indexOf(":") + 2 //: and ws
+                          //Console.println("marking at: [offc] " + offtocolon + " mydist " + mydist)
+                          mark(n, xi.getStartPosition + offtocolon + mydist, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+                          true
+                        } else
+                          false
+                      }
+                    }
+                  }
+
+                  if (! (markOrNot(x.getProperty(EclipseJavaASTProperties.postcondition)) ||
+                         markOrNot(x.getProperty(EclipseJavaASTProperties.precondition)) ||
+                         markOrNot(x.getProperty(EclipseJavaASTProperties.quantification))))
+                    mark(n, -1, 0, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+              }
             case Some(x) =>
               //proof!
               next match {
                 case Some(st) =>
                   //not entirely correct computation... ("invariant:" and "frame:")
                   val star = s + st.getStartPosition + 3 //"<% "
-                  Console.println("marking at " + star + " (s: " + s + " sp: " + st.getStartPosition + ")")
                   mark(n, star, l, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
                   next = None
                 case None =>
