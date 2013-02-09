@@ -303,23 +303,24 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
     }
   }
 
+  import scala.collection.mutable.HashMap
   def markproven (s : Int, l : Int) = {
     //getProj.provenMethods ::= method.get
     val ps = proofScript(method.get)
     markHelper("Verified using: " + ps, s, l, "dk.itu.sdg.kopitiam.provenmarker", IMarker.SEVERITY_ERROR) match {
-      case Some(x) => proofmarkers ::= x
+      case Some(x) =>
+        proofmarkers += method.get.getName.getIdentifier -> x
       case None =>
     }
-    //CoqTop.writeToCoq("Backtrack " + ...)
   }
 
   def unmarkProofs () : Unit = {
-    proofmarkers.foreach(_.delete)
-    proofmarkers = List[IMarker]()
+    for ((name, marker) <- proofmarkers) marker.delete
+    proofmarkers.clear
   }
 
   var markers : List[IMarker] = List[IMarker]()
-  var proofmarkers : List[IMarker] = List[IMarker]()
+  val proofmarkers : HashMap[String, IMarker] = new HashMap[String, IMarker]()
 
   def unmark () : Unit = {
     markers.foreach(_.delete)
