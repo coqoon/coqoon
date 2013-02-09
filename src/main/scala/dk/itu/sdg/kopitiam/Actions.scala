@@ -444,9 +444,7 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper {
         val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
         val off = selection.getOffset
         val node = findASTNode(cu, off, 0)
-        Console.println("found a node (" + node.getClass.toString + ")")
         val md = findMethod(node)
-        Console.println("method is " + md.getClass.toString)
         val proj = EclipseTables.DocToProject(doc)
         proj.program = Some(cu)
         proj.proveMethod(md)

@@ -33,7 +33,6 @@ trait EclipseJavaHelper {
     //if we have a cache!
     if (input.isInstanceOf[ICompilationUnit]) {
       val cu : ICompilationUnit = input.asInstanceOf[ICompilationUnit]
-      Console.println("getting root from the shared AST")
       root = SharedASTProvider.getAST(cu, SharedASTProvider.WAIT_YES, null)
     } else {
       val parser : ASTParser = ASTParser.newParser(AST.JLS4)
@@ -42,7 +41,6 @@ trait EclipseJavaHelper {
       parser.setStatementsRecovery(true)
       parser.setBindingsRecovery(true)
       parser.setIgnoreMethodBodies(false)
-      Console.println("running the parser")
       root = parser.createAST(null).asInstanceOf[CompilationUnit]
     }
     //Console.println("root (which we return) is " + root.getClass.toString)
@@ -336,10 +334,6 @@ Open Scope asn_scope.
 
           val p = prog.mkString("\n") + "\n"
           val s = spec.mkString("\n") + "\n"
-          Console.println("SPEC: " + s)
-          Console.println("PROG: " + p)
-          Console.println("End of line")
-
 
           x.setProperty(EclipseJavaASTProperties.coqDefinition, p)
           x.setProperty(EclipseJavaASTProperties.coqSpecification, s)
@@ -412,10 +406,12 @@ Open Scope asn_scope.
         case x : ReturnStatement =>
           val e = x.getExpression
           //this is special!
-          assert(e.isInstanceOf[SimpleName] || e.isInstanceOf[BooleanLiteral] ||
+          if (! (e.isInstanceOf[SimpleName] || e.isInstanceOf[BooleanLiteral] ||
                  e.isInstanceOf[NullLiteral] || e.isInstanceOf[NumberLiteral] ||
-                 e.isInstanceOf[StringLiteral])
-          assert(ret == "`0") //avoid multiple return statements
+                 e.isInstanceOf[StringLiteral]))
+            reportError("only simple names and literals are supported as return", x)
+          if (ret != "`0") //avoid multiple return statements
+            reportError("only a single return statement is supported!", x)
           if (e.isInstanceOf[BooleanLiteral] ||
               e.isInstanceOf[NullLiteral] || e.isInstanceOf[NumberLiteral] ||
               e.isInstanceOf[StringLiteral])
@@ -513,7 +509,8 @@ Open Scope asn_scope.
         case x : ClassInstanceCreation =>
           val n = x.getType.toString
           val a = scala.collection.JavaConversions.asBuffer(x.arguments)
-          assert(a.size == 0) //for now!
+          if (a.size != 0) //for now!
+            reportError("for now only constructors without arguments are supported", x)
           //val as = a.map(printE(_)).mkString("[", "; ", "]")
           "\"" + n + "\""
         case x : FieldAccess =>
