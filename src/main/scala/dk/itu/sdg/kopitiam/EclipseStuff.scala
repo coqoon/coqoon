@@ -414,32 +414,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
     assert(prf != null)
     var res : String = prf.asInstanceOf[String]
 
-    val printer : Statement => Option[String] = x =>
-      x match {
-        case x : EmptyStatement =>
-          val script = doc.get(x.getStartPosition, x.getLength)
-          val con =
-            if (script.contains("invariant:")) {
-              val i1 = script.indexOf(":")
-              val i2 = script.indexOf("frame:")
-              val i3 = if (i2 == -1) script.length - 3 else i2
-              val i = script.substring(i1 + 1, i3).trim
-              val f =
-                if (i2 == -1)
-                  "<true>"
-                else
-                  script.substring(i3 + 6, script.length - 3).trim
-              "forward (" + i + ") (" + f + ")."
-            } else
-              script.drop(2).dropRight(2).trim
-          Some(con)
-        case x : Statement =>
-          if (Activator.getDefault.getPreferenceStore.getBoolean("implicit"))
-            Some("forward.")
-          else
-            None
-      }
-
+    val printer : Statement => Option[String] = x => printProofScript(doc, x)
     val rs = traverseAST(m, true, false, printer)
     res + rs.mkString("\n")
   }
@@ -624,48 +599,18 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
     var active : Boolean = (cur == None)
 
     val print : Statement => Option[String] = x =>
-      x match {
-        case x : EmptyStatement =>
-          if (active) {
-            val script = doc.get(x.getStartPosition, x.getLength)
-            Console.println("script is " + script + " (size: " + script.length + ")")
-            val con =
-              if (script.contains("invariant:")) {
-                val i1 = script.indexOf(":")
-                val i2 = script.indexOf("frame:")
-                val i3 = if (i2 == -1) script.length - 3 else i2
-                val i = script.substring(i1 + 1, i3).trim
-                val f =
-                  if (i2 == -1)
-                    "<true>"
-                  else
-                    script.substring(i3 + 6, script.length - 3).trim
-                Console.println("inv: " + i1 + " " + i2 + " " + i3 + " f " + f)
-                "forward (" + i + ") (" + f + ")."
-              } else
-                script.drop(2).dropRight(2).trim
-            Console.println("found ES: " + con)
+      if (active) {
+        val ps = printProofScript(doc, x)
+        ps match {
+          case None => None
+          case Some(ps) =>
             next = Some(x)
-            Some(con)
-          } else {
-            if (cur.get == x)
-              active = true
-            None
-          }
-        case x : Statement =>
-          if (active) {
-            val fwd = Activator.getDefault.getPreferenceStore.getBoolean("implicit")
-            Console.println("found nth, using forward? " + fwd + " for " + x.getClass.toString)
-            if (fwd) {
-              next = Some(x)
-              Some("forward.")
-            } else
-              None
-          } else {
-            if (cur.get == x)
-              active = true
-            None
-          }
+            Some(ps)
+        }
+      } else {
+        if (cur.get == x)
+          active = true
+        None
       }
 
     val r = traverseAST(method.get, true, true, print)
