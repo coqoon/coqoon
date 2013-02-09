@@ -12,8 +12,8 @@ object EclipseJavaASTProperties {
 
 trait EclipseJavaHelper {
   import org.eclipse.jdt.core.ITypeRoot
-  import org.eclipse.ui.IEditorInput
   import org.eclipse.jdt.ui.JavaUI
+  import org.eclipse.ui.IEditorInput
   def getRoot (ei : IEditorInput) : ITypeRoot = {
     val input = JavaUI.getEditorInputJavaElement(ei)
     if (input.isInstanceOf[ITypeRoot])
@@ -48,7 +48,7 @@ trait EclipseJavaHelper {
     return root
   }
 
-  import org.eclipse.jdt.core.dom.{ASTNode, MethodDeclaration, Statement, Initializer}
+  import org.eclipse.jdt.core.dom.{ASTNode, MethodDeclaration, Initializer}
   def findMethod (x : ASTNode) : MethodDeclaration =
     x match {
       case y : MethodDeclaration => y
@@ -74,6 +74,7 @@ trait EclipseJavaHelper {
   }
 
   class NodeFinder (off : Int, len : Int) extends Visitor {
+    import org.eclipse.jdt.core.dom.Statement
     var coveringNode : Option[ASTNode] = None
     var coveredNode : Option[ASTNode] = None
     override def visitNode (node : ASTNode) : Boolean = {
@@ -111,7 +112,6 @@ trait EclipseJavaHelper {
     root.accept(co)
   }
 
-  import org.eclipse.jdt.core.dom.{AbstractTypeDeclaration, AnnotationTypeDeclaration, AnnotationTypeMemberDeclaration, AnonymousClassDeclaration, ArrayAccess, ArrayCreation, ArrayInitializer, ArrayType, AssertStatement, Assignment, Block, BlockComment, BooleanLiteral, BreakStatement, CastExpression, CatchClause, CharacterLiteral, ClassInstanceCreation, CompilationUnit, ConditionalExpression, ConstructorInvocation, ContinueStatement, DoStatement, EmptyStatement, EnhancedForStatement, EnumConstantDeclaration, EnumDeclaration, ExpressionStatement, FieldAccess, FieldDeclaration, ForStatement, IfStatement, ImportDeclaration, InfixExpression, Initializer, InstanceofExpression, Javadoc, LabeledStatement, LineComment, MarkerAnnotation, MemberRef, MemberValuePair, MethodDeclaration, MethodInvocation, MethodRef, MethodRefParameter, Modifier, NormalAnnotation, NullLiteral, NumberLiteral, PackageDeclaration, ParameterizedType, ParenthesizedExpression, PostfixExpression, PrefixExpression, PrimitiveType, QualifiedName, QualifiedType, ReturnStatement, SimpleName, SimpleType, SingleMemberAnnotation, SingleVariableDeclaration, StringLiteral, SuperConstructorInvocation, SuperFieldAccess, SuperMethodInvocation, SwitchCase, SwitchStatement, SynchronizedStatement, TagElement, TextElement, ThisExpression, ThrowStatement, TryStatement, TypeDeclaration, TypeDeclarationStatement, TypeLiteral, TypeParameter, UnionType, VariableDeclarationExpression, VariableDeclarationFragment, VariableDeclarationStatement, WhileStatement, WildcardType}
   class CoqOutput (doc : IDocument) extends Visitor {
     import scala.collection.immutable.Stack
     var offset : Int = 0;
@@ -133,6 +133,7 @@ trait EclipseJavaHelper {
       }
     }
 
+    import org.eclipse.jdt.core.dom.{Modifier, PrimitiveType, SingleVariableDeclaration}
     override def visitNode (node : ASTNode) : Boolean = {
       node match {
         case x : Initializer =>
@@ -236,6 +237,7 @@ Proof.
     }
 
     import scala.collection.immutable.Stack
+    import org.eclipse.jdt.core.dom.{AbstractTypeDeclaration, TypeDeclaration, VariableDeclarationFragment}
     override def endVisitNode (node : ASTNode) : Unit =
       node match {
         case x : TypeDeclaration =>
@@ -323,8 +325,7 @@ Open Scope asn_scope.
         case _ =>
       }
 
-    import org.eclipse.jdt.core.dom.Statement
-    import org.eclipse.jdt.core.dom.StructuralPropertyDescriptor
+    import org.eclipse.jdt.core.dom.{AssertStatement, Assignment, Block, BooleanLiteral, ClassInstanceCreation, EmptyStatement, ExpressionStatement, FieldAccess, IfStatement, MethodInvocation, NullLiteral, NumberLiteral, QualifiedName, ReturnStatement, SimpleName, Statement, StringLiteral, StructuralPropertyDescriptor, VariableDeclarationStatement, WhileStatement}
     private def getBodyString (b : Statement) : Option[String] =
       b match {
         case x : Block =>
@@ -440,6 +441,7 @@ Open Scope asn_scope.
         case x :: y => "(cseq " + x + " " + printB(y) + ")"
       }
 
+    import org.eclipse.jdt.core.dom.InfixExpression
     private def translateop (op : Any) : String =
       op match {
         case InfixExpression.Operator.TIMES => "vtimes"
@@ -461,7 +463,7 @@ Open Scope asn_scope.
         case y => findClass(y.getParent)
       }
 
-    import org.eclipse.jdt.core.dom.Expression
+    import org.eclipse.jdt.core.dom.{Expression, ThisExpression}
     private def printEev (x : Expression) : String =
       x match {
         //only true for variable names... bindings...
@@ -475,6 +477,7 @@ Open Scope asn_scope.
         case y => Console.println("dunno how to print (" + y.getClass.toString + ")" + y); ""
       }
 
+    import org.eclipse.jdt.core.dom.ParenthesizedExpression
     private def printE (e : Expression) : String = {
       //Console.println("printE with (" + e.getClass.toString + ") " + e);
       val r =
@@ -549,6 +552,8 @@ Open Scope asn_scope.
   import org.eclipse.jdt.core.dom.ASTVisitor
 
   class Visitor extends ASTVisitor {
+    import org.eclipse.jdt.core.dom.{AbstractTypeDeclaration, AnnotationTypeDeclaration, AnnotationTypeMemberDeclaration, AnonymousClassDeclaration, ArrayAccess, ArrayCreation, ArrayInitializer, ArrayType, AssertStatement, Assignment, Block, BlockComment, BooleanLiteral, BreakStatement, CastExpression, CatchClause, CharacterLiteral, ClassInstanceCreation, CompilationUnit, ConditionalExpression, ConstructorInvocation, ContinueStatement, DoStatement, EmptyStatement, EnhancedForStatement, EnumConstantDeclaration, EnumDeclaration, ExpressionStatement, FieldAccess, FieldDeclaration, ForStatement, IfStatement, ImportDeclaration, InfixExpression, Initializer, InstanceofExpression, Javadoc, LabeledStatement, LineComment, MarkerAnnotation, MemberRef, MemberValuePair, MethodDeclaration, MethodInvocation, MethodRef, MethodRefParameter, Modifier, NormalAnnotation, NullLiteral, NumberLiteral, PackageDeclaration, ParameterizedType, ParenthesizedExpression, PostfixExpression, PrefixExpression, PrimitiveType, QualifiedName, QualifiedType, ReturnStatement, SimpleName, SimpleType, SingleMemberAnnotation, SingleVariableDeclaration, StringLiteral, SuperConstructorInvocation, SuperFieldAccess, SuperMethodInvocation, SwitchCase, SwitchStatement, SynchronizedStatement, TagElement, TextElement, ThisExpression, ThrowStatement, TryStatement, TypeDeclaration, TypeDeclarationStatement, TypeLiteral, TypeParameter, UnionType, VariableDeclarationExpression, VariableDeclarationFragment, VariableDeclarationStatement, WhileStatement, WildcardType}
+
     def visitNode (node : ASTNode) : Boolean = { true }
     def endVisitNode (node : ASTNode) : Unit = { }
 

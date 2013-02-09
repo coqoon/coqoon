@@ -201,7 +201,7 @@ object EclipseTables {
   val StringToProject = new HashMap[String, CoqJavaProject]()
 }
 
-object JavaPosition extends CoqCallback with EclipseJavaHelper {
+object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils {
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   var editor : JavaEditor = null
 
@@ -413,21 +413,9 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
     val prf = m.getProperty(EclipseJavaASTProperties.coqProof)
     assert(prf != null)
     var res : String = prf.asInstanceOf[String]
-    var todo : Stack[Statement] = Stack[Statement]()
-    todo = todo.push(m.getBody)
-    while (!todo.isEmpty) {
-      val st = todo.top
-      todo = todo.pop
-      st match {
-        case x : Block =>
-          todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]).reverse)
-        case x : IfStatement =>
-          val el = x.getElseStatement
-          if (el != null)
-            todo = todo.push(el)
-          todo = todo.push(x.getThenStatement)
-        case x : WhileStatement =>
-          todo = todo.push(x.getBody)
+
+    val printer : Statement => Option[String] = x =>
+      x match {
         case x : EmptyStatement =>
           val script = doc.get(x.getStartPosition, x.getLength)
           val con =
@@ -444,41 +432,26 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
               "forward (" + i + ") (" + f + ")."
             } else
               script.drop(2).dropRight(2).trim
-          res = res + con + "\n"
+          Some(con)
         case x : Statement =>
           if (Activator.getDefault.getPreferenceStore.getBoolean("implicit"))
-            res = res + "forward.\n"
+            Some("forward.")
+          else
+            None
       }
-    }
-    res
+
+    val rs = traverseAST(m, true, false, printer)
+    res + rs.mkString("\n")
   }
 
   def emptyCoqShells () : Unit = {
-    var todo : Stack[Statement] = Stack[Statement]()
     method match {
       case Some(x) =>
-        todo = todo.push(x.getBody)
         x.setProperty(EclipseJavaASTProperties.coqShell, null)
+        val clean : Statement => Option[Unit] = x => { x.setProperty(EclipseJavaASTProperties.coqShell, null); None }
+        traverseAST(x, false, false, clean)
       case None =>
     }
-    while (!todo.isEmpty) {
-      val st = todo.top
-      todo = todo.pop
-      st match {
-        case x : Block =>
-          todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]))
-        case x : IfStatement =>
-          todo = todo.push(x.getThenStatement)
-          val el = x.getElseStatement
-          if (el != null)
-            todo = todo.push(el)
-        case x : WhileStatement =>
-          todo = todo.push(x.getBody)
-        case x : Statement =>
-          x.setProperty(EclipseJavaASTProperties.coqShell, null)
-      }
-    }
-
     val prov = editor.getDocumentProvider
     val doc = prov.getDocument(editor.getEditorInput)
     val annmodel = prov.getAnnotationModel(editor.getEditorInput)
@@ -508,40 +481,28 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
         Console.println("Is the method the same? " + (m == method.get))
         if (m == method.get) {
           Console.println("YEP")
-          var todo : Stack[Statement] = Stack[Statement]()
-          todo = todo.push(method.get.getBody)
           var nx : Boolean = false
-          while (!todo.isEmpty && next == None) {
-            val st = todo.top
-            todo = todo.pop
-            st match {
-              case x : Block =>
-                todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]))
-              case x : IfStatement =>
-                todo = todo.push(x.getThenStatement)
-                val el = x.getElseStatement
-                if (el != null)
-                  todo = todo.push(el)
-              case x : WhileStatement =>
-                todo = todo.push(x.getBody)
-              case x : Statement =>
-                Console.println("have a statement here " + x.getClass.toString + ": " + x)
-                if (nx) {
-                  val cs = x.getProperty(EclipseJavaASTProperties.coqShell)
-                  Console.println("and nx, cs " + cs)
-                  if (cs != null)
-                    next = Some(x)
-                }
-                if (n == x) {
-                  Console.println("and is n")
-                  nx = true
-                }
-                if (!nx) {
-                  Console.println("resetting shell!")
-                  x.setProperty(EclipseJavaASTProperties.coqShell, null)
-                }
-            }
+
+          val cb : Statement => Option[Statement] = x => {
+            val r =
+              if (nx) {
+                val cs = x.getProperty(EclipseJavaASTProperties.coqShell)
+                if (cs != null)
+                  Some(x)
+                else
+                  None
+              } else {
+                x.setProperty(EclipseJavaASTProperties.coqShell, null)
+                None
+              }
+            if (n == x)
+              nx = true
+            r
           }
+
+          val r = traverseAST(m, false, true, cb)
+          assert(r.size == 1)
+          next = Some(r.first)
         }
     }
     next
@@ -549,40 +510,23 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
 
   def getLastCoqStatement () : Option[CoqShellTokens] = {
     assert(next == None)
-    var todo : Stack[Statement] = Stack[Statement]()
-    todo = todo.push(method.get.getBody)
-    while (!todo.isEmpty && next == None) {
-      val st = todo.top
-      todo = todo.pop
-      st match {
-        case x : Block =>
-          todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]))
-        case x : IfStatement =>
-          todo = todo.push(x.getThenStatement)
-          val el = x.getElseStatement
-          if (el != null)
-            todo = todo.push(el)
-        case x : WhileStatement =>
-          todo = todo.push(x.getBody)
-        case x : Statement =>
-          val sh = x.getProperty(EclipseJavaASTProperties.coqShell)
-          if (sh != null)
-            cur match {
-              case None => //not sure what to do here....
-              case Some(y) =>
-                if (x != y) {
-                  Console.println("found sth exciting: " + x + ", which is not " + y)
-                  next = Some(x)
-                }
-                val she = y.getProperty(EclipseJavaASTProperties.coqShell).asInstanceOf[CoqShellTokens]
-                val sh1 = sh.asInstanceOf[CoqShellTokens]
-                if (she == sh1)
-                  Console.println("CST are the same " + she)
-                else
-                  Console.println("CST are different: " + she + " vs " + sh1)
-            }
-      }
+
+    val find : Statement => Option[Statement] = x => {
+      val sh = x.getProperty(EclipseJavaASTProperties.coqShell)
+      if (sh != null)
+        cur match {
+          case None => None
+          case Some(y) =>
+            if (x != y)
+              Some(x)
+            else
+              None
+        } else None
     }
+    val r = traverseAST(method.get, false, true, find)
+    assert(r.size == 1 || r.size == 0)
+    if (r.size == 1)
+      next = Some(r.first)
     next match {
       case None =>
         val sh = method.get.getProperty(EclipseJavaASTProperties.coqShell)
@@ -677,14 +621,10 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
       method = Some(md)
       getProj.ASTdirty = false
     }
-    var res : Option[String] = None
-    var todo : Stack[Statement] = Stack[Statement]()
     var active : Boolean = (cur == None)
-    todo = todo.push(method.get.getBody)
-    while (res == None && !todo.isEmpty) {
-      val nextst = todo.top
-      todo = todo.pop
-      res = nextst match {
+
+    val print : Statement => Option[String] = x =>
+      x match {
         case x : EmptyStatement =>
           if (active) {
             val script = doc.get(x.getStartPosition, x.getLength)
@@ -707,19 +647,11 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
             Console.println("found ES: " + con)
             next = Some(x)
             Some(con)
-          } else None
-        case x : WhileStatement =>
-          todo = todo.push(x.getBody)
-          None
-        case x : IfStatement =>
-          val el = x.getElseStatement
-          if (el != null)
-            todo = todo.push(el)
-          todo = todo.push(x.getThenStatement)
-          None
-        case x : Block =>
-          todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]).reverse)
-          None
+          } else {
+            if (cur.get == x)
+              active = true
+            None
+          }
         case x : Statement =>
           if (active) {
             val fwd = Activator.getDefault.getPreferenceStore.getBoolean("implicit")
@@ -729,12 +661,19 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper {
               Some("forward.")
             } else
               None
-          } else None
+          } else {
+            if (cur.get == x)
+              active = true
+            None
+          }
       }
-      if (!active && cur.get == nextst)
-        active = true
-    }
-    res
+
+    val r = traverseAST(method.get, true, true, print)
+    assert(r.size == 1 || r.size == 0)
+    if (r.size == 1)
+      Some(r.first)
+    else
+      None
   }
 
   import org.eclipse.swt.widgets.Display

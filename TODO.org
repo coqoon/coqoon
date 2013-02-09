@@ -75,6 +75,7 @@
 ** constructors (currently calloc instead of call to constructor)
 ** verify verified method <- what happens?
 ** use mouse position instead of cursor position for right-click "prove this method"
+** javaNewerThanSource unused!
 
 ** SimpleJava optimizations
 observations from SnapshotTrees.java:
