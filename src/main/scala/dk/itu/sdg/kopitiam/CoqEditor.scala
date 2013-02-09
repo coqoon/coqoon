@@ -17,7 +17,7 @@ class CoqEditor extends TextEditor with EclipseUtils {
 
   override protected def initializeEditor () : Unit = {
     //Console.println("initializeEditor was called")
-    setDocumentProvider(CoqJavaDocumentProvider)
+    setDocumentProvider(CoqDocumentProvider)
     //Console.println(" - document provider set")
     setSourceViewerConfiguration(new CoqSourceViewerConfiguration(this))
     //Console.println(" - source viewer configuration set")
@@ -42,7 +42,7 @@ class CoqEditor extends TextEditor with EclipseUtils {
     annotationModel = projViewer.getProjectionAnnotationModel()
 
     val doc = this.getDocumentProvider.getDocument(getEditorInput)
-    val outline = CoqJavaDocumentProvider.getOutline(doc)
+    val outline = CoqDocumentProvider.getOutline(doc)
 
     outline map (_.root) foreach { root =>
       updateFolding(root, doc)
@@ -141,7 +141,7 @@ class CoqEditor extends TextEditor with EclipseUtils {
       outlinePage foreach { _.setInput(input) }
     }
     val doc = this.getDocumentProvider.getDocument(input)
-    val outline = CoqJavaDocumentProvider.getOutline(doc)
+    val outline = CoqDocumentProvider.getOutline(doc)
     outline map (_.root) foreach {root =>
       if (annotationModel != null) this.updateFolding(root, doc)
     }
@@ -231,7 +231,7 @@ protected class CoqContentProvider extends ITreeContentProvider {
 
 import org.eclipse.ui.editors.text.TextFileDocumentProvider
 
-object CoqJavaDocumentProvider extends TextFileDocumentProvider {
+object CoqDocumentProvider extends TextFileDocumentProvider {
   import org.eclipse.jface.text.IDocument
 
   override def getDefaultEncoding () : String = "UTF-8"
@@ -243,7 +243,7 @@ object CoqJavaDocumentProvider extends TextFileDocumentProvider {
   def getOutline (doc : IDocument) : Option[CoqContentProvider] = {
     val outline = contentProviders.get(doc) getOrElse {
       val cprov = new CoqContentProvider()
-      cprov.documentProvider = Some(this)
+      cprov.documentProvider = Some(CoqDocumentProvider.this)
       contentProviders += (doc -> cprov)
       cprov
     }
@@ -309,7 +309,7 @@ class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor
 
   def reconcile (partition : IRegion) : Unit = {
     //println("Reconciling " + partition + " with editor = " + editor + " and doc = " + document)
-    val outline = CoqJavaDocumentProvider.getOutline(document) // updates model as side effect
+    val outline = CoqDocumentProvider.getOutline(document) // updates model as side effect
     if (editor != null) {
       val outlinePage = editor.getAdapter(classOf[IContentOutlinePage]).asInstanceOf[CoqContentOutlinePage]
       Display.getDefault.asyncExec(new java.lang.Runnable {
@@ -474,7 +474,7 @@ class CoqContentOutlinePage extends ContentOutlinePage {
         viewer.setInput(input)
         val doc = textEditor.getDocumentProvider.getDocument(input)
         //Console.println("  In update(), document is " + doc)
-        CoqJavaDocumentProvider.getOutline(doc) foreach { cprov => viewer.setContentProvider(cprov) }
+        CoqDocumentProvider.getOutline(doc) foreach { cprov => viewer.setContentProvider(cprov) }
         viewer.expandAll()
         control.setRedraw(true)
       }

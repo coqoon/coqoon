@@ -72,7 +72,6 @@
 ** proper enabling and disabling of actions (esp during prove method)
 ** field initializers - during constructor - translate that - and/or infer specification
 ** prove method: what if model or spec changes!
-** use compiled model!
 ** constructors (currently calloc instead of call to constructor)
 ** verify verified method <- what happens?
 ** use mouse position instead of cursor position for right-click "prove this method"
