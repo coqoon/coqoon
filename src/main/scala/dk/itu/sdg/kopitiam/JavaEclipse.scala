@@ -122,17 +122,20 @@ trait EclipseJavaHelper {
     var deps : Set[String] = Set[String]()
     var ret : String = "`0"
 
-    private def extractString (x : Option[Pair[Initializer, String]]) : String = {
-      x match {
-        case Some(x) =>
-          //Console.println("string is " + x._2)
-          val idx = x._2.indexOf(":")
-          val r = x._2.substring(idx + 1, x._2.length - 2).trim
-          //Console.println("r is " + r)
-          r
-        case None => ""
-      }
+    private def extractString (x : Pair[Initializer, String]) : String = {
+      //Console.println("string is " + x._2)
+      val idx = x._2.indexOf(":")
+      val r = x._2.substring(idx + 1, x._2.length - 2).trim
+      //Console.println("r is " + r)
+      r
     }
+
+    import org.eclipse.core.resources.IMarker
+    import org.eclipse.jdt.core.dom.ASTNode
+    def reportError (txt : String, s : ASTNode) : Unit = {
+      JavaPosition.mark(txt, s.getStartPosition, s.getLength, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+    }
+
 
     import org.eclipse.jdt.core.dom.{Modifier, PrimitiveType, SingleVariableDeclaration}
     override def visitNode (node : ASTNode) : Boolean = {
@@ -172,35 +175,39 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
             val spectxt = doc.get(s.getStartPosition, s.getLength)
             val lvaridx = spectxt.indexOf("lvars:")
             if (lvaridx > -1) {
-              assert(quant == None)
+              if (quant != None)
+                reportError("multiple logical variable statements, only one supported", s)
               quant = Some((s, spectxt))
             } else {
               val preidx = scala.math.max(spectxt.indexOf("precondition:"), spectxt.indexOf("requires:"))
               if (preidx > -1) {
-                assert(pre == None)
+                if (pre != None)
+                  reportError("multiple precondition statements, only one supported", s)
                 pre = Some((s, spectxt))
               } else {
                 val postidx = scala.math.max(spectxt.indexOf("postcondition:"), spectxt.indexOf("ensures:"))
                 if (postidx > -1) {
-                  assert(post == None)
+                  if (post != None)
+                    reportError("multiple postcondition statements, only one supported", s)
                   post = Some((s, spectxt))
                 }
               }
             }
           }
-          assert(quant != None && pre != None && post != None)
           var spec1 = "Definition " + name + """_spec :=
   ("""
 
-          val quant1 = extractString(quant).split(",")
-          val quant2 =
-            if (quant1.length == 0)
-              ""
-            else
-              quant1.mkString("[A] ", ", [A]", "")
+          val qua =
+            quant match {
+              case None => ""
+              case Some(x) =>
+                val q1 = extractString(x).split(",")
+                val q2 = q1.mkString("[A] ", ", [A]", "")
+                q2 + ", "
+            }
 
           val clazz = printE(findClass(x).getName)
-          val spec2 = spec1 + quant2 + ", " + clazz + " :.: \"" + name + "\" |-> " + arglist + """
+          val spec2 = spec1 + qua + clazz + " :.: \"" + name + "\" |-> " + arglist + """
   {{ """
 
           val rtype = x.getReturnType2
@@ -210,8 +217,21 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
             else
               ""
 
-          val spec3 = spec2 + extractString(pre) + " }}-{{ " + rets
-          val spec = spec3 + extractString(post) + " }})."
+          val pr =
+            pre match {
+              case None => reportError("no precondition provided", x); ""
+              case Some(x) => extractString(x)
+            }
+
+          val spec3 = spec2 + pr + " }}-{{ " + rets
+
+          val po =
+            post match {
+              case None => reportError("no postcondition provided", x); ""
+              case Some(x) => extractString(x)
+            }
+
+          val spec = spec3 + po + " }})."
           //set offsets for quant._1, pre._1, post._1
 
           //Console.println("spec: " + spec)

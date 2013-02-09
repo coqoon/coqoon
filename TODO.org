@@ -50,9 +50,7 @@
 ** provenmarker still ugly (yellow/orange-ish)
 ** call unmarkProofs somewhere!
 ** update provenmarkers when method is updated
-** warn if method does not contain a specification [instead of assert]
 ** Error reporting for specifications
-** lvars should be optional
 ** Report Warnings/Errors instead of Console.println during parsing and simplification
 ** report if Java is not SimpleJava
 ** Re-Implement translation of Java to SimpleJava
@@ -65,6 +63,7 @@
  methodcall(foo.bar) --> Object tmp1 = foo.bar; methodcall(tmp1)
 - Nested classes
 - prefix/postfix statements (which might be on stack or fields!)
+- ternary conditional operator
 (there might be more - https://github.com/hannesm/Kopitiam/tree/before-using-Eclipse-AST/src/test/resources/javaparser/source)
 ** Multiple coq statements in a single antiquote
 ** Keybindings for Coq actions
