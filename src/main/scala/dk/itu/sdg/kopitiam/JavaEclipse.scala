@@ -6,6 +6,7 @@ object EclipseJavaASTProperties {
   val coqDefinition : String = "dk.itu.sdg.kopitiam.coqDefinition"
   val coqSpecification : String = "dk.itu.sdg.kopitiam.coqSpecification"
   val coqProof : String = "dk.itu.sdg.kopitiam.coqProof"
+  val coqEnd : String = "dk.itu.sdg.kopitiam.coqEnd"
   val coqShell : String = "dk.itu.sdg.kopitiam.coqShell"
   val method : String = "dk.itu.sdg.kopitiam.method"
 }
@@ -322,6 +323,7 @@ Open Scope asn_scope.
 
           x.setProperty(EclipseJavaASTProperties.coqDefinition, p)
           x.setProperty(EclipseJavaASTProperties.coqSpecification, s)
+          x.setProperty(EclipseJavaASTProperties.coqEnd, "End " + n + "_spec.")
         case _ =>
       }
 

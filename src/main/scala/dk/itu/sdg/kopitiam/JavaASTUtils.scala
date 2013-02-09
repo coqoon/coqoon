@@ -71,5 +71,30 @@ trait JavaASTUtils {
     }
     res.reverse
   }
+
+
+  import org.eclipse.jdt.core.dom.{AbstractTypeDeclaration, CompilationUnit, MethodDeclaration, TypeDeclaration}
+  def traverseCU [A](c : CompilationUnit, callback : MethodDeclaration => A) : List[A] = {
+    var res : List[A] = List[A]()
+    var todo : Stack[AbstractTypeDeclaration] = Stack[AbstractTypeDeclaration]()
+    todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(c.types).map(_.asInstanceOf[AbstractTypeDeclaration]))
+    while (!todo.isEmpty) {
+      val t = todo.top
+      todo = todo.pop
+      t match {
+        case x : TypeDeclaration =>
+          todo = todo.pushAll(x.getTypes)
+          for (m <- x.getMethods)
+            res ::= callback(m)
+        case _ =>
+      }
+    }
+    res.reverse
+  }
+
+  def countMethods (c : CompilationUnit) : Int = {
+    val ctr : MethodDeclaration => Int = x => 1
+    traverseCU(c, ctr).size
+  }
 }
 

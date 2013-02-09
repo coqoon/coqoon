@@ -30,10 +30,9 @@ trait EclipseUtils {
 }
 
 class CoqJavaProject (basename : String) {
-  //foo -> foo.java [Java]
-  //foo -> foo.v [Model]
-  import org.eclipse.jface.text.IDocument
+  def base_name : String = basename
 
+  import org.eclipse.jface.text.IDocument
   var javaSource : Option[IDocument] = None
   var coqModel : Option[IDocument] = None
   var modelNewerThanSource : Boolean = true
@@ -233,8 +232,26 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
       null
   }
 
+  import org.eclipse.jdt.core.dom.CompilationUnit
+  def generateCertificate (c : CompilationUnit) : String = {
+    //prog
+    val pdef = c.getProperty(EclipseJavaASTProperties.coqDefinition).asInstanceOf[String]
+    //spec
+    val spec = c.getProperty(EclipseJavaASTProperties.coqSpecification).asInstanceOf[String]
+    //prog_valid
+
+    //proofs
+    val ps = traverseCU(c, proofScript)
+    //prog_valid_proof
+
+    //end
+    val en = c.getProperty(EclipseJavaASTProperties.coqEnd).asInstanceOf[String]
+    pdef + spec + ps.mkString("\n") + "\n" + en
+  }
+
   import org.eclipse.ui.IFileEditorInput
-  import org.eclipse.core.resources.IMarker
+  import org.eclipse.core.resources.{IFile, IMarker, IResource}
+  import java.io.ByteArrayInputStream
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqProofCompleted() =>
@@ -250,6 +267,28 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
           val length = method.get.getLength
           markproven(spos, length)
           //generate proof certificate IF last method!
+          val p = getProj
+          if (p != null)
+            p.program match {
+              case None =>
+              case Some(prog) =>
+                if (proofmarkers.size == countMethods(prog)) {
+                  val c = generateCertificate(prog)
+
+                  val edi = editor.getEditorInput.asInstanceOf[IFileEditorInput]
+                  val trfi : IFile = edi.getFile.getProject.getFile(p.base_name + "Java.v")
+                  if (trfi.exists)
+                    trfi.delete(true, false, null)
+                  trfi.create(null, IResource.NONE, null)
+                  trfi.setCharset("UTF-8", null)
+                  val bytes = c.getBytes("UTF-8")
+                  val bs = new Array[Byte](bytes.length)
+                  System.arraycopy(bytes, 0, bs, 0, bytes.length)
+                  trfi.setContents(new ByteArrayInputStream(bs), IResource.NONE, null)
+
+                  Console.println("received certificate: " + c)
+                }
+            }
           retract
           ActionDisabler.enableStart
         }
@@ -362,6 +401,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
       Console.println("hello my friend, NONONONO")
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
+      unmarkProofs
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
       annmodel.connect(doc)
       processed match {
@@ -412,7 +452,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
 
     val printer : Statement => Option[String] = x => printProofScript(doc, x)
     val rs = traverseAST(m, true, false, printer)
-    res + rs.mkString("\n")
+    res + rs.mkString("\n") + "\nQed."
   }
 
   def emptyCoqShells () : Unit = {
