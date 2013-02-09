@@ -233,12 +233,6 @@
             name="Compile Coq">
       </command>
       <command
-            defaultHandler="dk.itu.sdg.kopitiam.GenerateProofCertificateAction"
-            description="Generate Proof Ceritificate"
-            id="Kopitiam.generateproofcertificate"
-            name="Generate Proof Certificate">
-      </command>
-      <command
             defaultHandler="dk.itu.sdg.kopitiam.TranslateToSimpleJavaAction"
             description="Translate to SimpleJava"
             id="Kopitiam.translatetosimplejava"
@@ -268,18 +262,6 @@
    </extension>
    <extension
          point="org.eclipse.ui.menus">
-      <menuContribution
-            locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
-         <command
-               commandId="Kopitiam.generateproofcertificate">
-         </command>
-      </menuContribution>
-      <menuContribution
-            locationURI="popup:org.eclipse.ui.navigator.ProjectExplorer#PopupMenu?after=additions">
-        <command
-        	commandId="Kopitiam.generateproofcertificate">
-       	</command>
-      </menuContribution>
 <!--      <menuContribution
             locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
          <command
