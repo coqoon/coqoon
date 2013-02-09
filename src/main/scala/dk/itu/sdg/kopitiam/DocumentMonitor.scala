@@ -233,9 +233,13 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         if (!foundchange) {
           //change to actual java code!
           proj.ASTdirty = true
-          JavaPosition.unmark
-          JavaPosition.retract
-          CoqRetractAction.doitH
+          proj.proofShell match {
+            case None =>
+            case Some(x) =>
+              JavaPosition.unmark
+              JavaPosition.retract
+              CoqRetractAction.doitH
+          }
         }
         ActionDisabler.enableMaybe
       }
