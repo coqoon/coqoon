@@ -454,7 +454,7 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper {
 }
 object ProveMethodAction extends ProveMethodAction { }
 
-class TranslateAction extends KAction {
+class GenerateProofCertificateAction extends KAction {
   import org.eclipse.ui.handlers.HandlerUtil
   import org.eclipse.jface.viewers.IStructuredSelection
   import org.eclipse.jdt.core.ICompilationUnit
@@ -556,7 +556,7 @@ class TranslateAction extends KAction {
 
   override def doit () : Unit = ()
 }
-object TranslateAction extends TranslateAction { }
+object GenerateProofCertificateAction extends GenerateProofCertificateAction { }
 
 class TranslateToSimpleJavaAction extends KAction {
   import org.eclipse.ui.handlers.HandlerUtil

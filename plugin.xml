@@ -233,9 +233,9 @@
             name="Compile Coq">
       </command>
       <command
-            defaultHandler="dk.itu.sdg.kopitiam.TranslateAction"
-            description="Translate to Coq"
-            id="Kopitiam.translatetocoq"
+            defaultHandler="dk.itu.sdg.kopitiam.GenerateProofCertificateAction"
+            description="Generate Proof Ceritificate"
+            id="Kopitiam.generateproofcertificate"
             name="Generate Proof Certificate">
       </command>
       <command
@@ -271,13 +271,13 @@
       <menuContribution
             locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
          <command
-               commandId="Kopitiam.translatetocoq">
+               commandId="Kopitiam.generateproofcertificate">
          </command>
       </menuContribution>
       <menuContribution
             locationURI="popup:org.eclipse.ui.navigator.ProjectExplorer#PopupMenu?after=additions">
         <command
-        	commandId="Kopitiam.translatetocoq">
+        	commandId="Kopitiam.generateproofcertificate">
        	</command>
       </menuContribution>
 <!--      <menuContribution
