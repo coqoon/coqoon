@@ -50,7 +50,7 @@
 ** provenmarker still ugly (yellow/orange-ish)
 ** call unmarkProofs somewhere!
 ** update provenmarkers when method is updated
-** warn if an antiquote contains multiple statements!
+** warn if an antiquote contains multiple statements! (or support multiple coq statements in a single antiquote)
 ** report if Java is not SimpleJava
 ** Re-Implement translation of Java to SimpleJava
 - introduction of temporary variables on nested field access
@@ -64,7 +64,6 @@
 - prefix/postfix statements (which might be on stack or fields!)
 - ternary conditional operator
 (there might be more - https://github.com/hannesm/Kopitiam/tree/before-using-Eclipse-AST/src/test/resources/javaparser/source)
-** Multiple coq statements in a single antiquote
 ** Keybindings for Coq actions
 ** Step All / Step Until
 ** reveal when stepping
