@@ -275,8 +275,10 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
                 if (proofmarkers.size == countMethods(prog)) {
                   val c = generateCertificate(prog)
 
+                  val nam = p.base_name + "Java.v"
+
                   val edi = editor.getEditorInput.asInstanceOf[IFileEditorInput]
-                  val trfi : IFile = edi.getFile.getProject.getFile(p.base_name + "Java.v")
+                  val trfi : IFile = edi.getFile.getProject.getFile(nam)
                   if (trfi.exists)
                     trfi.delete(true, false, null)
                   trfi.create(null, IResource.NONE, null)
@@ -286,7 +288,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
                   System.arraycopy(bytes, 0, bs, 0, bytes.length)
                   trfi.setContents(new ByteArrayInputStream(bs), IResource.NONE, null)
 
-                  Console.println("received certificate: " + c)
+                  EclipseBoilerPlate.warnUser("Program is correct!", "A proof certificate was generated, its filename is " + nam)
                 }
             }
           retract
@@ -401,7 +403,6 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
       Console.println("hello my friend, NONONONO")
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
-      unmarkProofs
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
       annmodel.connect(doc)
       processed match {
