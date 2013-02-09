@@ -34,5 +34,6 @@ public class Activator extends AbstractUIPlugin {
     PreferenceConverter.setDefault(store, "coqSentBg", new RGB(118, 255, 133));
     PreferenceConverter.setDefault(store, "coqSentProcessBg", new RGB(244, 255, 200));
     PreferenceConverter.setDefault(store, "coqKeywordFg", new RGB(127, 6, 101));
+    store.setDefault("implicit", true);
   }
 }
