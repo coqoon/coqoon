@@ -6,6 +6,8 @@
       val bun = Platform.getBundle("dk.itu.sdg.kopitiam")
       val loc = FileLocator.getBundleFile(bun).getParentFile.getParentFile.toString
 ** move global loadpath into project-specific settings (similar to referenced libraries in eclipse)!
+** reveal on pos + 1 if pos + 1 is a whitespace
+** closing comment *) without beginning -> out of heap space
 ** future: incrementally run proofer in the background, annoy user then with unproven stuff (when code is changed)
 ** incremental combinator parsers, done in yi http://yi-editor.blogspot.com/2008/11/incremental-parsing-in-yi.html
 ** remove occurences of "null". these are evil!
@@ -50,6 +52,7 @@
 ** provenmarker still ugly (yellow/orange-ish)
 ** call unmarkProofs somewhere!
 ** update provenmarkers when method is updated
+** head vs this.head -> proof doesn't go through
 ** warn if an antiquote contains multiple statements! (or support multiple coq statements in a single antiquote)
 ** report if Java is not SimpleJava
 ** Re-Implement translation of Java to SimpleJava
