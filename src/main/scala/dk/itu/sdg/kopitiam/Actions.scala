@@ -327,8 +327,6 @@ class CoqStepAllAction extends KCoqAction {
 object CoqStepAllAction extends CoqStepAllAction { }
 
 class CoqStepUntilAction extends KCoqAction {
-  import org.eclipse.swt.widgets.Display
-
   override def doit () : Unit = {
     val cursor = EclipseBoilerPlate.getCaretPosition
     reallydoit(cursor)
@@ -669,7 +667,6 @@ object CoqCommands extends CoqCallback {
 }
 
 object CoqOutputDispatcher extends CoqCallback {
-  import org.eclipse.swt.widgets.Display
   import org.eclipse.core.resources.IMarker
 
   var goalviewer : GoalViewer = null
