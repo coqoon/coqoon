@@ -6,20 +6,14 @@
       val bun = Platform.getBundle("dk.itu.sdg.kopitiam")
       val loc = FileLocator.getBundleFile(bun).getParentFile.getParentFile.toString
 ** move global loadpath into project-specific settings (similar to referenced libraries in eclipse)!
-** reveal on pos + 1 if pos + 1 is a whitespace
-** closing comment *) without beginning -> out of heap space
 ** future: incrementally run proofer in the background, annoy user then with unproven stuff (when code is changed)
 ** incremental combinator parsers, done in yi http://yi-editor.blogspot.com/2008/11/incremental-parsing-in-yi.html
 ** remove occurences of "null". these are evil!
-** care more about initialization order!:
-   specifically: goalviewer might be null
-   also, activeeditor might be null
-    ~> should both not be the case if we're opening with a coq window
-
-  also, track more precisely all internal state and be able to destroy
-   it (too much depends on activeeditor == null in DocumentMonitor and EclipseStuff)
 ** useful: http://robertvarttinen.blogspot.com/2007/01/adding-third-party-jar-to-your-eclipse.html
 * Coq side
+** if focus on goalviewer, still enable step fwd/backward keyboard shortcuts
+** reveal on pos + 1 if pos + 1 is a whitespace
+** closing comment *) without beginning -> out of heap space
 ** lots of proof obligations -> find some useful interface for the tabs
 ** focus on a subgoal -> emit grey text "Focus n.", which is activated if the user writes proof script : question is: does subgoal stay active!?
 ** goal buffer + step until -> takes forever :/
