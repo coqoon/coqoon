@@ -20,6 +20,9 @@
    it (too much depends on activeeditor == null in DocumentMonitor and EclipseStuff)
 ** useful: http://robertvarttinen.blogspot.com/2007/01/adding-third-party-jar-to-your-eclipse.html
 * Coq side
+** lots of proof obligations -> find some useful interface for the tabs
+** focus on a subgoal -> emit grey text "Focus n.", which is activated if the user writes proof script : question is: does subgoal stay active!?
+** goal buffer + step until -> takes forever :/
 ** dependency graph of coq files, run coqc as background task
 ** coq projects which depend upon each other
 ** lazily run coqc when required (SfLib - just run coqc on Import SfLib)
@@ -49,6 +52,8 @@
 *** http://stackoverflow.com/questions/1835885/send-ctrl-c-to-process-open-by-java
 ** Reset ident <- undefines everything back to ident
 * Java side
+** more lazy about backtrack, especially when typing <% and %>
+** default specs for methods - only require those needed to be specified (don't need add to prove length)
 ** provenmarker still ugly (yellow/orange-ish)
 ** call unmarkProofs somewhere!
 ** update provenmarkers when method is updated
