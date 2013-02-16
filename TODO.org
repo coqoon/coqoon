@@ -20,8 +20,9 @@
  I've the slight feeling that parsing comments doesn't work reliable in those two situations
 
  Additionally there are the commentparsers in CoqEditor - OutlineParser - which do the folding stuff, and are borken
+
+ There is also findNextCommand and findPreviousCommand in CoqTop
 ** if focus on goalviewer, still enable step fwd/backward keyboard shortcuts
-** reveal on pos + 1 if pos + 1 is a whitespace <- PG goes forward all the spaces!
 ** closing comment *) without beginning -> out of heap space
 ** lots of proof obligations -> find some useful interface for the tabs
 ** focus on a subgoal -> emit grey text "Focus n.", which is activated if the user writes proof script : question is: does subgoal stay active!?

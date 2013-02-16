@@ -1215,13 +1215,19 @@ object DocumentState extends CoqCallback with KopitiamLogger {
           if (until <= position)
             //last step, recolor!
             activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
-        if (reveal)
+        if (reveal) {
+          val nxt : Int =
+            _content match {
+              case Some(x) => if (x(position) == ' ') 1 else 0
+              case None => 0
+            }
           Display.getDefault.asyncExec(
             new Runnable() {
               def run() = {
-                activeEditor.selectAndReveal(position, 0)
+                activeEditor.selectAndReveal(position + nxt, 0)
               }
             })
+        }
       }
     }
   }
