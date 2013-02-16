@@ -1,3 +1,6 @@
+** update user interface less often when Step Until/Step All is in progress
+ This speeds up the Goal Viewer when stepping to some position in a big file
+ Current heuristic: Only every tenth step is counted
 * Kopitiam 0.2.13 [12 February 2013]
 ** error reporting for specifications
 ** warn on bad specifications

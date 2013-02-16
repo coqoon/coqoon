@@ -1080,6 +1080,8 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     coqmarker = null
   }
 
+  private var lazyval : Int = 0
+
   var position_ : Int = 0
   def position : Int = position_
   def position_= (x : Int) {
@@ -1094,8 +1096,11 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         coqmarker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO)
       }
       try {
-        coqmarker.setAttribute(IMarker.CHAR_START, x)
-        coqmarker.setAttribute(IMarker.CHAR_END, x - 1) //at dot, not whitespace
+        lazyval = (lazyval + 1) % 10
+        if (! CoqStepNotifier.active || lazyval == 10 || until <= x) {
+          coqmarker.setAttribute(IMarker.CHAR_START, x)
+          coqmarker.setAttribute(IMarker.CHAR_END, x - 1) //at dot, not whitespace
+        }
         position_ = x
       } catch {
         case e : CoreException =>
@@ -1169,7 +1174,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   }
 
   def process () : Unit = {
-    if (activeEditor != null)
+    if (activeEditor != null && !CoqStepNotifier.active)
       activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
     JavaPosition.reAnnotate(true, false)
   }
@@ -1204,7 +1209,12 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         //mutated in nextCommand
         sendlen = 0
 
-        activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
+        if (! CoqStepNotifier.active)
+          activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
+        else
+          if (until <= position)
+            //last step, recolor!
+            activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
         if (reveal)
           Display.getDefault.asyncExec(
             new Runnable() {

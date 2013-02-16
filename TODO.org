@@ -11,12 +11,21 @@
 ** remove occurences of "null". these are evil!
 ** useful: http://robertvarttinen.blogspot.com/2007/01/adding-third-party-jar-to-your-eclipse.html
 * Coq side
+** comment parsing
+ shouldn't be too hard - currently done in CoqTop:
+   filterComments takes a string and removes all comments
+   computeCommentOffset takes a string and an offset and returns the length of preceeding comment
+ problem here is: nested comments and also multiple comments before an interesting command
+
+ I've the slight feeling that parsing comments doesn't work reliable in those two situations
+
+ Additionally there are the commentparsers in CoqEditor - OutlineParser - which do the folding stuff, and are borken
 ** if focus on goalviewer, still enable step fwd/backward keyboard shortcuts
-** reveal on pos + 1 if pos + 1 is a whitespace
+** reveal on pos + 1 if pos + 1 is a whitespace <- PG goes forward all the spaces!
 ** closing comment *) without beginning -> out of heap space
 ** lots of proof obligations -> find some useful interface for the tabs
 ** focus on a subgoal -> emit grey text "Focus n.", which is activated if the user writes proof script : question is: does subgoal stay active!?
-** goal buffer + step until -> takes forever :/
+** find better heuristic when to update Goal Viewer on Step Until/All: currently every 10th step, should be smarter (take all steps (or time?) into account, etc)
 ** dependency graph of coq files, run coqc as background task
 ** coq projects which depend upon each other
 ** lazily run coqc when required (SfLib - just run coqc on Import SfLib)
