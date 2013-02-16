@@ -1,3 +1,4 @@
+** Suggestions now contain the lemma, not only the name
 ** If command is successfully processed, and a space is directly after the dot, reveal after the space
 ** update user interface less often when Step Until/Step All is in progress
  This speeds up the Goal Viewer when stepping to some position in a big file

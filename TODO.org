@@ -33,13 +33,18 @@
 ** indicate when Qed
 ** run coqtop from project dir, rather than "Add LoadPath" <- implies one coqtop for each project!
 ** Jump to definition -- jface.text.hyperlink
-** get help (source of lemma) <- in suggestions
 ** completion for arguments "apply foo with (x := y + 1)" <- x is argument name of lemma
 ** cleanup outline - and add icons
 ** disable refresh action if not inside of proof (CoqState.proofMode)
 ** folding broken due to comments
 ** Notation: "Print Grammar constr." <- useful!?!? also: "Set Printing Notations."
 
+** content assisstant filtering "foo.bar" lemmas out:
+ CoqUnknown(List.existsb_exists:
+  forall (A : Type) (f : A -> Datatypes.bool) (l : Datatypes.list A),
+  List.existsb f l = Datatypes.true <->
+  (exists x : A, List.In x l /\ f x = Datatypes.true))
+CoqResponse should parse more carefully here - maybe
 
 ** Undo from just after End should jump to start of Section/Module/whatever
 ** remove hack that searches for '. ' to send command

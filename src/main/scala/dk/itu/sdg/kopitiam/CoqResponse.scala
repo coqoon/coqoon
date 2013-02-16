@@ -13,7 +13,7 @@ case class CoqUnknown (stuff : String) extends CoqResponse { }
 case class CoqUserInterrupt () extends CoqResponse { }
 case class CoqWarning (message : String) extends CoqResponse { }
 case class CoqShellReady (mono : Boolean, tokens : CoqShellTokens) extends CoqResponse { }
-case class CoqSearchResult (name : String) extends CoqResponse { }
+case class CoqSearchResult (name : String, info : String) extends CoqResponse { }
 
 object ParseCoqResponse {
   private val ident = """([\p{L}_][\p{L}_0-9']*)"""
@@ -25,7 +25,7 @@ object ParseCoqResponse {
   private val Thmd = (ident + """ is defined""").r
   private val Inte = """User interrupt.""".r
   private val Erro = """(Error:|Toplevel input,)(.*)""".r
-  private val Sear = (ident + """:.*""").r
+  private val Sear = (ident + """:(.*)""").r
 
   private val LineSeparator = System.getProperty("line.separator");
 
@@ -62,7 +62,7 @@ object ParseCoqResponse {
           CoqError(ps, p.reduceLeft(_ + " " + _), 0, 0)
       }
       case Inte() => CoqUserInterrupt()
-      case Sear(n) => CoqSearchResult(n)
+      case Sear(n, v) => CoqSearchResult(n, v)
       case x => CoqUnknown(s)
     }
   }

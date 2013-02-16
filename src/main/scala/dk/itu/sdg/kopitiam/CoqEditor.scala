@@ -375,12 +375,12 @@ class CoqContentAssistantProcessor extends IContentAssistProcessor with CoqCallb
   import org.eclipse.jface.text.contentassist.{IContextInformationValidator,IContextInformation,ICompletionProposal,CompletionProposal,ContextInformation}
   import org.eclipse.jface.text.ITextViewer
   import java.text.MessageFormat
-  import scala.collection.mutable.ArrayBuffer
+  import scala.collection.mutable.HashMap
 
-  private val dynamicCompletions = new ArrayBuffer[String]
-  private val staticCompletions = Array("apply","assumption","compute","destruct","induction","intros","reflexivity","rewrite","simpl","unfold")
+  private val dynamicCompletions = new HashMap[String, String]()
+  private val staticCompletions = Array("apply","assumption","compute","destruct","induction","intros","inversion","reflexivity","rewrite","simpl","unfold")
 
-  def getPrefix(doc : IDocument, offset : Int) : String = {
+  def getPrefix (doc : IDocument, offset : Int) : String = {
     val prefix = new StringBuffer
     if (doc != null && doc.getLength > 0) {
       var index = offset - 1
@@ -391,44 +391,48 @@ class CoqContentAssistantProcessor extends IContentAssistProcessor with CoqCallb
     }
     prefix toString
   }
-  
-  def getCompletionProposal(completion : String, prefix : String, offset : Int) : ICompletionProposal = {
-    val info = new ContextInformation(completion, MessageFormat.format("CompletionProcessor.Proposal.ContextInfo.pattern"));
-    new CompletionProposal(completion, offset - prefix.length, prefix.length, completion.length(), null, completion, info, MessageFormat.format("CompletionProcessor.Proposal.hoverinfo.pattern"))
+
+  def getCompletionProposal (completion : String, moreinfo : String, prefix : String, offset : Int) : ICompletionProposal = {
+    val info = new ContextInformation(completion, MessageFormat.format("CompletionProcessor.Proposal.ContextInfo.pattern"))
+    val more = if (moreinfo == null) completion else completion + " : " + moreinfo
+    new CompletionProposal(completion, offset - prefix.length, prefix.length, completion.length(), null, more, info, MessageFormat.format("CompletionProcessor.Proposal.hoverinfo.pattern"))
   }
-  
-  def computeCompletionProposals(viewer : ITextViewer, documentOffset : Int) : Array[ICompletionProposal] = {
+
+  def computeCompletionProposals (viewer : ITextViewer, documentOffset : Int) : Array[ICompletionProposal] = {
     val prefix = getPrefix(viewer.getDocument, documentOffset)
-    Console.println("--- ContentAssistant prefix: "+ prefix)
-    
+
     //Get definitions etc. from CoqTop
     if (prefix.length > 1)
     	CoqTop.writeToCoq("SearchAbout [ \""+ prefix +"\" ].")
-    
-    val filteredCompletions = Array.concat(staticCompletions, dynamicCompletions.toArray[String]).filter( comp => prefix.length == 0 || comp.startsWith(prefix) )
-    val proposals = new Array[ICompletionProposal](filteredCompletions.size)
-    for (i <- 0 until filteredCompletions.size) {
-      proposals(i) = getCompletionProposal(filteredCompletions(i), prefix, documentOffset)
-    }
+
+    val tst : String => Boolean = prefix.length == 0 || _.startsWith(prefix)
+
+    val filteredCompletions = dynamicCompletions.keys.toArray.filter(tst)
+    val filteredStatic = staticCompletions.filter(tst)
+    val proposals = new Array[ICompletionProposal](filteredStatic.size + filteredCompletions.size)
+    val mid = filteredStatic.length
+    Range(0, mid).map(x => proposals(x) = getCompletionProposal(filteredStatic(x), null, prefix, documentOffset))
+    Range(mid, proposals.length).map(x => {
+      Console.println("x " + x + " mid " + mid + " x - mid " + (x - mid))
+      val pr = filteredCompletions(x - mid)
+      proposals(x) = getCompletionProposal(pr, dynamicCompletions(pr), prefix, documentOffset)
+    })
     proposals
   }
 
-  def computeContextInformation(viewer : ITextViewer, offset : Int) : Array[IContextInformation] = null
-  def getCompletionProposalAutoActivationCharacters() : Array[Char] = Array('.')
-  def getContextInformationAutoActivationCharacters() : Array[Char] = null
-  def getContextInformationValidator() : IContextInformationValidator = null
-  def getErrorMessage() : String = "not yet implemented"
-  
+  def computeContextInformation (viewer : ITextViewer, offset : Int) : Array[IContextInformation] = null
+  def getCompletionProposalAutoActivationCharacters () : Array[Char] = Array('.')
+  def getContextInformationAutoActivationCharacters () : Array[Char] = null
+  def getContextInformationValidator () : IContextInformationValidator = null
+  def getErrorMessage () : String = "not yet implemented"
+
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqTheoremDefined(t) =>
-        println("ContentAssist - Adding theorem: "+ t);
-        dynamicCompletions += t
-      case CoqSearchResult(x) =>
-        if (!dynamicCompletions.contains(x)) {
-          println("ContentAssist - Adding search-result: "+ x);
-          dynamicCompletions += x
-        }
+        dynamicCompletions += (t -> null)
+      case CoqSearchResult(x, v) =>
+        if (!dynamicCompletions.contains(x))
+          dynamicCompletions += (x -> v)
       case CoqShellReady(m, token) =>
         if (token.globalStep == 1)
           dynamicCompletions.clear
