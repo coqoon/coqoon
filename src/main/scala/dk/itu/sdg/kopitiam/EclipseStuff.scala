@@ -927,10 +927,13 @@ object EclipseBoilerPlate {
   def mark (text : String, severity : Int = IMarker.SEVERITY_ERROR, advance : Boolean = false, off : Int = 0, len : Int = 0) : Unit = {
     if (DocumentState.activeEditor != null) {
       val file = DocumentState.resource
-      var spos = if (advance) DocumentState.sendlen + DocumentState.position + 1 else DocumentState.position + 1
+      var spos = if (advance) DocumentState.sendlen + DocumentState.position else DocumentState.position
       val con = DocumentState.content
-      while ((con(spos) == '\n' || con(spos) == ' ' || con(spos) == '\t') && spos < con.length)
-        spos += 1
+      val skipwhite : Unit => Unit = x => {
+        while ((con(spos) == '\n' || con(spos) == ' ' || con(spos) == '\t') && spos < con.length)
+          spos += 1
+      }
+      skipwhite()
       spos += off
       val epos =
         if (advance)
@@ -942,9 +945,18 @@ object EclipseBoilerPlate {
       val marker = file.createMarker(IMarker.PROBLEM)
       marker.setAttribute(IMarker.MESSAGE, text)
       marker.setAttribute(IMarker.LOCATION, file.getName)
-      val commentoff = CoqTop.computeCommentOffset(con.drop(DocumentState.position), spos - DocumentState.position)
-      //Console.println("searched for comments in: " + con.drop(DocumentState.position - 10).take(20) + " spos: " + (spos - DocumentState.position) + " commentoff " + commentoff + " con at spos: " + con.drop(spos).take(10))
-      marker.setAttribute(IMarker.CHAR_START, spos + commentoff)
+      var endnow : Boolean = false
+      while (! endnow) {
+        Console.println("searching for comments in " + con.drop(DocumentState.position + spos).take(30))
+        val coff = CoqTop.computeCommentOffset(con.drop(DocumentState.position + spos), 0)
+        Console.println("computecommentoff was " + coff)
+        if (coff == 0)
+          endnow = true
+        spos = spos + coff
+        skipwhite()
+      }
+      //Console.println("searched for comments in: " + con.drop(DocumentState.position - 10).take(20) + " spos: " + (spos - DocumentState.position) + " con at spos: " + con.drop(spos).take(10))
+      marker.setAttribute(IMarker.CHAR_START, spos)
       marker.setAttribute(IMarker.CHAR_END, epos) //for tha whitespace
       marker.setAttribute(IMarker.SEVERITY, severity)
       marker.setAttribute(IMarker.TRANSIENT, true)

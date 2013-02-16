@@ -199,7 +199,7 @@ object CoqTop {
   def computeCommentOffset (x : String, off : Int) : Int = {
     val st = x.indexOf("(*")
     val end = x.indexOf("*)")
-    //Console.println("commentoff: " + st + " till " + end)
+    //Console.println("commentoff: " + st + " till " + end + "(in string " + x.take(20) + ")")
     var rst : Int = st
     var isend : Boolean = false
     while (rst < end && isend == false) {
@@ -215,7 +215,7 @@ object CoqTop {
       0
     else
       if (rst == off)
-        end
+        end + 2
       else if (rst > off)
         0
       else {
@@ -241,7 +241,7 @@ object CoqTop {
   }
 
   def writeToCoq (dat : String) : Unit = {
-    val data = filterComments(dat)
+    val data = filterComments(dat).trim
     if (started && data != null && data.length > 0) {
       if (coqin == null)
         Console.println("coqin is null")
