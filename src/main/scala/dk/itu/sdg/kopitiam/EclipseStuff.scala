@@ -1080,7 +1080,8 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     coqmarker = null
   }
 
-  private var lazyval : Int = 0
+  private var lastupdate : Long = 0
+  private var forceupdate : Boolean = false
 
   var position_ : Int = 0
   def position : Int = position_
@@ -1096,10 +1097,12 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         coqmarker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO)
       }
       try {
-        lazyval = (lazyval + 1) % 10
-        if (! CoqStepNotifier.active || lazyval == 10 || until <= x) {
+        val nooooow = System.currentTimeMillis
+        forceupdate = (nooooow - lastupdate > 500) //we can do 2 frames per second :)
+        if (! CoqStepNotifier.active || forceupdate || until <= x) {
           coqmarker.setAttribute(IMarker.CHAR_START, x)
           coqmarker.setAttribute(IMarker.CHAR_END, x - 1) //at dot, not whitespace
+          lastupdate = nooooow
         }
         position_ = x
       } catch {
@@ -1212,7 +1215,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
         if (! CoqStepNotifier.active)
           activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
         else
-          if (until <= position)
+          if (until <= position || forceupdate)
             //last step, recolor!
             activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
         if (reveal) {

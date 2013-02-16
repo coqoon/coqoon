@@ -26,10 +26,6 @@
 ** closing comment *) without beginning -> out of heap space
 ** lots of proof obligations -> find some useful interface for the tabs
 ** focus on a subgoal -> emit grey text "Focus n.", which is activated if the user writes proof script : question is: does subgoal stay active!?
-** find better heuristic when to update Goal Viewer on Step Until/All
-   currently every 10th step
-   take all steps into account, and update n times
-   use time, update every full second
 ** dependency graph of coq files, run coqc as background task
 ** coq projects which depend upon each other
 ** lazily run coqc when required (SfLib - just run coqc on Import SfLib)
