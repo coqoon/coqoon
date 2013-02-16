@@ -581,15 +581,11 @@ object CoqStepNotifier extends CoqCallback {
             fini
           else {
             val nc = CoqTop.findNextCommand(DocumentState.content.drop(DocumentState.position))
-            val bl = if (test.isDefined) test.get(DocumentState.position, DocumentState.position + nc) else "no test"
-            Console.println("nc is " + nc + " tstres " + bl)
-            if ((test.isDefined && test.get(DocumentState.position, DocumentState.position + nc)) || nc == -1) {
-              Console.println("finishing")
+            if ((test.isDefined && test.get(DocumentState.position, DocumentState.position + nc)) || nc == -1)
               fini
-            } else if (monoton) {
-              Console.println("one more step")
+            else if (monoton)
               CoqStepAction.doit
-            } else {
+            else {
               //we got into an error state
               fini
               if (CoqState.proofMode)
@@ -638,8 +634,6 @@ object CoqCommands extends CoqCallback {
         PrintActor.deregister(CoqCommands)
         Console.println("no command to run, deregistered")
       }
-    else
-      Console.println("step called, but wasn't finished")
   }
 
   private def finished () : Boolean = {

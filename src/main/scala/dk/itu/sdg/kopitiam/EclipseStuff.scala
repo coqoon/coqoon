@@ -704,14 +704,13 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
   import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.text.source.IAnnotationModelExtension
   def reAnnotate (proc : Boolean, undo : Boolean) : Unit = {
-    val m = (method != None)
-    Console.println("reannotate called with proc " + proc + " undo " + undo + " method " + m + " editor " + editor)
     //4 cases:
     // #t #f => processing       remove nothing, mark yellow
     // #t #t => problem marker   remove yellow, mark nothing
     // #f #t => real undo        remove green, mark green
     // #f #f => processed!       remove yellow & green, mark green
     if (editor != null && method != None) {
+      Console.println("reannotate called with proc " + proc + " undo " + undo + " method " + (method != None) + " editor " + editor)
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
       val proj = getProj
