@@ -28,7 +28,7 @@ object ParseCoqResponse {
   private val Sear = (ident + """:.*""").r
 
   private val LineSeparator = System.getProperty("line.separator");
-  
+
   def parse (s : String) : CoqResponse = {
     s.split(LineSeparator).take(1)(0) match {
       case Goal(x, _) => CoqGoal(x.toInt, s.split(LineSeparator).toList.drop(1))
