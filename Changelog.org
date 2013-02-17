@@ -1,3 +1,5 @@
+* Kopitiam 0.2.15 [17 February 2013]
+** reverted comment parsing for error reporting, didn't work
 * Kopitiam 0.2.14 [17 February 2013]
 ** Suggestions now contain the lemma, not only the name
 ** If command is successfully processed, and a space is directly after the dot, reveal after the space

@@ -22,6 +22,8 @@
  Additionally there are the commentparsers in CoqEditor - OutlineParser - which do the folding stuff, and are borken
 
  There is also findNextCommand and findPreviousCommand in CoqTop
+
+  maybe it is easier to treat each comment as a step?
 ** if focus on goalviewer, still enable step fwd/backward keyboard shortcuts
 ** closing comment *) without beginning -> out of heap space
 ** lots of proof obligations -> find some useful interface for the tabs
