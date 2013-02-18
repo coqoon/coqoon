@@ -1,3 +1,5 @@
+* Kopitiam 0.2.16 [18 February 2013]
+** revert commit which didn't enable actions
 * Kopitiam 0.2.15 [17 February 2013]
 ** reverted comment parsing for error reporting, didn't work
 * Kopitiam 0.2.14 [17 February 2013]
