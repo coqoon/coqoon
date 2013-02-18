@@ -677,8 +677,7 @@ object CoqOutputDispatcher extends CoqCallback {
           EclipseBoilerPlate.unmark
           JavaPosition.unmark
         }
-        if (! CoqStepNotifier.active)
-          ActionDisabler.enableMaybe
+        ActionDisabler.enableMaybe
         if (!monoton && token.context.length == 0 && goalviewer != null)
           goalviewer.clear
       case CoqGoal(n, goals) =>
