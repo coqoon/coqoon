@@ -413,7 +413,6 @@ class CoqContentAssistantProcessor extends IContentAssistProcessor with CoqCallb
     val mid = filteredStatic.length
     Range(0, mid).map(x => proposals(x) = getCompletionProposal(filteredStatic(x), null, prefix, documentOffset))
     Range(mid, proposals.length).map(x => {
-      Console.println("x " + x + " mid " + mid + " x - mid " + (x - mid))
       val pr = filteredCompletions(x - mid)
       proposals(x) = getCompletionProposal(pr, dynamicCompletions(pr), prefix, documentOffset)
     })
