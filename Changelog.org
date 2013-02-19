@@ -1,3 +1,4 @@
+** parsing of a SearchResult (which is everything ident + ":") only send first line up
 * Kopitiam 0.2.16 [18 February 2013]
 ** revert commit which didn't enable actions
 * Kopitiam 0.2.15 [17 February 2013]

@@ -25,7 +25,7 @@ object ParseCoqResponse {
   private val Thmd = (ident + """ is defined""").r
   private val Inte = """User interrupt.""".r
   private val Erro = """(Error:|Toplevel input,)(.*)""".r
-  private val Sear = (ident + """:(.*)""").r
+  private val Sear = (ident + """:.*""").r
 
   private val LineSeparator = System.getProperty("line.separator");
 
@@ -62,7 +62,10 @@ object ParseCoqResponse {
           CoqError(ps, p.reduceLeft(_ + " " + _), 0, 0)
       }
       case Inte() => CoqUserInterrupt()
-      case Sear(n, v) => CoqSearchResult(n, v)
+      case Sear(n) =>
+        val cpos = s.indexOf(":")
+        val rem = s.substring(cpos + 1)
+        CoqSearchResult(n, rem)
       case x => CoqUnknown(s)
     }
   }
