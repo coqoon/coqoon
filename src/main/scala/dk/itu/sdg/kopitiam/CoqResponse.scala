@@ -63,9 +63,13 @@ object ParseCoqResponse {
       }
       case Inte() => CoqUserInterrupt()
       case Sear(n) =>
-        val cpos = s.indexOf(":")
-        val rem = s.substring(cpos + 1)
-        CoqSearchResult(n, rem)
+        if (CoqState.lastCommand.startsWith("SearchAbout")) {
+          val cpos = s.indexOf(":")
+          val rem = s.substring(cpos + 1)
+          val remsingle = rem.split(LineSeparator).mkString(" ")
+          CoqSearchResult(n, remsingle)
+        } else
+          CoqUnknown(s)
       case x => CoqUnknown(s)
     }
   }

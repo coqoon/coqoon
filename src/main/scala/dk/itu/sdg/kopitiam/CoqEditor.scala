@@ -432,6 +432,9 @@ class CoqContentAssistantProcessor extends IContentAssistProcessor with CoqCallb
       case CoqSearchResult(x, v) =>
         if (!dynamicCompletions.contains(x))
           dynamicCompletions += (x -> v)
+        else
+          if (dynamicCompletions(x) == null || dynamicCompletions(x).equals(x))
+            dynamicCompletions += (x -> v)
       case CoqShellReady(m, token) =>
         if (token.globalStep == 1)
           dynamicCompletions.clear

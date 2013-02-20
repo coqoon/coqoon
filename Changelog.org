@@ -1,3 +1,5 @@
+** suggestions work if lemma spans over multiple lines
+** suggestions are now filtered more precisely
 * Kopitiam 0.2.17 [19 February 2013]
 ** parsing of a SearchResult (which is everything ident + ":") only send first line up
 * Kopitiam 0.2.16 [18 February 2013]
