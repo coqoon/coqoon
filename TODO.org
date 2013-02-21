@@ -1,3 +1,11 @@
+* VSTTE
+** translate java to simplejava code
+** mainly test and update java examples
+** softening spec requirements: only needed specs, others replace with true
+** test!
+** test more!
+** test eclipse 4!
+
 * General
 ** notes from SVARM:
  interface/java standard library annotations
