@@ -118,9 +118,21 @@ class CoqJavaProject (basename : String) {
     }
     CoqCommands.doLater(() => {
       if (DocumentState.activeEditor != null) {
+        DocumentState.resetState
         DocumentState.activeEditor.addAnnotations(0, 0)
         DocumentState.activeEditor.invalidate
         DocumentState.activeEditor = null
+        DocumentState.setBusy
+        PrintActor.deregister(CoqOutputDispatcher)
+        PrintActor.deregister(CoqStepNotifier)
+        PrintActor.deregister(CoqCommands)
+        val shell = CoqState.getShell
+        PrintActor.register(CoqStartUp)
+        CoqStartUp.synchronized {
+	  val initial = DocumentState.positionToShell(0).globalStep
+	  CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
+	  CoqStartUp.wait
+        }
       }
       CoqCommands.step
     })

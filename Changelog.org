@@ -1,3 +1,4 @@
+** if coq is active, and verify method is executed, clean coq state before
 ** suggestions work if lemma spans over multiple lines
 ** suggestions are now filtered more precisely
 * Kopitiam 0.2.17 [19 February 2013]
