@@ -92,6 +92,7 @@ CoqResponse should parse more carefully here - maybe
 - prefix/postfix statements (which might be on stack or fields!)
 - ternary conditional operator
 - multiple variable declarations at once?
+- move field initializers to constructor
 (there might be more - https://github.com/hannesm/Kopitiam/tree/before-using-Eclipse-AST/src/test/resources/javaparser/source)
 ** Keybindings for Coq actions
 ** Step All / Step Until

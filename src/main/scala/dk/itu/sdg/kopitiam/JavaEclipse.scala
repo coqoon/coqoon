@@ -495,7 +495,7 @@ Open Scope asn_scope.
         case InfixExpression.Operator.LESS_EQUALS => "vle"
         case InfixExpression.Operator.GREATER => "vgt"
         case InfixExpression.Operator.GREATER_EQUALS => "vge"
-        case InfixExpression.Operator.EQUALS => "veq"
+        case InfixExpression.Operator.EQUALS => "veq" //XXX: sometimes eeq_ptrs!?
         case x =>
           Console.println("translating " + op + " to =")
           "="

@@ -13,7 +13,7 @@ trait JavaToCoreJava extends VisitingAST {
 
   class Translator (doc : IDocument) extends Visitor {
 
-    import org.eclipse.jdt.core.dom.{ArrayAccess, ArrayCreation, ArrayInitializer, Assignment, CastExpression, ConditionalExpression, Expression, FieldAccess, InfixExpression, InstanceofExpression, PostfixExpression, PrefixExpression, QualifiedName}
+    import org.eclipse.jdt.core.dom.{ArrayAccess, ArrayCreation, ArrayInitializer, Assignment, CastExpression, ClassInstanceCreation, ConditionalExpression, Expression, FieldAccess, InfixExpression, InstanceofExpression, MethodInvocation, PostfixExpression, PrefixExpression, QualifiedName, ThisExpression}
     def checkExpression (node : Expression) : Unit =
       node match {
         case x : QualifiedName =>
@@ -26,6 +26,8 @@ trait JavaToCoreJava extends VisitingAST {
               Console.println("PROBLEM: nested field access")
             case y : QualifiedName =>
               Console.println("PROBLEM: nested field with qualified name")
+            case y : ThisExpression =>
+              //all good
             case y =>
               Console.println("maybe PROBLEM: nested field with " + y.getClass.toString)
           }
@@ -35,39 +37,50 @@ trait JavaToCoreJava extends VisitingAST {
           Console.println("PROBLEM: postfix")
         case x : PrefixExpression =>
           Console.println("PROBLEM: prefix")
+        case x : MethodInvocation =>
+          if (! isMethodInvocationGood(x))
+            Console.println("PROBLEM: method invocation bad")
+        case x : ClassInstanceCreation =>
+          if (! isClassInstanceCreationGood(x))
+            Console.println("PROBLEM: class instance creation bad")
         case x : Assignment =>
           //better make sure left and right are good
           val left = x.getLeftHandSide
           val right = x.getRightHandSide
+          if (! containsRealExpressions(left))
+            if (! containsRealExpressions(right))
+              Console.println("PROBLEM: left of assignment not an expression: " + left)
+            else
+              left match {
+                case x : FieldAccess => //fine!
+                case x : QualifiedName => //fine!
+                case x => Console.println("maybe problem: left is not an expression, but right is one. left is a [" + x.getClass.toString + "]")
+              }
+          else if (! containsRealExpressions(right))
+            //left is already known to be a real expression!
+            right match {
+              case x : MethodInvocation => //we're good!
+              case x : ClassInstanceCreation => //we're good!
+              case x =>
+                Console.println("PROBLEM: right of assignment not an expression [" + x.getClass.toString + "]: " + right)
+            }
           //plus operator is good!
           val op = x.getOperator
+          if (! isAssignmentOperatorGood(op))
+            Console.println("PROBLEM: assignment operator no good")
           //what is good?
         case x : InfixExpression =>
           //better make sure left and right are good
           val left = x.getLeftOperand
+          if (! containsRealExpressions(left))
+            Console.println("PROBLEM: left of infix is not an expression")
           val right = x.getRightOperand
+          if (! containsRealExpressions(right))
+            Console.println("PROBLEM: right of infix is not an expression")
           //plus operator is good!
           val op = x.getOperator
-          //what is good?
-//    *    TIMES
-//    /  DIVIDE
-//    %  REMAINDER
-//    +  PLUS
-//    -  MINUS
-//    <<  LEFT_SHIFT
-//    >>  RIGHT_SHIFT_SIGNED
-//    >>>  RIGHT_SHIFT_UNSIGNED
-//    <  LESS
-//    >  GREATER
-//    <=  LESS_EQUALS
-//    >=  GREATER_EQUALS
-//    ==  EQUALS
-//    !=  NOT_EQUALS
-//    ^  XOR
-//    &  AND
-//    |  OR
-//    &&  CONDITIONAL_AND
-//    ||  CONDITIONAL_OR
+          if (! isInfixOperatorGood(op))
+            Console.println("PROBLEM: infix with bad operator")
         case x : InstanceofExpression =>
           Console.println("PROBLEM: instanceof")
         case x : ArrayAccess =>
@@ -81,7 +94,58 @@ trait JavaToCoreJava extends VisitingAST {
         case x => //you may pass
       }
 
-    import org.eclipse.jdt.core.dom.{ClassInstanceCreation, MethodInvocation, ParenthesizedExpression, SimpleName}
+    def isInfixOperatorGood (x : InfixExpression.Operator) : Boolean =
+      x match {
+        case InfixExpression.Operator.TIMES => true
+        case InfixExpression.Operator.PLUS => true
+        case InfixExpression.Operator.MINUS => true
+        case InfixExpression.Operator.LESS => true
+        case InfixExpression.Operator.LESS_EQUALS => true
+        case InfixExpression.Operator.GREATER => true
+        case InfixExpression.Operator.GREATER_EQUALS => true
+        case InfixExpression.Operator.EQUALS => true
+        case InfixExpression.Operator.NOT_EQUALS => true
+        // /  DIVIDE
+        // %  REMAINDER
+        // <<  LEFT_SHIFT
+        // >>  RIGHT_SHIFT_SIGNED
+        // >>>  RIGHT_SHIFT_UNSIGNED
+        // ^  XOR
+        // &  AND
+        // |  OR
+        // &&  CONDITIONAL_AND
+        // ||  CONDITIONAL_OR
+        case x => false
+      }
+
+    def isAssignmentOperatorGood (x : Assignment.Operator) : Boolean =
+      x match {
+        case Assignment.Operator.ASSIGN => true
+        // += PLUS_ASSIGN - we can rewrite
+        // -= MINUS_ASSIGN - we can rewrite
+        // *= TIMES_ASSIGN - we can rewrite
+        // /= DIVIDE_ASSIGN
+        // &= BIT_AND_ASSIGN
+        // |= BIT_OR_ASSIGN
+        // ^= BIT_XOR_ASSIGN
+        // %= REMAINDER_ASSIGN
+        // <<= LEFT_SHIFT_ASSIGN
+        // >>= RIGHT_SHIFT_SIGNED_ASSIGN
+        // >>>= RIGHT_SHIFT_UNSIGNED_ASSIGN
+        case y => false
+      }
+
+    //currently we only support empty constructors
+    def isClassInstanceCreationGood (node : ClassInstanceCreation) : Boolean =
+      scala.collection.JavaConversions.asBuffer(node.arguments).map(_.asInstanceOf[Expression]).toList.length == 0
+    def isMethodInvocationGood (node : MethodInvocation) : Boolean =
+      areArgumentsGood(scala.collection.JavaConversions.asBuffer(node.arguments).map(_.asInstanceOf[Expression]).toList)
+
+    def areArgumentsGood (args : List[Expression]) : Boolean =
+      args.filter(containsRealExpressions).length == args.length
+
+    import org.eclipse.jdt.core.dom.{BooleanLiteral, CharacterLiteral, NullLiteral, NumberLiteral, StringLiteral, ThisExpression}
+    import org.eclipse.jdt.core.dom.{ParenthesizedExpression, SimpleName}
     def containsRealExpressions (node : Expression) : Boolean =
       node match {
         case x : FieldAccess => false
@@ -97,8 +161,15 @@ trait JavaToCoreJava extends VisitingAST {
           val right = x.getRightOperand
           //plus operator is good!
           val op = x.getOperator
-          //val opgood = ?
-          containsRealExpressions(left) && containsRealExpressions(right)
+          isInfixOperatorGood(op) &&
+            containsRealExpressions(left) &&
+            containsRealExpressions(right)
+        case x : BooleanLiteral => true
+        case x : CharacterLiteral => true
+        case x : NullLiteral => true
+        case x : NumberLiteral => true
+        case x : StringLiteral => true
+        case x : ThisExpression => (x.getQualifier == null)
         case x =>
           Console.println("got " + x.getClass.toString)
           true
