@@ -1,6 +1,5 @@
 * VSTTE
 ** translate java to simplejava code
-*** use this.foo instead of foo -> bug!
 ** mainly test and update java examples
 ** softening spec requirements: only needed specs, others replace with true
 ** test!

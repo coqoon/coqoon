@@ -358,6 +358,21 @@ Open Scope asn_scope.
       }
 
     import org.eclipse.jdt.core.dom.{AssertStatement, Assignment, Block, BooleanLiteral, ClassInstanceCreation, EmptyStatement, ExpressionStatement, FieldAccess, IfStatement, MethodInvocation, NullLiteral, NumberLiteral, QualifiedName, ReturnStatement, SimpleName, Statement, StringLiteral, StructuralPropertyDescriptor, VariableDeclarationStatement, WhileStatement}
+    import org.eclipse.jdt.core.IJavaElement
+    private def isField (y : SimpleName) : Boolean = {
+      var res : Boolean = false
+      val bind = y.resolveBinding
+      if (bind != null) {
+        val javaele = bind.getJavaElement
+        if (javaele != null) {
+          val typ = javaele.getElementType
+          if (typ == IJavaElement.FIELD)
+            res = true
+        }
+      }
+      res
+    }
+
     private def getBodyString (b : Statement) : Option[String] =
       b match {
         case x : Block =>
@@ -390,6 +405,11 @@ Open Scope asn_scope.
                         "(cread " + printE(l) + " " + printE(y) + ")"
                       case y : QualifiedName =>
                         "(cread " + printE(l) + " " + printE(y) + ")"
+                      case y : SimpleName =>
+                        if (isField(y))
+                          "(cread " + printE(l) + " \"this\" " + printE(y) + ")"
+                        else
+                          "(cassign " + printE(l) + " " + printE(y) + ")"
                       case y =>
                         "(cassign " + printE(l) + " " + printE(y) + ")"
                     }
@@ -456,6 +476,11 @@ Open Scope asn_scope.
                     "(cread " + nam + " " + inite + ")"
                   case y : FieldAccess =>
                     "(cread " + nam + " " + inite + ")"
+                  case y : SimpleName =>
+                    if (isField(y))
+                      "(cread " + nam + " \"this\" " + inite + ")"
+                    else
+                      "(cassign " + nam + " " + inite + ")"
                   case y =>
                     "(cassign " + nam + " " + inite + ")"
                 }

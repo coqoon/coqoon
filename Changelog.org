@@ -1,3 +1,4 @@
+** if field is accessed by the fieldname, without explicit "this", this is now correctly translated
 ** if Java editor is closed while Coq is active inside of it, do a graceful retract
 ** if coq is active, and verify method is executed, clean coq state before
 ** suggestions work if lemma spans over multiple lines
