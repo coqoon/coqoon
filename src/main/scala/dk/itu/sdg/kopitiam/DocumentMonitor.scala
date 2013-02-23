@@ -121,22 +121,23 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     if (p.isInstanceOf[ITextEditor]) {
       val txt = p.asInstanceOf[ITextEditor]
       val doc = txt.getDocumentProvider.getDocument(txt.getEditorInput)
-      if (EclipseTables.DocToProject.contains(doc)) {
-        EclipseTables.DocToProject(doc).gotClosed(doc)
-        EclipseTables.DocToProject.remove(doc)
-      }
-      if (p == DocumentState.activeEditor) {
+      if (p == DocumentState.activeEditor || p == JavaPosition.editor) {
         DocumentState.activeEditor = null
         if (CoqOutputDispatcher.goalviewer != null)
           CoqOutputDispatcher.goalviewer.clear
         val initial = DocumentState.positionToShell(0).globalStep
         DocumentState.resetState
         JavaPosition.retract
+        JavaPosition.editor = null
         PrintActor.deregister(CoqOutputDispatcher)
         val shell = CoqState.getShell
         DocumentState.setBusy
         CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
         PrintActor.register(CoqOutputDispatcher)
+      }
+      if (EclipseTables.DocToProject.contains(doc)) {
+        EclipseTables.DocToProject(doc).gotClosed(doc)
+        EclipseTables.DocToProject.remove(doc)
       }
     }
   }

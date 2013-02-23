@@ -486,7 +486,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
       PrintActor.deregister(JavaPosition)
       Display.getDefault.asyncExec(
         new Runnable() {
-          def run() = { editor.getViewer.invalidateTextPresentation }})
+          def run() = { if (editor != null) editor.getViewer.invalidateTextPresentation }})
     }
   }
 

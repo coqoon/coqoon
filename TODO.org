@@ -1,10 +1,12 @@
 * VSTTE
 ** translate java to simplejava code
+*** use this.foo instead of foo -> bug!
 ** mainly test and update java examples
 ** softening spec requirements: only needed specs, others replace with true
 ** test!
 ** test more!
 ** test eclipse 4!
+** prove method in one java buffer, then prove method in another -> only until after backtrack
 
 * General
 ** notes from SVARM:
