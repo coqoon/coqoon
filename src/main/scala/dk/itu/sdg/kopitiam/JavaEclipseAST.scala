@@ -3,6 +3,22 @@
 package dk.itu.sdg.kopitiam
 
 trait VisitingAST {
+  import org.eclipse.jdt.core.IJavaElement
+  import org.eclipse.jdt.core.dom.SimpleName
+  def isField (y : SimpleName) : Boolean = {
+    var res : Boolean = false
+    val bind = y.resolveBinding
+    if (bind != null) {
+      val javaele = bind.getJavaElement
+      if (javaele != null) {
+        val typ = javaele.getElementType
+        if (typ == IJavaElement.FIELD)
+          res = true
+      }
+    }
+    res
+  }
+
   //beware of the boilerplate. nothing interesting to see below.
   import org.eclipse.jdt.core.dom.ASTVisitor
 

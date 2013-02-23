@@ -358,21 +358,6 @@ Open Scope asn_scope.
       }
 
     import org.eclipse.jdt.core.dom.{AssertStatement, Assignment, Block, BooleanLiteral, ClassInstanceCreation, EmptyStatement, ExpressionStatement, FieldAccess, IfStatement, MethodInvocation, NullLiteral, NumberLiteral, QualifiedName, ReturnStatement, SimpleName, Statement, StringLiteral, StructuralPropertyDescriptor, VariableDeclarationStatement, WhileStatement}
-    import org.eclipse.jdt.core.IJavaElement
-    private def isField (y : SimpleName) : Boolean = {
-      var res : Boolean = false
-      val bind = y.resolveBinding
-      if (bind != null) {
-        val javaele = bind.getJavaElement
-        if (javaele != null) {
-          val typ = javaele.getElementType
-          if (typ == IJavaElement.FIELD)
-            res = true
-        }
-      }
-      res
-    }
-
     private def getBodyString (b : Statement) : Option[String] =
       b match {
         case x : Block =>

@@ -7,6 +7,7 @@
 ** test eclipse 4!
 ** prove method in one java buffer, then prove method in another -> only until after backtrack (sometimes)
 ** comment parsing
+** multiple . in antiquotes
 
 * General
 ** notes from SVARM:
@@ -90,6 +91,7 @@ CoqResponse should parse more carefully here - maybe
 - Nested classes <- that sort of works somehow...
 - prefix/postfix statements (which might be on stack or fields!)
 - ternary conditional operator
+- multiple variable declarations at once?
 (there might be more - https://github.com/hannesm/Kopitiam/tree/before-using-Eclipse-AST/src/test/resources/javaparser/source)
 ** Keybindings for Coq actions
 ** Step All / Step Until
