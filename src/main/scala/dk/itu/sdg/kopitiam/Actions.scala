@@ -411,7 +411,7 @@ class CoqRefreshAction extends KCoqAction {
 }
 object CoqRefreshAction extends CoqRefreshAction { }
 
-class ProveMethodAction extends KEditorAction with EclipseJavaHelper {
+class ProveMethodAction extends KEditorAction with EclipseJavaHelper with JavaToCoreJava {
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.text.ITextSelection
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
@@ -438,6 +438,8 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper {
         JavaPosition.editor = edi
       }
       JavaPosition.unmark
+      // a': CoreJava checking!
+      translateAST(cu, doc)
       // b: if outdated coqString: translate -- need to verify outdated...
       walkAST(cu, doc) //side effects: properties: coq output, spec ptr to method
       // c: find method and statement we want to prove
