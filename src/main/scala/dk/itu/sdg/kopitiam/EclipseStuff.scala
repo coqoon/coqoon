@@ -33,8 +33,8 @@ class CoqJavaProject (basename : String) {
   def base_name : String = basename
 
   import org.eclipse.jface.text.IDocument
-  var javaSource : Option[IDocument] = None
-  var coqModel : Option[IDocument] = None
+  private var javaSource : Option[IDocument] = None
+  private var coqModel : Option[IDocument] = None
   var modelNewerThanSource : Boolean = true
   var javaNewerThanSource : Boolean = true
   var ASTdirty : Boolean = false
@@ -54,11 +54,12 @@ class CoqJavaProject (basename : String) {
     }
   }
 
+  //XXX: this was broken, but didn't hurt too much -- maybe we don't need this anymore?
   def setDocument (doc : IDocument, name : String) : Unit = {
     if (name.equals(basename + ".java")) {
       assert(javaSource == None)
       javaSource = Some(doc)
-    } else if (name.equals(basename + ".v")) {
+    } else if (name.equals(basename + "_model.v")) {
       assert(coqModel == None)
       coqModel = Some(doc)
     } else
