@@ -5,7 +5,8 @@
 ** test!
 ** test more!
 ** test eclipse 4!
-** prove method in one java buffer, then prove method in another -> only until after backtrack
+** prove method in one java buffer, then prove method in another -> only until after backtrack (sometimes)
+** comment parsing
 
 * General
 ** notes from SVARM:
@@ -76,7 +77,6 @@ CoqResponse should parse more carefully here - maybe
 ** provenmarker still ugly (yellow/orange-ish)
 ** call unmarkProofs somewhere!
 ** update provenmarkers when method is updated
-** head vs this.head -> proof doesn't go through
 ** warn if an antiquote contains multiple statements! (or support multiple coq statements in a single antiquote)
 ** report if Java is not SimpleJava
 ** Re-Implement translation of Java to SimpleJava
@@ -87,7 +87,7 @@ CoqResponse should parse more carefully here - maybe
  while (foo.bar > 42) --> int tmp1 = foo.bar; while (tmp1 > 42) { ... ; tmp1 = foo.bar }
 - Move statements out of arguments (of method calls)
  methodcall(foo.bar) --> Object tmp1 = foo.bar; methodcall(tmp1)
-- Nested classes
+- Nested classes <- that sort of works somehow...
 - prefix/postfix statements (which might be on stack or fields!)
 - ternary conditional operator
 (there might be more - https://github.com/hannesm/Kopitiam/tree/before-using-Eclipse-AST/src/test/resources/javaparser/source)
