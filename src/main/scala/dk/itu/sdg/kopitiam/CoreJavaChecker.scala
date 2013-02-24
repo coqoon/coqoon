@@ -2,10 +2,10 @@
 
 package dk.itu.sdg.kopitiam
 
-trait JavaToCoreJava extends VisitingAST {
+trait CoreJavaChecker extends VisitingAST {
   import org.eclipse.jface.text.IDocument
   import org.eclipse.jdt.core.dom.ASTNode
-  def translateAST (root : ASTNode, doc : IDocument) : Unit = {
+  def checkAST (root : ASTNode, doc : IDocument) : Unit = {
     val co = new Translator(doc)
     root.accept(co)
     Console.println("translated...")

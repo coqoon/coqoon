@@ -16,6 +16,7 @@ abstract class KAction extends IWorkbenchWindowActionDelegate with IHandler {
 
   override def selectionChanged (a : IAction, s : ISelection) : Unit = ()
 
+  //I've no clue why this code is around and whether it is useful at all
   private var handlers : List[IHandlerListener] = List[IHandlerListener]()
   override def addHandlerListener (h : IHandlerListener) : Unit = { handlers ::= h }
   override def removeHandlerListener (h : IHandlerListener) : Unit =
@@ -411,7 +412,7 @@ class CoqRefreshAction extends KCoqAction {
 }
 object CoqRefreshAction extends CoqRefreshAction { }
 
-class ProveMethodAction extends KEditorAction with EclipseJavaHelper with JavaToCoreJava {
+class ProveMethodAction extends KEditorAction with EclipseJavaHelper with CoreJavaChecker {
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.text.ITextSelection
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
@@ -439,7 +440,7 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper with JavaTo
       }
       JavaPosition.unmark
       // a': CoreJava checking!
-      translateAST(cu, doc)
+      checkAST(cu, doc)
       // b: if outdated coqString: translate -- need to verify outdated...
       walkAST(cu, doc) //side effects: properties: coq output, spec ptr to method
       // c: find method and statement we want to prove
