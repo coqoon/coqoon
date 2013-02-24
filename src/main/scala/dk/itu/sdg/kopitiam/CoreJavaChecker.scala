@@ -18,44 +18,44 @@ trait CoreJavaChecker extends VisitingAST {
       node match {
         case x : QualifiedName =>
           if (x.getQualifier.isInstanceOf[QualifiedName])
-            reportError("PROBLEM: qualified name with qualified name", x)
+            reportError("Nested field access (qualified name twice) is not yet supported by Kopitiam", x)
         case x : FieldAccess =>
           val exp = x.getExpression
           exp match {
             case y : FieldAccess =>
-              reportError("PROBLEM: nested field access", x)
+              reportError("Nested field access is not yet supported by Kopitiam", x)
             case y : QualifiedName =>
-              reportError("PROBLEM: nested field with qualified name", x)
+              reportError("Nested field access (with qualified name) is not supported by Kopitiam", x)
             case y : ThisExpression =>
               //all good
             case y =>
-              reportError("maybe PROBLEM: nested field with " + y.getClass.toString, x)
+              reportError("Nested field access is not supported by Kopitiam", x)
           }
         case x : ConditionalExpression =>
-          reportError("PROBLEM: conditionalexpression (but we can fix)", x)
+          reportError("The ternary operator is not yet supported by Kopitiam", x)
         case x : PostfixExpression =>
-          reportError("PROBLEM: postfix", x)
+          reportError("The postfix expression is not yet supported by Kopitiam", x)
         case x : PrefixExpression =>
-          reportError("PROBLEM: prefix", x)
+          reportError("The prefix expression is not yet supported by Kopitiam", x)
         case x : MethodInvocation =>
           if (! isMethodInvocationGood(x))
-            reportError("PROBLEM: method invocation bad", x)
+            reportError("The method call should use only simple expression, this is too complex for Kopitiam", x)
         case x : ClassInstanceCreation =>
           if (! isClassInstanceCreationGood(x))
-            reportError("PROBLEM: class instance creation bad", x)
+            reportError("The class instance creation has to pass no arguments currently in Kopitiam", x)
         case x : Assignment =>
           //better make sure left and right are good
           val left = x.getLeftHandSide
           val right = x.getRightHandSide
           if (! containsRealExpressions(left))
             if (! containsRealExpressions(right))
-              reportError("PROBLEM: left of assignment not an expression: " + left, x)
+              reportError("Both sides are not simple expression, but one side should be. This is too complex for Kopitiam", x)
             else
               left match {
                 case x : FieldAccess => //fine!
                 case x : QualifiedName => //fine!
                 case x =>
-                  reportError("maybe problem: left is not an expression, but right is one. left is a [" + x.getClass.toString + "]", x)
+                  reportError("This is not a simple expression, it is too complex for Kopitiam", x)
               }
           else if (! containsRealExpressions(right))
             //left is already known to be a real expression!
@@ -63,39 +63,39 @@ trait CoreJavaChecker extends VisitingAST {
               case x : MethodInvocation => //we're good!
               case x : ClassInstanceCreation => //we're good!
               case x =>
-                reportError("PROBLEM: right of assignment not an expression [" + x.getClass.toString + "]: " + right, x)
+                reportError("This is not a simple expression, it is too complex for Kopitiam", x)
             }
           //plus operator is good!
           val op = x.getOperator
           if (! isAssignmentOperatorGood(op))
-            reportError("PROBLEM: assignment operator no good", x)
+            reportError("This assignment operator is not yet supported by Kopitiam", x)
           //what is good?
         case x : InfixExpression =>
           //better make sure left and right are good
           val left = x.getLeftOperand
           if (! containsRealExpressions(left))
-            reportError("PROBLEM: left of infix is not an expression", x)
+            reportError("This is not a simple expression, it is too complex for Kopitiam", left)
           val right = x.getRightOperand
           if (! containsRealExpressions(right))
-            reportError("PROBLEM: right of infix is not an expression", x)
+            reportError("This is not a simple expression, it is too complex for Kopitiam", right)
           //plus operator is good!
           val op = x.getOperator
           if (! isInfixOperatorGood(op))
-            reportError("PROBLEM: infix with bad operator", x)
+            reportError("The infix operator is not yet supported by Kopitiam", x)
         case x : InstanceofExpression =>
-          reportError("PROBLEM: instanceof", x)
+          reportError("The instanceof statement is not yet supported by Kopitiam", x)
         case x : ArrayAccess =>
-          reportError("PROBLEM: arrayaccess", x)
+          reportError("Arrays are not yet supported by Kopitiam", x)
         case x : ArrayCreation =>
-          reportError("PROBLEM: arraycreation", x)
+          reportError("Arrays are not yet supported by Kopitiam", x)
         case x : ArrayInitializer =>
-          reportError("PROBLEM: arrayinitializer", x)
+          reportError("Arrays are not yet supported by Kopitiam", x)
         case x : CastExpression =>
-          reportError("PROBLEM: castexpression", x)
+          reportError("A dynamic cast is not yet supported by Kopitiam", x)
         case x : SuperMethodInvocation =>
-          reportError("PROBLEM: super method invocation", x)
+          reportError("The super method is not supported by Kopitiam, due to its lack of class-to-class inheritance", x)
         case x : SuperFieldAccess =>
-          reportError("PROBLEM: super field access", x)
+          reportError("A super field is not supported by Kopitiam, due to its lack of class-to-class inheritance", x)
         case x => //you may pass
       }
 
@@ -187,45 +187,45 @@ trait CoreJavaChecker extends VisitingAST {
           //verify test is a _real_ expression
           val tst = x.getExpression
           if (! containsRealExpressions(tst))
-            reportError("PROBLEM in IF-TEST", tst)
+            reportError("The test of a conditional statement may only contain a simple expression which accesses variables on the stack in Kopitiam", tst)
         case x : WhileStatement =>
           val tst = x.getExpression
           //should be a real expression
           if (! containsRealExpressions(tst))
-            reportError("PROBLEM in WHILE-TST", tst)
+            reportError("The test of a while loop may only contain a simple expression which accesses variables on the stack in Kopitiam", tst)
         case x : FieldDeclaration =>
           //no initialzers!
           val frag = scala.collection.JavaConversions.asBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList
           if (frag.filter(_.getInitializer != null).length > 0)
-            reportError("PROBLEM: field declaration with initializer", x)
+            reportError("A Field declaration with an initialization expression is not yet supported by Kopitiam", x)
         case x : BreakStatement =>
-          reportError("PROBLEM: break", x)
+          reportError("The break statement is not yet supported by Kopitiam", x)
         case x : ContinueStatement =>
-          reportError("PROBLEM: continue", x)
+          reportError("The continue statement is not yet supported by Kopitiam", x)
         case x : DoStatement =>
-          reportError("PROBLEM: do", x)
+          reportError("The do loop is not yet supported by Kopitiam, please use while", x)
         case x : EnhancedForStatement =>
-          reportError("PROBLEM: enhanced for", x)
+          reportError("The enhanced for loop is not yet supported by Kopitiam, please use while", x)
         case x : ForStatement =>
-          reportError("PROBLEM: for", x)
+          reportError("The for loop is not yet supported by Kopitiam, please use while", x)
         case x : LabeledStatement =>
-          reportError("PROBLEM: labeled statement", x)
+          reportError("Statements with a label are not yet supported by Kopitiam", x)
         case x : SwitchCase =>
-          reportError("PROBLEM: switchcase", x)
+          reportError("The switch case is not yet supported by Kopitiam, please use if", x)
         case x : SwitchStatement =>
-          reportError("PROBLEM: switch", x)
+          reportError("The switch statement is not yet supported by Kopitiam, please use if", x)
         case x : SynchronizedStatement =>
-          reportError("PROBLEM: synchronized", x)
+          reportError("The synchronized statement is not yet supported by Kopitiam", x)
         case x : ThrowStatement =>
-          reportError("PROBLEM: throw", x)
+          reportError("The throw statement is not yet supported by Kopitiam", x)
         case x : TryStatement =>
-          reportError("PROBLEM: try", x)
+          reportError("The try statement is not supported by Kopitiam", x)
         case x : ArrayType =>
-          reportError("PROBLEM: ArrayType", x)
+          reportError("Array types are not yet supported by Kopitiam", x)
         case x : ParameterizedType =>
-          reportError("PROBLEM: ParameterizedType", x)
+          reportError("Generics / Parameterized types are not yet supported by Kopitiam", x)
         case x : WildcardType =>
-          reportError("PROBLEM: WildcardType", x)
+          reportError("Wildcard types are not yet supported by Kopitiam", x)
         case x : Expression =>
           checkExpression(x)
         case x =>
