@@ -13,7 +13,7 @@ trait JavaToCoreJava extends VisitingAST {
 
   class Translator (doc : IDocument) extends Visitor {
 
-    import org.eclipse.jdt.core.dom.{ArrayAccess, ArrayCreation, ArrayInitializer, Assignment, CastExpression, ClassInstanceCreation, ConditionalExpression, Expression, FieldAccess, InfixExpression, InstanceofExpression, MethodInvocation, PostfixExpression, PrefixExpression, QualifiedName, ThisExpression}
+    import org.eclipse.jdt.core.dom.{ArrayAccess, ArrayCreation, ArrayInitializer, Assignment, CastExpression, ClassInstanceCreation, ConditionalExpression, Expression, FieldAccess, InfixExpression, InstanceofExpression, MethodInvocation, PostfixExpression, PrefixExpression, QualifiedName, SuperFieldAccess, SuperMethodInvocation, ThisExpression}
     def checkExpression (node : Expression) : Unit =
       node match {
         case x : QualifiedName =>
@@ -91,6 +91,10 @@ trait JavaToCoreJava extends VisitingAST {
           Console.println("PROBLEM: arrayinitializer")
         case x : CastExpression =>
           Console.println("PROBLEM: castexpression")
+        case x : SuperMethodInvocation =>
+          Console.println("PROBLEM: super method invocation")
+        case x : SuperFieldAccess =>
+          Console.println("PROBLEM: super field access")
         case x => //you may pass
       }
 
@@ -175,7 +179,7 @@ trait JavaToCoreJava extends VisitingAST {
           true
       }
 
-    import org.eclipse.jdt.core.dom.{BreakStatement, ContinueStatement, DoStatement, EnhancedForStatement, ForStatement, IfStatement, LabeledStatement, SwitchCase, SwitchStatement, SynchronizedStatement, ThrowStatement, TryStatement, WhileStatement}
+    import org.eclipse.jdt.core.dom.{ArrayType, BreakStatement, ContinueStatement, DoStatement, EnhancedForStatement, FieldDeclaration, ForStatement, IfStatement, LabeledStatement, ParameterizedType, SwitchCase, SwitchStatement, SynchronizedStatement, ThrowStatement, TryStatement, VariableDeclarationFragment, WhileStatement, WildcardType}
     override def visitNode (node : ASTNode) : Boolean = {
       node match {
         case x : IfStatement =>
@@ -188,6 +192,11 @@ trait JavaToCoreJava extends VisitingAST {
           //should be a real expression
           if (! containsRealExpressions(tst))
             Console.println("PROBLEM in WHILE-TST")
+        case x : FieldDeclaration =>
+          //no initialzers!
+          val frag = scala.collection.JavaConversions.asBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList
+          if (frag.filter(_.getInitializer != null).length > 0)
+            Console.println("PROBLEM: field declaration with initializer")
         case x : BreakStatement =>
           Console.println("PROBLEM: break")
         case x : ContinueStatement =>
@@ -210,9 +219,14 @@ trait JavaToCoreJava extends VisitingAST {
           Console.println("PROBLEM: throw")
         case x : TryStatement =>
           Console.println("PROBLEM: try")
+        case x : ArrayType =>
+          Console.println("PROBLEM: ArrayType")
+        case x : ParameterizedType =>
+          Console.println("PROBLEM: ParameterizedType")
+        case x : WildcardType =>
+          Console.println("PROBLEM: WildcardType")
         case x : Expression =>
           checkExpression(x)
-        //we can have generic types, unfortunately, somewhere...
         case x =>
       }
       true

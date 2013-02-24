@@ -91,7 +91,7 @@ CoqResponse should parse more carefully here - maybe
 - Nested classes <- that sort of works somehow...
 - prefix/postfix statements (which might be on stack or fields!)
 - ternary conditional operator
-- multiple variable declarations at once?
+- multiple variable declarations at once? - multiple fields are supported!
 - move field initializers to constructor
 (there might be more - https://github.com/hannesm/Kopitiam/tree/before-using-Eclipse-AST/src/test/resources/javaparser/source)
 ** Keybindings for Coq actions
