@@ -6,55 +6,56 @@ trait CoreJavaChecker extends VisitingAST {
   import org.eclipse.jface.text.IDocument
   import org.eclipse.jdt.core.dom.ASTNode
   def checkAST (root : ASTNode, doc : IDocument) : Unit = {
-    val co = new Translator(doc)
+    val co = new CheckCoreJava(doc)
     root.accept(co)
-    Console.println("translated...")
+    Console.println("checked...")
   }
 
-  class Translator (doc : IDocument) extends Visitor {
+  class CheckCoreJava (doc : IDocument) extends Visitor {
 
     import org.eclipse.jdt.core.dom.{ArrayAccess, ArrayCreation, ArrayInitializer, Assignment, CastExpression, ClassInstanceCreation, ConditionalExpression, Expression, FieldAccess, InfixExpression, InstanceofExpression, MethodInvocation, PostfixExpression, PrefixExpression, QualifiedName, SuperFieldAccess, SuperMethodInvocation, ThisExpression}
     def checkExpression (node : Expression) : Unit =
       node match {
         case x : QualifiedName =>
           if (x.getQualifier.isInstanceOf[QualifiedName])
-            Console.println("PROBLEM: qualified name with qualified name")
+            reportError("PROBLEM: qualified name with qualified name", x)
         case x : FieldAccess =>
           val exp = x.getExpression
           exp match {
             case y : FieldAccess =>
-              Console.println("PROBLEM: nested field access")
+              reportError("PROBLEM: nested field access", x)
             case y : QualifiedName =>
-              Console.println("PROBLEM: nested field with qualified name")
+              reportError("PROBLEM: nested field with qualified name", x)
             case y : ThisExpression =>
               //all good
             case y =>
-              Console.println("maybe PROBLEM: nested field with " + y.getClass.toString)
+              reportError("maybe PROBLEM: nested field with " + y.getClass.toString, x)
           }
         case x : ConditionalExpression =>
-          Console.println("PROBLEM: conditionalexpression (but we can fix)")
+          reportError("PROBLEM: conditionalexpression (but we can fix)", x)
         case x : PostfixExpression =>
-          Console.println("PROBLEM: postfix")
+          reportError("PROBLEM: postfix", x)
         case x : PrefixExpression =>
-          Console.println("PROBLEM: prefix")
+          reportError("PROBLEM: prefix", x)
         case x : MethodInvocation =>
           if (! isMethodInvocationGood(x))
-            Console.println("PROBLEM: method invocation bad")
+            reportError("PROBLEM: method invocation bad", x)
         case x : ClassInstanceCreation =>
           if (! isClassInstanceCreationGood(x))
-            Console.println("PROBLEM: class instance creation bad")
+            reportError("PROBLEM: class instance creation bad", x)
         case x : Assignment =>
           //better make sure left and right are good
           val left = x.getLeftHandSide
           val right = x.getRightHandSide
           if (! containsRealExpressions(left))
             if (! containsRealExpressions(right))
-              Console.println("PROBLEM: left of assignment not an expression: " + left)
+              reportError("PROBLEM: left of assignment not an expression: " + left, x)
             else
               left match {
                 case x : FieldAccess => //fine!
                 case x : QualifiedName => //fine!
-                case x => Console.println("maybe problem: left is not an expression, but right is one. left is a [" + x.getClass.toString + "]")
+                case x =>
+                  reportError("maybe problem: left is not an expression, but right is one. left is a [" + x.getClass.toString + "]", x)
               }
           else if (! containsRealExpressions(right))
             //left is already known to be a real expression!
@@ -62,39 +63,39 @@ trait CoreJavaChecker extends VisitingAST {
               case x : MethodInvocation => //we're good!
               case x : ClassInstanceCreation => //we're good!
               case x =>
-                Console.println("PROBLEM: right of assignment not an expression [" + x.getClass.toString + "]: " + right)
+                reportError("PROBLEM: right of assignment not an expression [" + x.getClass.toString + "]: " + right, x)
             }
           //plus operator is good!
           val op = x.getOperator
           if (! isAssignmentOperatorGood(op))
-            Console.println("PROBLEM: assignment operator no good")
+            reportError("PROBLEM: assignment operator no good", x)
           //what is good?
         case x : InfixExpression =>
           //better make sure left and right are good
           val left = x.getLeftOperand
           if (! containsRealExpressions(left))
-            Console.println("PROBLEM: left of infix is not an expression")
+            reportError("PROBLEM: left of infix is not an expression", x)
           val right = x.getRightOperand
           if (! containsRealExpressions(right))
-            Console.println("PROBLEM: right of infix is not an expression")
+            reportError("PROBLEM: right of infix is not an expression", x)
           //plus operator is good!
           val op = x.getOperator
           if (! isInfixOperatorGood(op))
-            Console.println("PROBLEM: infix with bad operator")
+            reportError("PROBLEM: infix with bad operator", x)
         case x : InstanceofExpression =>
-          Console.println("PROBLEM: instanceof")
+          reportError("PROBLEM: instanceof", x)
         case x : ArrayAccess =>
-          Console.println("PROBLEM: arrayaccess")
+          reportError("PROBLEM: arrayaccess", x)
         case x : ArrayCreation =>
-          Console.println("PROBLEM: arraycreation")
+          reportError("PROBLEM: arraycreation", x)
         case x : ArrayInitializer =>
-          Console.println("PROBLEM: arrayinitializer")
+          reportError("PROBLEM: arrayinitializer", x)
         case x : CastExpression =>
-          Console.println("PROBLEM: castexpression")
+          reportError("PROBLEM: castexpression", x)
         case x : SuperMethodInvocation =>
-          Console.println("PROBLEM: super method invocation")
+          reportError("PROBLEM: super method invocation", x)
         case x : SuperFieldAccess =>
-          Console.println("PROBLEM: super field access")
+          reportError("PROBLEM: super field access", x)
         case x => //you may pass
       }
 
@@ -146,7 +147,7 @@ trait CoreJavaChecker extends VisitingAST {
       areArgumentsGood(scala.collection.JavaConversions.asBuffer(node.arguments).map(_.asInstanceOf[Expression]).toList)
 
     def areArgumentsGood (args : List[Expression]) : Boolean =
-      args.filter(containsRealExpressions).length == args.length
+      args.filterNot(containsRealExpressions).length == 0
 
     import org.eclipse.jdt.core.dom.{BooleanLiteral, CharacterLiteral, NullLiteral, NumberLiteral, StringLiteral, ThisExpression}
     import org.eclipse.jdt.core.dom.{ParenthesizedExpression, SimpleName}
@@ -186,54 +187,51 @@ trait CoreJavaChecker extends VisitingAST {
           //verify test is a _real_ expression
           val tst = x.getExpression
           if (! containsRealExpressions(tst))
-            Console.println("PROBLEM in IF-TEST")
+            reportError("PROBLEM in IF-TEST", tst)
         case x : WhileStatement =>
           val tst = x.getExpression
           //should be a real expression
           if (! containsRealExpressions(tst))
-            Console.println("PROBLEM in WHILE-TST")
+            reportError("PROBLEM in WHILE-TST", tst)
         case x : FieldDeclaration =>
           //no initialzers!
           val frag = scala.collection.JavaConversions.asBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList
           if (frag.filter(_.getInitializer != null).length > 0)
-            Console.println("PROBLEM: field declaration with initializer")
+            reportError("PROBLEM: field declaration with initializer", x)
         case x : BreakStatement =>
-          Console.println("PROBLEM: break")
+          reportError("PROBLEM: break", x)
         case x : ContinueStatement =>
-          Console.println("PROBLEM: continue")
+          reportError("PROBLEM: continue", x)
         case x : DoStatement =>
-          Console.println("PROBLEM: do")
+          reportError("PROBLEM: do", x)
         case x : EnhancedForStatement =>
-          Console.println("PROBLEM: enhanced for")
+          reportError("PROBLEM: enhanced for", x)
         case x : ForStatement =>
-          Console.println("PROBLEM: for")
+          reportError("PROBLEM: for", x)
         case x : LabeledStatement =>
-          Console.println("PROBLEM: labeled statement")
+          reportError("PROBLEM: labeled statement", x)
         case x : SwitchCase =>
-          Console.println("PROBLEM: switchcase")
+          reportError("PROBLEM: switchcase", x)
         case x : SwitchStatement =>
-          Console.println("PROBLEM: switch")
+          reportError("PROBLEM: switch", x)
         case x : SynchronizedStatement =>
-          Console.println("PROBLEM: synchronized")
+          reportError("PROBLEM: synchronized", x)
         case x : ThrowStatement =>
-          Console.println("PROBLEM: throw")
+          reportError("PROBLEM: throw", x)
         case x : TryStatement =>
-          Console.println("PROBLEM: try")
+          reportError("PROBLEM: try", x)
         case x : ArrayType =>
-          Console.println("PROBLEM: ArrayType")
+          reportError("PROBLEM: ArrayType", x)
         case x : ParameterizedType =>
-          Console.println("PROBLEM: ParameterizedType")
+          reportError("PROBLEM: ParameterizedType", x)
         case x : WildcardType =>
-          Console.println("PROBLEM: WildcardType")
+          reportError("PROBLEM: WildcardType", x)
         case x : Expression =>
           checkExpression(x)
         case x =>
       }
       true
     }
-
-    override def endVisitNode (node : ASTNode) : Unit = { }
-
   }
 }
 

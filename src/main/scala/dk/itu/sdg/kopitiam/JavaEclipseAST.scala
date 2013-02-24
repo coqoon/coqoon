@@ -19,6 +19,12 @@ trait VisitingAST {
     res
   }
 
+  import org.eclipse.core.resources.IMarker
+  import org.eclipse.jdt.core.dom.ASTNode
+  def reportError (txt : String, s : ASTNode) : Unit = {
+    JavaPosition.mark(txt, s.getStartPosition, s.getLength, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+  }
+
   //beware of the boilerplate. nothing interesting to see below.
   import org.eclipse.jdt.core.dom.ASTVisitor
 

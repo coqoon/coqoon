@@ -133,13 +133,6 @@ trait EclipseJavaHelper extends VisitingAST {
       r
     }
 
-    import org.eclipse.core.resources.IMarker
-    import org.eclipse.jdt.core.dom.ASTNode
-    def reportError (txt : String, s : ASTNode) : Unit = {
-      JavaPosition.mark(txt, s.getStartPosition, s.getLength, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
-    }
-
-
     import org.eclipse.jdt.core.dom.{Modifier, PrimitiveType, SingleVariableDeclaration}
     override def visitNode (node : ASTNode) : Boolean = {
       node match {
