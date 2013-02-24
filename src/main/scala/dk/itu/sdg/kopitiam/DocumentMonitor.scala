@@ -125,15 +125,17 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         DocumentState.activeEditor = null
         if (CoqOutputDispatcher.goalviewer != null)
           CoqOutputDispatcher.goalviewer.clear
-        val initial = DocumentState.positionToShell(0).globalStep
-        DocumentState.resetState
-        JavaPosition.retract
-        JavaPosition.editor = null
-        PrintActor.deregister(CoqOutputDispatcher)
-        val shell = CoqState.getShell
-        DocumentState.setBusy
-        CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
-        PrintActor.register(CoqOutputDispatcher)
+        if (CoqTop.isStarted) {
+          val initial = DocumentState.positionToShell(0).globalStep
+          DocumentState.resetState
+          JavaPosition.retract
+          JavaPosition.editor = null
+          PrintActor.deregister(CoqOutputDispatcher)
+          val shell = CoqState.getShell
+          DocumentState.setBusy
+          PrintActor.register(CoqStartUp)
+          CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
+        }
       }
       if (EclipseTables.DocToProject.contains(doc)) {
         EclipseTables.DocToProject(doc).gotClosed(doc)
