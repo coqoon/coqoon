@@ -187,12 +187,12 @@ trait CoreJavaChecker extends VisitingAST {
           //verify test is a _real_ expression
           val tst = x.getExpression
           if (! containsRealExpressions(tst))
-            reportError("The test of a conditional statement may only contain a simple expression which accesses variables on the stack in Kopitiam", tst)
+            reportError("The test of a conditional statement may only contain a simple expression which accesses variables on the stack in Kopitiam. Also, only a limited set of operators is supported.", tst)
         case x : WhileStatement =>
           val tst = x.getExpression
           //should be a real expression
           if (! containsRealExpressions(tst))
-            reportError("The test of a while loop may only contain a simple expression which accesses variables on the stack in Kopitiam", tst)
+            reportError("The test of a while loop may only contain a simple expression which accesses variables on the stack in Kopitiam. Also, only a limited set of operators is supported.", tst)
         case x : FieldDeclaration =>
           //no initialzers!
           val frag = scala.collection.JavaConversions.asBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList

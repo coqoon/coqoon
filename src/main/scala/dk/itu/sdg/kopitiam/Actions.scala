@@ -441,18 +441,20 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper with CoreJa
       JavaPosition.unmark
       // a': CoreJava checking!
       checkAST(cu, doc)
-      // b: if outdated coqString: translate -- need to verify outdated...
-      walkAST(cu, doc) //side effects: properties: coq output, spec ptr to method
-      // c: find method and statement we want to prove
       if (JavaPosition.markers.length == 0) { //no errors!
-        val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
-        val off = selection.getOffset
-        val node = findASTNode(cu, off, 0)
-        val md = findMethod(node)
-        val proj = EclipseTables.DocToProject(doc)
-        proj.program = Some(cu)
-        proj.proveMethod(md)
-        CoqCommands.step
+        // b: if outdated coqString: translate -- need to verify outdated...
+        walkAST(cu, doc) //side effects: properties: coq output, spec ptr to method
+        // c: find method and statement we want to prove
+        if (JavaPosition.markers.length == 0) { //no errors!
+          val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
+          val off = selection.getOffset
+          val node = findASTNode(cu, off, 0)
+          val md = findMethod(node)
+          val proj = EclipseTables.DocToProject(doc)
+          proj.program = Some(cu)
+          proj.proveMethod(md)
+          CoqCommands.step
+        }
       }
     }
   }
