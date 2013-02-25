@@ -343,9 +343,18 @@
          point="org.eclipse.ui.editors.markerAnnotationSpecification">
       <specification
             annotationType="dk.itu.sdg.kopitiam.provenannotation"
+            colorPreferenceKey="dk.itu.sdg.kopitiam.proverannotation.mycolorhighlightkey"
             colorPreferenceValue="3,167,17"
+            highlightPreferenceKey="dk.itu.sdg.kopitiam.proverannotation.mycolorbackgroundhighlightkey"
+            highlightPreferenceValue="true"
             icon="icons/checkmark.gif"
             includeOnPreferencePage="true"
+            overviewRulerPreferenceKey="highlight.rulers.overview"
+            overviewRulerPreferenceValue="true"
+            textPreferenceKey="provenmarkerIndicationInText"
+            textPreferenceValue="true"
+            textStylePreferenceKey="dk.itu.sdg.kopitiam.proverannotation.textStyle"
+            textStylePreferenceValue="BOX"
             verticalRulerPreferenceKey="provenmarkerIndicationInVerticalRuler"
             verticalRulerPreferenceValue="true">
       </specification>

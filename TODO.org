@@ -8,6 +8,10 @@
 ** prove method in one java buffer, then prove method in another -> only until after backtrack (sometimes)
 ** comment parsing
 ** multiple . in antiquotes
+** coq buffer 1 -> switch to 2 -> no annotations are removed in 1
+** compilation is brittle - esp the automatic one
+** don't backtract everything - leave the require import in there (DocumentMonitor)
+** verify verified method!
 
 * General
 ** notes from SVARM:
@@ -75,9 +79,8 @@ CoqResponse should parse more carefully here - maybe
 * Java side
 ** more lazy about backtrack, especially when typing <% and %>
 ** default specs for methods - only require those needed to be specified (don't need add to prove length)
-** provenmarker still ugly (yellow/orange-ish)
 ** call unmarkProofs somewhere!
-** update provenmarkers when method is updated
+** remove provenmarkers when method is updated
 ** warn if an antiquote contains multiple statements! (or support multiple coq statements in a single antiquote)
 ** report if Java is not SimpleJava
 ** Re-Implement translation of Java to SimpleJava
