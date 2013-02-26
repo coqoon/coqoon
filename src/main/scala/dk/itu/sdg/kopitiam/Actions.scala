@@ -532,27 +532,21 @@ object CoqStartUp extends CoqCallback {
     }
   }
 
-  import java.io.File
   override def dispatch (x : CoqResponse) : Unit = {
+    import java.io.File
     x match {
       case CoqShellReady(m, t) =>
       	//Console.println("CoqStartUp dispatch, initialize is " + initialize + " fini is " + fini)
         val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
         val lp = new File(loadp).exists
-        if (initialize == 0) {
+        if (initialize == 0 && lp) {
           DocumentState.setBusy
-          if (lp) {
-            CoqTop.writeToCoq("Add LoadPath \"" + loadp + "\".")
-            initialize = 1
-          } else {
-            Console.println("loadpath from preferences does not exist")
-            CoqTop.writeToCoq("Add LoadPath \"" + EclipseBoilerPlate.getProjectDir + "\".")
-            initialize = 2
-          }
-        } else if (initialize == 1) {
-            DocumentState.setBusy
-            CoqTop.writeToCoq("Add LoadPath \"" + EclipseBoilerPlate.getProjectDir + "\".")
-            initialize = 2
+          CoqTop.writeToCoq("Add LoadPath \"" + loadp + "\".")
+          initialize = 1
+        } else if ((initialize == 0 && !lp) || initialize == 1) {
+          DocumentState.setBusy
+          CoqTop.writeToCoq("Add LoadPath \"" + EclipseBoilerPlate.getProjectDir + "\".")
+          initialize = 2
         } else {
           PrintActor.deregister(CoqStartUp)
           PrintActor.register(CoqOutputDispatcher)

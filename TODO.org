@@ -10,9 +10,13 @@
 ** multiple . in antiquotes
 ** coq buffer 1 -> switch to 2 -> no annotations are removed in 1
 ** compilation is brittle - esp the automatic one
+ -> due to stateful Add LoadPath which isn't backtrack by BackTrack...
+   -> need to use Remove LoadPath as inverse operation!
 ** don't backtrack everything - leave the require import in there (DocumentMonitor)
 ** verify verified method!
 ** enable/disable actions in java editor
+** put model into proof certificate!
+** keybindings in goal viewer etc
 
 * General
 ** notes from SVARM:
@@ -108,7 +112,6 @@ CoqResponse should parse more carefully here - maybe
 ** use mouse position instead of cursor position for right-click "prove this method"
 ** javaNewerThanSource unused!
 ** stepping over if <- emit forward; but here offset computations are bad!
-
 ** SimpleJava optimizations
 observations from SnapshotTrees.java:
 pushLeftPath: node = node.left (where node is an argument (must be allocated on stack anyhow?)) ~~> JAssignment(node, JFieldAccess(node, left)) ~~> tmp because node is used on RHS
@@ -151,8 +154,8 @@ if (node.item > 20)
 ** name newly introduced variables not tmp_xx, but find a logical name for them (as done in LOOP/Umbra/...)
 ** types for ternary Bool ? x : y <- intersect x y
 ** for loops -> translate to while
-** error on multiple returns and overloading of the same method name
-*** at least warnings for eclipse and support for refactoring/fixing these
+** warn when overloading of the same method name
+** also warn on varargs construct
 ** constructors (multiple, what to do in there?)
 ** there's an alternative way to get the source of an editor:
   final IEditorInput editorInput = window.getActivePage().getActiveEditor().getEditorInput();
