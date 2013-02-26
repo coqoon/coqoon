@@ -50,6 +50,7 @@ object PrintActor {
   type Printable = { def println (x : String) : Unit }
   var stream : Printable = PCons
 
+  //could be a Set as well, but we have some ordering constraints here
   var callbacks : List[CoqCallback] = List[CoqCallback]() //why not actors?
 
   def register (c : CoqCallback) : Unit = {
@@ -150,12 +151,20 @@ object CoqState {
   }
 
   def proofMode () : Boolean = {
-    Console.println("con is " + shell.context)
     shell.context.size > 0
   }
 
+  private var loadpath : Set[String] = Set[String]()
+
+  def getLoadPaths () : Set[String] = {
+    loadpath
+  }
+
   def sendCommand (c : String) : Unit = {
-    //Console.println("not ready :/")
+    if (c.startsWith("Add LoadPath"))
+      loadpath += c.substring(c.indexOf("\"") + 1, c.lastIndexOf("\""))
+    if (c.startsWith("Remove LoadPath"))
+      loadpath -= c.substring(c.indexOf("\"") + 1, c.lastIndexOf("\""))
     lastc = c
     readyforinput = false
   }

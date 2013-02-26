@@ -10,8 +10,6 @@
 ** multiple . in antiquotes
 ** coq buffer 1 -> switch to 2 -> no annotations are removed in 1
 ** compilation is brittle - esp the automatic one
- -> due to stateful Add LoadPath which isn't backtrack by BackTrack...
-   -> need to use Remove LoadPath as inverse operation!
 ** don't backtrack everything - leave the require import in there (DocumentMonitor)
 ** verify verified method!
 ** enable/disable actions in java editor

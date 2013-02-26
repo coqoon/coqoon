@@ -1,3 +1,4 @@
+** properly Remove LoadPath which have been added previously when switching projects
 ** improve coloring of proven marker
 * Kopitiam 0.2.18 [24 February 2013]
 ** the Java code is now checked for compliance to our formalisation

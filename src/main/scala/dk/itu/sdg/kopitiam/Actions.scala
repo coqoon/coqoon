@@ -93,6 +93,10 @@ abstract class KCoqAction extends KAction {
           PrintActor.deregister(CoqOutputDispatcher)
           PrintActor.deregister(CoqStepNotifier)
           PrintActor.deregister(CoqCommands)
+          CoqTearDown.synchronized {
+            CoqTearDown.start
+            CoqTearDown.wait
+          }
           val shell = CoqState.getShell
           PrintActor.register(CoqStartUp)
           CoqStartUp.synchronized {
@@ -512,10 +516,38 @@ class TranslateToSimpleJavaAction extends KAction {
 }
 object TranslateToSimpleJavaAction extends TranslateToSimpleJavaAction { }
 
+object CoqTearDown extends CoqCallback {
+  private var cbbackup : List[CoqCallback] = List[CoqCallback]()
+
+  def start () : Unit = {
+    cbbackup = PrintActor.callbacks
+    cbbackup.foreach(PrintActor.deregister(_))
+    PrintActor.register(CoqTearDown)
+    doit
+  }
+
+  override def dispatch (x : CoqResponse) : Unit =
+    x match {
+      case CoqShellReady(m, t) => doit
+      case y =>
+    }
+
+  def doit () : Unit = {
+    val lps = CoqState.getLoadPaths
+    if (lps.size == 0) {
+      PrintActor.deregister(CoqTearDown)
+      cbbackup.foreach(PrintActor.register(_))
+      synchronized {
+        notifyAll
+      }
+    } else
+      CoqTop.writeToCoq("Remove LoadPath \"" + lps.head + "\".")
+  }
+}
 
 object CoqStartUp extends CoqCallback {
   private var initialize : Int = 0
-  
+
   def start () : Unit = synchronized {
     if (! CoqTop.isStarted) {
       PrintActor.deregister(CoqCommands)
@@ -650,7 +682,7 @@ object CoqCommands extends CoqCallback {
       case CoqShellReady(monoton, token) =>
         if (monoton)
           step
-        else if (CoqState.lastCommand.startsWith("Backtrack"))
+        else if (CoqState.lastWasUndo)
           step
         else
           empty
