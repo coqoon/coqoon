@@ -10,8 +10,9 @@
 ** multiple . in antiquotes
 ** coq buffer 1 -> switch to 2 -> no annotations are removed in 1
 ** compilation is brittle - esp the automatic one
-** don't backtract everything - leave the require import in there (DocumentMonitor)
+** don't backtrack everything - leave the require import in there (DocumentMonitor)
 ** verify verified method!
+** enable/disable actions in java editor
 
 * General
 ** notes from SVARM:
