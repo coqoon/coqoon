@@ -130,6 +130,10 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
           DocumentState.resetState
           JavaPosition.retract
           JavaPosition.editor = null
+          CoqTearDown.synchronized {
+            CoqTearDown.start
+            CoqTearDown.wait
+          }
           PrintActor.deregister(CoqOutputDispatcher)
           val shell = CoqState.getShell
           DocumentState.setBusy

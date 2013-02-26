@@ -571,15 +571,30 @@ object CoqStartUp extends CoqCallback {
       	//Console.println("CoqStartUp dispatch, initialize is " + initialize + " fini is " + fini)
         val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
         val lp = new File(loadp).exists
-        if (initialize == 0 && lp) {
-          DocumentState.setBusy
-          CoqTop.writeToCoq("Add LoadPath \"" + loadp + "\".")
+        var cont : Boolean = true
+        if (initialize == 0) {
+          //next stage!
           initialize = 1
-        } else if ((initialize == 0 && !lp) || initialize == 1) {
-          DocumentState.setBusy
-          CoqTop.writeToCoq("Add LoadPath \"" + EclipseBoilerPlate.getProjectDir + "\".")
+          if (lp) {
+            DocumentState.setBusy
+            CoqTop.writeToCoq("Add LoadPath \"" + loadp + "\".")
+            cont = false
+          } else
+            cont = true
+        }
+        if (cont && initialize == 1) {
+          //next stage!
           initialize = 2
-        } else {
+          EclipseBoilerPlate.getProjectDir match {
+            case Some(x) =>
+              DocumentState.setBusy
+              CoqTop.writeToCoq("Add LoadPath \"" + x + "\".")
+              cont = false
+            case None =>
+              cont = true
+          }
+        }
+        if (cont && initialize == 2) {
           PrintActor.deregister(CoqStartUp)
           PrintActor.register(CoqOutputDispatcher)
           PrintActor.register(CoqStepNotifier)

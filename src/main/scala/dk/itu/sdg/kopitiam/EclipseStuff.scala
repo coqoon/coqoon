@@ -897,31 +897,30 @@ object EclipseBoilerPlate {
 
   import org.eclipse.ui.{IFileEditorInput, PlatformUI}
   import org.eclipse.core.resources.IResource
-  def getProjectDir () : String = {
+  def getProjectDir () : Option[String] = {
     val editor =
       if (DocumentState.activeEditor != null)
-        DocumentState.activeEditor
+        Some(DocumentState.activeEditor)
       else if (JavaPosition.editor != null)
-        JavaPosition.editor
-      else {
-        Console.println("no active editor")
-        null
-      }
-    if (editor != null) {
-      val input = editor.getEditorInput
-      val res : Option[IResource] =
-        if (input.isInstanceOf[IFileEditorInput])
-          Some(input.asInstanceOf[IFileEditorInput].getFile)
-        else
-          None
-      res match {
-        case Some(r) => r.getProject.getLocation.toOSString
-        case None =>
-          Console.println("shouldn't happen - trying to get ProjectDir from " + input + ", which is not an IFileEditorInput")
-          ""
-      }
-    } else
-      ""
+        Some(JavaPosition.editor)
+      else
+        None
+    editor match {
+      case Some(x) =>
+        val input = x.getEditorInput
+        val res : Option[IResource] =
+          if (input.isInstanceOf[IFileEditorInput])
+            Some(input.asInstanceOf[IFileEditorInput].getFile)
+          else
+            None
+        res match {
+          case Some(r) => Some(r.getProject.getLocation.toOSString)
+          case None =>
+            Console.println("shouldn't happen - trying to get ProjectDir from " + input + ", which is not an IFileEditorInput")
+            None
+        }
+      case None => None
+    }
   }
 
   import org.eclipse.swt.widgets.Display

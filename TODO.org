@@ -8,13 +8,13 @@
 ** prove method in one java buffer, then prove method in another -> only until after backtrack (sometimes)
 ** comment parsing
 ** multiple . in antiquotes
-** coq buffer 1 -> switch to 2 -> no annotations are removed in 1
 ** compilation is brittle - esp the automatic one
 ** don't backtrack everything - leave the require import in there (DocumentMonitor)
 ** verify verified method!
 ** enable/disable actions in java editor
 ** put model into proof certificate!
 ** keybindings in goal viewer etc
+** use CoqTearDown at more places where we backtrack completely!
 
 * General
 ** notes from SVARM:
