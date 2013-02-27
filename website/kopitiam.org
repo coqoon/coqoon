@@ -27,7 +27,7 @@
 Coq perspective (click to enlarge): on the left bottom the outline, in
 the middle the Coq editor and problems view, on the right the goal
 viewer. The Coq editor indicates with a green background the commands
-processed by Coq, the red squiggly line indicates an error ('Tactic Expected')
+processed by Coq, the red squiggly line indicates an error ('Tactic expected')
 and the tooltip shows all possible completions
 with the prefix 'Zabs'.
 
