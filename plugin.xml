@@ -132,9 +132,12 @@
             class="dk.itu.sdg.kopitiam.CoqEditor"
             contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
             extensions="v"
-            icon="icons/sample.gif"
+            icon="icons/coqide.gif"
             id="kopitiam.CoqEditor"
             name="Coq Editor">
+         <contentTypeBinding
+               contentTypeId="kopitiam.CoqFile">
+         </contentTypeBinding>
       </editor>
    </extension>
    <extension
@@ -279,7 +282,7 @@
          point="org.eclipse.ui.newWizards">
       <wizard
             class="dk.itu.sdg.kopitiam.NewCoqFileWizard"
-            icon="icons/sample.gif"
+            icon="icons/coqide.gif"
             id="Kopitiam.newCoqFileWizard"
             name="Coq File">
       </wizard>
@@ -358,6 +361,17 @@
             verticalRulerPreferenceKey="provenmarkerIndicationInVerticalRuler"
             verticalRulerPreferenceValue="true">
       </specification>
+   </extension>
+   <extension
+         point="org.eclipse.core.contenttype.contentTypes">
+      <content-type
+            base-type="org.eclipse.core.runtime.text"
+            default-charset="UTF-8"
+            file-extensions="v"
+            id="kopitiam.CoqFile"
+            name="Coq file"
+            priority="normal">
+      </content-type>
    </extension>
 
 </plugin>
