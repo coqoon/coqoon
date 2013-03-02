@@ -43,7 +43,6 @@
 ** if focus on goalviewer, still enable step fwd/backward keyboard shortcuts
 ** closing comment *) without beginning -> out of heap space
 ** lots of proof obligations -> find some useful interface for the tabs
-** focus on a subgoal -> emit grey text "Focus n.", which is activated if the user writes proof script : question is: does subgoal stay active!?
 ** dependency graph of coq files, run coqc as background task
 ** coq projects which depend upon each other
 ** lazily run coqc when required (SfLib - just run coqc on Import SfLib)
@@ -82,7 +81,6 @@ CoqResponse should parse more carefully here - maybe
 ** default specs for methods - only require those needed to be specified (don't need add to prove length)
 ** call unmarkProofs somewhere!
 ** warn if an antiquote contains multiple statements! (or support multiple coq statements in a single antiquote)
-** report if Java is not SimpleJava
 ** Re-Implement translation of Java to SimpleJava
 - introduction of temporary variables on nested field access
  foo.bar.baz --> Object tmp1 = foo.bar ; Object tmp2 = tmp1.baz
@@ -103,7 +101,6 @@ CoqResponse should parse more carefully here - maybe
 ** proper enabling and disabling of actions (esp during prove method)
 ** field initializers - during constructor - translate that - and/or infer specification
 ** constructors (currently calloc instead of call to constructor)
-** verify verified method <- what happens?
 ** use mouse position instead of cursor position for right-click "prove this method"
 ** javaNewerThanSource unused!
 ** stepping over if <- emit forward; but here offset computations are bad!
