@@ -344,7 +344,9 @@
       <specification
             annotationType="dk.itu.sdg.kopitiam.provenannotation"
             colorPreferenceKey="dk.itu.sdg.kopitiam.proverannotation.mycolorhighlightkey"
-            colorPreferenceValue="3,167,17"
+            colorPreferenceValue="50,249,255"
+            highlightPreferenceKey="dk.itu.sdg.kopitiam.proverannotation.mycolorbackgroundhighlightkey"
+            highlightPreferenceValue="true"
             icon="icons/checkmark.gif"
             includeOnPreferencePage="true"
             overviewRulerPreferenceKey="dk.itu.sdg.kopitiam.proverannotation.overviewrulerkey"
