@@ -1102,7 +1102,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       }
       try {
         val nooooow = System.currentTimeMillis
-        forceupdate = (nooooow - lastupdate > 500) //we can do 2 frames per second :)
+        forceupdate = (nooooow - lastupdate > 300) //we can do 3.33 frames per second :)
         if (! CoqStepNotifier.active || forceupdate || until <= x) {
           coqmarker.setAttribute(IMarker.CHAR_START, x)
           coqmarker.setAttribute(IMarker.CHAR_END, x - 1) //at dot, not whitespace
