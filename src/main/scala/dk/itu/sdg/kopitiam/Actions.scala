@@ -456,10 +456,14 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper with CoreJa
           val off = selection.getOffset
           val node = findASTNode(cu, off, 0)
           val md = findMethod(node)
-          val proj = EclipseTables.DocToProject(doc)
-          proj.program = Some(cu)
-          proj.proveMethod(md)
-          CoqCommands.step
+          if (JavaPosition.proofmarkers.contains(md.getName.getIdentifier))
+            EclipseBoilerPlate.warnUser("Already proven", "Sorry, this method was already proven")
+          else {
+            val proj = EclipseTables.DocToProject(doc)
+            proj.program = Some(cu)
+            proj.proveMethod(md)
+            CoqCommands.step
+          }
         }
       }
     }

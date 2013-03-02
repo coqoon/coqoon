@@ -10,7 +10,6 @@
 ** multiple . in antiquotes
 ** compilation is brittle - esp the automatic one
 ** don't backtrack everything - leave the require import in there (DocumentMonitor)
-** verify verified method!
 ** enable/disable actions in java editor
 ** put model into proof certificate!
 ** keybindings in goal viewer etc
