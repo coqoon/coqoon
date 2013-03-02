@@ -27,9 +27,9 @@
 Coq perspective (click to enlarge): on the left bottom the outline, in
 the middle the Coq editor and problems view, on the right the goal
 viewer. The Coq editor indicates with a green background the commands
-processed by Coq, the red squiggly line indicates an error (no command
-'eapply xist' exists) and the tooltip shows all possible completions
-with the prefix 'xist'.
+processed by Coq, the red squiggly line indicates an error ('Tactic expected')
+and the tooltip shows all possible completions
+with the prefix 'Zabs'.
 
 [[file:screen2.jpg][file:screen2-small.jpg]]
 
@@ -47,10 +47,10 @@ Coq. On the right the goal viewer shows the current proof state.
    <div class="content">
  #+end_html
 
-** [[http://coq.inria.fr][Coq]] - currently Coq-8.3 ([[http://coq.inria.fr/coq-8.3][direct link]]) is required
+** [[http://coq.inria.fr][Coq]] - both Coq-8.4 and Coq-8.3 are supported
 ** [[file:charge-coq8.3-20121219.tar.gz][Charge!]] - Java semantics, higher-order separation logic and tactics in Coq
 *** Unpack the tarball and use 'make' to compile
-** [[http://eclipse.org][Eclipse]] - currently Indigo (3.7) ([[http://www.eclipse.org/downloads/packages/release/indigo/sr2][direct link]]) is required
+** [[http://eclipse.org][Eclipse]] - currently Indigo (3.7) ([[http://www.eclipse.org/downloads/packages/release/indigo/sr2][direct link]]) is mainly supported
 ** Start Eclipse
 ** Click on the "Help -> Install New Software" menu item
 ** Enter "http://www.itu.dk/research/tomeso/kopitiam/eclipse" as update site
@@ -84,7 +84,7 @@ These are enabled when a Coq editor is active (or a Java editor). The actions ar
 ** Step All - which steps until the end of the file
 ** Refresh - which refreshes the Goal Viewer
 ** Restart - which terminates Coq and spawns a new Coq process
-** Interrupt - which breaks Coq
+** Interrupt - which interrupts Coq (useful if it does not terminate or takes a long time)
 
 Additionally, ".v" files are opened by default in the Coq editor provided by Kopitiam. You can always click with the right mouse button on any file, use the "Open With" menu item and select Coq Editor from the list to open that file in a Coq Editor.
 
@@ -106,7 +106,7 @@ When "Verify Method" is selected, first the Coq model file is processed by Coq (
 
 Once Coq has processed all definitions, the specification of the currently focused method is higlighted with a green background. In the goal viewer the current proof obligation is shown, you can step forwards and backwards over the antiquotations.
 
-When all methods of a program are verified, you can generate a proof certificate from the context menu of the file.
+When all methods of a program are verified, Kopitiam generates a proof certificate.
  #+begin_html
  </div>
  #+end_html
