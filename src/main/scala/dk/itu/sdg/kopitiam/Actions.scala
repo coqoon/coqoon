@@ -79,6 +79,7 @@ abstract class KCoqAction extends KAction {
           EclipseBoilerPlate.unmarkReally
         DocumentState.resetState
         JavaPosition.retract
+        JavaPosition.unmarkProofs
         if (DocumentState.activeEditor != null)
           DocumentState.processUndo
         DocumentState.activeEditor = acted.asInstanceOf[CoqEditor]
@@ -236,6 +237,7 @@ class CoqRetractAction extends KCoqAction {
     EclipseBoilerPlate.unmarkReally
     JavaPosition.unmark
     JavaPosition.retract
+    JavaPosition.unmarkProofs
     val initial =
       if (DocumentState.positionToShell.contains(0))
         DocumentState.positionToShell(0).globalStep
@@ -389,6 +391,8 @@ class RestartCoqAction extends KAction {
     EclipseBoilerPlate.unmarkReally
     JavaPosition.unmark
     JavaPosition.retract
+    JavaPosition.unmarkProofs
+    CoqState.resetLoadPaths
     CoqCommands.empty
     PrintActor.deregister(CoqOutputDispatcher)
     PrintActor.deregister(JavaPosition)
@@ -441,6 +445,7 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper with CoreJa
           if (CoqTop.isStarted)
             CoqRetractAction.doitH
           JavaPosition.retract
+          JavaPosition.unmarkProofs
         }
         JavaPosition.editor = edi
       }

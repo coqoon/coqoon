@@ -1,6 +1,5 @@
 * VSTTE
 ** translate java to simplejava code
-** mainly test and update java examples
 ** softening spec requirements: only needed specs, others replace with true
 ** test!
 ** test more!
@@ -83,7 +82,6 @@ CoqResponse should parse more carefully here - maybe
 ** more lazy about backtrack, especially when typing <% and %>
 ** default specs for methods - only require those needed to be specified (don't need add to prove length)
 ** call unmarkProofs somewhere!
-** remove provenmarkers when method is updated
 ** warn if an antiquote contains multiple statements! (or support multiple coq statements in a single antiquote)
 ** report if Java is not SimpleJava
 ** Re-Implement translation of Java to SimpleJava

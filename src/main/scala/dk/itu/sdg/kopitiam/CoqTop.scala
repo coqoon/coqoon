@@ -156,6 +156,10 @@ object CoqState {
 
   private var loadpath : Set[String] = Set[String]()
 
+  def resetLoadPaths () : Unit = {
+    loadpath = Set[String]()
+  }
+
   def getLoadPaths () : Set[String] = {
     loadpath
   }

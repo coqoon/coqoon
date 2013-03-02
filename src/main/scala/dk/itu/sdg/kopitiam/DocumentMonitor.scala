@@ -129,6 +129,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
           val initial = DocumentState.positionToShell(0).globalStep
           DocumentState.resetState
           JavaPosition.retract
+          JavaPosition.unmarkProofs
           JavaPosition.editor = null
           CoqTearDown.synchronized {
             CoqTearDown.start
@@ -240,6 +241,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         if (!foundchange) {
           //change to actual java code!
           proj.ASTdirty = true
+          JavaPosition.unmarkProofs
           proj.proofShell match {
             case None =>
             case Some(x) =>
@@ -253,6 +255,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       if (proj.isCoqModel(doc)) {
         Console.println("model updated, setting boolean")
         proj.modelNewerThanSource = true
+        JavaPosition.unmarkProofs
         proj.proofShell match {
           case None =>
           case Some(x) =>
