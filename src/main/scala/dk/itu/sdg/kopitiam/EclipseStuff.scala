@@ -270,8 +270,13 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
     x match {
       case CoqProofCompleted() =>
         if (editor != null) {
-          DocumentState.setBusy
-          CoqTop.writeToCoq("Qed.")
+          CoqCommands.doLater(() => {
+            DocumentState.setBusy
+            CoqTop.writeToCoq("Qed.")
+          })
+          //if for some reason the Shell came before the proof completed
+          if (DocumentState.readyForInput)
+            CoqCommands.step
         }
       case CoqTheoremDefined(x) =>
         if (editor != null && x.startsWith("valid_")) { // + method.get.id)) {

@@ -1,3 +1,5 @@
+** do not allow "Verify Method" while Coq interaction is active
+** properly set busy state when Qed is transmitted during Java method proving
 ** properly Remove LoadPath which have been added previously when switching projects
 ** improve coloring of proven marker
 * Kopitiam 0.2.18 [24 February 2013]

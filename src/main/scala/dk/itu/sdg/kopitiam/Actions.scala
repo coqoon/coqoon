@@ -425,6 +425,8 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper with CoreJa
   override def run (a : IAction) : Unit = {
     if (! ActionDisabler.ready)
       EclipseBoilerPlate.warnUser("Not ready", "Sorry, the Eclipse preference store is not yet ready. Wait a few seconds")
+    else if (CoqTop.isStarted && ! DocumentState.readyForInput)
+      EclipseBoilerPlate.warnUser("Not ready yet", "Sorry, Coq interaction is active. Maybe it is doing a Qed.")
     else {
       //plan:
       // a: get project
