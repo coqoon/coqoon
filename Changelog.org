@@ -1,3 +1,4 @@
+* Kopitiam 0.2.19 [02 March 2013]
 ** proven markers are removed in the events when code changed, or coq gets restarted
 ** do not allow "Verify Method" while Coq interaction is active
 ** properly set busy state when Qed is transmitted during Java method proving
