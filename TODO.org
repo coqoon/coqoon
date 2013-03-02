@@ -1,4 +1,5 @@
 * VSTTE
+** findMethod might NPE!!!
 ** translate java to simplejava code
 ** softening spec requirements: only needed specs, others replace with true
 ** test!
@@ -13,7 +14,7 @@
 ** put model into proof certificate!
 ** keybindings in goal viewer etc
 ** use CoqTearDown at more places where we backtrack completely!
-** prove method -> prove method does not work at all
+** remove provenmarker of current method if proof script modified
 
 * General
 ** notes from SVARM:

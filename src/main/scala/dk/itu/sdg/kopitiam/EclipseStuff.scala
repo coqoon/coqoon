@@ -281,6 +281,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
       case CoqTheoremDefined(x) =>
         if (editor != null && x.startsWith("valid_")) { // + method.get.id)) {
           //what about specifications!?
+          removeMarkers
           val spos = method.get.getStartPosition
           val length = method.get.getLength
           markproven(spos, length)
@@ -309,7 +310,6 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
                   EclipseBoilerPlate.warnUser("Program is correct!", "A proof certificate was generated, its filename is " + nam)
                 }
             }
-          retract
           ActionDisabler.enableStart
         }
       case CoqError(m, n, s, l) =>
@@ -456,11 +456,8 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
   }
 
   import org.eclipse.swt.widgets.Display
-  def retract () : Unit = {
-    val mn = (method != None)
-    Console.println("retracting with " + editor + " and method? " + mn)
-    if (editor != null && method != None) {
-      Console.println("hello my friend, NONONONO")
+  def removeMarkers () : Unit = {
+    if (editor != null) {
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
@@ -485,14 +482,23 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
       annmodel.disconnect(doc)
       cur = None
       next = None
-      emptyCoqShells
-      method = None
-      if (getProj != null)
-        getProj.proofShell = None
       PrintActor.deregister(JavaPosition)
       Display.getDefault.asyncExec(
         new Runnable() {
           def run() = { if (editor != null) editor.getViewer.invalidateTextPresentation }})
+    }
+  }
+
+  def retract () : Unit = {
+    val mn = (method != None)
+    Console.println("retracting with " + editor + " and method? " + mn)
+    if (editor != null && method != None) {
+      Console.println("hello my friend, NONONONO")
+      removeMarkers
+      emptyCoqShells
+      method = None
+      if (getProj != null)
+        getProj.proofShell = None
     }
   }
 
