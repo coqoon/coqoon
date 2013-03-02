@@ -53,14 +53,19 @@ trait EclipseJavaHelper extends VisitingAST {
   }
 
   import org.eclipse.jdt.core.dom.{ASTNode, MethodDeclaration, Initializer}
-  def findMethod (x : ASTNode) : MethodDeclaration =
-    x match {
-      case y : MethodDeclaration => y
-      case y : Initializer =>
-        val m = y.getProperty(EclipseJavaASTProperties.method)
-        if (m != null) m.asInstanceOf[MethodDeclaration] else null
-      case y => findMethod(y.getParent)
+  def findMethod (x : ASTNode) : Option[MethodDeclaration] = {
+    if (x == null)
+      None
+    else {
+      x match {
+        case y : MethodDeclaration => Some(y)
+        case y : Initializer =>
+          val m = y.getProperty(EclipseJavaASTProperties.method)
+          if (m != null) Some(m.asInstanceOf[MethodDeclaration]) else None
+        case y => findMethod(y.getParent)
+      }
     }
+  }
 
   def findASTNode (root : ASTNode, offset : Int, length : Int) : ASTNode = {
     val nf = new NodeFinder(offset, length)

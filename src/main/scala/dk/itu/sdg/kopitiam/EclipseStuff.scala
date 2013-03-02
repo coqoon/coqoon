@@ -415,6 +415,14 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
     }
   }
 
+  def unmarkProof (m : MethodDeclaration) : Unit = {
+    val nam = m.getName.getIdentifier
+    if (proofmarkers.contains(nam)) {
+      proofmarkers(nam).delete
+      proofmarkers -= nam
+    }
+  }
+
   def unmarkProofs () : Unit = {
     for ((name, marker) <- proofmarkers) marker.delete
     proofmarkers.clear
@@ -555,32 +563,35 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
       case Some(x) =>
         val n = findASTNode(x, off, 0)
         Console.println("n is " + n.getClass.toString + ": " + n)
-        val m = findMethod(n)
-        Console.println("Is the method the same? " + (m == method.get))
-        if (m == method.get) {
-          Console.println("YEP")
-          var nx : Boolean = false
+        findMethod(n) match {
+          case None =>
+          case Some(x) =>
+            Console.println("Is the method the same? " + (x == method.get))
+            if (x == method.get) {
+              Console.println("YEP")
+              var nx : Boolean = false
 
-          val cb : Statement => Option[Statement] = x => {
-            val r =
-              if (nx) {
-                val cs = x.getProperty(EclipseJavaASTProperties.coqShell)
-                if (cs != null)
-                  Some(x)
-                else
-                  None
-              } else {
-                x.setProperty(EclipseJavaASTProperties.coqShell, null)
-                None
+              val cb : Statement => Option[Statement] = x => {
+                val r =
+                  if (nx) {
+                    val cs = x.getProperty(EclipseJavaASTProperties.coqShell)
+                    if (cs != null)
+                      Some(x)
+                    else
+                      None
+                  } else {
+                    x.setProperty(EclipseJavaASTProperties.coqShell, null)
+                    None
+                  }
+                if (n == x)
+                  nx = true
+                r
               }
-            if (n == x)
-              nx = true
-            r
-          }
 
-          val r = traverseAST(m, false, true, cb)
-          assert(r.size == 1)
-          next = Some(r.first)
+              val r = traverseAST(x, false, true, cb)
+              assert(r.size == 1)
+              next = Some(r.first)
+            }
         }
     }
     next
@@ -691,13 +702,15 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
       val selection = editor.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
       val off = selection.getOffset
       val node = findASTNode(cu, off, 0)
-      val md = findMethod(node)
-
-      //copy over
-      copyProps(method.get, md)
-      getProj.program = Some(cu)
-      method = Some(md)
-      getProj.ASTdirty = false
+      findMethod(node) match {
+        case None =>
+        case Some(md) =>
+          //copy over
+          copyProps(method.get, md)
+          getProj.program = Some(cu)
+          method = Some(md)
+          getProj.ASTdirty = false
+      }
     }
 
     var active : Boolean = (cur == None)

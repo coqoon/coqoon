@@ -461,13 +461,17 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper with CoreJa
           val off = selection.getOffset
           val node = findASTNode(cu, off, 0)
           val md = findMethod(node)
-          if (JavaPosition.proofmarkers.contains(md.getName.getIdentifier))
-            EclipseBoilerPlate.warnUser("Already proven", "Sorry, this method was already proven")
-          else {
-            val proj = EclipseTables.DocToProject(doc)
-            proj.program = Some(cu)
-            proj.proveMethod(md)
-            CoqCommands.step
+          md match {
+            case None => EclipseBoilerPlate.warnUser("Cursor not inside of method", "Please put the cursor inside of the method to verify")
+            case Some(x) =>
+              if (JavaPosition.proofmarkers.contains(x.getName.getIdentifier))
+                EclipseBoilerPlate.warnUser("Already proven", "Sorry, this method was already proven")
+              else {
+                val proj = EclipseTables.DocToProject(doc)
+                proj.program = Some(cu)
+                proj.proveMethod(x)
+                CoqCommands.step
+              }
           }
         }
       }

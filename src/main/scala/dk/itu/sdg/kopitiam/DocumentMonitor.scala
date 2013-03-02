@@ -195,6 +195,14 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                   //change to proof script - might need to backtrack
                   JavaPosition.cur match {
                     case None => //we're lucky! but how can that happen?
+                      val m = JavaPosition.getASTbeforeOff(off) match {
+                        case None => None
+                        case Some(x) => JavaPosition.findMethod(x)
+                      }
+                      m match {
+                        case None =>
+                        case Some(x) => JavaPosition.unmarkProof(x)
+                      }
                     case Some(x) =>
                       Console.println("Is " + (x.getStartPosition + x.getLength) + " > " + off + "?")
                       if (x.getStartPosition + x.getLength > off) {
