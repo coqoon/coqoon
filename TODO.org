@@ -15,6 +15,9 @@
 ** put model into proof certificate!
 ** keybindings in goal viewer etc
 ** use CoqTearDown at more places where we backtrack completely!
+** light blue coloring for proof completed
+** provenmarker broken: don't accept anything during Qed
+** prove method -> prove method does not work at all
 
 * General
 ** notes from SVARM:
