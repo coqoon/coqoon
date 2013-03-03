@@ -13,7 +13,7 @@ trait CoreJavaChecker extends VisitingAST {
 
   class CheckCoreJava (doc : IDocument) extends Visitor {
 
-    import org.eclipse.jdt.core.dom.{ArrayAccess, ArrayCreation, ArrayInitializer, Assignment, CastExpression, ClassInstanceCreation, ConditionalExpression, Expression, FieldAccess, InfixExpression, InstanceofExpression, MethodInvocation, PostfixExpression, PrefixExpression, QualifiedName, SuperFieldAccess, SuperMethodInvocation, ThisExpression}
+    import org.eclipse.jdt.core.dom.{ArrayAccess, ArrayCreation, ArrayInitializer, Assignment, CastExpression, ClassInstanceCreation, ConditionalExpression, Expression, FieldAccess, InfixExpression, InstanceofExpression, MethodInvocation, PostfixExpression, PrefixExpression, QualifiedName, SimpleName, SuperFieldAccess, SuperMethodInvocation, ThisExpression}
     def checkExpression (node : Expression) : Unit =
       node match {
         case x : QualifiedName =>
@@ -54,7 +54,9 @@ trait CoreJavaChecker extends VisitingAST {
               left match {
                 case x : FieldAccess => //fine!
                 case x : QualifiedName => //fine!
+                case x : SimpleName => //fine!
                 case x =>
+                  Console.println("x is " + x.getClass.toString)
                   reportError("This is not a simple expression, it is too complex for Kopitiam", x)
               }
           else if (! containsRealExpressions(right))

@@ -11,7 +11,6 @@
 ** enable/disable actions in java editor
 ** put model into proof certificate!
 ** keybindings in goal viewer etc
-** this.head = old <- kopitiam complains! but it should be able to do that...
 
 * General
 ** notes from SVARM:

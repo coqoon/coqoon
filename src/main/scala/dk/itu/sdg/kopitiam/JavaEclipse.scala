@@ -377,26 +377,29 @@ Open Scope asn_scope.
                   case y : QualifiedName =>
                     "(cwrite " + printE(y) + " " + printE(r) + ")"
                   case y =>
-                    r match {
-                      case y : MethodInvocation =>
-                        val st = (y.resolveMethodBinding.getModifiers & Modifier.STATIC) == Modifier.STATIC
-                        val str = if (st) "cscall" else "cdcall"
-                        deps = deps + y.getName.getIdentifier
-                        "(" + str + " " + printE(l) + " " + printE(y) + ")"
-                      case y : ClassInstanceCreation =>
-                        "(calloc " + printE(l) + " " + printE(y) + ")"
-                      case y : FieldAccess =>
-                        "(cread " + printE(l) + " " + printE(y) + ")"
-                      case y : QualifiedName =>
-                        "(cread " + printE(l) + " " + printE(y) + ")"
-                      case y : SimpleName =>
-                        if (isField(y))
-                          "(cread " + printE(l) + " \"this\" " + printE(y) + ")"
-                        else
+                    if (y.isInstanceOf[SimpleName] && isField(y.asInstanceOf[SimpleName]))
+                      "(cwrite \"this\" " + printE(y) + " " + printE(r) + ")"
+                    else
+                      r match {
+                        case y : MethodInvocation =>
+                          val st = (y.resolveMethodBinding.getModifiers & Modifier.STATIC) == Modifier.STATIC
+                          val str = if (st) "cscall" else "cdcall"
+                          deps = deps + y.getName.getIdentifier
+                          "(" + str + " " + printE(l) + " " + printE(y) + ")"
+                        case y : ClassInstanceCreation =>
+                          "(calloc " + printE(l) + " " + printE(y) + ")"
+                        case y : FieldAccess =>
+                          "(cread " + printE(l) + " " + printE(y) + ")"
+                        case y : QualifiedName =>
+                          "(cread " + printE(l) + " " + printE(y) + ")"
+                        case y : SimpleName =>
+                          if (isField(y))
+                            "(cread " + printE(l) + " \"this\" " + printE(y) + ")"
+                          else
+                            "(cassign " + printE(l) + " " + printE(y) + ")"
+                        case y =>
                           "(cassign " + printE(l) + " " + printE(y) + ")"
-                      case y =>
-                        "(cassign " + printE(l) + " " + printE(y) + ")"
-                    }
+                      }
                 }
               case x : MethodInvocation =>
                 val st = (x.resolveMethodBinding.getModifiers & Modifier.STATIC) == Modifier.STATIC
