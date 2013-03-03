@@ -424,12 +424,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
   }
 
   def unmarkProofs () : Unit = {
-    for ((name, marker) <- proofmarkers)
-      try
-        marker.delete
-      catch {
-        case e : NoClassDefFoundError =>
-      }
+    for ((name, marker) <- proofmarkers) marker.delete
     proofmarkers.clear
   }
 

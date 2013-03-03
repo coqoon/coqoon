@@ -19,8 +19,13 @@ abstract class KAction extends IWorkbenchWindowActionDelegate with IHandler {
   //I've no clue why this code is around and whether it is useful at all
   private var handlers : List[IHandlerListener] = List[IHandlerListener]()
   override def addHandlerListener (h : IHandlerListener) : Unit = { handlers ::= h }
-  override def removeHandlerListener (h : IHandlerListener) : Unit =
-    { handlers = handlers.filterNot(_ == h) }
+  override def removeHandlerListener (h : IHandlerListener) : Unit = {
+    try
+      handlers = handlers.filterNot(_ == h)
+    catch {
+        case e : NoClassDefFoundError =>
+      }
+  }
 
   override def run (a : IAction) : Unit = { doit }
   override def execute (ev : ExecutionEvent) : Object = { doit; null }
@@ -230,6 +235,12 @@ class CoqRetractAction extends KCoqAction {
   override def doit () : Unit = {
     DocumentState.setBusy
     PrintActor.deregister(CoqOutputDispatcher)
+    PrintActor.deregister(CoqCommands)
+    PrintActor.deregister(CoqStepNotifier)
+    CoqTearDown.synchronized {
+      CoqTearDown.start
+      CoqTearDown.wait
+    }
     DocumentState.resetState
     PrintActor.register(CoqStartUp)
     val shell = CoqState.getShell
@@ -441,13 +452,14 @@ class ProveMethodAction extends KEditorAction with EclipseJavaHelper with CoreJa
       val cu = getCompilationUnit(bla)
       //assign JavaPosition.editor - for error reporting in walkAST
       if (JavaPosition.editor != edi) {
-        if (JavaPosition.editor != null) {
-          if (CoqTop.isStarted)
-            CoqRetractAction.doitH
+        val need = (JavaPosition.editor != null)
+        if (need) {
           JavaPosition.retract
           JavaPosition.unmarkProofs
         }
         JavaPosition.editor = edi
+        if (CoqTop.isStarted && need)
+          CoqRetractAction.doitH
       }
       JavaPosition.unmark
       // a': CoreJava checking!
@@ -613,9 +625,10 @@ object CoqStartUp extends CoqCallback {
           PrintActor.deregister(CoqStartUp)
           PrintActor.register(CoqOutputDispatcher)
           PrintActor.register(CoqStepNotifier)
-          PrintActor.register(CoqCommands)
-          if (CoqCommands.nonempty)
+          if (CoqCommands.nonempty) {
             PrintActor.register(CoqCommands)
+            CoqCommands.step
+          }
           initialize = 0
           synchronized {
             notifyAll
@@ -679,13 +692,13 @@ object CoqCommands extends CoqCallback {
   }
 
   def doLater (f : () => Unit) : Unit = {
-    if (commands.size == 0)
+    if (commands.size == 0 && ! PrintActor.callbacks.contains(CoqStartUp) && ! PrintActor.callbacks.contains(CoqTearDown))
       PrintActor.register(CoqCommands)
     commands = (commands :+ f)
   }
 
   def step () : Unit = {
-    if (finished)
+    if (finished && PrintActor.callbacks.contains(CoqCommands))
       if (commands.size != 0) {
         val c = commands.head
         commands = commands.tail
