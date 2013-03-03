@@ -193,16 +193,17 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                 } else {
                   Console.println("it's the proof you changed... (to " + nncon + ")")
                   //change to proof script - might need to backtrack
-                  JavaPosition.cur match {
-                    case None => //we're lucky! but how can that happen?
-                      val m = JavaPosition.getASTbeforeOff(off) match {
-                        case None => None
-                        case Some(x) => JavaPosition.findMethod(x)
-                      }
-                      m match {
-                        case None =>
+                  //remove proven marker if edit in there...
+                  proj.program match {
+                    case None => //
+                    case Some(p) =>
+                      JavaPosition.findMethod(JavaPosition.findASTNode(p, off, 0)) match {
+                        case None => //
                         case Some(x) => JavaPosition.unmarkProof(x)
                       }
+                  }
+                  JavaPosition.cur match {
+                    case None => //we're lucky! but how can that happen?
                     case Some(x) =>
                       Console.println("Is " + (x.getStartPosition + x.getLength) + " > " + off + "?")
                       if (x.getStartPosition + x.getLength > off) {

@@ -341,6 +341,7 @@ Import """ + n + """.
 Require Import """ + n + """_model.
 Module Import SC := Tac """ + n + """.
 
+Open Scope cmd_scope.
 Open Scope spec_scope.
 Open Scope asn_scope.
 """

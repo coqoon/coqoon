@@ -424,7 +424,12 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
   }
 
   def unmarkProofs () : Unit = {
-    for ((name, marker) <- proofmarkers) marker.delete
+    for ((name, marker) <- proofmarkers)
+      try
+        marker.delete
+      catch {
+        case e : NoClassDefFoundError =>
+      }
     proofmarkers.clear
   }
 
@@ -466,6 +471,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
   import org.eclipse.swt.widgets.Display
   def removeMarkers () : Unit = {
     if (editor != null) {
+      PrintActor.deregister(JavaPosition)
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
@@ -490,7 +496,6 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
       annmodel.disconnect(doc)
       cur = None
       next = None
-      PrintActor.deregister(JavaPosition)
       Display.getDefault.asyncExec(
         new Runnable() {
           def run() = { if (editor != null) editor.getViewer.invalidateTextPresentation }})
