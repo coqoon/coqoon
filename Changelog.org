@@ -1,3 +1,6 @@
+* Kopitiam 0.2.20 [03 March 2013]
+** support to switch java editor and work on different java projects at once
+** safety and correctness
 * Kopitiam 0.2.19 [02 March 2013]
 ** proven markers are removed in the events when code changed, or coq gets restarted
 ** do not allow "Verify Method" while Coq interaction is active
