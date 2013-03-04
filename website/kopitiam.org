@@ -49,8 +49,15 @@ the goal viewer shows the current proof state.
  #+end_html
 
 ** [[http://coq.inria.fr][Coq]] - use Coq-8.4
-** [[file:charge-coq8.4-20130303.tar.gz][Charge!]] - Java semantics, higher-order separation logic and tactics in Coq
-*** Unpack the tarball and use 'make' to compile
+** Charge! [[file:charge-8.4-20130304.tar.gz][tar.gz]] [[file:charge-8.4-20130304.zip][zip]] - Java semantics, higher-order separation logic and tactics in Coq
+*** MacOSX and Linux: Unpack the tarball and use 'make' to compile
+*** Windows: Unpack the zipfile and use the included build.bat (from windows command line processor)
+
+c:\charge> set PATH=C:\Program Files\Coq\bin;%PATH%
+
+c:\charge> build.bat
+
+...coq output...
 ** [[http://eclipse.org][Eclipse]] - currently Indigo (3.7) ([[http://www.eclipse.org/downloads/packages/release/indigo/sr2][direct link]]) is mainly supported
 ** Start Eclipse
 ** Click on the "Help -> Install New Software" menu item
