@@ -1421,7 +1421,6 @@ class Startup extends IStartup {
     CoqTop.init
     CoqTop.consoleprinter = CoqTop.system.actorOf(Props[ConsolePrinter], name = "ConsolePrinter")
     PrintActor.register(DocumentState)
-    CoqTop.coqpath = Activator.getDefault.getPreferenceStore.getString("coqpath") + System.getProperty("file.separator")
     ActionDisabler.initializationFinished
   }
 }
@@ -1445,8 +1444,7 @@ class CoqCompileJob (path : File, name : String, requiressuccess : Boolean) exte
     Console.println("hello, world!, " + name)
     if (EclipseConsole.out == null)
       EclipseConsole.initConsole
-    val la = if (CoqTop.isWin) ".exe" else ""
-    val coqc = CoqTop.coqpath + "coqc" + la
+    val coqc = CoqTopIdeSlave.getProgramPath("coqc")
     //what about dependencies?? <- need Add LoadPath explicitly in .v!
     if (new File(coqc).exists) {
       val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")

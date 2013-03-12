@@ -202,11 +202,8 @@ object CoqTop {
   private var coqin : OutputStream = null
   private var started : Boolean = false
   private var coqprocess : Process = null
-  var coqpath : String = ""
   var pid : String = ""
 
-  val coqtopbinary = "coqtop"
-  private val coqarguments = "-emacs"
   private var waiting : Int = 0
 
   def computeCommentOffset (x : String, off : Int) : Int = {
@@ -327,19 +324,14 @@ object CoqTop {
 
   import java.io.File
 
-  def checkForCoqBinary () : Boolean = {
-    val end = if (isWin) ".exe" else ""
-    return (new File(coqpath + coqtopbinary + end).exists)
-  }
-
   def startCoq () : Boolean = {
-    val end = if (isWin) ".exe" else ""
-    if (!checkForCoqBinary) {
-      Console.println("can't find coqtop binary (in: " + coqpath + coqtopbinary + end + ")")
+    val path = CoqTopIdeSlave.getProgramPath
+    if (!new File(path).exists) {
+      Console.println("can't find coqtop binary (in: " + path + ")")
       return false
     }
     if (isWin)
-      coqprocess = Runtime.getRuntime.exec(coqpath + coqtopbinary + end + " " + coqarguments)
+      coqprocess = Runtime.getRuntime.exec(path + " -emacs")
     else {
       //due to the lack of Java's possibility to send signals to processes,
       //we start coqtop in a shell (and thus can send ctrl+c sequences manually)
@@ -352,7 +344,7 @@ object CoqTop {
           List("/bin/sh", "-c")
       if (exec.length == 1)
         return false
-      val strarr = (exec ++ List("echo $$; exec " + coqpath + coqtopbinary + " " + coqarguments)).toArray
+      val strarr = (exec ++ List("echo $$; exec " + path + " -emacs")).toArray
       //Console.println("executing:" + strarr.toList)
       coqprocess = Runtime.getRuntime.exec(strarr)
       val cout = coqprocess.getInputStream

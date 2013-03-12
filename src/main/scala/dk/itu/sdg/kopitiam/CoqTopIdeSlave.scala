@@ -23,6 +23,26 @@ object CoqTopIdeSlave {
       case _ => None
     }
   }
+  
+  import java.io.File
+  def checkProgramPath() : Boolean = new File(getProgramPath).exists()
+  
+  def getProgramPath : String = getProgramPath("coqtop")
+  
+  def getProgramPath(program : String) : String = {
+    val ac = Activator.getDefault
+    getProgramPath(program,
+      if (ac != null) ac.getPreferenceStore.getString("coqpath") else "")
+  }
+  
+  def getProgramPath(program : String, dir : String) : String = {
+    def isWindows =
+      System.getProperty("os.name").toLowerCase.contains("windows")
+    val programName = (if (isWindows) program + ".exe" else program)
+    if (dir == null || dir.length == 0) {
+      programName
+    } else dir + File.separator + programName
+  }
 }
 
 trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
@@ -63,7 +83,7 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
   
   override def restart = {
     kill
-    pr = Process(Seq("coqtop", "-ideslave")).run(
+    pr = Process(Seq(CoqTopIdeSlave.getProgramPath, "-ideslave")).run(
       new ProcessIO(
         a => in = new OutputStreamWriter(a),
         a => out = new InputStreamReader(a),
