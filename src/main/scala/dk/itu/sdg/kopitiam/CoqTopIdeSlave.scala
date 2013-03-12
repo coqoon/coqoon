@@ -76,9 +76,15 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
   private var pr : Process = null
   
   override def kill = {
+    if (in != null)
+      in.close()
+    if (out != null)
+      out.close()
     if (pr != null)
       pr.destroy
     pr = null
+    in = null
+    out = null
   }
   
   override def restart = {
@@ -91,26 +97,20 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
   }
   restart
   
-  import scala.xml.Attribute
-  import scala.xml.Elem
-  import scala.xml.Node
-  import scala.xml.Null
-  import scala.xml.Text
+  import scala.xml.{Attribute, Elem, Node, Null, Text, XML}
   private def sendRaw(n : Elem) : Elem = {
     in.write(n.toString())
     in.flush()
     var t = new String()
-    def _util : Elem = {
-      while (true) {
-        val c = out.read()
-        if (c == -1)
-          return null
-        val ch = c.asInstanceOf[Char]
-        t += ch
-        if (ch == '>' && t.endsWith("</value>"))
-          return scala.xml.XML.loadString(t)
-      }
-      return null
+    @scala.annotation.tailrec def _util : Elem = {
+      val c = out.read()
+      if (c == -1)
+        return null
+      val ch = c.asInstanceOf[Char]
+      t += ch
+      if (ch == '>' && t.endsWith("</value>")) {
+        XML.loadString(t)
+      } else _util
     }
     _util
   }
@@ -141,7 +141,7 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
               case Pair(Some(Seq(Text(a))), Some(Seq(Text(b)))) =>
                 Some(a.toInt, b.toInt)
               case _ => None
-            }, e.text))
+            }, e.text.trim))
       }
       case Some(Seq(Text("good"))) => CoqTypes.Good(f(e))
       case Some(Seq(Text("unsafe"))) => CoqTypes.Unsafe(f(e))
