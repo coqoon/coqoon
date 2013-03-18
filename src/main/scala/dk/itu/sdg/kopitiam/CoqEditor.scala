@@ -120,7 +120,7 @@ class CoqEditor extends TextEditor with EclipseUtils {
   var outlinePage : Option[CoqContentOutlinePage] = None
   override def getAdapter (required : java.lang.Class[_]) : AnyRef = {
     //Console.println("Getting adapter for " + required + " on CoqEditor")
-    if (required.isInterface && required.getName.endsWith("IContentOutlinePage")) {
+    if (required == classOf[IContentOutlinePage]) {
       outlinePage = outlinePage match {
         case p@Some(page) => p
         case None => {
