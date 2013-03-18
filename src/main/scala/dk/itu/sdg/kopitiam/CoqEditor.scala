@@ -4,7 +4,37 @@ package dk.itu.sdg.kopitiam
 
 import org.eclipse.ui.editors.text.TextEditor
 
-class CoqEditor extends TextEditor with EclipseUtils {
+class CoqEditor extends TextEditor with EclipseUtils with Editor {
+  import scala.collection.mutable.Stack
+  private var stepsV : Stack[CoqStep] = Stack[CoqStep]()
+  override def steps = stepsV
+  
+  override def document = getSourceViewer().getDocument().get()
+  override def cursorPosition =
+    getSourceViewer().getTextWidget().getCaretOffset()
+  
+  private var underwayV : Int = 0
+  override def underway = underwayV
+  override def setUnderway(offset : Int) = (underwayV = offset)
+  
+  private var completedV : Int = 0
+  override def completed = completedV
+  override def setCompleted(offset : Int) = (completedV = offset)
+  
+  private var goalsV : CoqTypes.goals = goals
+  override def goals = goalsV
+  override def setGoals(goals : CoqTypes.goals) = (goalsV = goals)
+  
+  private var coqTopV : CoqTopIdeSlave_v20120710 = null
+  override def coqTop = {
+    if (coqTopV == null)
+      coqTopV = CoqTopIdeSlave.forVersion("20120710") match {
+        case Some(m : CoqTopIdeSlave_v20120710) => m
+        case _ => null
+      }
+    coqTopV
+  }
+  
   import dk.itu.sdg.coqparser.VernacularRegion
   import org.eclipse.jface.text.source.{Annotation, IAnnotationModel, ISourceViewer, IVerticalRuler}
   import org.eclipse.jface.text.{IDocument, Position}
