@@ -15,11 +15,17 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   
   private var underwayV : Int = 0
   override def underway = underwayV
-  override def setUnderway(offset : Int) = (underwayV = offset)
+  override def setUnderway(offset : Int) = {
+    underwayV = offset
+    addAnnotations_(completed, underway)
+  }
   
   private var completedV : Int = 0
   override def completed = completedV
-  override def setCompleted(offset : Int) = (completedV = offset)
+  override def setCompleted(offset : Int) = {
+    completedV = offset
+    addAnnotations_(completed, underway)
+  }
   
   private var goalsV : CoqTypes.goals = goals
   override def goals = goalsV
@@ -91,9 +97,14 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   private var processed : Option[Annotation] = None
   private var processing : Option[Annotation] = None
 
+  def addAnnotations (first : Int, second : Int) : Unit = {
+    underwayV = second
+    setCompleted(first)
+  }
+  
   import org.eclipse.jface.text.Position
   import org.eclipse.swt.widgets.Display
-  def addAnnotations (first : Int, second : Int) : Unit = {
+  private def addAnnotations_ (first : Int, second : Int) : Unit = {
     val provider = getDocumentProvider
     val doc = provider.getDocument(getEditorInput)
     //I get IAnnotationModel here, but need IAnnotationModelExtension
