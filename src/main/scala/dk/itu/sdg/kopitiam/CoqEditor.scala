@@ -98,7 +98,8 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   private var processing : Option[Annotation] = None
 
   def addAnnotations (first : Int, second : Int) : Unit = {
-    underwayV = second
+    // second is underway, which must always be >= first
+    underwayV = if (second < first) first else second
     setCompleted(first)
   }
   
@@ -124,7 +125,7 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
         if (tst)
           invalidate
     }
-    val p2 = if (second > 0) new Position(first, second) else null
+    val p2 = if (second != first) new Position(first, second) else null
     processing match {
       case None =>
         if (second > 0) {
