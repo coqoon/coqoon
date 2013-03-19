@@ -373,5 +373,14 @@
             priority="normal">
       </content-type>
    </extension>
+   <extension
+         point="org.eclipse.ui.perspectives">
+      <perspective
+            class="dk.itu.sdg.kopitiam.CoqPerspective"
+            icon="icons/coqide.gif"
+            id="dk.itu.sdg.kopitiam.CoqPerspective"
+            name="Coq">
+      </perspective>
+   </extension>
 
 </plugin>
