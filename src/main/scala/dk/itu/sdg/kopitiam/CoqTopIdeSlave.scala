@@ -50,6 +50,7 @@ trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
   
   override def version = "20120710"
   
+  /* All of these methods perform synchronised and blocking I/O */
   def interp(raw : raw, verbose : verbose, string : String) : value[String]
   def rewind(steps : Int) : value[Int]
   def goals : value[Option[goals]]
@@ -62,7 +63,6 @@ trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
   def get_options : value[List[Pair[option_name, option_state]]]
   def set_options(options : List[Pair[option_name, option_state]])
   def quit : value[Unit]
-  
   /* ? */ def about : value[coq_info]
 }
 
@@ -98,7 +98,7 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
   restart
   
   import scala.xml.{Attribute, Elem, Node, Null, Text, XML}
-  private def sendRaw(n : Elem) : Elem = {
+  private def sendRaw(n : Elem) : Elem = synchronized {
     in.write(n.toString())
     in.flush()
     var t = new String()
