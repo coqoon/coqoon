@@ -2,86 +2,6 @@
 <?eclipse version="3.4"?>
 <plugin>
    <extension
-         point="org.eclipse.ui.actionSets">
-      <actionSet
-            id="Kopitiam.actionSet"
-            label="Kopitiam Action Set"
-            visible="true">
-         <action
-               class="dk.itu.sdg.kopitiam.CompileCoqAction"
-               icon="icons/compile.gif"
-               id="kopitiam.actions.CompileAction"
-               label="&amp;Compile"
-               toolbarPath="CoqGroup"
-               tooltip="Compile">
-         </action>
-         <action
-               class="dk.itu.sdg.kopitiam.InterruptCoqAction"
-               icon="icons/stop.gif"
-               id="kopitiam.actions.InterruptAction"
-               label="&amp;Interrupt Coq"
-               toolbarPath="CoqGroup"
-               tooltip="Interrupt Coq">
-         </action>
-         <action
-               class="dk.itu.sdg.kopitiam.RestartCoqAction"
-               icon="icons/dead.gif"
-               id="kopitiam.actions.RestartAction"
-               label="&amp;Restart Coq"
-               toolbarPath="CoqGroup"
-               tooltip="Restart Coq">
-         </action>
-         <action
-               class="dk.itu.sdg.kopitiam.CoqRefreshAction"
-               icon="icons/refresh.gif"
-               id="kopitiam.actions.RefreshAction"
-               label="&amp;Refresh"
-               toolbarPath="CoqGroup"
-               tooltip="Refresh">
-         </action>
-         <action
-               class="dk.itu.sdg.kopitiam.CoqStepAllAction"
-               icon="icons/downtoo.gif"
-               id="kopitiam.actions.StepAllAction"
-               label="&amp;Step All"
-               toolbarPath="CoqGroup"
-               tooltip="Step All">
-         </action>
-         <action
-               class="dk.itu.sdg.kopitiam.CoqStepUntilAction"
-               icon="icons/icon_lego.gif"
-               id="kopitiam.actions.StepUntilAction"
-               label="&amp;Step Until Cursor"
-               toolbarPath="CoqGroup"
-               tooltip="Step Until Cursor">
-         </action>
-         <action
-               class="dk.itu.sdg.kopitiam.CoqStepAction"
-               icon="icons/down.gif"
-               id="kopitiam.actions.StepAction"
-               label="&amp;Step"
-               toolbarPath="CoqGroup"
-               tooltip="Step">
-         </action>
-         <action
-               class="dk.itu.sdg.kopitiam.CoqRetractAction"
-               icon="icons/uptoo.gif"
-               id="kopitiam.actions.CoqRetractAction"
-               label="&amp;Retract"
-               toolbarPath="CoqGroup"
-               tooltip="Retract">
-         </action>
-         <action
-               class="dk.itu.sdg.kopitiam.CoqUndoAction"
-               icon="icons/up.gif"
-               id="kopitiam.actions.UndoStepAction"
-               label="&amp;Undo"
-               toolbarPath="CoqGroup"
-               tooltip="Undo">
-         </action>
-      </actionSet>
-   </extension>
-   <extension
          point="org.eclipse.ui.bindings">
       <key
             commandId="Kopitiam.step_forward"
@@ -265,6 +185,77 @@
    </extension>
    <extension
          point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:org.eclipse.ui.main.toolbar">
+         <toolbar
+               id="Kopitiam.toolbar1"
+               label="Kopitiam toolbar">
+            <command
+                  commandId="Kopitiam.step_backward"
+                  icon="icons/up.gif"
+                  label="Undo"
+                  style="push"
+                  tooltip="Undo">
+            </command>
+            <command
+                  commandId="Kopitiam.retract"
+                  icon="icons/uptoo.gif"
+                  label="Retract"
+                  style="push"
+                  tooltip="Retract">
+            </command>
+            <command
+                  commandId="Kopitiam.step_forward"
+                  icon="icons/down.gif"
+                  label="Step"
+                  style="push"
+                  tooltip="Step">
+            </command>
+            <command
+                  commandId="Kopitiam.step_cursor"
+                  icon="icons/icon_lego.gif"
+                  label="Step Until Cursor"
+                  style="push"
+                  tooltip="Step Until Cursor">
+            </command>
+            <command
+                  commandId="Kopitiam.step_all"
+                  icon="icons/downtoo.gif"
+                  label="Step All"
+                  style="push"
+                  tooltip="Step All">
+            </command>
+            <command
+                  commandId="Kopitiam.refresh"
+                  icon="icons/refresh.gif"
+                  label="Refresh"
+                  style="push"
+                  tooltip="Refresh">
+            </command>
+            <command
+                  commandId="Kopitiam.restart_coq"
+                  icon="icons/dead.gif"
+                  label="Restart Coq"
+                  style="push"
+                  tooltip="Restart Coq">
+            </command>
+            <command
+                  commandId="Kopitiam.interrupt"
+                  icon="icons/stop.gif"
+                  label="Interrupt Coq"
+                  style="push"
+                  tooltip="Interrupt Coq">
+            </command>
+            <command
+                  commandId="Kopitiam.compile_coq"
+                  icon="icons/compile.gif"
+                  label="Compile"
+                  style="push"
+                  tooltip="Compile">
+            </command>
+         </toolbar>
+      </menuContribution>
 <!--      <menuContribution
             locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
          <command
