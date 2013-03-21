@@ -61,7 +61,7 @@ trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
   def evars : value[Option[List[evar]]]
   def search(sf : search_flags) : value[List[coq_object[String]]]
   def get_options : value[List[Pair[option_name, option_state]]]
-  def set_options(options : List[Pair[option_name, option_state]])
+  def set_options(options : List[Pair[option_name, option_value]])
   def quit : value[Unit]
   /* ? */ def about : value[coq_info]
 }
@@ -101,6 +101,7 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
   private def sendRaw(n : Elem) : Elem = synchronized {
     in.write(n.toString())
     in.flush()
+    println("TO   " + n.toString())
     var t = new String()
     @scala.annotation.tailrec def _util : Elem = {
       val c = out.read()
@@ -112,28 +113,39 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
         XML.loadString(t)
       } else _util
     }
-    _util
+    val x = _util
+    println("FROM " + x.toString())
+    x
   }
   
-  private def send[A](n : Elem, f : (Elem) => A) = {
+  private def send[A](n : Elem, f : Elem => A) = {
     unwrapValue(sendRaw(n), f)
   }
-  
-  private def attr(name : String, value : String) =
-    Attribute(None, name, if (value != null) Text(value) else null, Null)
   
   private def childElements(e : Elem) : Seq[Elem] = {
     (e \ "_").collect({case el : Elem => el})
   }
   
+  import scala.xml.UnprefixedAttribute
+  
+  implicit def pairToAttribute(a : Pair[String, String]) : UnprefixedAttribute =
+    new UnprefixedAttribute(a._1, a._2, Null)
+  
+  private def wrapString(a : String) : Elem = <string>{a}</string>
   private def unwrapString(e : Elem) = e.text.trim()
+  
+  private def wrapInt(a : Int) : Elem = <int>{a}</int>
   private def unwrapInt(e : Elem) = unwrapString(e).toInt
+  
+  private def wrapBoolean(a : Boolean) : Elem =
+    Elem(null, "bool", ("val", a.toString), scala.xml.TopScope)
+    
   private def unwrapBoolean(e : Elem) = e.attribute("val") match {
   	case Some(Seq(Text(a))) => a.trim.toBoolean
   	case _ => false
   }
   
-  private def unwrapValue[A](e : Elem, f : (Elem) => A) : CoqTypes.value[A] = {
+  private def unwrapValue[A](e : Elem, f : Elem => A) : CoqTypes.value[A] = {
     e.attribute("val") match {
       case Some(Seq(Text("fail"))) => {
         CoqTypes.Fail(Pair(
@@ -141,7 +153,7 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
               case Pair(Some(Seq(Text(a))), Some(Seq(Text(b)))) =>
                 Some(a.toInt, b.toInt)
               case _ => None
-            }, e.text.trim))
+            }, e.text))
       }
       case Some(Seq(Text("good"))) => CoqTypes.Good(f(e))
       case Some(Seq(Text("unsafe"))) => CoqTypes.Unsafe(f(e))
@@ -149,18 +161,36 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
     }
   }
   
-  private def unwrapOption[A](e : Elem, f : (Elem) => A) = {
+  private def wrapOption[A](a : Option[A], f : A => Elem) : Elem = {
+    val wr = a match {
+      case Some(b) => ("some", f(b))
+      case None => ("none", null)
+    }
+    Elem(null, "option", ("val", wr._1), scala.xml.TopScope, wr._2)
+  }
+  
+  private def unwrapOption[A](e : Elem, f : Elem => A) = {
     e.attribute("val") match {
       case Some(Seq(Text("some"))) => Some(f(childElements(e).first))
       case _ => None
     }
   }
   
-  private def unwrapList[A](e : Elem, f : (Elem) => A) = {
+  private def wrapList[A](sf : List[A], f : A => Elem) : Elem = {
+    val children = sf.map(f)
+    Elem(null, "list", Null, scala.xml.TopScope, children : _*)
+  }
+  
+  private def unwrapList[A](e : Elem, f : Elem => A) = {
     childElements(e).map(f).toList
   }
   
-  private def unwrapPair[A, B](e : Elem, f : (Elem) => A, g : (Elem) => B) = {
+  private def wrapPair[A, B](a : Pair[A, B], f : A => Elem, g : B => Elem) = {
+    val children = List(f(a._1), g(a._2))
+    Elem(null, "pair", Null, scala.xml.TopScope, children : _*)
+  }
+  
+  private def unwrapPair[A, B](e : Elem, f : Elem => A, g : Elem => B) = {
     val ce = childElements(e)
     Pair(f(ce(0)), g(ce(1)))
   }
@@ -205,6 +235,8 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
         unwrapString(ce(2)))
   }
   
+  private def wrapOptionName(a : List[String]) = wrapList(a, wrapString)
+  
   private def unwrapOptionName(a : Elem) = unwrapList(a, unwrapString)
   
   private def unwrapOptionState(a : Elem) = {
@@ -214,6 +246,18 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
         unwrapBoolean(ce(1)),
         unwrapString(ce(2)),
         unwrapOptionValue(ce(3)))
+  }
+  
+  private def wrapOptionValue(st : CoqTypes.option_value) : Elem = {
+    val wr = st match {
+      case b : CoqTypes.BoolValue =>
+        ("boolvalue", wrapBoolean(b.value))
+      case i : CoqTypes.IntValue =>
+        ("intvalue", wrapOption(i.value, wrapInt))
+      case s : CoqTypes.StringValue =>
+        ("stringvalue", wrapString(s.value))
+    }
+    Elem(null, "option_value", ("val", wr._1), scala.xml.TopScope, wr._2)
   }
   
   private def unwrapOptionValue(a : Elem) = {
@@ -234,13 +278,13 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
   override def interp(r : CoqTypes.raw, v : CoqTypes.verbose, s : String) =
     send(
       (<call val="interp">{s}</call> %
-        attr("raw", if (r) "true" else null) %
-        attr("verbose", if (v) "true" else null)),
+        ("raw", if (r) "true" else null) %
+        ("verbose", if (v) "true" else null)),
       unwrapString)
   
   override def rewind(steps : Int) =
     send(
-      (<call val="rewind" /> % attr("steps", "" + steps)),
+      (<call val="interp" /> % ("steps", steps.toString)),
       a => unwrapInt(childElements(a).first))
 
   override def goals =
@@ -279,14 +323,45 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
       a => unwrapOption(
           childElements(a).first,
           unwrapList(_, b => { CoqTypes.evar(b.text)})))
-      
-  override def search(sf : CoqTypes.search_flags) = // TODO: marshalling
+  
+  private def wrapSearchFlags(sf : CoqTypes.search_flags) : List[Elem] =
+    sf.map(_ match {
+      case (c : CoqTypes.search_constraint, b) =>
+        Elem(null, "pair", Null, scala.xml.TopScope, c match {
+          case p : CoqTypes.Name_Pattern =>
+            Elem(null, "search_constraint",
+                ("val", "name_pattern"), scala.xml.TopScope,
+                wrapString(p.value))
+          case p : CoqTypes.Type_Pattern =>
+            Elem(null, "search_constraint",
+                ("val", "type_pattern"), scala.xml.TopScope,
+                wrapString(p.value))
+          case p : CoqTypes.SubType_Pattern =>
+            Elem(null, "search_constraint",
+                ("val", "subtype_pattern"), scala.xml.TopScope,
+                wrapString(p.value))
+          case p : CoqTypes.In_Module =>
+            Elem(null, "search_constraint",
+                ("val", "in_module"), scala.xml.TopScope,
+                wrapList(p.value, wrapString))
+          case p : CoqTypes.Include_Blacklist =>
+            Elem(null, "search_constraint",
+                ("val", "include_blacklist"), scala.xml.TopScope)
+        }, wrapBoolean(b))
+    })
+  
+  private def wrapSearch(sf : CoqTypes.search_flags) : Elem = {
+    val children = wrapSearchFlags(sf)
+    Elem(null, "call", ("val", "search"), scala.xml.TopScope, children : _*)
+  }
+  
+  override def search(sf : CoqTypes.search_flags) =
     send(
-      (<call val="search" />),
+      wrapSearch(sf),
       a => unwrapList(
           childElements(a).first,
           unwrapCoqObjectString))
-      
+  
   override def get_options =
     send(
       (<call val="getoptions" />),
@@ -295,13 +370,24 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
           unwrapPair(_,
               unwrapOptionName,
               unwrapOptionState)))
-      
-  override def set_options( // TODO: marshalling
-      options : List[Pair[CoqTypes.option_name, CoqTypes.option_state]]) = {
-    val el = <call val="setoptions" />
-    el
+  
+  private def wrapOptions(
+      options : List[Pair[CoqTypes.option_name, CoqTypes.option_value]]) :
+          List[Elem] = {
+    options.map(wrapPair(_, wrapOptionName, wrapOptionValue))
+  }
+  
+  private def wrapSetOptions(
+      options : List[Pair[CoqTypes.option_name, CoqTypes.option_value]]) :
+          Elem = {
+    val children = wrapOptions(options)
+    Elem(null, "setoptions", Null, scala.xml.TopScope, children : _*)
+  }
+              
+  override def set_options(
+      options : List[Pair[CoqTypes.option_name, CoqTypes.option_value]]) = {
     send(
-      el,
+      wrapSetOptions(options),
       _ => ())
   }
 
