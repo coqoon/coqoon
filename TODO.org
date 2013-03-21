@@ -1,9 +1,6 @@
 * VSTTE
 ** translate java to simplejava code
 ** softening spec requirements: only needed specs, others replace with true
-** test!
-** test more!
-** test eclipse 4!
 ** comment parsing
 ** multiple . in antiquotes
 ** compilation is brittle - esp the automatic one
@@ -69,7 +66,6 @@ CoqResponse should parse more carefully here - maybe
 *** to fight performance issues - being able to load current state again
 *** might also help for background proofing
 ** interrupt on windows (custom c code which sends ctrl-c)
-*** maybe Ctrl+Br ("" + 3)?
 *** http://msdn.microsoft.com/en-us/library/ms811896
 *** http://msdn.microsoft.com/en-us/library/ms683155(v=vs.85).aspx
 *** http://stackoverflow.com/questions/1835885/send-ctrl-c-to-process-open-by-java
@@ -77,7 +73,6 @@ CoqResponse should parse more carefully here - maybe
 * Java side
 ** more lazy about backtrack, especially when typing <% and %>
 ** default specs for methods - only require those needed to be specified (don't need add to prove length)
-** call unmarkProofs somewhere!
 ** warn if an antiquote contains multiple statements! (or support multiple coq statements in a single antiquote)
 ** Re-Implement translation of Java to SimpleJava
 - introduction of temporary variables on nested field access
