@@ -29,7 +29,10 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   
   private var goalsV : CoqTypes.goals = goals
   override def goals = goalsV
-  override def setGoals(goals : CoqTypes.goals) = (goalsV = goals)
+  override def setGoals(goals : CoqTypes.goals) = {
+    goalsV = goals
+    firePropertyChange(CoqEditorConstants.PROPERTY_GOALS)
+  }
   
   private var coqTopV : CoqTopIdeSlave_v20120710 = null
   override def coqTop = {
@@ -269,6 +272,10 @@ protected class CoqContentProvider extends ITreeContentProvider {
     //Console.println("getParent " + obj)
     null //FIXME: Figure out how to do this - perhaps compute a table of parents?
   }
+}
+
+object CoqEditorConstants {
+  final val PROPERTY_GOALS = 1234567;
 }
 
 import org.eclipse.ui.editors.text.TextFileDocumentProvider
