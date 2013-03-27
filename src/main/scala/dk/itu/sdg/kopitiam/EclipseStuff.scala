@@ -84,7 +84,7 @@ class CoqJavaProject (basename : String) {
   def proveMethod (meth : MethodDeclaration) : Unit = {
     proofShell match {
       case Some(x) =>
-        if (x.globalStep > CoqState.getShell.globalStep)
+        if (x.globalStep > CoqTop.dummy.globalStep)
           proofShell = None
       case None =>
     }
@@ -124,16 +124,7 @@ class CoqJavaProject (basename : String) {
         DocumentState.activeEditor.invalidate
         DocumentState.activeEditor = null
         DocumentState.setBusy
-        PrintActor.deregister(CoqOutputDispatcher)
-        PrintActor.deregister(CoqStepNotifier)
-        PrintActor.deregister(CoqCommands)
-        val shell = CoqState.getShell
-        PrintActor.register(CoqStartUp)
-        CoqStartUp.synchronized {
-	  val initial = DocumentState.positionToShell(0).globalStep
-	  CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
-	  CoqStartUp.wait
-        }
+        val shell = CoqTop.dummy
       }
       CoqCommands.step
     })
@@ -142,8 +133,7 @@ class CoqJavaProject (basename : String) {
         case None =>
           Console.println("sending defs + spec")
           DocumentState._content = getCoqString
-          PrintActor.register(JavaPosition)
-          CoqStepAllAction.doitH
+          //CoqStepAllAction.doitH
         case Some(x) =>
           val sh : CoqShellTokens = JavaPosition.method match {
             case None => x
@@ -156,23 +146,23 @@ class CoqJavaProject (basename : String) {
                   x
               } else x
           }
-          Console.println("have a PS: " + sh.globalStep + " < " + CoqState.getShell.globalStep)
-          if (sh.globalStep < CoqState.getShell.globalStep) {
+          Console.println("have a PS: " + sh.globalStep + " < " + CoqTop.dummy.globalStep)
+          if (sh.globalStep < CoqTop.dummy.globalStep) {
             JavaPosition.cur = None
             JavaPosition.next = None
             JavaPosition.emptyCoqShells
             JavaPosition.method = None
             DocumentState.setBusy
             Console.println("backtracking to shell " + sh)
-            CoqTop.writeToCoq("Backtrack " + sh.globalStep + " 0 " + CoqState.getShell.context.length + ".")
+            CoqTop.writeToCoq("Backtrack " + sh.globalStep + " 0 " + CoqTop.dummy.context.length + ".")
           } else
             CoqCommands.step
       }
     })
     CoqCommands.doLater(() => {
       if (proofShell == None) {
-        Console.println("preserving proof shell: " + CoqState.getShell)
-        proofShell = Some(CoqState.getShell)
+        Console.println("preserving proof shell: " + CoqTop.dummy)
+        proofShell = Some(CoqTop.dummy)
       }
       if (JavaPosition.method == None) {
         Console.println("assigning method to JP ")
@@ -183,8 +173,7 @@ class CoqJavaProject (basename : String) {
         val p = prf.asInstanceOf[String]
         Console.println("p is " + p)
         DocumentState._content = Some(DocumentState._content.getOrElse("") + p)
-        PrintActor.register(JavaPosition)
-        CoqStepAllAction.doitH
+        //CoqStepAllAction.doitH
       } else
         CoqCommands.step
     })
@@ -268,7 +257,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
   import org.eclipse.jdt.core.dom.Initializer
   override def dispatch (x : CoqResponse) : Unit = {
     x match {
-      case CoqProofCompleted() =>
+      /*case CoqProofCompleted() =>
         if (editor != null) {
           CoqCommands.doLater(() => {
             DocumentState.setBusy
@@ -396,10 +385,7 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
         if (monoton)
           reAnnotate(false, false)
         else
-          if (CoqState.lastWasUndo)
-            reAnnotate(false, true)
-          else
-            reAnnotate(true, true)
+          reAnnotate(true, true) */
       case _ =>
     }
   }
@@ -466,7 +452,6 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
   import org.eclipse.swt.widgets.Display
   def removeMarkers () : Unit = {
     if (editor != null) {
-      PrintActor.deregister(JavaPosition)
       val prov = editor.getDocumentProvider
       val doc = prov.getDocument(editor.getEditorInput)
       val annmodel = prov.getAnnotationModel(editor.getEditorInput)
@@ -779,10 +764,10 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
           cur match {
             case None =>
               Console.println("preserving initial coq shell")
-              method.get.setProperty(EclipseJavaASTProperties.coqShell, CoqState.getShell)
+              method.get.setProperty(EclipseJavaASTProperties.coqShell, CoqTop.dummy)
             case Some(x) =>
-              Console.println("preserving for " + x + " shell " + CoqState.getShell)
-              x.setProperty(EclipseJavaASTProperties.coqShell, CoqState.getShell)
+              Console.println("preserving for " + x + " shell " + CoqTop.dummy)
+              x.setProperty(EclipseJavaASTProperties.coqShell, CoqTop.dummy)
           }
 
 
@@ -1011,6 +996,8 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   import org.eclipse.ui.IWorkbenchPart
   var activated : IWorkbenchPart = null
 
+  override def dispatch (x : CoqResponse) = ()
+  
   var activeEditor : CoqEditor = null
 
   import org.eclipse.jface.text.IDocument
@@ -1021,18 +1008,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       null
   }
 
-  def resetState () : Unit = {
-    val value = positionToShell.get(0)
-    positionToShell.clear
-    value match {
-      case Some(x) => positionToShell += 0 -> x
-      case None =>
-    }
-    position_ = 0
-    sendlen = 0
-    _content = None
-    invalidateCoqMarker
-  }
+  def resetState () : Unit = ()
 
   import org.eclipse.ui.{IFileEditorInput,IURIEditorInput}
   import org.eclipse.core.resources.{IFile,IResource,ResourcesPlugin}
@@ -1084,80 +1060,15 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       } else None
     } else None
   }
-
-
-
-  import scala.collection.mutable.HashMap
-  var positionToShell : HashMap[Int,CoqShellTokens] = new HashMap[Int,CoqShellTokens]()
-
+  
   var sendlen : Int = 0
   var until : Int = -1
 
-  import org.eclipse.core.resources.IMarker
-  import org.eclipse.core.runtime.CoreException
-  private var coqmarker : IMarker = null
-
-  def invalidateCoqMarker () : Unit = {
-    if (coqmarker != null)
-      coqmarker.delete
-    coqmarker = null
-  }
-
-  private var lastupdate : Long = 0
-  private var forceupdate : Boolean = false
-
-  var position_ : Int = 0
-  def position : Int = position_
-  def position_= (x : Int) {
-    if (activeEditor != null) {
-      //Console.println("new pos is " + x + " (old was " + position_ + ")");
-      if (coqmarker == null) {
-        val file = resource
-        coqmarker = file.createMarker(IMarker.BOOKMARK)
-        coqmarker.setAttribute(IMarker.MESSAGE, "coq position")
-        coqmarker.setAttribute(IMarker.LOCATION, file.getName)
-        coqmarker.setAttribute(IMarker.TRANSIENT, true)
-        coqmarker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO)
-      }
-      try {
-        val nooooow = System.currentTimeMillis
-        forceupdate = (nooooow - lastupdate > 300) //we can do 3.33 frames per second :)
-        if (! CoqStepNotifier.active || forceupdate || until <= x) {
-          coqmarker.setAttribute(IMarker.CHAR_START, x)
-          coqmarker.setAttribute(IMarker.CHAR_END, x - 1) //at dot, not whitespace
-          lastupdate = nooooow
-        }
-        position_ = x
-      } catch {
-        case e : CoreException =>
-          Console.println("caught CoreException")
-          invalidateCoqMarker
-          position = x
-      }
-    } else
-      position_ = x
-    //Console.println("position updated to " + x)
-  }
+  var position : Int = 0
 
   private var _readyForInput : Boolean = false
   def readyForInput () : Boolean = { _readyForInput }
   def setBusy () : Unit = { _readyForInput = false }
-
-  override def dispatch (x : CoqResponse) : Unit = {
-    x match {
-      case CoqShellReady(monoton, token) =>
-        if (monoton) {
-          commit
-          if (positionToShell.get(position) == None) {
-            //Console.println("filling table (" + positionToShell.keys.toList.length + ") [" + position + "]: " + token)
-            positionToShell += position -> token
-          }
-        } else
-          undo
-        _readyForInput = true
-      case y =>
-    }
-  }
 
   var oldsendlen : Int = 0
   var reveal : Boolean = true
@@ -1167,7 +1078,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
   def undo () : Unit = {
     //Console.println("undo (@" + position + ", sendlen: " + sendlen + ")
     if (sendlen != 0) {
-      if (CoqState.lastWasUndo) {
+      if (false) { // XXX: lastWasUndo
         val start = scala.math.max(position - sendlen, 0)
         if (activeEditor != null) {
           activeEditor.addAnnotations(start, 0)
@@ -1199,12 +1110,6 @@ object DocumentState extends CoqCallback with KopitiamLogger {
     }
   }
 
-  def process () : Unit = {
-    if (activeEditor != null && !CoqStepNotifier.active)
-      activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
-    JavaPosition.reAnnotate(true, false)
-  }
-
   def processUndo () : Unit = {
     if (activeEditor != null) {
       activeEditor.addAnnotations(position, 0)
@@ -1214,48 +1119,6 @@ object DocumentState extends CoqCallback with KopitiamLogger {
       JavaPosition.retract
     else
       JavaPosition.reAnnotate(true, true)
-  }
-
-  private def commit () : Unit = {
-    //Console.println("commited (@" + position + ", " + sendlen + "): " + positionToShell.contains(position))
-    if (sendlen != 0) {
-      //Console.println("commited - and doing some work")
-      val end = scala.math.min(sendlen, content.length - position)
-      position += end
-      sendlen = 0
-      //XXX: that's wrong! sendlen is 0!!!!
-      if (activeEditor != null) {
-        if (nextCommand == None && Activator.getDefault.getPreferenceStore.getBoolean("smartcompilation")) {
-          //getFullPath is relative to Workspace
-          val cwd = resource.getProject.getLocation.toFile
-          val nam = resource.getName
-          Console.println("no next command in here, starting a ccj! (with " + nam + ")")
-          new CoqCompileJob(cwd, nam, false).schedule
-        }
-        //mutated in nextCommand
-        sendlen = 0
-
-        if (! CoqStepNotifier.active)
-          activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
-        else
-          if (until <= position || forceupdate)
-            //last step, recolor!
-            activeEditor.addAnnotations(position, scala.math.max(until - position, sendlen))
-        if (reveal) {
-          val nxt : Int =
-            _content match {
-              case Some(x) => if (x(position) == ' ') 1 else 0
-              case None => 0
-            }
-          Display.getDefault.asyncExec(
-            new Runnable() {
-              def run() = {
-                activeEditor.selectAndReveal(position + nxt, 0)
-              }
-            })
-        }
-      }
-    }
   }
 }
 
@@ -1290,8 +1153,9 @@ object EclipseConsole {
 }
 
 import org.eclipse.ui.part.ViewPart
+import org.eclipse.ui.{IPropertyListener, IPartListener2}
 
-class GoalViewer extends ViewPart {
+class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   import org.eclipse.swt.widgets.{Composite,Text}
   import org.eclipse.swt.SWT
   import org.eclipse.swt.layout.{FormData,FormLayout,FormAttachment}
@@ -1299,138 +1163,144 @@ class GoalViewer extends ViewPart {
   import org.eclipse.swt.widgets.{Display,Sash,Listener,Event,TabFolder,TabItem}
 //  import org.eclipse.swt.custom.{CTabFolder,CTabItem}
 
+  import org.eclipse.ui.texteditor.ITextEditor
+  
+  override def propertyChanged (source : Object, propID : Int) = {
+    if (source.isInstanceOf[ITextEditor] &&
+        source.isInstanceOf[Editor] &&
+        propID == CoqEditorConstants.PROPERTY_GOALS)
+      writeGoal(source.asInstanceOf[Editor])
+  }
 
-  var context : Text = null
+  import org.eclipse.ui.IViewSite
+  override def init (site : IViewSite) = {
+    super.init(site)
+    site.getWorkbenchWindow().getPartService().addPartListener(this)
+  }
+  
+  override def dispose = {
+    getSite.getWorkbenchWindow().getPartService().removePartListener(this)
+    super.dispose
+  }
+  
+  import org.eclipse.ui.IEditorPart
+  private var activeEditor : Option[Editor] = None
+  private def setActiveEditor (e : IEditorPart) = {
+    println("" + this + ".setActiveEditor(" + e + ")")
+    activeEditor match {
+      case Some(ed) => ed.removePropertyListener(this)
+      case None =>
+    }
+    if (e.isInstanceOf[ITextEditor] && e.isInstanceOf[Editor]) {
+      val ed = e.asInstanceOf[Editor]
+      activeEditor = Some(ed)
+      ed.addPropertyListener(this)
+      writeGoal(ed)
+    } else
+      activeEditor = None
+  }
+  
+  import org.eclipse.ui.IWorkbenchPartReference
+  override def partOpened (ref : IWorkbenchPartReference) = {
+    val p = ref.getPart(false)
+    if (p == this)
+      setActiveEditor(
+          getSite.getWorkbenchWindow().getActivePage().getActiveEditor())
+  }
+  
+  override def partClosed (ref : IWorkbenchPartReference) = {
+    val p = ref.getPart(false)
+    if (this == p || Some(p) == activeEditor)
+      setActiveEditor(null)
+  }
+  
+  override def partActivated (ref : IWorkbenchPartReference) = {
+    val p = ref.getPart(false)
+    if (p.isInstanceOf[IEditorPart] && Some(p) != activeEditor)
+      setActiveEditor(p.asInstanceOf[IEditorPart])
+  }
+
+  override def partDeactivated (ref : IWorkbenchPartReference) = ()
+
+  override def partBroughtToTop (part : IWorkbenchPartReference) : Unit = { }
+  override def partHidden (part : IWorkbenchPartReference) : Unit = { }
+  override def partInputChanged (part : IWorkbenchPartReference) : Unit = { }
+  override def partVisible (part : IWorkbenchPartReference) : Unit = { }
+
+  
   var goals : TabFolder = null
-  var subgoals : List[TabItem] = List[TabItem]()
-  var subgoalTexts : List[Text] = List[Text]()
+  def subgoals = goals.getItems()
   var comp : Composite = null
 
-  /*
-   * |---------------------|       -
-   * | context             |       | comp (FormLayout)
-   * |---------------------| sash  |
-   * | goals (TabFolder)   |       |
-   * |---------------------|       -
-   */
-
+  import org.eclipse.swt.layout.FillLayout
+  
   override def createPartControl (parent : Composite) : Unit = {
     comp = new Composite(parent, SWT.NONE)
-    comp.setLayout(new FormLayout())
-
-    context = new Text(comp, SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+    comp.setLayout(new FillLayout())
 
     goals = new TabFolder(comp, SWT.NONE)
+  }
 
-    val sash = new Sash(comp, SWT.HORIZONTAL)
-
-    //sash
-    val contextData = new FormData()
-    contextData.left = new FormAttachment(0, 0)
-    contextData.right = new FormAttachment(100, 0)
-    contextData.top = new FormAttachment(0, 0)
-    contextData.bottom = new FormAttachment(sash, 0)
-    context.setLayoutData(contextData)
-
-    val goalData = new FormData()
-    goalData.left = new FormAttachment(0, 0)
-    goalData.right = new FormAttachment(100, 0)
-    goalData.top = new FormAttachment(sash, 0)
-    goalData.bottom = new FormAttachment(100, 0)
-    goals.setLayoutData(goalData)
-
-    val limit = 20
-    val percent = 50
-    val sashData = new FormData()
-    sashData.left = new FormAttachment(0, 0)
-    sashData.right = new FormAttachment(100, 0)
-    sashData.top = new FormAttachment(percent, 0)
-    sash.setLayoutData(sashData)
-    sash.addListener(SWT.Selection, new Listener () {
-      def handleEvent (e : Event) = {
-        val sashRect : Rectangle = sash.getBounds()
-        val shellRect : Rectangle = comp.getClientArea()
-        val top = shellRect.height - sashRect.height - limit
-        e.y = scala.math.max(scala.math.min(e.y, top), limit)
-        if (e.y != sashRect.y)  {
-          sashData.top = new FormAttachment (0, e.y)
-          comp.layout()
-        }
+  /*class SashListener(sash : Sash, comp : Composite, limit : Int)
+      extends Listener {
+    override def handleEvent (e : Event) = {
+      val sashRect : Rectangle = sash.getBounds()
+      val shellRect : Rectangle = comp.getClientArea()
+      val top = shellRect.height - sashRect.height - limit
+      e.y = scala.math.max(scala.math.min(e.y, top), limit)
+      if (e.y != sashRect.y)  {
+        sashData.top = new FormAttachment (0, e.y)
+        comp.layout()
       }
-    });
-
-    CoqOutputDispatcher.goalviewer = this
-  }
-
-  def clear () : Unit = {
-    writeGoal("", List[String]())
-  }
-
-  def writeGoal (assumptions : String, sgoals : List[String]) : Unit = {
-    Display.getDefault.asyncExec(
-      new Runnable() {
-        def run() =
-          if (! comp.isDisposed) {
-            context.setText(assumptions)
-            //Console.println("sgoals: " + sgoals.length + " subgoals: " + subgoals.length)
-            if (sgoals.length < subgoals.length) {
-              //drop some, but keep one!
-              val (stay, leave) = subgoals.splitAt(sgoals.length)
-              val (stayT, leaveT) = subgoalTexts.splitAt(sgoals.length)
-              subgoals = stay
-              subgoalTexts = stayT
-              leaveT.foreach(_.setText(""))
-              leaveT.foreach(_.dispose)
-              leave.foreach(_.dispose)
-              goals.reskin(SWT.ALL)
-            } else if (sgoals.length > subgoals.length) {
-              //add some
-              val tomake = sgoals.length - subgoals.length
-              var index : Int = 0
-              while (index < tomake) {
+    }
+  }*/
+  
+  private def writeGoal (ed : Editor) : Unit = {
+          if (ed != null && ed.goals != null && ! comp.isDisposed) {
+            val goalData = ed.goals.fg_goals
+            if (subgoals.length < goalData.length) {
+              while (subgoals.length != goalData.length) {
                 val ti = new TabItem(goals, SWT.NONE)
-                subgoals = subgoals ++ List(ti)
-                ti.setText((subgoals.length - 1).toString)
-                val te = new Text(goals, SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
-                subgoalTexts = subgoalTexts ++ List(te)
-                ti.setControl(te)
-                index = index + 1
+                val area = new Composite(goals, SWT.NONE)
+                area.setLayout(new FillLayout(SWT.VERTICAL))
+                ti.setControl(area)
+                
+                // val sash = new Sash(area, SWT.HORIZONTAL)
+                new Text(area,
+                    SWT.BORDER | SWT.READ_ONLY | SWT.MULTI |
+                    SWT.H_SCROLL | SWT.V_SCROLL)
+                new Text(area,
+                    SWT.BORDER | SWT.READ_ONLY | SWT.MULTI |
+                    SWT.H_SCROLL | SWT.V_SCROLL)
+                ti.setText(subgoals.length.toString)
               }
+            } else {
+              while (subgoals.length != goalData.length)
+                subgoals.last.dispose()
             }
-            sgoals.indices.foreach(x => subgoalTexts(x).setText(sgoals(x)))
+            goals.pack
+            goalData.zip(subgoals).foreach(_ match {
+              case (goal, control) =>
+                val comp = control.getControl().asInstanceOf[Composite]
+                comp.getChildren()(0).asInstanceOf[Text].setText(goal.goal_hyp.mkString("\n"))
+                comp.getChildren()(1).asInstanceOf[Text].setText(goal.goal_ccl)
+            })
             comp.layout
           }
-        })
   }
 
   def setFocus() : Unit = {
   //  viewer.getControl.setFocus
   }
 }
-object GoalViewer extends GoalViewer { }
 
 import org.eclipse.ui.IStartup
-import akka.actor.Props
 class Startup extends IStartup {
   import org.eclipse.core.runtime.Platform
 
   override def earlyStartup () : Unit = {
     Console.println("earlyStartup called")
-    ActionDisabler.disableAll
     DocumentMonitor.init
-    CoqTop.init
-    CoqTop.consoleprinter = CoqTop.system.actorOf(Props[ConsolePrinter], name = "ConsolePrinter")
-    PrintActor.register(DocumentState)
-    ActionDisabler.initializationFinished
-  }
-}
-
-import akka.actor.{Actor, ActorRef}
-class ConsolePrinter extends Actor {
-  def receive = {
-    case msg : String =>
-      EclipseConsole.out.println(msg)
-    case _ =>
   }
 }
 
@@ -1441,7 +1311,6 @@ class CoqCompileJob (path : File, name : String, requiressuccess : Boolean) exte
   import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status}
   import java.io.File
   override def run (mon : IProgressMonitor) : IStatus = {
-    Console.println("hello, world!, " + name)
     if (EclipseConsole.out == null)
       EclipseConsole.initConsole
     val coqc = CoqTopIdeSlave.getProgramPath("coqc")
@@ -1451,28 +1320,26 @@ class CoqCompileJob (path : File, name : String, requiressuccess : Boolean) exte
       val lp = new File(loadp).exists
       val cmdarr =
         if (lp)
-          Array(coqc, "-I", loadp, name)
+          List(coqc, "-I", loadp, name)
         else
-          Array(coqc, name)
-      val coqcp = Runtime.getRuntime.exec(cmdarr, null, path)
-      val ou = coqcp.getInputStream
-      val err = coqcp.getErrorStream
-      val bs = new BusyStreamReader(ou)
-      val bs2 = new BusyStreamReader(err)
-      bs.addActor(CoqTop.consoleprinter)
-      bs2.addActor(CoqTop.consoleprinter)
-      new Thread(bs).start
-      new Thread(bs2).start
+          List(coqc, name)
+      val coqcp = new ProcessBuilder(cmdarr : _*)
+            .directory(path)
+            .redirectErrorStream(true)
+            .start();
+      import java.io._
+      val ou = new BufferedReader(new InputStreamReader(coqcp.getInputStream()))
+      var line : String = ou.readLine()
+      while (line != null) {
+        EclipseConsole.out.println(line)
+        line = ou.readLine()
+      }
       coqcp.waitFor
       if (requiressuccess)
         if (coqcp.exitValue != 0) {
-          Console.println("errrrrrrrrror")
           CoqCommands.empty
         } else
           CoqCommands.step
-      bs.act = false
-      bs2.act = false
-      Console.println("done")
     }
     Status.OK_STATUS
   }
