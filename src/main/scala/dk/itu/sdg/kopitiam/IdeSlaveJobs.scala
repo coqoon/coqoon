@@ -48,22 +48,20 @@ class InitialiseCoqJob(editor : Editor)
 }
 
 private object CoqJob {
-  def asyncExec(f : () => Unit) =
+  def asyncExec(f : => Unit) =
     org.eclipse.ui.PlatformUI.getWorkbench.getDisplay.asyncExec(
         new Runnable() {
-      override def run = {
-        f()
-      }
+      override def run = f
     })
 }
 
 class RestartCoqJob(editor : Editor) extends CoqJob("Restart Coq", editor) {
   override def run(monitor : IProgressMonitor) = {
     editor.steps.synchronized { editor.steps.clear }
-    CoqJob.asyncExec(() => {
+    CoqJob.asyncExec {
       editor.setGoals(null)
       editor.setUnderway(0)
-    })
+    }
     editor.coqTop.restart
     new InitialiseCoqJob(editor).schedule()
     Status.OK_STATUS
@@ -73,6 +71,24 @@ class RestartCoqJob(editor : Editor) extends CoqJob("Restart Coq", editor) {
 abstract class StepJob(
     title : String,
     editor : Editor) extends CoqJob(title, editor) {
+  protected def doCancel = {
+    CoqJob.asyncExec {
+      editor.setUnderway(editor.completed)
+    }
+    editor.postExecuteJob
+    Status.CANCEL_STATUS
+  }
+}
+
+class StepBackJob(
+    editor : Editor,
+    stepCount : Int) extends StepJob("Step back", editor) {
+  override def run(monitor : IProgressMonitor) : IStatus = {
+    monitor.beginTask("Step back", stepCount)
+    var steps = editor.steps.synchronized { editor.steps.take(stepCount)}
+    println(steps)
+    Status.OK_STATUS
+  }
 }
 
 class StepForwardJob(
@@ -82,26 +98,21 @@ class StepForwardJob(
     monitor.beginTask("Step forward", steps.length)
     editor.preExecuteJob
     for (step <- steps) {
-      if (monitor.isCanceled()) {
-        CoqJob.asyncExec(() => {
-          editor.setUnderway(editor.completed)
-        })
-        editor.postExecuteJob
-        return Status.CANCEL_STATUS
-      }
+      if (monitor.isCanceled())
+        return doCancel
       monitor.subTask(step.text.trim)
       editor.coqTop.interp(false, false, step.text) match {
         case CoqTypes.Good(s) =>
           editor.steps.synchronized { editor.steps.push(step) }
           monitor.worked(1)
-          CoqJob.asyncExec(() => {
+          CoqJob.asyncExec {
             editor.setCompleted(step.offset + step.text.length)
-          })
+          }
         case CoqTypes.Fail(ep) =>
           val error = ep._2.trim
-          CoqJob.asyncExec(() => {
+          CoqJob.asyncExec {
             editor.setUnderway(editor.completed)
-          })
+          }
           editor.postExecuteJob
           return new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", error)
       }
@@ -110,9 +121,9 @@ class StepForwardJob(
       case CoqTypes.Good(Some(g)) => g
       case _ => null
     }
-    CoqJob.asyncExec(() => {
+    CoqJob.asyncExec {
       editor.setGoals(goals)
-    })
+    }
     editor.postExecuteJob
     Status.OK_STATUS
   }

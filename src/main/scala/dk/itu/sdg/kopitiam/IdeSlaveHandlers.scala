@@ -51,9 +51,11 @@ abstract class EditorHandler extends AbstractHandler {
         getActiveWorkbenchWindow().getActivePage().getActiveEditor()
     if (activeEditor != null && activeEditor.isInstanceOf[CoqEditor]) {
       editor = activeEditor.asInstanceOf[CoqEditor]
-      setBaseEnabled(editor.enabled)
+      setBaseEnabled(editor.enabled && calculateEnabled)
     } else setBaseEnabled(false)
   }
+  
+  def calculateEnabled : Boolean = true
 }
 
 object EditorHandler {
@@ -123,11 +125,42 @@ class StepToCursorHandler extends EditorHandler {
           new StepForwardJob(editor, steps).schedule()
         }
       } else if (cursorPos < underwayPos) { // Backwards!
-        
+        var count = editor.steps.synchronized {
+          editor.steps.prefixLength(
+              a => (cursorPos >= (a.offset + a.text.length)))
+        }
+        if (count > 0)
+          new StepBackJob(editor, count).schedule()
       }
     }
     null
   }
+}
+
+class StepBackHandler extends EditorHandler {
+  override def execute(ev : ExecutionEvent) = {
+    if (isEnabled()) {
+      val count = editor.steps.synchronized { editor.steps.length }
+      if (count > 0)
+        new StepBackJob(editor, 1).schedule()
+    }
+    null
+  }
+  
+  override def calculateEnabled = (editor.steps.length > 0)
+}
+
+class RetractAllHandler extends EditorHandler {
+  override def execute(ev : ExecutionEvent) = {
+    if (isEnabled()) {
+      val count = editor.steps.synchronized { editor.steps.length }
+      if (count > 0)
+        new StepBackJob(editor, count).schedule()
+    }
+    null
+  }
+  
+  override def calculateEnabled = (editor.steps.length > 0)
 }
 
 class RestartCoqHandler extends EditorHandler {
