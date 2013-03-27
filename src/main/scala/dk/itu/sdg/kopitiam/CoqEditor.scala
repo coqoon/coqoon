@@ -16,6 +16,8 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   private var underwayV : Int = 0
   override def underway = underwayV
   override def setUnderway(offset : Int) = {
+    if (offset < completedV)
+      completedV = offset
     underwayV = offset
     addAnnotations_(completed, underway)
   }
@@ -36,11 +38,14 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   
   private var coqTopV : CoqTopIdeSlave_v20120710 = null
   override def coqTop = {
-    if (coqTopV == null)
+    if (coqTopV == null) {
       coqTopV = CoqTopIdeSlave.forVersion("20120710") match {
         case Some(m : CoqTopIdeSlave_v20120710) => m
         case _ => null
       }
+      if (coqTopV != null)
+        new InitialiseCoqJob(this).schedule()
+    }
     coqTopV
   }
   
@@ -128,20 +133,21 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
         if (tst)
           invalidate
     }
-    val p2 = if (second != first) new Position(first, second) else null
+    val p2 = if (second > first) new Position(first, second - first) else null
     processing match {
       case None =>
-        if (second > 0) {
+        if (p2 != null) {
           val ann2 = new Annotation("dk.itu.sdg.kopitiam.processing", false, "Processing Proof")
           annmodel.addAnnotation(ann2, p2)
           processing = Some(ann2)
         }
       case Some(x) =>
-        if (second > 0)
+        if (p2 != null)
           annmodel.asInstanceOf[IAnnotationModelExtension].modifyAnnotationPosition(x, p2)
         else {
           annmodel.removeAnnotation(x)
           processing = None
+          invalidate
         }
     }
     annmodel.disconnect(doc)
@@ -395,8 +401,7 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
 
   override def getContentAssistant(v : ISourceViewer) : IContentAssistant = {
     val assistant= new ContentAssistant
-    val assistantProcessor = new CoqContentAssistantProcessor()
-    PrintActor.register(assistantProcessor)
+    val assistantProcessor = new CoqContentAssistantProcessor(editor)
     assistant.setContentAssistProcessor(assistantProcessor, IDocument.DEFAULT_CONTENT_TYPE)
     assistant
   }
@@ -420,14 +425,13 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
 
 import org.eclipse.jface.text.contentassist.IContentAssistProcessor
 
-class CoqContentAssistantProcessor extends IContentAssistProcessor with CoqCallback {
+class CoqContentAssistantProcessor(val editor : Editor) extends IContentAssistProcessor {
   import org.eclipse.jface.text.contentassist.{IContextInformationValidator,IContextInformation,ICompletionProposal,CompletionProposal,ContextInformation}
   import org.eclipse.jface.text.ITextViewer
   import java.text.MessageFormat
   import scala.collection.mutable.HashMap
 
-  private val dynamicCompletions = new HashMap[String, String]()
-  private val staticCompletions = Array("apply","assumption","compute","destruct","induction","intros","inversion","reflexivity","rewrite","simpl","unfold")
+  private val staticCompletions = Array("Admitted","apply","assumption","compute","Defined","destruct","Fixpoint","induction","intros","inversion","Lemma","reflexivity","rewrite","simpl","Theorem","unfold")
 
   def getPrefix (doc : IDocument, offset : Int) : String = {
     val prefix = new StringBuffer
@@ -450,20 +454,30 @@ class CoqContentAssistantProcessor extends IContentAssistProcessor with CoqCallb
   def computeCompletionProposals (viewer : ITextViewer, documentOffset : Int) : Array[ICompletionProposal] = {
     val prefix = getPrefix(viewer.getDocument, documentOffset)
 
-    //Get definitions etc. from CoqTop
-    if (prefix.length > 1)
-    	CoqTop.writeToCoq("SearchAbout [ \""+ prefix +"\" ].")
+    import dk.itu.sdg.kopitiam.CoqTypes._
+    
+    val results =
+      if (prefix.length > 1) {
+    	editor.coqTop.search(List(
+    	    (Name_Pattern("^" + prefix), true))) match {
+    	  case Good(results) =>
+    	    results.map(a => {
+    	      (a.coq_object_qualid.mkString("."),
+    	          a.coq_object_object.replaceAll("\\s+", " "))
+    	    })
+    	  case _ => List()
+    	}
+      } else List()
 
     val tst : String => Boolean = prefix.length == 0 || _.startsWith(prefix)
-
-    val filteredCompletions = dynamicCompletions.keys.toArray.filter(tst)
+    
     val filteredStatic = staticCompletions.filter(tst)
-    val proposals = new Array[ICompletionProposal](filteredStatic.size + filteredCompletions.size)
+    val proposals = new Array[ICompletionProposal](filteredStatic.size + results.size)
     val mid = filteredStatic.length
     Range(0, mid).map(x => proposals(x) = getCompletionProposal(filteredStatic(x), null, prefix, documentOffset))
     Range(mid, proposals.length).map(x => {
-      val pr = filteredCompletions(x - mid)
-      proposals(x) = getCompletionProposal(pr, dynamicCompletions(pr), prefix, documentOffset)
+      val pr = results(x - mid)
+      proposals(x) = getCompletionProposal(pr._1, pr._2, prefix, documentOffset)
     })
     proposals
   }
@@ -473,23 +487,6 @@ class CoqContentAssistantProcessor extends IContentAssistProcessor with CoqCallb
   def getContextInformationAutoActivationCharacters () : Array[Char] = null
   def getContextInformationValidator () : IContextInformationValidator = null
   def getErrorMessage () : String = "not yet implemented"
-
-  override def dispatch (x : CoqResponse) : Unit = {
-    x match {
-      case CoqTheoremDefined(t) =>
-        dynamicCompletions += (t -> null)
-      case CoqSearchResult(x, v) =>
-        if (!dynamicCompletions.contains(x))
-          dynamicCompletions += (x -> v)
-        else
-          if (dynamicCompletions(x) == null || dynamicCompletions(x).equals(x))
-            dynamicCompletions += (x -> v)
-      case CoqShellReady(m, token) =>
-        if (token.globalStep == 1)
-          dynamicCompletions.clear
-      case _ =>
-    }
-  }
 }
 
 
