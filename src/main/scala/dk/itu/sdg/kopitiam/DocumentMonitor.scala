@@ -106,8 +106,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       val txt = ed.asInstanceOf[JavaEditor]
       maybeInsert(txt, txt.getViewer)
     }
-    ActionDisabler.disableAll
-    ActionDisabler.enableMaybe
   }
 
   override def partOpened (part : IWorkbenchPartReference) : Unit =
@@ -121,31 +119,8 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     if (p.isInstanceOf[ITextEditor]) {
       val txt = p.asInstanceOf[ITextEditor]
       val doc = txt.getDocumentProvider.getDocument(txt.getEditorInput)
-      if (p == DocumentState.activeEditor || p == JavaPosition.editor) {
+      if (p == DocumentState.activeEditor || p == JavaPosition.editor)
         DocumentState.activeEditor = null
-        if (CoqOutputDispatcher.goalviewer != null)
-          CoqOutputDispatcher.goalviewer.clear
-        if (CoqTop.isStarted) {
-          val initial = DocumentState.positionToShell(0).globalStep
-          try {
-            DocumentState.resetState
-            JavaPosition.retract
-            JavaPosition.unmarkProofs
-            JavaPosition.editor = null
-            CoqTearDown.synchronized {
-              CoqTearDown.start
-              CoqTearDown.wait
-            }
-            PrintActor.deregister(CoqOutputDispatcher)
-            val shell = CoqState.getShell
-            DocumentState.setBusy
-            PrintActor.register(CoqStartUp)
-            CoqTop.writeToCoq("Backtrack " + initial + " 0 " + shell.context.length + ".")
-          } catch {
-            case e : NoClassDefFoundError =>
-          }
-        }
-      }
       if (EclipseTables.DocToProject.contains(doc)) {
         EclipseTables.DocToProject(doc).gotClosed(doc)
         EclipseTables.DocToProject.remove(doc)
@@ -240,7 +215,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                           case None =>
                           case Some(x) =>
                             DocumentState.setBusy
-                            val cs = CoqState.getShell
+                            val cs = CoqTop.dummy
                             CoqTop.writeToCoq("Backtrack " + x.globalStep + " " + x.localStep + " " + (cs.context.length - x.context.length) + ".")
                         }
                       }
@@ -260,10 +235,9 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
             case Some(x) =>
               JavaPosition.unmark
               JavaPosition.retract
-              CoqRetractAction.doitH
+              //CoqRetractAction.doitH
           }
         }
-        ActionDisabler.enableMaybe
       }
       if (proj.isCoqModel(doc)) {
         Console.println("model updated, setting boolean")
@@ -274,7 +248,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
           case Some(x) =>
             JavaPosition.unmark
             JavaPosition.retract
-            CoqRetractAction.doitH
+            //CoqRetractAction.doitH
         }
         DocumentState._content = None
       }
@@ -286,12 +260,11 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         Console.println("retracting to " + off + " (from " + DocumentState.position + ")")
         DocumentState.reveal = false
         DocumentState.autoreveal = true
-        CoqUndoAction.doitReally(off)
+        // CoqUndoAction.doitReally(off) XXX
       }
       //also, remove markers around here
       EclipseBoilerPlate.maybeunmark(off)
       //Console.println("may have unmarked stuff")
-      ActionDisabler.enableMaybe
       DocumentState._content = None
     }
   }
