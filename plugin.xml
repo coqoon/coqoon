@@ -115,61 +115,52 @@
       </category>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.CoqStepAction"
+            defaultHandler="dk.itu.sdg.kopitiam.StepForwardHandler"
             id="Kopitiam.step_forward"
             name="Step forward command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.CoqUndoAction"
+            defaultHandler="dk.itu.sdg.kopitiam.StepBackHandler"
             id="Kopitiam.step_backward"
             name="Step backward command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.CoqStepUntilAction"
+            defaultHandler="dk.itu.sdg.kopitiam.StepToCursorHandler"
             id="Kopitiam.step_cursor"
             name="Step to cursor command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.CoqStepAllAction"
+            defaultHandler="dk.itu.sdg.kopitiam.StepAllHandler"
             id="Kopitiam.step_all"
             name="Step all command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.CoqRetractAction"
+            defaultHandler="dk.itu.sdg.kopitiam.RetractAllHandler"
             id="Kopitiam.retract"
             name="Retract all command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.RestartCoqAction"
+            defaultHandler="dk.itu.sdg.kopitiam.RestartCoqHandler"
             id="Kopitiam.restart_coq"
             name="Restart Coq command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.CompileCoqAction"
             id="Kopitiam.compile_coq"
             name="Compile Coq">
       </command>
       <command
-            defaultHandler="dk.itu.sdg.kopitiam.TranslateToSimpleJavaAction"
-            description="Translate to SimpleJava"
-            id="Kopitiam.translatetosimplejava"
-            name="Translate to SimpleJava">
-      </command>
-      <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.CoqRefreshAction"
             id="Kopitiam.refresh"
             name="Refresh Coq command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.InterruptCoqAction"
             id="Kopitiam.interrupt"
             name="Interrupt Coq command">
       </command>
