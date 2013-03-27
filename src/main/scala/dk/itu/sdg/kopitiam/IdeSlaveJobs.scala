@@ -13,35 +13,59 @@ abstract class CoqJob(
     editor : Editor) extends org.eclipse.core.runtime.jobs.Job(name) {
   /* Two CoqJobs operating on the same Editor should conflict */
   setRule(EditorRule(editor))
+  /* Make sure that this editor's coqtop instance has been initialised */
+  editor.coqTop
+}
+
+class InitialiseCoqJob(editor : Editor)
+    extends CoqJob("Initialise Coq", editor) {
+  override def run(monitor : IProgressMonitor) = {
+    editor.preExecuteJob
+    val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
+    editor.coqTop.interp(false, false, "Add LoadPath \"" + loadp + "\".")
+    
+    import org.eclipse.ui.IFileEditorInput
+    import org.eclipse.core.resources.IResource
+    
+    val input = editor.getEditorInput
+    val res : Option[IResource] =
+      if (input.isInstanceOf[IFileEditorInput]) {
+        Some(input.asInstanceOf[IFileEditorInput].getFile)
+      } else None
+      
+    res match {
+      case Some(r) =>
+        editor.coqTop.interp(false, false,
+            "Add LoadPath \"" + r.getProject.getLocation.toOSString + "\".")
+      case None =>
+        Console.println("shouldn't happen - trying to get ProjectDir from " +
+            input + ", which is not an IFileEditorInput")
+    }
+
+    editor.postExecuteJob
+    Status.OK_STATUS
+  }
 }
 
 private object CoqJob {
-  import java.util.{Timer, TimerTask}
-  
-  var t : Timer = null
-  
-  def schedule(f : () => Unit) : Unit = {
-    if (t != null)
-      t.cancel()
-    t = new Timer("Kopitiam UI update", true)
-    t.schedule(new TimerTask() {
-      override def run = f
-    }, 200)
-  }
-
-  implicit def funcToRunnable(f : () => Unit) : Runnable = new Runnable() {
-    override def run = f
-  }
-  
   def asyncExec(f : () => Unit) =
-    org.eclipse.ui.PlatformUI.getWorkbench().getDisplay.asyncExec(f)
+    org.eclipse.ui.PlatformUI.getWorkbench.getDisplay.asyncExec(
+        new Runnable() {
+      override def run = {
+        f()
+      }
+    })
 }
 
 class RestartCoqJob(editor : Editor) extends CoqJob("Restart Coq", editor) {
   override def run(monitor : IProgressMonitor) = {
-    editor.steps.clear
+    editor.steps.synchronized { editor.steps.clear }
+    CoqJob.asyncExec(() => {
+      editor.setGoals(null)
+      editor.setUnderway(0)
+    })
     editor.coqTop.restart
-    // CoqJob.schedule(() => StepJob.update(editor, None))
+    new InitialiseCoqJob(editor).schedule()
     Status.OK_STATUS
   }
 }
@@ -49,42 +73,47 @@ class RestartCoqJob(editor : Editor) extends CoqJob("Restart Coq", editor) {
 abstract class StepJob(
     title : String,
     editor : Editor) extends CoqJob(title, editor) {
-  protected def update(editor : Editor, payload : Option[() => Unit]) = {
+}
+
+class StepForwardJob(
+    editor : Editor,
+    steps : List[CoqStep]) extends StepJob("Step forward", editor) {
+  override def run(monitor : IProgressMonitor) : IStatus = {
+    monitor.beginTask("Step forward", steps.length)
+    editor.preExecuteJob
+    for (step <- steps) {
+      if (monitor.isCanceled()) {
+        CoqJob.asyncExec(() => {
+          editor.setUnderway(editor.completed)
+        })
+        editor.postExecuteJob
+        return Status.CANCEL_STATUS
+      }
+      monitor.subTask(step.text.trim)
+      editor.coqTop.interp(false, false, step.text) match {
+        case CoqTypes.Good(s) =>
+          editor.steps.synchronized { editor.steps.push(step) }
+          monitor.worked(1)
+          CoqJob.asyncExec(() => {
+            editor.setCompleted(step.offset + step.text.length)
+          })
+        case CoqTypes.Fail(ep) =>
+          val error = ep._2.trim
+          CoqJob.asyncExec(() => {
+            editor.setUnderway(editor.completed)
+          })
+          editor.postExecuteJob
+          return new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", error)
+      }
+    }
     val goals = editor.coqTop.goals match {
       case CoqTypes.Good(Some(g)) => g
       case _ => null
     }
     CoqJob.asyncExec(() => {
-      val head = editor.steps.synchronized { editor.steps.head }
       editor.setGoals(goals)
-      editor.setCompleted(head.offset + head.text.length())
-      payload match {
-        case Some(f) => f()
-        case _ =>
-      }
     })
-  }
-  
-  protected def failPayload(ep : Pair[CoqTypes.location, String]) = {
-    editor.getEditorSite().getActionBars().
-      getStatusLineManager().setErrorMessage(ep._2)
-  }
-}
-
-class StepOneForwardJob(
-    editor : Editor,
-    step : CoqStep) extends StepJob("Step forward", editor) {
-  override def run(monitor : IProgressMonitor) = {
-    editor.coqTop.interp(false, false, step.text) match {
-      case CoqTypes.Good(s) =>
-        editor.steps.synchronized { editor.steps.push(step) }
-        CoqJob.schedule(() =>
-          update(editor, None))
-      case CoqTypes.Fail(ep) =>
-        CoqJob.schedule(() =>
-          update(editor,
-              Some(() => failPayload(ep._1, ep._2))))
-    }
+    editor.postExecuteJob
     Status.OK_STATUS
   }
 }
