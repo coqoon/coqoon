@@ -127,7 +127,7 @@ class StepToCursorHandler extends EditorHandler {
       } else if (cursorPos < underwayPos) { // Backwards!
         var count = editor.steps.synchronized {
           editor.steps.prefixLength(
-              a => (cursorPos >= (a.offset + a.text.length)))
+              a => (cursorPos < (a.offset + a.text.length)))
         }
         if (count > 0)
           new StepBackJob(editor, count).schedule()
