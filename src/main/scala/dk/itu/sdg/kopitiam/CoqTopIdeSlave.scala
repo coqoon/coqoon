@@ -284,7 +284,7 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
   
   override def rewind(steps : Int) =
     send(
-      (<call val="interp" /> % ("steps", steps.toString)),
+      (<call val="rewind" /> % ("steps", steps.toString)),
       a => unwrapInt(childElements(a).first))
 
   override def goals =
