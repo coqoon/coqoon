@@ -78,6 +78,12 @@ abstract class StepJob(
     editor.postExecuteJob
     Status.CANCEL_STATUS
   }
+  
+  protected def doStep(step : CoqStep) : CoqTypes.value[String] =
+    if (step.synthetic)
+      CoqTypes.Good("")
+    else
+      editor.coqTop.interp(false, false, step.text)
 }
 
 class StepBackJob(
@@ -85,8 +91,46 @@ class StepBackJob(
     stepCount : Int) extends StepJob("Step back", editor) {
   override def run(monitor : IProgressMonitor) : IStatus = {
     monitor.beginTask("Step back", stepCount)
-    var steps = editor.steps.synchronized { editor.steps.take(stepCount)}
-    println(steps)
+    var steps = editor.steps.synchronized { editor.steps.take(stepCount) }
+    val rewindCount = steps.count(_.synthetic == false)
+    editor.coqTop.rewind(rewindCount) match {
+      case CoqTypes.Good(extra) =>
+        val latest = editor.steps.synchronized {
+          // Pop all of the steps we've successfully rewound...
+          for (step <- steps)
+            editor.steps.pop
+          // ... (temporary CoqIDE-like behaviour) pop all of the
+          // involuntarily-rewound steps...
+          var i = 0
+          while (i < extra) {
+            editor.steps.pop
+            i = i + 1
+          }
+          // ... then return the most recent step, if there is one
+          editor.steps.firstOption
+        }
+        CoqJob.asyncExec {
+          editor.setUnderway(latest match {
+            case Some(step) => step.offset + step.text.length
+            case None => 0
+          })
+        }
+      case CoqTypes.Fail(ep) =>
+        val error = ep._2.trim
+        CoqJob.asyncExec {
+          editor.setUnderway(editor.completed)
+        }
+        editor.postExecuteJob
+        return new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", error)
+    }
+    val goals = editor.coqTop.goals match {
+      case CoqTypes.Good(Some(g)) => g
+      case _ => null
+    }
+    CoqJob.asyncExec {
+      editor.setGoals(goals)
+    }
+    editor.postExecuteJob
     Status.OK_STATUS
   }
 }
@@ -101,7 +145,7 @@ class StepForwardJob(
       if (monitor.isCanceled())
         return doCancel
       monitor.subTask(step.text.trim)
-      editor.coqTop.interp(false, false, step.text) match {
+      doStep(step) match {
         case CoqTypes.Good(s) =>
           editor.steps.synchronized { editor.steps.push(step) }
           monitor.worked(1)
