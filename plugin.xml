@@ -34,12 +34,6 @@
             sequence="Ctrl+B">
       </key>
       <key
-            commandId="Kopitiam.refresh"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="Ctrl+P">
-      </key>
-      <key
             commandId="Kopitiam.interrupt"
             contextId="Kopitiam.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
@@ -156,11 +150,6 @@
       </command>
       <command
             categoryId="Kopitiam.category"
-            id="Kopitiam.refresh"
-            name="Refresh Coq command">
-      </command>
-      <command
-            categoryId="Kopitiam.category"
             id="Kopitiam.interrupt"
             name="Interrupt Coq command">
       </command>
@@ -216,13 +205,6 @@
                   label="Step All"
                   style="push"
                   tooltip="Step All">
-            </command>
-            <command
-                  commandId="Kopitiam.refresh"
-                  icon="icons/refresh.gif"
-                  label="Refresh"
-                  style="push"
-                  tooltip="Refresh">
             </command>
             <command
                   commandId="Kopitiam.restart_coq"

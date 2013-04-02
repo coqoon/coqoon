@@ -25,51 +25,6 @@ abstract class KAction extends IHandler {
   def doit () : Unit
 }
 
-abstract class KCoqAction extends KAction {
-  import org.eclipse.jface.action.IAction
-  import org.eclipse.jface.viewers.ISelection
-  import org.eclipse.core.commands.ExecutionEvent
-  
-  override def isEnabled () : Boolean = {
-    if (DocumentState.position == 0 && start)
-      false
-    else if (DocumentState.position + 1 >= DocumentState.content.length && end)
-      false
-    else
-      true
-  }
-  override def execute (ev : ExecutionEvent) : Object = { doitH; null }
-
-  def doitH () : Unit = ()
-
-  def start () : Boolean
-  def end () : Boolean
-}
-
-class CoqStepUntilAction extends KCoqAction {
-  override def doit () : Unit = {
-    val cursor = EclipseBoilerPlate.getCaretPosition
-    reallydoit(cursor)
-  }
-
-  def reallydoit (cursor : Int) : Unit = {
-    val togo = CoqTop.findNextCommand(DocumentState.content.drop(cursor)) + cursor
-    Console.println("reallydoit: togo is " + togo + ", cursor is " + cursor + ", docpos is " + DocumentState.position)
-    //doesn't work reliable when inside a comment
-    if (DocumentState.position == togo)
-      CoqCommands.step
-    else if (DocumentState.position < togo) {
-    } else { //Backtrack
-      //go forward till cursor afterwards
-      DocumentState.reveal = false
-      CoqCommands.doLater(() => CoqStepUntilAction.reallydoit(cursor))
-    }
-  }
-  override def start () : Boolean = false
-  override def end () : Boolean = false
-}
-object CoqStepUntilAction extends CoqStepUntilAction { }
-
 class CompileCoqAction extends KAction {
   import org.eclipse.ui.{IFileEditorInput, PlatformUI}
   override def doit () : Unit = {
@@ -81,16 +36,6 @@ class CompileCoqAction extends KAction {
   }
 }
 object CompileCoqAction extends CompileCoqAction { }
-
-//only enable in proof edit mode!
-class CoqRefreshAction extends KCoqAction {
-  override def doit () : Unit = {
-    CoqTop.writeToCoq("Show. ")
-  }
-  override def start () : Boolean = true
-  override def end () : Boolean = false
-}
-object CoqRefreshAction extends CoqRefreshAction { }
 
 class ProveMethodAction extends KAction with EclipseJavaHelper with CoreJavaChecker {
   val editor : org.eclipse.ui.IEditorPart = null
