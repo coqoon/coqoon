@@ -10,7 +10,7 @@ package dk.itu.sdg.kopitiam
 case class CoqStep(
     offset : Int,
     text : String,
-    undo : Pair[Int, Option[String]]) // (rewind-steps, undo-command)
+    synthetic : Boolean) // true iff this step doesn't need to be rewound
 
 import scala.collection.mutable.Stack
 trait Editor extends org.eclipse.ui.IEditorPart {
@@ -62,7 +62,7 @@ object EditorHandler {
   def makeStep(doc : String, offset : Int) : Option[CoqStep] = {
     val length = CoqTop.findNextCommand(doc.substring(offset))
     if (length != -1) {
-      Some(CoqStep(offset, doc.substring(offset, offset + length), (1, None)))
+      Some(CoqStep(offset, doc.substring(offset, offset + length), false))
     } else None
   }
   
