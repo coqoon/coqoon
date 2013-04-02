@@ -49,6 +49,14 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
     coqTopV
   }
   
+  override def dispose = {
+    if (coqTopV != null) {
+      coqTopV.kill
+      coqTopV = null
+    }
+    super.dispose
+  }
+  
   import dk.itu.sdg.coqparser.VernacularRegion
   import org.eclipse.jface.text.source.{Annotation, IAnnotationModel, ISourceViewer, IVerticalRuler}
   import org.eclipse.jface.text.{IDocument, Position}
