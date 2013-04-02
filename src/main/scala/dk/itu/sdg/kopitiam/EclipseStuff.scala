@@ -1256,37 +1256,39 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   }*/
   
   private def writeGoal (ed : Editor) : Unit = {
-          if (ed != null && ed.goals != null && ! comp.isDisposed) {
-            val goalData = ed.goals.fg_goals
-            if (subgoals.length < goalData.length) {
-              while (subgoals.length != goalData.length) {
-                val ti = new TabItem(goals, SWT.NONE)
-                val area = new Composite(goals, SWT.NONE)
-                area.setLayout(new FillLayout(SWT.VERTICAL))
-                ti.setControl(area)
-                
-                // val sash = new Sash(area, SWT.HORIZONTAL)
-                new Text(area,
-                    SWT.BORDER | SWT.READ_ONLY | SWT.MULTI |
-                    SWT.H_SCROLL | SWT.V_SCROLL)
-                new Text(area,
-                    SWT.BORDER | SWT.READ_ONLY | SWT.MULTI |
-                    SWT.H_SCROLL | SWT.V_SCROLL)
-                ti.setText(subgoals.length.toString)
-              }
-            } else {
-              while (subgoals.length != goalData.length)
-                subgoals.last.dispose()
-            }
-            goals.pack
-            goalData.zip(subgoals).foreach(_ match {
-              case (goal, control) =>
-                val comp = control.getControl().asInstanceOf[Composite]
-                comp.getChildren()(0).asInstanceOf[Text].setText(goal.goal_hyp.mkString("\n"))
-                comp.getChildren()(1).asInstanceOf[Text].setText(goal.goal_ccl)
-            })
-            comp.layout
-          }
+    if (!comp.isDisposed) {
+      val goalData = if (ed != null && ed.goals != null) {
+        ed.goals.fg_goals
+      } else List.empty
+      if (subgoals.length < goalData.length) {
+        while (subgoals.length != goalData.length) {
+          val ti = new TabItem(goals, SWT.NONE)
+          val area = new Composite(goals, SWT.NONE)
+          area.setLayout(new FillLayout(SWT.VERTICAL))
+          ti.setControl(area)
+          
+          // val sash = new Sash(area, SWT.HORIZONTAL)
+          new Text(area,
+              SWT.BORDER | SWT.READ_ONLY | SWT.MULTI |
+              SWT.H_SCROLL | SWT.V_SCROLL)
+          new Text(area,
+              SWT.BORDER | SWT.READ_ONLY | SWT.MULTI |
+              SWT.H_SCROLL | SWT.V_SCROLL)
+          ti.setText(subgoals.length.toString)
+        }
+      } else {
+        while (subgoals.length != goalData.length)
+          subgoals.last.dispose()
+      }
+      goals.pack
+      goalData.zip(subgoals).foreach(_ match {
+        case (goal, control) =>
+          val comp = control.getControl().asInstanceOf[Composite]
+          comp.getChildren()(0).asInstanceOf[Text].setText(goal.goal_hyp.mkString("\n"))
+          comp.getChildren()(1).asInstanceOf[Text].setText(goal.goal_ccl)
+      })
+      comp.layout
+    }
   }
 
   def setFocus() : Unit = {
