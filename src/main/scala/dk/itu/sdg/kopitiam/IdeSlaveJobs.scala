@@ -91,23 +91,22 @@ class StepBackJob(
     stepCount : Int) extends StepJob("Step back", editor) {
   override def run(monitor : IProgressMonitor) : IStatus = {
     monitor.beginTask("Step back", stepCount)
-    var steps = editor.steps.synchronized { editor.steps.take(stepCount) }
+    val steps = editor.steps.synchronized { editor.steps.take(stepCount) }
     val rewindCount = steps.count(_.synthetic == false)
     editor.coqTop.rewind(rewindCount) match {
       case CoqTypes.Good(extra) =>
         val latest = editor.steps.synchronized {
-          // Pop all of the steps we've successfully rewound...
           for (step <- steps)
             editor.steps.pop
-          // ... (temporary CoqIDE-like behaviour) pop all of the
-          // involuntarily-rewound steps...
-          var i = 0
-          while (i < extra) {
-            editor.steps.pop
-            i = i + 1
-          }
-          // ... then return the most recent step, if there is one
-          editor.steps.firstOption
+          
+          if (extra > 0) {
+            // XXX: synthetic steps
+            var redoSteps = editor.steps.take(extra).toList.reverse
+            for (step <- redoSteps)
+              editor.steps.pop
+            new StepForwardJob(editor, redoSteps).schedule()
+            redoSteps.lastOption
+          } else editor.steps.firstOption
         }
         CoqJob.asyncExec {
           editor.setUnderway(latest match {
