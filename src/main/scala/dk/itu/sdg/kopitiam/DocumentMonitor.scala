@@ -120,7 +120,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       val txt = p.asInstanceOf[ITextEditor]
       val doc = txt.getDocumentProvider.getDocument(txt.getEditorInput)
       if (p == DocumentState.activeEditor || p == JavaPosition.editor)
-        DocumentState.activeEditor = null
+        () //DocumentState.activeEditor = null
       if (EclipseTables.DocToProject.contains(doc)) {
         EclipseTables.DocToProject(doc).gotClosed(doc)
         EclipseTables.DocToProject.remove(doc)
@@ -255,12 +255,13 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     }
     if (DocumentState.activeDocument == doc) {
       val off = event.getOffset
-      if (off < DocumentState.position) {
+      if (off < DocumentState.activeEditor.completed) {
         //retract to before
         Console.println("retracting to " + off + " (from " + DocumentState.position + ")")
         DocumentState.reveal = false
         DocumentState.autoreveal = true
-        // CoqUndoAction.doitReally(off) XXX
+        EditorHandler.doStepBack(DocumentState.activeEditor,
+            _.prefixLength(a => (off < (a.offset + a.text.length))))
       }
       //also, remove markers around here
       EclipseBoilerPlate.maybeunmark(off)

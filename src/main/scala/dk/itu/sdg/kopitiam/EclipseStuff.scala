@@ -122,7 +122,6 @@ class CoqJavaProject (basename : String) {
         DocumentState.resetState
         DocumentState.activeEditor.addAnnotations(0, 0)
         DocumentState.activeEditor.invalidate
-        DocumentState.activeEditor = null
         DocumentState.setBusy
         val shell = CoqTop.dummy
       }
@@ -998,7 +997,14 @@ object DocumentState extends CoqCallback with KopitiamLogger {
 
   override def dispatch (x : CoqResponse) = ()
   
-  var activeEditor : CoqEditor = null
+  @Deprecated
+  def activeEditor : CoqEditor = {
+    val editor = org.eclipse.ui.PlatformUI.getWorkbench().
+        getActiveWorkbenchWindow().getActivePage().getActiveEditor()
+    if (editor != null && editor.isInstanceOf[CoqEditor]) {
+      editor.asInstanceOf[CoqEditor]
+    } else null
+  }
 
   import org.eclipse.jface.text.IDocument
   def activeDocument () : IDocument = {
