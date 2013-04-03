@@ -95,7 +95,7 @@ class StepBackJob(
     val rewindCount = steps.count(_.synthetic == false)
     editor.coqTop.rewind(rewindCount) match {
       case CoqTypes.Good(extra) =>
-        val latest = editor.steps.synchronized {
+        editor.steps.synchronized {
           for (step <- steps)
             editor.steps.pop
           
@@ -105,19 +105,19 @@ class StepBackJob(
             for (step <- redoSteps)
               editor.steps.pop
             new StepForwardJob(editor, redoSteps).schedule()
-            redoSteps.lastOption
-          } else editor.steps.firstOption
-        }
-        CoqJob.asyncExec {
-          editor.setUnderway(latest match {
-            case Some(step) => step.offset + step.text.length
-            case None => 0
-          })
+          }
         }
       case CoqTypes.Fail(ep) =>
         val error = ep._2.trim
         CoqJob.asyncExec {
-          editor.setUnderway(editor.completed)
+          val completed = editor.steps.synchronized {
+            editor.steps.firstOption match {
+              case None => 0
+              case Some(step) => step.offset + step.text.length
+            }
+          }
+          editor.setUnderway(completed)
+          editor.setCompleted(completed)
         }
         editor.postExecuteJob
         return new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", error)

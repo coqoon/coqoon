@@ -81,6 +81,30 @@ object EditorHandler {
     }
     steps.result
   }
+  
+  def getStepBackPair(
+      editor : Editor,
+      f : Stack[CoqStep] => Int) : (Int, Option[CoqStep]) = {
+    var count : Int = 0
+    var mostRecent : Option[CoqStep] = None
+    editor.steps.synchronized {
+      count = f(editor.steps)
+      if (count > 0 && editor.steps.length - count > 0)
+        mostRecent = Some(editor.steps(count))
+    }
+    (count, mostRecent)
+  }
+  
+  def doStepBack(editor : Editor, f : Stack[CoqStep] => Int) = {
+    val p = getStepBackPair(editor, f)
+    if (p._1 > 0) {
+      editor.setUnderway(p._2 match {
+        case None => 0
+        case Some(x) => x.offset + x.text.length
+      })
+      new StepBackJob(editor, p._1).schedule()
+    }
+  }
 }
     
 class StepForwardHandler extends EditorHandler {
@@ -125,12 +149,8 @@ class StepToCursorHandler extends EditorHandler {
           new StepForwardJob(editor, steps).schedule()
         }
       } else if (cursorPos < underwayPos) { // Backwards!
-        var count = editor.steps.synchronized {
-          editor.steps.prefixLength(
-              a => (cursorPos < (a.offset + a.text.length)))
-        }
-        if (count > 0)
-          new StepBackJob(editor, count).schedule()
+        EditorHandler.doStepBack(editor,
+            _.prefixLength(a => (cursorPos < (a.offset + a.text.length))))
       }
     }
     null
@@ -139,11 +159,8 @@ class StepToCursorHandler extends EditorHandler {
 
 class StepBackHandler extends EditorHandler {
   override def execute(ev : ExecutionEvent) = {
-    if (isEnabled()) {
-      val count = editor.steps.synchronized { editor.steps.length }
-      if (count > 0)
-        new StepBackJob(editor, 1).schedule()
-    }
+    if (isEnabled())
+      EditorHandler.doStepBack(editor, a => if (a.length > 0) 1 else 0)
     null
   }
   
@@ -152,11 +169,8 @@ class StepBackHandler extends EditorHandler {
 
 class RetractAllHandler extends EditorHandler {
   override def execute(ev : ExecutionEvent) = {
-    if (isEnabled()) {
-      val count = editor.steps.synchronized { editor.steps.length }
-      if (count > 0)
-        new StepBackJob(editor, count).schedule()
-    }
+    if (isEnabled())
+      EditorHandler.doStepBack(editor, _.length)
     null
   }
   
