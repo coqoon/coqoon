@@ -71,19 +71,29 @@ class RestartCoqJob(editor : Editor) extends CoqJob("Restart Coq", editor) {
 abstract class StepJob(
     title : String,
     editor : Editor) extends CoqJob(title, editor) {
-  protected def doCancel = {
-    CoqJob.asyncExec {
-      editor.setUnderway(editor.completed)
-    }
-    editor.postExecuteJob
-    Status.CANCEL_STATUS
-  }
+  protected val partialCCB = Some(() => editor.setUnderway(editor.completed))
+  
+  protected def doCancel = doComplete(partialCCB, Status.CANCEL_STATUS)
   
   protected def doStep(step : CoqStep) : CoqTypes.value[String] =
     if (step.synthetic)
       CoqTypes.Good("")
     else
       editor.coqTop.interp(false, false, step.text)
+  
+  protected def doComplete(
+      f : Option[() => Unit], status : IStatus) : IStatus = {
+    val goals = editor.coqTop.goals match {
+      case CoqTypes.Good(Some(g)) => g
+      case _ => null
+    }
+    CoqJob.asyncExec {
+      f.map { _() }
+      editor.setGoals(goals)
+    }
+    editor.postExecuteJob
+    status
+  }
 }
 
 class StepBackJob(
@@ -108,8 +118,7 @@ class StepBackJob(
           }
         }
       case CoqTypes.Fail(ep) =>
-        val error = ep._2.trim
-        CoqJob.asyncExec {
+        return doComplete(Some(() => {
           val completed = editor.steps.synchronized {
             editor.steps.headOption match {
               case None => 0
@@ -118,19 +127,9 @@ class StepBackJob(
           }
           editor.setUnderway(completed)
           editor.setCompleted(completed)
-        }
-        editor.postExecuteJob
-        return new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", error)
+        }), new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2.trim))
     }
-    val goals = editor.coqTop.goals match {
-      case CoqTypes.Good(Some(g)) => g
-      case _ => null
-    }
-    CoqJob.asyncExec {
-      editor.setGoals(goals)
-    }
-    editor.postExecuteJob
-    Status.OK_STATUS
+    return doComplete(None, Status.OK_STATUS)
   }
 }
 
@@ -152,22 +151,10 @@ class StepForwardJob(
             editor.setCompleted(step.offset + step.text.length)
           }
         case CoqTypes.Fail(ep) =>
-          val error = ep._2.trim
-          CoqJob.asyncExec {
-            editor.setUnderway(editor.completed)
-          }
-          editor.postExecuteJob
-          return new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", error)
+          return doComplete(partialCCB,
+              new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2.trim))
       }
     }
-    val goals = editor.coqTop.goals match {
-      case CoqTypes.Good(Some(g)) => g
-      case _ => null
-    }
-    CoqJob.asyncExec {
-      editor.setGoals(goals)
-    }
-    editor.postExecuteJob
-    Status.OK_STATUS
+    return doComplete(None, Status.OK_STATUS)
   }
 }
