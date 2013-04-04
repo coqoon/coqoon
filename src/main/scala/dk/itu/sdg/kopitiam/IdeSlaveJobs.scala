@@ -111,7 +111,7 @@ class StepBackJob(
         val error = ep._2.trim
         CoqJob.asyncExec {
           val completed = editor.steps.synchronized {
-            editor.steps.firstOption match {
+            editor.steps.headOption match {
               case None => 0
               case Some(step) => step.offset + step.text.length
             }

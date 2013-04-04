@@ -52,7 +52,7 @@ object CoqTypes {
     value : String) extends search_constraint
   case class In_Module(
     value : List[String]) extends search_constraint
-  case class Include_Blacklist extends search_constraint
+  case class Include_Blacklist() extends search_constraint
 
   type search_flags = List[Pair[search_constraint, Boolean]]
 
@@ -69,10 +69,10 @@ object CoqTypes {
   
   abstract class message_level
   case class Debug(value : String) extends message_level
-  case class Info extends message_level
-  case class Notice extends message_level
-  case class Warning extends message_level
-  case class Error extends message_level
+  case class Info() extends message_level
+  case class Notice() extends message_level
+  case class Warning() extends message_level
+  case class Error() extends message_level
   
   case class message(
     message_level : message_level,

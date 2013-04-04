@@ -171,7 +171,7 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
   
   private def unwrapOption[A](e : Elem, f : Elem => A) = {
     e.attribute("val") match {
-      case Some(Seq(Text("some"))) => Some(f(childElements(e).first))
+      case Some(Seq(Text("some"))) => Some(f(childElements(e).head))
       case _ => None
     }
   }
@@ -261,7 +261,7 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
   }
   
   private def unwrapOptionValue(a : Elem) = {
-    val ch = childElements(a).first
+    val ch = childElements(a).head
     a.attribute("val") match {
       case Some(Seq(Text("intvalue"))) =>
         CoqTypes.IntValue(unwrapOption(ch, unwrapInt))
@@ -285,19 +285,19 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
   override def rewind(steps : Int) =
     send(
       (<call val="rewind" /> % ("steps", steps.toString)),
-      a => unwrapInt(childElements(a).first))
+      a => unwrapInt(childElements(a).head))
 
   override def goals =
     send(
       (<call val="goal" />),
       a => unwrapOption(
-          childElements(a).first, unwrapGoals))
+          childElements(a).head, unwrapGoals))
   
   override def hints =
     send(
       (<call val="hints" />),
       a => unwrapOption(
-          childElements(a).first,
+          childElements(a).head,
           unwrapPair(_,
               unwrapList(_, unwrapHint(_)),
               unwrapHint(_))))
@@ -305,23 +305,23 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
   override def status =
     send(
       (<call val="status" />),
-      a => unwrapStatus(childElements(a).first))
+      a => unwrapStatus(childElements(a).head))
 
   override def inloadpath(dir : String) =
     send(
       (<call val="inloadpath">{dir}</call>),
-      a => unwrapBoolean(childElements(a).first))
+      a => unwrapBoolean(childElements(a).head))
 
   override def mkcases(inductive : String) =
     send(
       (<call val="mkcases">{inductive}</call>),
-      a => unwrapList(childElements(a).first, unwrapList(_, { _.text })))
+      a => unwrapList(childElements(a).head, unwrapList(_, { _.text })))
       
   override def evars =
     send(
       (<call val="evars" />),
       a => unwrapOption(
-          childElements(a).first,
+          childElements(a).head,
           unwrapList(_, b => { CoqTypes.evar(b.text)})))
   
   private def wrapSearchFlags(sf : CoqTypes.search_flags) : List[Elem] =
@@ -359,14 +359,14 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
     send(
       wrapSearch(sf),
       a => unwrapList(
-          childElements(a).first,
+          childElements(a).head,
           unwrapCoqObjectString))
   
   override def get_options =
     send(
       (<call val="getoptions" />),
       a => unwrapList(
-          childElements(a).first,
+          childElements(a).head,
           unwrapPair(_,
               unwrapOptionName,
               unwrapOptionState)))
@@ -400,7 +400,7 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
     send(
       (<call val="about" />),
       a => {
-        val cif = (a \ "coq_info").first.child
+        val cif = (a \ "coq_info").head.child
         CoqTypes.coq_info(
           cif(0).text, cif(1).text, cif(2).text, cif(3).text)
       })

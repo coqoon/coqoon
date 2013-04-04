@@ -991,12 +991,10 @@ object EclipseBoilerPlate {
 }
 
 import dk.itu.sdg.util.KopitiamLogger
-object DocumentState extends CoqCallback with KopitiamLogger {
+object DocumentState extends KopitiamLogger {
   import org.eclipse.ui.IWorkbenchPart
   var activated : IWorkbenchPart = null
 
-  override def dispatch (x : CoqResponse) = ()
-  
   var activeEditor : CoqEditor = null
 
   import org.eclipse.jface.text.IDocument
