@@ -201,7 +201,7 @@ object EclipseTables {
   val StringToProject = new HashMap[String, CoqJavaProject]()
 }
 
-object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils {
+object JavaPosition extends EclipseJavaHelper with JavaASTUtils {
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   var editor : JavaEditor = null
 
@@ -254,9 +254,9 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
   import org.eclipse.core.resources.{IFile, IMarker, IResource}
   import java.io.ByteArrayInputStream
   import org.eclipse.jdt.core.dom.Initializer
-  override def dispatch (x : CoqResponse) : Unit = {
+  /*override def dispatch (x : CoqResponse) : Unit = {
     x match {
-      /*case CoqProofCompleted() =>
+      case CoqProofCompleted() =>
         if (editor != null) {
           CoqCommands.doLater(() => {
             DocumentState.setBusy
@@ -384,10 +384,10 @@ object JavaPosition extends CoqCallback with EclipseJavaHelper with JavaASTUtils
         if (monoton)
           reAnnotate(false, false)
         else
-          reAnnotate(true, true) */
+          reAnnotate(true, true)
       case _ =>
     }
-  }
+  }*/
 
   import scala.collection.mutable.HashMap
   def markproven (s : Int, l : Int) = {

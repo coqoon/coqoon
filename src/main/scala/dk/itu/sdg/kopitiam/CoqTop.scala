@@ -2,10 +2,6 @@
 
 package dk.itu.sdg.kopitiam
 
-trait CoqCallback {
-  def dispatch (x : CoqResponse) : Unit
-}
-
 case class CoqShellTokens (theorem : String, globalStep : Int, context : List[String], localStep : Int) {
   override def toString = theorem + " " + globalStep + " " + context + " " + localStep
 }
