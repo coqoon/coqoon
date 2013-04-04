@@ -88,7 +88,7 @@ class ProveMethodAction extends KAction with EclipseJavaHelper with CoreJavaChec
                 val proj = EclipseTables.DocToProject(doc)
                 proj.program = Some(cu)
                 proj.proveMethod(x)
-                CoqCommands.step
+                (/*CoqCommands.step*/)
               }
           }
         }
@@ -100,43 +100,3 @@ class ProveMethodAction extends KAction with EclipseJavaHelper with CoreJavaChec
 }
 object ProveMethodAction extends ProveMethodAction { }
 
-object CoqCommands extends CoqCallback {
-  private var commands : List[() => Unit] = List[() => Unit]()
-
-  def nonempty () : Boolean = { commands.size > 0 }
-
-  def empty () : Unit = {
-    commands = List[() => Unit]()
-  }
-
-  def doLater (f : () => Unit) : Unit = {
-    commands = (commands :+ f)
-  }
-
-  def step () : Unit = {
-    if (finished)
-      if (commands.size != 0) {
-        val c = commands.head
-        commands = commands.tail
-        //should we execute in a certain thread? UI?
-        c()
-      } else {
-        Console.println("no command to run, deregistered")
-      }
-  }
-
-  private def finished () : Boolean = {
-    return true
-  }
-
-  override def dispatch (x : CoqResponse) : Unit = {
-    x match {
-      case CoqShellReady(monoton, token) =>
-        if (monoton)
-          step
-        else
-          empty
-      case _ =>
-    }
-  }
-}

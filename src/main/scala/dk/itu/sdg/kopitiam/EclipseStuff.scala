@@ -117,7 +117,7 @@ class CoqJavaProject (basename : String) {
       }
       new CoqCompileJob(model.getProject.getLocation.toFile, model.getName, true).schedule
     }
-    CoqCommands.doLater(() => {
+    /*CoqCommands.doLater*/(() => {
       if (DocumentState.activeEditor != null) {
         DocumentState.resetState
         DocumentState.activeEditor.addAnnotations(0, 0)
@@ -125,9 +125,9 @@ class CoqJavaProject (basename : String) {
         DocumentState.setBusy
         val shell = CoqTop.dummy
       }
-      CoqCommands.step
+      (/*CoqCommands.step*/)
     })
-    CoqCommands.doLater(() => {
+    /*CoqCommands.doLater*/(() => {
       proofShell match {
         case None =>
           Console.println("sending defs + spec")
@@ -155,10 +155,10 @@ class CoqJavaProject (basename : String) {
             Console.println("backtracking to shell " + sh)
             CoqTop.writeToCoq("Backtrack " + sh.globalStep + " 0 " + CoqTop.dummy.context.length + ".")
           } else
-            CoqCommands.step
+            (/*CoqCommands.step*/)
       }
     })
-    CoqCommands.doLater(() => {
+    /*CoqCommands.doLater*/(() => {
       if (proofShell == None) {
         Console.println("preserving proof shell: " + CoqTop.dummy)
         proofShell = Some(CoqTop.dummy)
@@ -174,7 +174,7 @@ class CoqJavaProject (basename : String) {
         DocumentState._content = Some(DocumentState._content.getOrElse("") + p)
         //CoqStepAllAction.doitH
       } else
-        CoqCommands.step
+        (/*CoqCommands.step*/)
     })
   }
 
@@ -1338,9 +1338,9 @@ class CoqCompileJob (path : File, name : String, requiressuccess : Boolean) exte
       coqcp.waitFor
       if (requiressuccess)
         if (coqcp.exitValue != 0) {
-          CoqCommands.empty
+          (/*CoqCommands.empty*/)
         } else
-          CoqCommands.step
+          (/*CoqCommands.step*/)
     }
     Status.OK_STATUS
   }
