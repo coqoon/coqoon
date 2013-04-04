@@ -2,6 +2,7 @@
 
 package dk.itu.sdg.kopitiam
 
+import org.eclipse.ui.IEditorInput
 import org.eclipse.ui.editors.text.TextEditor
 
 class CoqEditor extends TextEditor with EclipseUtils with Editor {
@@ -12,7 +13,7 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   override def document = getSourceViewer().getDocument().get()
   override def cursorPosition =
     getSourceViewer().getTextWidget().getCaretOffset()
-  
+    
   private var underwayV : Int = 0
   override def underway = underwayV
   override def setUnderway(offset : Int) = {
@@ -49,14 +50,23 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
     coqTopV
   }
   
+  private val listener = new CoqDocumentListener(this)
+  
+  import org.eclipse.ui.IEditorSite
+  override def init(site : IEditorSite, input : IEditorInput) = {
+    super.init(site, input)
+    listener.updateDocument(input)
+  }
+  
   override def dispose = {
     if (coqTopV != null) {
       coqTopV.kill
       coqTopV = null
     }
+    listener.updateDocument(null)
     super.dispose
   }
-  
+    
   import dk.itu.sdg.coqparser.VernacularRegion
   import org.eclipse.jface.text.source.{Annotation, IAnnotationModel, ISourceViewer, IVerticalRuler}
   import org.eclipse.jface.text.{IDocument, Position}
@@ -231,6 +241,30 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
     else
      region.getOutline.flatMap(foldingAnnotations(_, document))
   }
+}
+
+import org.eclipse.jface.text.{IDocument,DocumentEvent,IDocumentListener}
+private class CoqDocumentListener(
+    editor : CoqEditor) extends IDocumentListener {
+  private var document : IDocument = null
+  
+  def updateDocument(input : IEditorInput) = {
+    val newDocument = editor.getDocumentProvider.getDocument(input)
+    if (document != null && newDocument != document)
+      document.removeDocumentListener(this)
+    document = newDocument
+    if (document != null)
+      document.addDocumentListener(this)
+  }
+  
+  override def documentChanged(ev : DocumentEvent) = {
+    val off = ev.getOffset
+    if (off < editor.completed)
+      EditorHandler.doStepBack(editor,
+          _.prefixLength(a => (off < (a.offset + a.text.length))))
+  }
+  
+  override def documentAboutToBeChanged(ev : DocumentEvent) = ()
 }
 
 import org.eclipse.jface.viewers.ITreeContentProvider

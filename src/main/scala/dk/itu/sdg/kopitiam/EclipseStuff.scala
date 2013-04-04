@@ -997,14 +997,7 @@ object DocumentState extends CoqCallback with KopitiamLogger {
 
   override def dispatch (x : CoqResponse) = ()
   
-  @Deprecated
-  def activeEditor : CoqEditor = {
-    val editor = org.eclipse.ui.PlatformUI.getWorkbench().
-        getActiveWorkbenchWindow().getActivePage().getActiveEditor()
-    if (editor != null && editor.isInstanceOf[CoqEditor]) {
-      editor.asInstanceOf[CoqEditor]
-    } else null
-  }
+  var activeEditor : CoqEditor = null
 
   import org.eclipse.jface.text.IDocument
   def activeDocument () : IDocument = {

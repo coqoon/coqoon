@@ -253,21 +253,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         DocumentState._content = None
       }
     }
-    if (DocumentState.activeDocument == doc) {
-      val off = event.getOffset
-      if (off < DocumentState.activeEditor.completed) {
-        //retract to before
-        Console.println("retracting to " + off + " (from " + DocumentState.position + ")")
-        DocumentState.reveal = false
-        DocumentState.autoreveal = true
-        EditorHandler.doStepBack(DocumentState.activeEditor,
-            _.prefixLength(a => (off < (a.offset + a.text.length))))
-      }
-      //also, remove markers around here
-      EclipseBoilerPlate.maybeunmark(off)
-      //Console.println("may have unmarked stuff")
-      DocumentState._content = None
-    }
   }
 
   override def documentAboutToBeChanged (event : DocumentEvent) : Unit = ()
