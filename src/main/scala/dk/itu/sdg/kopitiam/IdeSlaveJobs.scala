@@ -81,9 +81,6 @@ abstract class StepJob(
     () => {
       partialCCB.map { _() }
       val file = editor.getEditorInput.asInstanceOf[IFileEditorInput].getFile()
-      val d = new DeleteErrorMarkersJob(
-          file, IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
-      d.schedule; d.join
       new CreateErrorMarkerJob(file, step, ep).schedule()
     }
   
@@ -182,6 +179,7 @@ import org.eclipse.core.resources.WorkspaceJob
 abstract class MarkerJob(
     resource : IResource) extends WorkspaceJob("Update markers") {
   setRule(JobUtilities.getRuleFactory.markerRule(resource))
+  setSystem(true) /* Don't show this job in the UI */
 }
 
 class DeleteErrorMarkersJob(

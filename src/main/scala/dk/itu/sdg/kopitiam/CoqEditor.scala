@@ -246,9 +246,11 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
 import org.eclipse.jface.text.{IDocument,DocumentEvent,IDocumentListener}
 private class CoqDocumentListener(
     editor : CoqEditor) extends IDocumentListener {
+  private var input : IEditorInput = null
   private var document : IDocument = null
   
   def updateDocument(input : IEditorInput) = {
+    this.input = input
     val newDocument = editor.getDocumentProvider.getDocument(input)
     if (document != null && newDocument != document)
       document.removeDocumentListener(this)
@@ -257,7 +259,18 @@ private class CoqDocumentListener(
       document.addDocumentListener(this)
   }
   
+  import org.eclipse.ui.IFileEditorInput
+  import org.eclipse.core.resources.{IMarker,IResource}
+  
   override def documentChanged(ev : DocumentEvent) = {
+    if (input != null && input.isInstanceOf[IFileEditorInput]) {
+      val file = input.asInstanceOf[IFileEditorInput].getFile()
+      if (file.findMarkers(
+          IMarker.PROBLEM, true, IResource.DEPTH_ZERO).length > 0)
+        new DeleteErrorMarkersJob(
+            file, IMarker.PROBLEM, true, IResource.DEPTH_ZERO).schedule
+    }
+
     val off = ev.getOffset
     if (off < editor.completed)
       EditorHandler.doStepBack(editor,
