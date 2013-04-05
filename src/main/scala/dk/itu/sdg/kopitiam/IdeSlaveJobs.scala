@@ -68,10 +68,24 @@ class RestartCoqJob(editor : Editor) extends CoqJob("Restart Coq", editor) {
   }
 }
 
+import org.eclipse.ui.IFileEditorInput
+import org.eclipse.core.resources.IMarker
+import org.eclipse.core.resources.IResource
+
 abstract class StepJob(
     title : String,
     editor : Editor) extends CoqJob(title, editor) {
   protected val partialCCB = Some(() => editor.setUnderway(editor.completed))
+  
+  protected def failCB(step : CoqStep, ep : (CoqTypes.location, String)) =
+    () => {
+      partialCCB.map { _() }
+      val file = editor.getEditorInput.asInstanceOf[IFileEditorInput].getFile()
+      val d = new DeleteErrorMarkersJob(
+          file, IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
+      d.schedule; d.join
+      new CreateErrorMarkerJob(file, step, ep).schedule()
+    }
   
   protected def doCancel = doComplete(partialCCB, Status.CANCEL_STATUS)
   
@@ -150,11 +164,54 @@ class StepForwardJob(
           CoqJob.asyncExec {
             editor.setCompleted(step.offset + step.text.length)
           }
-        case CoqTypes.Fail(ep) =>
-          return doComplete(partialCCB,
-              new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2.trim))
+        case CoqTypes.Fail(err) =>
+          return doComplete(Some(failCB(step, err)), Status.OK_STATUS)
       }
     }
     return doComplete(None, Status.OK_STATUS)
+  }
+}
+
+private object JobUtilities {
+  import org.eclipse.core.resources.ResourcesPlugin
+  def getRuleFactory = ResourcesPlugin.getWorkspace().getRuleFactory()
+}
+
+import org.eclipse.core.resources.WorkspaceJob
+
+abstract class MarkerJob(
+    resource : IResource) extends WorkspaceJob("Update markers") {
+  setRule(JobUtilities.getRuleFactory.markerRule(resource))
+}
+
+class DeleteErrorMarkersJob(
+    resource : IResource, type_ : String,
+    includeSubtypes : Boolean, depth : Int) extends MarkerJob(resource) {
+  override def runInWorkspace(monitor : IProgressMonitor) : IStatus = {
+    resource.deleteMarkers(type_, includeSubtypes, depth)
+    Status.OK_STATUS
+  }
+}
+
+class CreateErrorMarkerJob(
+    resource : IResource, step : CoqStep, ep : (CoqTypes.location, String))
+    extends MarkerJob(resource) {
+  override def runInWorkspace(monitor : IProgressMonitor) : IStatus = {
+    val m = resource.createMarker(IMarker.PROBLEM)
+    val offsets = ep._1 match {
+      case Some((begin, end)) => (step.offset + begin, step.offset + end)
+      case None => (step.offset, step.offset + step.text.length)
+    }
+    {
+      import scala.collection.JavaConversions._
+      m.setAttributes(Map(
+          (IMarker.MESSAGE, ep._2.trim),
+          (IMarker.LOCATION, resource.toString),
+          (IMarker.SEVERITY, IMarker.SEVERITY_ERROR),
+          (IMarker.CHAR_START, offsets._1),
+          (IMarker.CHAR_END, offsets._2),
+          (IMarker.TRANSIENT, true)))
+    }
+    Status.OK_STATUS
   }
 }
