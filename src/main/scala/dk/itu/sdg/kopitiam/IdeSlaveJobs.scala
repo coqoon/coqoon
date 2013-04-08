@@ -81,7 +81,7 @@ abstract class StepJob(
     () => {
       partialCCB.map { _() }
       val file = editor.getEditorInput.asInstanceOf[IFileEditorInput].getFile()
-      new CreateErrorMarkerJob(file, step, ep).schedule()
+      CreateErrorMarkerJob(file, step, ep).schedule()
     }
   
   protected def doCancel = doComplete(partialCCB, Status.CANCEL_STATUS)
@@ -192,24 +192,32 @@ class DeleteErrorMarkersJob(
 }
 
 class CreateErrorMarkerJob(
-    resource : IResource, step : CoqStep, ep : (CoqTypes.location, String))
+    resource : IResource, region : (Int, Int), message : String)
     extends MarkerJob(resource) {
   override def runInWorkspace(monitor : IProgressMonitor) : IStatus = {
     val m = resource.createMarker(IMarker.PROBLEM)
+    import scala.collection.JavaConversions._
+    m.setAttributes(Map(
+        (IMarker.MESSAGE, message),
+        (IMarker.LOCATION, resource.toString),
+        (IMarker.SEVERITY, IMarker.SEVERITY_ERROR),
+        (IMarker.CHAR_START, region._1),
+        (IMarker.CHAR_END, region._2),
+        (IMarker.TRANSIENT, true)))
+    Status.OK_STATUS
+  }
+}
+object CreateErrorMarkerJob {
+  def apply(
+      resource : IResource, step : CoqStep, ep : (CoqTypes.location, String)) : CreateErrorMarkerJob = {
     val offsets = ep._1 match {
       case Some((begin, end)) => (step.offset + begin, step.offset + end)
       case None => (step.offset, step.offset + step.text.length)
     }
-    {
-      import scala.collection.JavaConversions._
-      m.setAttributes(Map(
-          (IMarker.MESSAGE, ep._2.trim),
-          (IMarker.LOCATION, resource.toString),
-          (IMarker.SEVERITY, IMarker.SEVERITY_ERROR),
-          (IMarker.CHAR_START, offsets._1),
-          (IMarker.CHAR_END, offsets._2),
-          (IMarker.TRANSIENT, true)))
-    }
-    Status.OK_STATUS
+    CreateErrorMarkerJob(resource, offsets, ep._2.trim)
   }
+  
+  def apply(
+      resource : IResource, region : (Int, Int), message : String) : CreateErrorMarkerJob =
+    new CreateErrorMarkerJob(resource, region, message)
 }
