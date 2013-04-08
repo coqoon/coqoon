@@ -216,7 +216,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                           case Some(x) =>
                             DocumentState.setBusy
                             val cs = CoqTop.dummy
-                            CoqTop.writeToCoq("Backtrack " + x.globalStep + " " + x.localStep + " " + (cs.context.length - x.context.length) + ".")
+                            /*CoqTop.writeToCoq*/("Backtrack " + x.globalStep + " " + x.localStep + " " + (cs.context.length - x.context.length) + ".")
                         }
                       }
                   }

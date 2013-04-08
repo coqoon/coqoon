@@ -51,8 +51,6 @@ object CoqTop {
       filterComments(x.substring(0, rst) + x.substring(end + 2))
   }
 
-  def writeToCoq (dat : String) : Unit = ()
-
   val dummy = new CoqShellTokens("Coq", 0, List(), 0)
 
   def findPreviousCommand (s : String, start : Int) : Int = {

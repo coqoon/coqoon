@@ -153,7 +153,7 @@ class CoqJavaProject (basename : String) {
             JavaPosition.method = None
             DocumentState.setBusy
             Console.println("backtracking to shell " + sh)
-            CoqTop.writeToCoq("Backtrack " + sh.globalStep + " 0 " + CoqTop.dummy.context.length + ".")
+            /*CoqTop.writeToCoq*/("Backtrack " + sh.globalStep + " 0 " + CoqTop.dummy.context.length + ".")
           } else
             (/*CoqCommands.step*/)
       }
