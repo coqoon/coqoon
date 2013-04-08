@@ -46,7 +46,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       def run () = {
         val win = wb.getActiveWorkbenchWindow
         assert(win != null)
-        EclipseBoilerPlate.window = win
         activateEditor(win.getActivePage.getActiveEditor)
       }
     })

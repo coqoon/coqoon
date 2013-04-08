@@ -891,46 +891,6 @@ object JavaPosition extends EclipseJavaHelper with JavaASTUtils {
 }
 
 object EclipseBoilerPlate {
-  import org.eclipse.ui.{IWorkbenchWindow,IEditorPart}
-  import org.eclipse.ui.texteditor.{ITextEditor,IDocumentProvider,AbstractTextEditor}
-  import org.eclipse.jface.text.{IDocument,ITextSelection}
-
-  var window : IWorkbenchWindow = null
-
-  def getCaretPosition () : Int = {
-    val sel = DocumentState.activeEditor.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
-    //Console.println("cursor position is " + sel.getLength + " @" + sel.getOffset)
-    sel.getOffset
-  }
-
-  import org.eclipse.ui.{IFileEditorInput, PlatformUI}
-  import org.eclipse.core.resources.IResource
-  def getProjectDir () : Option[String] = {
-    val editor =
-      if (DocumentState.activeEditor != null)
-        Some(DocumentState.activeEditor)
-      else if (JavaPosition.editor != null)
-        Some(JavaPosition.editor)
-      else
-        None
-    editor match {
-      case Some(x) =>
-        val input = x.getEditorInput
-        val res : Option[IResource] =
-          if (input.isInstanceOf[IFileEditorInput])
-            Some(input.asInstanceOf[IFileEditorInput].getFile)
-          else
-            None
-        res match {
-          case Some(r) => Some(r.getProject.getLocation.toOSString)
-          case None =>
-            Console.println("shouldn't happen - trying to get ProjectDir from " + input + ", which is not an IFileEditorInput")
-            None
-        }
-      case None => None
-    }
-  }
-
   import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.dialogs.MessageDialog
   def warnUser (title : String, message : String) : Unit = {
@@ -938,55 +898,6 @@ object EclipseBoilerPlate {
       new Runnable() {
         def run() = MessageDialog.openWarning(Display.getDefault.getActiveShell, title, message)
       })
-  }
-
-
-  import org.eclipse.core.resources.{IMarker, IResource}
-
-  def mark (text : String, severity : Int = IMarker.SEVERITY_ERROR, advance : Boolean = false, off : Int = 0, len : Int = 0) : Unit = {
-    if (DocumentState.activeEditor != null) {
-      val file = DocumentState.resource
-      var spos = if (advance) DocumentState.sendlen + DocumentState.position + 1 else DocumentState.position + 1
-      val con = DocumentState.content
-      while ((con(spos) == '\n' || con(spos) == ' ' || con(spos) == '\t') && spos < con.length)
-        spos += 1
-      spos += off
-      val epos =
-        if (advance)
-          spos + 1
-        else if (len > 0)
-          spos + len
-        else
-          DocumentState.position + DocumentState.oldsendlen - 1
-      val marker = file.createMarker(IMarker.PROBLEM)
-      marker.setAttribute(IMarker.MESSAGE, text)
-      marker.setAttribute(IMarker.LOCATION, file.getName)
-      val commentoff = CoqTop.computeCommentOffset(con.drop(DocumentState.position), spos - DocumentState.position)
-      //Console.println("searched for comments in: " + con.drop(DocumentState.position - 10).take(20) + " spos: " + (spos - DocumentState.position) + " commentoff " + commentoff + " con at spos: " + con.drop(spos).take(10))
-      marker.setAttribute(IMarker.CHAR_START, spos + commentoff)
-      marker.setAttribute(IMarker.CHAR_END, epos) //for tha whitespace
-      marker.setAttribute(IMarker.SEVERITY, severity)
-      marker.setAttribute(IMarker.TRANSIENT, true)
-    }
-  }
-
-  def unmarkReally () : Unit = {
-    if (DocumentState.activeEditor != null)
-      DocumentState.resource.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
-  }
-
-  def unmark () : Unit = {
-    if (DocumentState.activeEditor != null) {
-      val marks = DocumentState.resource.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
-      marks.foreach(x => if (x.getAttribute(IMarker.SEVERITY, 0) == IMarker.SEVERITY_ERROR) x.delete)
-    }
-  }
-
-  def maybeunmark (until : Int) : Unit = {
-    if (DocumentState.activeEditor != null) {
-      val marks = DocumentState.resource.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
-      marks.foreach(x => if (x.getAttribute(IMarker.CHAR_START, 0) < until && x.getAttribute(IMarker.SEVERITY, 0) == IMarker.SEVERITY_ERROR) x.delete)
-    }
   }
 }
 
