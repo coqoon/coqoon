@@ -117,7 +117,7 @@ class CoqJavaProject (basename : String) {
       }
       new CoqCompileJob(model.getProject.getLocation.toFile, model.getName, true).schedule
     }
-    /*CoqCommands.doLater*/(() => {
+    /*CoqCommands.doLater(() => {
       if (DocumentState.activeEditor != null) {
         DocumentState.resetState
         DocumentState.activeEditor.addAnnotations(0, 0)
@@ -125,13 +125,13 @@ class CoqJavaProject (basename : String) {
         DocumentState.setBusy
         val shell = CoqTop.dummy
       }
-      (/*CoqCommands.step*/)
-    })
+      (CoqCommands.step)
+    })*/
     /*CoqCommands.doLater*/(() => {
       proofShell match {
         case None =>
           Console.println("sending defs + spec")
-          DocumentState._content = getCoqString
+          //DocumentState._content = getCoqString
           //CoqStepAllAction.doitH
         case Some(x) =>
           val sh : CoqShellTokens = JavaPosition.method match {
@@ -151,7 +151,6 @@ class CoqJavaProject (basename : String) {
             JavaPosition.next = None
             JavaPosition.emptyCoqShells
             JavaPosition.method = None
-            DocumentState.setBusy
             Console.println("backtracking to shell " + sh)
             /*CoqTop.writeToCoq*/("Backtrack " + sh.globalStep + " 0 " + CoqTop.dummy.context.length + ".")
           } else
@@ -171,7 +170,7 @@ class CoqJavaProject (basename : String) {
         assert(prf != null)
         val p = prf.asInstanceOf[String]
         Console.println("p is " + p)
-        DocumentState._content = Some(DocumentState._content.getOrElse("") + p)
+        //DocumentState._content = Some(DocumentState._content.getOrElse("") + p)
         //CoqStepAllAction.doitH
       } else
         (/*CoqCommands.step*/)
@@ -898,135 +897,6 @@ object EclipseBoilerPlate {
       new Runnable() {
         def run() = MessageDialog.openWarning(Display.getDefault.getActiveShell, title, message)
       })
-  }
-}
-
-import dk.itu.sdg.util.KopitiamLogger
-object DocumentState extends KopitiamLogger {
-  import org.eclipse.ui.IWorkbenchPart
-  var activated : IWorkbenchPart = null
-
-  var activeEditor : CoqEditor = null
-
-  import org.eclipse.jface.text.IDocument
-  def activeDocument () : IDocument = {
-    if (activeEditor != null)
-      activeEditor.getDocumentProvider.getDocument(activeEditor.getEditorInput)
-    else
-      null
-  }
-
-  def resetState () : Unit = ()
-
-  import org.eclipse.ui.{IFileEditorInput,IURIEditorInput}
-  import org.eclipse.core.resources.{IFile,IResource,ResourcesPlugin}
-  import org.eclipse.core.runtime.Path
-  def resource () : IFile = {
-    if (activeEditor != null) {
-      val input = activeEditor.getEditorInput
-      if (input.isInstanceOf[IFileEditorInput])
-        input.asInstanceOf[IFileEditorInput].getFile
-      else if (input.isInstanceOf[IURIEditorInput]) {
-        val path = input.asInstanceOf[IURIEditorInput].getURI.getPath
-        val ws = ResourcesPlugin.getWorkspace();
-        val project = ws.getRoot().getProject("External Files");
-        if (!project.exists())
-          project.create(null);
-        if (!project.isOpen())
-          project.open(null);
-        val location = new Path(path);
-        val file = project.getFile(location.lastSegment());
-        if (! file.exists)
-          file.createLink(location, IResource.NONE, null);
-        file
-      } else null
-    } else null
-  }
-
-  var _content : Option[String] = None
-
-  def content () : String = {
-    _content match {
-      case None =>
-        Console.println("no content. activeeditor is " + activeEditor)
-        if (activeEditor != null)
-          _content = Some(activeDocument.get)
-        _content.getOrElse("  ") //not happy with this hack
-      case Some(x) =>
-        x
-    }
-  }
-
-  def nextCommand () : Option[String] = {
-    val cont = content.drop(DocumentState.position)
-    if (cont.length > 0) {
-      val eoc = CoqTop.findNextCommand(cont)
-      if (eoc > 0) {
-        val cmd = cont.take(eoc).trim
-        sendlen = eoc
-        Some(cmd)
-      } else None
-    } else None
-  }
-  
-  var sendlen : Int = 0
-  var until : Int = -1
-
-  var position : Int = 0
-
-  private var _readyForInput : Boolean = false
-  def readyForInput () : Boolean = { _readyForInput }
-  def setBusy () : Unit = { _readyForInput = false }
-
-  var oldsendlen : Int = 0
-  var reveal : Boolean = true
-  var autoreveal : Boolean = false
-
-  import org.eclipse.swt.widgets.Display
-  def undo () : Unit = {
-    //Console.println("undo (@" + position + ", sendlen: " + sendlen + ")
-    if (sendlen != 0) {
-      if (false) { // XXX: lastWasUndo
-        val start = scala.math.max(position - sendlen, 0)
-        if (activeEditor != null) {
-          activeEditor.addAnnotations(start, 0)
-          activeEditor.invalidate
-          if (reveal)
-            Display.getDefault.asyncExec(
-              new Runnable() {
-                def run() = {
-                  activeEditor.selectAndReveal(start, 0)
-                }
-              })
-        }
-        if (autoreveal) {
-          reveal = true
-          autoreveal = false
-        }
-        position = start
-        sendlen = 0
-      } else { //just an error
-        //Console.println("undo: barf")
-        //kill off process colored thingies
-        if (activeEditor != null) {
-          activeEditor.addAnnotations(position, 0)
-          activeEditor.invalidate
-        }
-        oldsendlen = sendlen
-        sendlen = 0
-      }
-    }
-  }
-
-  def processUndo () : Unit = {
-    if (activeEditor != null) {
-      activeEditor.addAnnotations(position, 0)
-      activeEditor.invalidate
-    }
-    if (position == 0)
-      JavaPosition.retract
-    else
-      JavaPosition.reAnnotate(true, true)
   }
 }
 

@@ -46,7 +46,7 @@ class ProveMethodAction extends KAction with EclipseJavaHelper with CoreJavaChec
   import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.core.resources.IMarker
   override def execute (ev : ExecutionEvent) : Object = {
-    if (! DocumentState.readyForInput)
+    if (false) //! DocumentState.readyForInput)
       EclipseBoilerPlate.warnUser("Not ready yet", "Sorry, Coq interaction is active. Maybe it is doing a Qed.")
     else {
       //plan:

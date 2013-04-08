@@ -97,7 +97,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   def activateEditor (ed : IWorkbenchPart) : Unit = {
     Console.println("activated: " + ed)
-    DocumentState.activated = ed
     if (ed.isInstanceOf[CoqEditor]) {
       val txt = ed.asInstanceOf[CoqEditor]
       maybeInsert(txt, txt.getSource)
@@ -118,8 +117,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     if (p.isInstanceOf[ITextEditor]) {
       val txt = p.asInstanceOf[ITextEditor]
       val doc = txt.getDocumentProvider.getDocument(txt.getEditorInput)
-      if (p == DocumentState.activeEditor || p == JavaPosition.editor)
-        () //DocumentState.activeEditor = null
       if (EclipseTables.DocToProject.contains(doc)) {
         EclipseTables.DocToProject(doc).gotClosed(doc)
         EclipseTables.DocToProject.remove(doc)
@@ -213,7 +210,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                         css match {
                           case None =>
                           case Some(x) =>
-                            DocumentState.setBusy
                             val cs = CoqTop.dummy
                             /*CoqTop.writeToCoq*/("Backtrack " + x.globalStep + " " + x.localStep + " " + (cs.context.length - x.context.length) + ".")
                         }
@@ -249,7 +245,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
             JavaPosition.retract
             //CoqRetractAction.doitH
         }
-        DocumentState._content = None
+        //DocumentState._content = None
       }
     }
   }
