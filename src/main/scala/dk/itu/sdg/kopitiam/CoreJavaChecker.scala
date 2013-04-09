@@ -5,14 +5,14 @@ package dk.itu.sdg.kopitiam
 trait CoreJavaChecker extends VisitingAST {
   import org.eclipse.jface.text.IDocument
   import org.eclipse.jdt.core.dom.ASTNode
-  def checkAST (root : ASTNode, doc : IDocument) : Unit = {
-    val co = new CheckCoreJava(doc)
+  def checkAST (jes : JavaEditorState, root : ASTNode, doc : IDocument) : Boolean = {
+    val co = new CheckCoreJava(jes, doc)
     root.accept(co)
     Console.println("checked...")
+    co.getSuccess
   }
 
-  class CheckCoreJava (doc : IDocument) extends Visitor {
-
+  class CheckCoreJava (jes : JavaEditorState, doc : IDocument) extends ReportingVisitor(jes) {
     import org.eclipse.jdt.core.dom.{ArrayAccess, ArrayCreation, ArrayInitializer, Assignment, CastExpression, ClassInstanceCreation, ConditionalExpression, Expression, FieldAccess, InfixExpression, InstanceofExpression, MethodInvocation, PostfixExpression, PrefixExpression, QualifiedName, SimpleName, SuperFieldAccess, SuperMethodInvocation, ThisExpression}
     def checkExpression (node : Expression) : Unit =
       node match {

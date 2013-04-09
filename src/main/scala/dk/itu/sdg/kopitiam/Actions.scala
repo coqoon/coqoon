@@ -37,12 +37,38 @@ class CompileCoqAction extends KAction {
 }
 object CompileCoqAction extends CompileCoqAction { }
 
-class ProveMethodAction extends KAction with EclipseJavaHelper with CoreJavaChecker {
-  val editor : org.eclipse.ui.IEditorPart = null
+class JavaEditorState {
+  import org.eclipse.jdt.core.dom._
+  
+  var editor : org.eclipse.ui.IEditorPart = null
+  
+  var coqtop : CoqTopIdeSlave_v20120710 = null
+  
+  def method : Option[MethodDeclaration] = None
+  def setMethod(a : Option[MethodDeclaration]) = ()
+  def complete : Option[ASTNode] = None
+  def setComplete(a : Option[ASTNode]) = ()
+  def underway : Option[ASTNode] = None
+  def setUnderway(a : Option[ASTNode]) = ()
+  
+  var completedMethods : List[MethodDeclaration] = null
+}
+
+class ProveMethodAction extends KAction
+    with EclipseJavaHelper
+    with CoreJavaChecker with org.eclipse.ui.IEditorActionDelegate {
+  import org.eclipse.ui.IEditorPart
+  var editor : IEditorPart = null
   
   import org.eclipse.jface.action.IAction
+  import org.eclipse.jface.viewers.ISelection
+  override def run(a : IAction) = execute(null)
+  override def setActiveEditor(a : IAction, b : IEditorPart) = (editor = b)
+  override def selectionChanged(a : IAction, b : ISelection) = ()
+  
   import org.eclipse.jface.text.ITextSelection
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
+  import org.eclipse.ui.texteditor.ITextEditor
   import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.core.resources.IMarker
   override def execute (ev : ExecutionEvent) : Object = {
@@ -51,30 +77,18 @@ class ProveMethodAction extends KAction with EclipseJavaHelper with CoreJavaChec
     else {
       //plan:
       // a: get project
-      val edi : JavaEditor = editor.asInstanceOf[JavaEditor]
+      val edi : ITextEditor = editor.asInstanceOf[ITextEditor]
+      val jes : JavaEditorState = null /* for now */
       val prov = edi.getDocumentProvider
       val doc = prov.getDocument(edi.getEditorInput)
       val bla = getRoot(edi.getEditorInput)
       val cu = getCompilationUnit(bla)
-      //assign JavaPosition.editor - for error reporting in walkAST
-      if (JavaPosition.editor != edi) {
-        val need = (JavaPosition.editor != null)
-        if (need) {
-          JavaPosition.retract
-          JavaPosition.unmarkProofs
-        }
-        JavaPosition.editor = edi
-        if (need)
-          ()//CoqRetractAction.doitH
-      }
-      JavaPosition.unmark
+      jes.method.map(_ => { jes.setUnderway(None); jes.setMethod(None) })
       // a': CoreJava checking!
-      checkAST(cu, doc)
-      if (JavaPosition.markers.length == 0) { //no errors!
+      if (checkAST(jes, cu, doc)) { //no errors!
         // b: if outdated coqString: translate -- need to verify outdated...
-        walkAST(cu, doc) //side effects: properties: coq output, spec ptr to method
         // c: find method and statement we want to prove
-        if (JavaPosition.markers.length == 0) { //no errors!
+        if (walkAST(jes, cu, doc)) { //no errors!
           val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
           val off = selection.getOffset
           val node = findASTNode(cu, off, 0)
@@ -82,13 +96,12 @@ class ProveMethodAction extends KAction with EclipseJavaHelper with CoreJavaChec
           md match {
             case None => EclipseBoilerPlate.warnUser("Cursor not inside of method", "Please put the cursor inside of the method to verify")
             case Some(x) =>
-              if (JavaPosition.proofmarkers.contains(x.getName.getIdentifier))
+              if (jes.completedMethods.contains(x))
                 EclipseBoilerPlate.warnUser("Already proven", "Sorry, this method was already proven")
               else {
-                val proj = EclipseTables.DocToProject(doc)
-                proj.program = Some(cu)
-                proj.proveMethod(x)
-                (/*CoqCommands.step*/)
+                jes.setMethod(Some(x))
+                new JavaProofInitialisationJob(jes).schedule
+                //proj.proveMethod(x)
               }
           }
         }
@@ -100,3 +113,24 @@ class ProveMethodAction extends KAction with EclipseJavaHelper with CoreJavaChec
 }
 object ProveMethodAction extends ProveMethodAction { }
 
+class JavaProofInitialisationJob(jes : JavaEditorState)
+    extends CoqJob("Initialise Java proof mode", null) {
+  import org.eclipse.ui.IFileEditorInput
+  import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status}
+  import org.eclipse.core.runtime.Path
+  override def run(monitor : IProgressMonitor) : IStatus = {
+    val fei = jes.editor.getEditorInput().asInstanceOf[IFileEditorInput]
+    val proj = fei.getFile.getParent
+    val basename = fei.getFile.getName().dropRight(5)
+    val model = proj.getFile(new Path(basename + "_model.v"))
+    if (!model.exists) {
+      EclipseBoilerPlate.warnUser("Please write a model file for this Java file named '" + basename + "_model'.", "")
+      return Status.OK_STATUS
+    } else
+      new CoqCompileJob(model.getProject.getLocation.toFile, model.getName, true).schedule
+    //send over definition and spec
+    //send over beginning of proof
+    //register handlers!
+    Status.OK_STATUS
+  }
+}

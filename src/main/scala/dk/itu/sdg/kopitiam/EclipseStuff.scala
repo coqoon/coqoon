@@ -82,41 +82,6 @@ class CoqJavaProject (basename : String) {
   import org.eclipse.swt.widgets.Display
   import org.eclipse.jdt.core.dom.MethodDeclaration
   def proveMethod (meth : MethodDeclaration) : Unit = {
-    proofShell match {
-      case Some(x) =>
-        if (x.globalStep > CoqTop.dummy.globalStep)
-          proofShell = None
-      case None =>
-    }
-    Console.println("provemethod called! modelnewer: " + modelNewerThanSource + " javanewer: " + javaNewerThanSource + " proofshell " + proofShell)
-    if (modelNewerThanSource) {
-      modelNewerThanSource = false
-      var model : IFile = null
-      if (JavaPosition.editor == null)
-        Console.println("this should not happen - no java editor...")
-      else {
-        val fei = JavaPosition.editor.getEditorInput
-        if (fei.isInstanceOf[IFileEditorInput]) {
-          val proj : IProject = fei.asInstanceOf[IFileEditorInput].getFile.getProject
-          val maybemodel = proj.getFile(basename + "_model.v")
-          if (maybemodel.exists)
-            model = maybemodel
-          else {
-            val maybemodel = proj.getFile("src/" + basename + "_model.v")
-            if (maybemodel.exists)
-              model = maybemodel
-          }
-        } else {
-          JavaPosition.mark("something went wrong reading the Java file", 0, 10, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
-          return
-        }
-        if (model == null || ! model.exists) {
-          JavaPosition.mark("Please write a model file for this Java file named '" + basename + "_model'.", 0, 10, IMarker.PROBLEM, IMarker.SEVERITY_WARNING)
-          return
-        }
-      }
-      new CoqCompileJob(model.getProject.getLocation.toFile, model.getName, true).schedule
-    }
     /*CoqCommands.doLater(() => {
       if (DocumentState.activeEditor != null) {
         DocumentState.resetState
@@ -680,7 +645,7 @@ object JavaPosition extends EclipseJavaHelper with JavaASTUtils {
       // and copy over properties (at least CoqShell)
       val bla = getRoot(ei)
       val cu = getCompilationUnit(bla)
-      walkAST(cu, doc)
+      walkAST(null, cu, doc)
 
       val selection = editor.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
       val off = selection.getOffset
@@ -1077,7 +1042,7 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
 import org.eclipse.ui.IStartup
 class Startup extends IStartup {
   import org.eclipse.core.runtime.Platform
-
+  
   override def earlyStartup () : Unit = {
     Console.println("earlyStartup called")
     DocumentMonitor.init

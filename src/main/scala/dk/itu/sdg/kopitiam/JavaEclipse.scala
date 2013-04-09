@@ -116,12 +116,13 @@ trait EclipseJavaHelper extends VisitingAST {
   }
 
   import org.eclipse.jface.text.IDocument
-  def walkAST (root : ASTNode, doc : IDocument) : Unit = {
-    val co = new CoqOutput(doc)
+  def walkAST (jes : JavaEditorState, root : ASTNode, doc : IDocument) : Boolean = {
+    val co = new CoqOutput(jes, doc)
     root.accept(co)
+    co.getSuccess
   }
 
-  class CoqOutput (doc : IDocument) extends Visitor {
+  class CoqOutput (jes : JavaEditorState, doc : IDocument) extends ReportingVisitor(jes) {
     import scala.collection.immutable.Stack
     var offset : Int = 0;
     var specs : List[Initializer] = List[Initializer]()
