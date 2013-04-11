@@ -145,6 +145,7 @@
       </command>
       <command
             categoryId="Kopitiam.category"
+            defaultHandler="dk.itu.sdg.kopitiam.CompileCoqHandler"
             id="Kopitiam.compile_coq"
             name="Compile Coq">
       </command>

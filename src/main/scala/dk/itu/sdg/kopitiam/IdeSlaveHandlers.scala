@@ -184,3 +184,15 @@ class RestartCoqHandler extends EditorHandler {
     null
   }
 }
+
+class CompileCoqHandler extends EditorHandler {
+  override def execute(ev : ExecutionEvent) = {
+    import org.eclipse.ui.IFileEditorInput
+    if (isEnabled()) {
+      val f = editor.getEditorInput().asInstanceOf[IFileEditorInput].getFile
+      new CoqCompileJob(
+          f.getParent.getLocation.toFile, f.getName, false).schedule()
+    }
+    null
+  }
+}
