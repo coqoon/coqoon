@@ -37,21 +37,34 @@ class CompileCoqAction extends KAction {
 }
 object CompileCoqAction extends CompileCoqAction { }
 
-class JavaEditorState {
+class JavaEditorState(val editor : org.eclipse.ui.IEditorPart) {
   import org.eclipse.jdt.core.dom._
   
-  var editor : org.eclipse.ui.IEditorPart = null
+  private var coqTopV : CoqTopIdeSlave_v20120710 = null
+  def coqTop = {
+    if (coqTopV == null) {
+      coqTopV = CoqTopIdeSlave.forVersion("20120710") match {
+        case Some(m : CoqTopIdeSlave_v20120710) => m
+        case _ => null
+      }
+    }
+    coqTopV
+  }
   
-  var coqtop : CoqTopIdeSlave_v20120710 = null
+  private var m : Option[MethodDeclaration] = None
+  def method : Option[MethodDeclaration] = m
+  def setMethod(a : Option[MethodDeclaration]) = m = a
+    
+  private var cu : Option[CompilationUnit] = None
+  def compilationUnit : Option[CompilationUnit] = cu
+  def setCompilationUnit (a : Option[CompilationUnit]) = cu = a
   
-  def method : Option[MethodDeclaration] = None
-  def setMethod(a : Option[MethodDeclaration]) = ()
   def complete : Option[ASTNode] = None
   def setComplete(a : Option[ASTNode]) = ()
   def underway : Option[ASTNode] = None
   def setUnderway(a : Option[ASTNode]) = ()
   
-  var completedMethods : List[MethodDeclaration] = null
+  var completedMethods : List[MethodDeclaration] = List()
 }
 
 class ProveMethodAction extends KAction
@@ -78,11 +91,12 @@ class ProveMethodAction extends KAction
       //plan:
       // a: get project
       val edi : ITextEditor = editor.asInstanceOf[ITextEditor]
-      val jes : JavaEditorState = null /* for now */
+      val jes : JavaEditorState = new JavaEditorState(edi) /* for now */
       val prov = edi.getDocumentProvider
       val doc = prov.getDocument(edi.getEditorInput)
       val bla = getRoot(edi.getEditorInput)
       val cu = getCompilationUnit(bla)
+      jes.setCompilationUnit(Some(cu))
       jes.method.map(_ => { jes.setUnderway(None); jes.setMethod(None) })
       // a': CoreJava checking!
       if (checkAST(jes, cu, doc)) { //no errors!
@@ -113,12 +127,35 @@ class ProveMethodAction extends KAction
 }
 object ProveMethodAction extends ProveMethodAction { }
 
+import org.eclipse.core.runtime.jobs.Job
+
 class JavaProofInitialisationJob(jes : JavaEditorState)
-    extends CoqJob("Initialise Java proof mode", null) {
+    extends Job("Initialise Java proof mode") {
   import org.eclipse.ui.IFileEditorInput
   import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status}
   import org.eclipse.core.runtime.Path
   override def run(monitor : IProgressMonitor) : IStatus = {
+    val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
+    jes.coqTop.interp(false, false, "Add LoadPath \"" + loadp + "\".")
+
+    import org.eclipse.core.resources.IResource
+    
+    val input = jes.editor.getEditorInput
+    val res : Option[IResource] =
+      if (input.isInstanceOf[IFileEditorInput]) {
+        Some(input.asInstanceOf[IFileEditorInput].getFile)
+      } else None
+      
+    res match {
+      case Some(r) =>
+        jes.coqTop.interp(false, false,
+            "Add Rec LoadPath \"" +
+            r.getProject.getFolder("src").getLocation.toOSString + "\".")
+      case None =>
+        Console.println("shouldn't happen - trying to get ProjectDir from " +
+            input + ", which is not an IFileEditorInput")
+    }
+
     val fei = jes.editor.getEditorInput().asInstanceOf[IFileEditorInput]
     val proj = fei.getFile.getParent
     val basename = fei.getFile.getName().dropRight(5)
@@ -129,7 +166,24 @@ class JavaProofInitialisationJob(jes : JavaEditorState)
     } else
       new CoqCompileJob(model.getProject.getLocation.toFile, model.getName, true).schedule
     //send over definition and spec
+    jes.compilationUnit match {
+      case Some(x) =>
+        val pdef = x.getProperty(EclipseJavaASTProperties.coqDefinition).asInstanceOf[List[String]]
+        val spec = x.getProperty(EclipseJavaASTProperties.coqSpecification).asInstanceOf[List[String]]
+        println("" + pdef + ", " + spec)
+        for (s <- pdef ++ spec)
+          jes.coqTop.interp(true, false, s)
+      case None =>
+    }
     //send over beginning of proof
+    jes.method match {
+      case Some(meth) =>
+        val prfhead = meth.getProperty(EclipseJavaASTProperties.coqProof).asInstanceOf[List[String]]
+        println("" + prfhead)
+        for (s <- prfhead)
+          jes.coqTop.interp(true, false, s)        
+      case None =>
+    }
     //register handlers!
     Status.OK_STATUS
   }

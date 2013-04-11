@@ -160,8 +160,10 @@ trait EclipseJavaHelper extends VisitingAST {
             bd match {
               case Some(y) =>
                 val id = name + "M"
-                val defs = "Definition " + name + "_body := " + y + """.
-Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + ret + "."
+                val defs = List(
+                    "Definition " + name + "_body := " + y + ".",
+                    "Definition " + id + " := Build_Method " + arglist +
+                        " " + name + "_body " + ret + ".")
                 x.setProperty(EclipseJavaASTProperties.coqDefinition, defs)
               case _ =>
             }
@@ -245,7 +247,7 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
           //set offsets for quant._1, pre._1, post._1
 
           //Console.println("spec: " + spec)
-          x.setProperty(EclipseJavaASTProperties.coqSpecification, spec)
+          x.setProperty(EclipseJavaASTProperties.coqSpecification, List(spec))
           specs = List[Initializer]()
 
 
@@ -256,9 +258,9 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
             else
               "|> " + rdep.mkString("(", "[/\\]", ")")
           val suff = if (deps.contains(name)) " at 2 " else ""
-          val prfhead = "Lemma valid_" + name + "_" + clazz.drop(1).dropRight(1) + ": " + rdeps + " |= " + name + """_spec.
-Proof.
-  unfold """ + name + "_spec" + suff + "; unfold_spec.\n"
+          val prfhead = List("Lemma valid_" + name + "_" + clazz.drop(1).dropRight(1) + ": " + rdeps + " |= " + name + "_spec.",
+        		  		     "Proof.",
+        		  		     "unfold " + name + "_spec" + suff + "; unfold_spec.")
           //Console.println("proof is " + prfhead)
           x.setProperty(EclipseJavaASTProperties.coqProof, prfhead)
 
@@ -283,7 +285,9 @@ Proof.
           val fieldnames = x.getFields.map(x => scala.collection.JavaConversions.asBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList.map(_.getName.getIdentifier)).flatten
           val fields = fieldnames.foldRight("(SS.empty)")("(SS.add \"" + _ + "\" " + _ + ")")
           val metstring = methods.foldRight("(SM.empty _)")("(SM.add " + _ + " " + _ + ")")
-          val cd = "Definition " + nam + " := Build_Class " + fields + " " + metstring + "."
+          val cd = List(
+              "Definition " + nam + " := Build_Class " + fields +
+                  " " + metstring + ".")
 
           //Console.println(cd)
           x.setProperty(EclipseJavaASTProperties.coqDefinition, cd)
@@ -303,56 +307,48 @@ Proof.
                 if (pname == None) pname = Some(x.getName.getIdentifier)
                 classes += x.getName.getIdentifier
                 todo = todo.pushAll(x.getTypes)
-                val p = x.getProperty(EclipseJavaASTProperties.coqDefinition)
-                if (p != null)
-                  prog ::= p.asInstanceOf[String]
                 for (x <- x.getMethods) {
                   //Console.println("setting offset for method [" + x.getName.getIdentifier + "]: " + spec.mkString("\n").length)
                   x.setProperty(EclipseJavaASTProperties.coqOffset, spec.mkString("\n").length)
                   val sp = x.getProperty(EclipseJavaASTProperties.coqSpecification)
                   if (sp != null)
-                    spec ::= sp.asInstanceOf[String]
+                    spec ++= sp.asInstanceOf[List[String]]
                   val p = x.getProperty(EclipseJavaASTProperties.coqDefinition)
                   if (p != null)
-                    prog ::= p.asInstanceOf[String]
+                    prog ++= p.asInstanceOf[List[String]]
                   //Console.println("  got m " + x.getName.getIdentifier)
                 }
+                val p = x.getProperty(EclipseJavaASTProperties.coqDefinition)
+                if (p != null)
+                  prog ++= p.asInstanceOf[List[String]]
               case y =>
             }
           }
 
           val n = pname.get
           val clazz = classes.foldRight("(SM.empty _)")((x, y) => "(SM.add \"" + x + "\" " + x + " " + y + ")")
-          val pr = "Definition Prog := Build_Program " + clazz + "."
-          val umn = """
-Definition unique_method_names := option_proof (search_unique_names Prog).
-Opaque unique_method_names."""
-          prog = List("""
-Require Import AbstractAsn.
-Require Import Tactics.
+          prog = List(
+              "Require Import AbstractAsn.",
+              "Require Import Tactics.",
+              "Open Scope string_scope.",
+              "Open Scope hasn_scope.",
+              "Module " + n + " <: PROGRAM.") ++ prog ++
+				List("Definition Prog := Build_Program " + clazz + ".",
+					 "Definition unique_method_names := option_proof (search_unique_names Prog).",
+					 "Opaque unique_method_names.",
+					 "End " + n + ".")
 
-Open Scope string_scope.
-Open Scope hasn_scope.
+          spec = List("Module " + n + "_spec.",
+        		  	  "Import " + n + ".",
+        		  	  "Require Import " + n + "_model.",
+        		  	  "Module Import SC := Tac " + n + ".",
+        		  	  "Open Scope cmd_scope.",
+        		  	  "Open Scope spec_scope.",
+        		  	  "Open Scope asn_scope.") ++ spec.reverse
 
-Module """ + n + " <: PROGRAM.") ++ prog ++ List(pr, umn, "End " + n + ".")
-
-          val specpre = """
-Module """ + n + """_spec.
-Import """ + n + """.
-Require Import """ + n + """_model.
-Module Import SC := Tac """ + n + """.
-
-Open Scope cmd_scope.
-Open Scope spec_scope.
-Open Scope asn_scope.
-"""
-          spec = List(specpre) ++ spec.reverse
-          val p = prog.mkString("\n") + "\n"
-          val s = spec.mkString("\n") + "\n"
-
-          x.setProperty(EclipseJavaASTProperties.specOffset, p.length + specpre.length + 1)
-          x.setProperty(EclipseJavaASTProperties.coqDefinition, p)
-          x.setProperty(EclipseJavaASTProperties.coqSpecification, s)
+          //x.setProperty(EclipseJavaASTProperties.specOffset, p.length + specpre.length + 1)
+          x.setProperty(EclipseJavaASTProperties.coqDefinition, prog)
+          x.setProperty(EclipseJavaASTProperties.coqSpecification, spec)
           x.setProperty(EclipseJavaASTProperties.coqEnd, "End " + n + "_spec.")
         case _ =>
       }
