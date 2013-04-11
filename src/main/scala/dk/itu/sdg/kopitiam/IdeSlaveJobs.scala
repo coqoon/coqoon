@@ -36,7 +36,8 @@ class InitialiseCoqJob(editor : Editor)
     res match {
       case Some(r) =>
         editor.coqTop.interp(false, false,
-            "Add LoadPath \"" + r.getProject.getLocation.toOSString + "\".")
+            "Add Rec LoadPath \"" +
+            r.getProject.getFolder("src").getLocation.toOSString + "\".")
       case None =>
         Console.println("shouldn't happen - trying to get ProjectDir from " +
             input + ", which is not an IFileEditorInput")
