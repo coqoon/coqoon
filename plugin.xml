@@ -56,7 +56,7 @@
             id="kopitiam.CoqEditor"
             name="Coq Editor">
          <contentTypeBinding
-               contentTypeId="kopitiam.CoqFile">
+               contentTypeId="dk.itu.sdg.kopitiam.CoqFile">
          </contentTypeBinding>
       </editor>
    </extension>
@@ -374,8 +374,14 @@
             base-type="org.eclipse.core.runtime.text"
             default-charset="UTF-8"
             file-extensions="v"
-            id="kopitiam.CoqFile"
+            id="dk.itu.sdg.kopitiam.CoqFile"
             name="Coq file"
+            priority="normal">
+      </content-type>
+      <content-type
+            file-extensions="vo"
+            id="dk.itu.sdg.kopitiam.CoqObjectFile"
+            name="Coq object file"
             priority="normal">
       </content-type>
    </extension>
