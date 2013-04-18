@@ -43,7 +43,12 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
   
   import org.eclipse.ui.IWorkbench
   import org.eclipse.jface.viewers.IStructuredSelection
-  override def init(w : IWorkbench, s : IStructuredSelection) = ()
+  private var workbench : IWorkbench = null
+  private var selection : IStructuredSelection = null
+  override def init(w : IWorkbench, s : IStructuredSelection) = {
+    workbench = w
+    selection = s
+  }
   
   private val creationPage = new NewCoqProjectCreationPage()
   
@@ -51,26 +56,21 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
     addPage(creationPage)
   }
   
-  class ProjectCreator(private val description : IProjectDescription)
+  class ProjectCreator(private val project : ICoqProject)
       extends IRunnableWithProgress {
-    import org.eclipse.core.commands.ExecutionException
-    import org.eclipse.ui.ide.undo.{CreateProjectOperation, WorkspaceUndoUtil}
+    import org.eclipse.ui.ide.undo.WorkspaceUndoUtil
     override def run(monitor : IProgressMonitor) = {
-      new CreateProjectOperation(description, "Coq project").
-          execute(monitor, WorkspaceUndoUtil.getUIInfoAdapter(getShell()))
+      project.getCreateOperation.execute(
+          monitor, WorkspaceUndoUtil.getUIInfoAdapter(getShell))
     }
   }
   
   def createProject : IProject = {
     val project = creationPage.getProjectHandle()
     if (!project.exists()) {
-      val description =
-          project.getWorkspace.newProjectDescription(project.getName())
-      import org.eclipse.core.resources.ICommand
-      description.setNatureIds(Array(CoqProject.NATURE_ID))
-      description.setBuildSpec(Array(
-          CoqProject.makeBuilderCommand(description)))
-      getContainer().run(true, true, new ProjectCreator(description));
+      val mm = ICoqModel.create(project.getWorkspace.getRoot)
+      val cp = mm.getProject(project.getName)
+      getContainer().run(true, true, new ProjectCreator(cp))
     }
     return project
   }
@@ -85,8 +85,8 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
   }
 }
 
-class CoqProject extends IProjectNature {
-  import CoqProject._
+class CoqNature extends IProjectNature {
+  import CoqNature._
   import org.eclipse.core.resources.ICommand
   
   private var project : IProject = null
@@ -97,33 +97,16 @@ class CoqProject extends IProjectNature {
   
   override def getProject = project
   
-  private def coqBuilderP(a : ICommand) =
-    (CoqBuilder.BUILDER_ID == a.getBuilderName)
-  
   override def configure = {
-    val d = project.getDescription()
-    val bs = d.getBuildSpec
-    if (!bs.exists(coqBuilderP)) {
-      d.setBuildSpec(bs :+ makeBuilderCommand(d))
-      project.setDescription(d, null)
-    }
+    project.setDescription(
+        ICoqProject.configureDescription(project.getDescription), null)
   }
   
   override def deconfigure = {
-    val d = project.getDescription()
-    val bs = d.getBuildSpec
-    if (bs.exists(coqBuilderP)) {
-      d.setBuildSpec(bs.filterNot(coqBuilderP))
-      project.setDescription(d, null)
-    }
+    project.setDescription(
+        ICoqProject.deconfigureDescription(project.getDescription), null)
   }
 }
-object CoqProject {
+object CoqNature {
   final val NATURE_ID = "dk.itu.sdg.kopitiam.CoqProject"
-  
-  def makeBuilderCommand(d : IProjectDescription) = {
-    val c = d.newCommand()
-    c.setBuilderName(CoqBuilder.BUILDER_ID)
-    c
-  }
 }

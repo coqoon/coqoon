@@ -113,7 +113,7 @@ object ICoqProject {
     (CoqBuilder.BUILDER_ID == a.getBuilderName)
   
   private def coqNatureP(a : String) =
-    (CoqProject.NATURE_ID == a)
+    (CoqNature.NATURE_ID == a)
     
   def getDescription(ws : IWorkspace, name : String) :
       IProjectDescription = {
@@ -127,7 +127,7 @@ object ICoqProject {
       d.setBuildSpec(bs :+ makeBuilderCommand(d))
     val ns = d.getNatureIds
     if (!ns.exists(coqNatureP))
-      d.setNatureIds(ns :+ CoqProject.NATURE_ID)
+      d.setNatureIds(ns :+ CoqNature.NATURE_ID)
     d
   }
   
