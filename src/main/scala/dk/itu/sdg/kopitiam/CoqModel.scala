@@ -95,14 +95,51 @@ private object CoqModelImpl {
   def hasNature(a : IProject) = false
 }
 
+trait ICoqLoadPath {
+  def path : String
+  def coqdir : Option[String]
+  
+  def _tmp_makecmd = "Add Rec LoadPath \"" + path + "\"" + (coqdir match {
+      case Some(dir) => " as " + dir
+      case None => ""
+    }) + "."
+  
+  /* def install(coqtop : CoqTopIdeSlave_v20120703) = {
+    coqtop.interp(true, false, _tmp_makecmd)
+  } */
+}
+
+case class ProjectSourceLoadPath(
+    val folder : IFolder, val output : Option[ProjectBinaryLoadPath] = None)
+    extends ICoqLoadPath {
+  def path = folder.getLocation.toOSString
+  def coqdir = None
+}
+
+case class ProjectBinaryLoadPath(val folder : IFolder) extends ICoqLoadPath {
+  def path = folder.getLocation.toOSString
+  def coqdir = None
+}
+
+case class ExternalLoadPath(val fsPath : IPath, val dir : String)
+    extends ICoqLoadPath {
+  def path = fsPath.toOSString
+  def coqdir = Option(dir)
+}
+
 trait ICoqProject extends ICoqElement with IParent {
   override def getElementType = classOf[ICoqProject]
   
   override def getParent : Option[ICoqModel]
   override def getCorrespondingResource : Option[IProject]
   
+  def getLoadPath : Seq[_ <: ICoqLoadPath]
+  def setLoadPath(lp : Seq[_ <: ICoqLoadPath], monitor : IProgressMonitor)
+  
+  def getDefaultOutputLocation : IPath
+  
   def getPackageFragmentRoot(folder : IPath) : ICoqPackageFragmentRoot
-  def getPackageFragmentRoots : Seq[_ <: ICoqPackageFragment]
+  def getPackageFragmentRoots : Seq[_ <: ICoqPackageFragmentRoot]
   def hasPackageFragmentRoots : Boolean = (!getPackageFragmentRoots.isEmpty)
   
   def getCreateOperation : IUndoableOperation
@@ -164,9 +201,24 @@ private class CoqProjectImpl(
         Array(res), "Delete Coq project", deleteContent)
   }
   
+  override def getLoadPath : Seq[_ <: ICoqLoadPath] = List(
+      new ProjectSourceLoadPath(res.getFolder("src")),
+      new ProjectBinaryLoadPath(res.getFolder("bin")))
+  override def setLoadPath(
+      lp : Seq[_ <: ICoqLoadPath], monitor : IProgressMonitor) = ()
+  
+  override def getDefaultOutputLocation = res.getFolder("bin").getFullPath
+  
   override def getPackageFragmentRoot(folder : IPath) =
     new CoqPackageFragmentRootImpl(res.getFolder(folder), this)
-  override def getPackageFragmentRoots = List()
+  override def getPackageFragmentRoots = getLoadPath.collect {
+    case ProjectSourceLoadPath(folder, output)
+        if (res == folder.getProject) =>
+      new CoqPackageFragmentRootImpl(folder, this)
+    case ProjectBinaryLoadPath(folder)
+        if (res == folder.getProject) =>
+      new CoqPackageFragmentRootImpl(folder, this)
+  }
   
   override def getChildren = getPackageFragmentRoots
 }
