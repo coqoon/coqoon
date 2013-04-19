@@ -418,5 +418,23 @@
             id="dk.itu.sdg.kopitiam.CoqBuilder">
       </builder>
    </extension>
+   <extension
+         point="org.eclipse.ui.propertyPages">
+      <page
+            class="dk.itu.sdg.kopitiam.LoadPathConfigurationPage"
+            icon="icons/coqide.gif"
+            id="dk.itu.sdg.kopitiam.propertyPages.CoqLoadPath"
+            name="Coq Load Path">
+         <enabledWhen>
+            <adapt
+                  type="org.eclipse.core.resources.IProject">
+               <test
+                     property="org.eclipse.core.resources.projectNature"
+                     value="dk.itu.sdg.kopitiam.CoqProject">
+               </test>
+            </adapt>
+         </enabledWhen>
+      </page>
+   </extension>
 
 </plugin>

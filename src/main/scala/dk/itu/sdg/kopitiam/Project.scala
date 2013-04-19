@@ -109,6 +109,23 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
   }
 }
 
+import org.eclipse.swt.SWT
+import org.eclipse.swt.widgets.{Composite, Label}
+import org.eclipse.core.runtime.IAdaptable
+import org.eclipse.ui.IWorkbenchPropertyPage
+import org.eclipse.jface.preference.PreferencePage
+
+class LoadPathConfigurationPage
+    extends PreferencePage with IWorkbenchPropertyPage {
+  override def getElement = null
+  override def setElement(element : IAdaptable) = ()
+  override def createContents(c : Composite) = {
+    var l = new Label(c, SWT.NONE)
+    l.setText("\"This is only a test...\"")
+    l
+  }
+}
+
 class CoqNature extends IProjectNature {
   import CoqNature._
   import org.eclipse.core.resources.ICommand
