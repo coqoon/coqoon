@@ -86,13 +86,14 @@ private class CoqModelImpl(
   
   override def getProject(name : String) =
     new CoqProjectImpl(res.getProject(name), this)
-  override def getProjects = res.getProjects().filter(hasNature).map(
+  override def getProjects = res.getProjects.filter(hasNature).map(
       a => new CoqProjectImpl(a, this))
   
   override def getChildren = getProjects
 }
 private object CoqModelImpl {
-  def hasNature(a : IProject) = false
+  def hasNature(a : IProject) =
+    (a.getDescription.getNatureIds.exists(ICoqProject.isCoqNature))
 }
 
 trait ICoqLoadPath {
@@ -348,12 +349,10 @@ private object EmptyInputStream extends InputStream {
   override def read = -1
 }
 
-import org.eclipse.jface.operation.IRunnableWithProgress
-
 trait ICoqVernacFile extends ICoqFile {
   override def getElementType = classOf[ICoqVernacFile]
   
-  def getSetOperation(is : InputStream) : IRunnableWithProgress
+  def setContents(is : InputStream, monitor : IProgressMonitor)
   def getCreateOperation : IUndoableOperation
   def getDeleteOperation : IUndoableOperation
 }
@@ -373,31 +372,14 @@ private class CoqVernacFileImpl(
   
   import org.eclipse.ui.ide.undo.CreateFileOperation
   
-  private class SetContentsWrapper(
-      private val is : InputStream) extends IRunnableWithProgress {
-    private class Operation extends IWorkspaceRunnable {
-      override def run(monitor : IProgressMonitor) =
-          res.setContents(is, IResource.KEEP_HISTORY, monitor)
-    }
-    
-    override def run(monitor : IProgressMonitor) = {
-      res.getWorkspace.run(
-          new Operation(), res.getWorkspace.getRuleFactory.modifyRule(res),
-          IWorkspace.AVOID_UPDATE, monitor)
-    }
-  }
+  override def setContents(is : InputStream, monitor : IProgressMonitor) =
+    res.setContents(is, IResource.NONE, monitor)
   
-  override def getSetOperation(is : InputStream) : IRunnableWithProgress = {
-    new SetContentsWrapper(is)
-  }
-  
-  override def getCreateOperation = {
+  override def getCreateOperation =
     new CreateFileOperation(res, null, EmptyInputStream, "New Vernac file")
-  }
   
-  override def getDeleteOperation = {
+  override def getDeleteOperation =
     new DeleteResourcesOperation(Array(res), "Delete Vernac file", false)
-  }
 }
 
 trait ICoqObjectFile extends ICoqFile {
