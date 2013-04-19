@@ -58,10 +58,34 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
   
   class ProjectCreator(private val project : ICoqProject)
       extends IRunnableWithProgress {
+    import org.eclipse.core.runtime.SubMonitor
+    import org.eclipse.core.resources.{IWorkspace, IWorkspaceRunnable}
     import org.eclipse.ui.ide.undo.WorkspaceUndoUtil
-    override def run(monitor : IProgressMonitor) = {
-      project.getCreateOperation.execute(
-          monitor, WorkspaceUndoUtil.getUIInfoAdapter(getShell))
+    
+    private class DerivedRunnable(r : IResource) extends IWorkspaceRunnable {
+      override def run(monitor : IProgressMonitor) = {
+        r.setHidden(true)
+        r.setDerived(true, monitor)
+      }
+    }
+    
+    override def run(monitor_ : IProgressMonitor) = {
+      val monitor = SubMonitor.convert(monitor_, 4)
+      
+      monitor.beginTask("New Coq project", 4)
+      import PathUtilities.Implicits._
+      val infoAdapter = WorkspaceUndoUtil.getUIInfoAdapter(getShell)
+      project.getCreateOperation.execute(monitor.newChild(1), infoAdapter)
+      val src = project.getPackageFragmentRoot("src")
+      src.getCreateOperation.execute(monitor.newChild(1), infoAdapter)
+      val bin = project.getPackageFragmentRoot("bin")
+      bin.getCreateOperation.execute(monitor.newChild(1), infoAdapter)
+      
+      val binFolder = bin.getCorrespondingResource.get
+      val ws = binFolder.getWorkspace
+      ws.run(new DerivedRunnable(binFolder),
+          ws.getRuleFactory.derivedRule(binFolder),
+          IWorkspace.AVOID_UPDATE, monitor.newChild(1))
     }
   }
   
@@ -69,8 +93,8 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
     val project = creationPage.getProjectHandle()
     if (!project.exists()) {
       val mm = ICoqModel.create(project.getWorkspace.getRoot)
-      val cp = mm.getProject(project.getName)
-      getContainer().run(true, true, new ProjectCreator(cp))
+      getContainer().run(
+          true, true, new ProjectCreator(mm.getProject(project.getName)))
     }
     return project
   }

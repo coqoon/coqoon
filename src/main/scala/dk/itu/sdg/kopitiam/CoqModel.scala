@@ -47,9 +47,11 @@ trait ICoqElement {
 }
 
 object PathUtilities {
-  implicit def stringToPath(s : String) : IPath = new Path(s)
-  implicit def stringSeqToPath(s : Seq[_ <: String]) : IPath =
-    new Path(s.mkString("/"))
+  object Implicits {
+    implicit def stringToPath(s : String) : IPath = new Path(s)
+    implicit def stringSeqToPath(s : Seq[_ <: String]) : IPath =
+      new Path(s.mkString("/"))
+  }
 }
 
 private abstract class CoqElementImpl[
