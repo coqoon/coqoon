@@ -146,32 +146,30 @@ trait ICoqProject extends ICoqElement with IParent {
   def getDeleteOperation(deleteContent : Boolean) : IUndoableOperation
 }
 object ICoqProject {
-  private def coqBuilderP(a : ICommand) =
-    (CoqBuilder.BUILDER_ID == a.getBuilderName)
-  
-  private def coqNatureP(a : String) =
-    (CoqNature.NATURE_ID == a)
+  def isCoqNature(a : String) = (CoqNature.NATURE_ID == a)
+  def isCoqBuilder(a : ICommand) = (CoqBuilder.BUILDER_ID == a.getBuilderName)
     
-  def getDescription(ws : IWorkspace, name : String) :
-      IProjectDescription = {
-    configureDescription(ws.newProjectDescription(name))
-  }
+  def newDescription(ws : IWorkspace, name : String) : IProjectDescription =
+      configureDescription(ws.newProjectDescription(name))
+  
+  def newDescription(proj : IProject) : IProjectDescription =
+      newDescription(proj.getWorkspace, proj.getName)
   
   def configureDescription(d : IProjectDescription) :
       IProjectDescription = {
     val bs = d.getBuildSpec
-    if (!bs.exists(coqBuilderP))
+    if (!bs.exists(isCoqBuilder))
       d.setBuildSpec(bs :+ makeBuilderCommand(d))
     val ns = d.getNatureIds
-    if (!ns.exists(coqNatureP))
+    if (!ns.exists(isCoqNature))
       d.setNatureIds(ns :+ CoqNature.NATURE_ID)
     d
   }
   
   def deconfigureDescription(d : IProjectDescription) :
       IProjectDescription = {
-    d.setBuildSpec(d.getBuildSpec.filterNot(coqBuilderP))
-    d.setNatureIds(d.getNatureIds.filterNot(coqNatureP))
+    d.setBuildSpec(d.getBuildSpec.filterNot(isCoqBuilder))
+    d.setNatureIds(d.getNatureIds.filterNot(isCoqNature))
     d
   }
   
@@ -192,8 +190,7 @@ private class CoqProjectImpl(
   
   override def getCreateOperation = {
     new CreateProjectOperation(
-        ICoqProject.getDescription(res.getWorkspace, res.getName),
-        "New Coq project")
+        ICoqProject.newDescription(res), "New Coq project")
   }
   
   override def getDeleteOperation(deleteContent : Boolean) = {
@@ -300,13 +297,11 @@ private class CoqPackageFragmentImpl(
   
   import org.eclipse.ui.ide.undo.CreateFolderOperation
   
-  override def getCreateOperation = {
+  override def getCreateOperation =
     new CreateFolderOperation(res, null, "New package fragment")
-  }
   
-  override def getDeleteOperation = {
+  override def getDeleteOperation =
     new DeleteResourcesOperation(Array(res), "Delete package fragment", false)
-  }
   
   override def getVernacFile(file : IPath) =
     new CoqVernacFileImpl(res.getFile(file), this)
