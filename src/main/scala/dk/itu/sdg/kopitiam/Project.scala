@@ -109,20 +109,76 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
   }
 }
 
+import org.eclipse.jface.viewers.{
+  LabelProvider, ILabelProviderListener, ITreeContentProvider, Viewer}
+
+private class LoadPathLabelProvider extends LabelProvider
+
+private class LoadPathContentProvider extends ITreeContentProvider {
+  override def dispose = ()
+  
+  override def inputChanged(viewer : Viewer, oldInput : Any, newInput : Any) =
+    viewer.refresh
+  
+  override def getElements(input : Any) = input match {
+    case a : ICoqProject => a.getLoadPath.toArray
+    case _ => Array()
+  }
+  
+  override def getChildren(parent : Any) = parent match {
+    case a : ICoqLoadPath => Array(a._tmp_makecmd)
+    case _ => Array()
+  }
+  
+  override def getParent(child : Any) = null
+  override def hasChildren(parent : Any) = true
+}
+
 import org.eclipse.swt.SWT
-import org.eclipse.swt.widgets.{Composite, Label}
+import org.eclipse.swt.layout.FillLayout
+import org.eclipse.swt.widgets.{Composite, Button, Label, TabFolder, TabItem}
 import org.eclipse.core.runtime.IAdaptable
 import org.eclipse.ui.IWorkbenchPropertyPage
 import org.eclipse.jface.preference.PreferencePage
+import org.eclipse.jface.viewers.TreeViewer
 
 class LoadPathConfigurationPage
     extends PreferencePage with IWorkbenchPropertyPage {
-  override def getElement = null
-  override def setElement(element : IAdaptable) = ()
+  private var element : IAdaptable = null
+  override def getElement : IProject = element.asInstanceOf[IProject]
+  override def setElement(element : IAdaptable) = (this.element = element)
   override def createContents(c : Composite) = {
-    var l = new Label(c, SWT.NONE)
-    l.setText("\"This is only a test...\"")
-    l
+    val tf = new TabFolder(c, SWT.NONE)
+    
+    val t1 = new TabItem(tf, SWT.NONE)
+    t1.setText("Source")
+    val c1 = new Composite(tf, SWT.NONE)
+    t1.setControl(c1)
+    c1.setLayout(new FillLayout(SWT.HORIZONTAL))
+    
+    val c1l = new Composite(c1, SWT.NONE)
+    c1l.setLayout(new FillLayout(SWT.VERTICAL))
+    
+    val tv = new TreeViewer(c1l)
+    tv.setLabelProvider(new LoadPathLabelProvider)
+    tv.setContentProvider(new LoadPathContentProvider)
+    tv.setInput(ICoqModel.create(
+        getElement.getWorkspace.getRoot).getProject(getElement.getName()))
+    
+    val c1r = new Composite(c1, SWT.NONE)
+    c1r.setLayout(new FillLayout(SWT.VERTICAL))
+    
+    new Button(c1r, SWT.NONE).setText("I'm a button!")
+    new Button(c1r, SWT.NONE).setText("I'm also a button!")
+    
+    val t2 = new TabItem(tf, SWT.NONE)
+    t2.setText("Projects")
+    
+    val t3 = new TabItem(tf, SWT.NONE)
+    t3.setText("Libraries")
+    
+    tf.pack
+    tf
   }
 }
 
