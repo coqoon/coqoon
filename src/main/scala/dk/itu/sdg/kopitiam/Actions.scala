@@ -25,7 +25,9 @@ abstract class KAction extends IHandler {
   def doit () : Unit
 }
 
-class JavaEditorState(val editor : org.eclipse.ui.IEditorPart) {
+import org.eclipse.ui.IEditorPart
+
+class JavaEditorState(val editor : IEditorPart) extends CoqTopContainer {
   import org.eclipse.jdt.core.dom._
   
   private var coqTopV : CoqTopIdeSlave_v20120710 = null
@@ -54,6 +56,12 @@ class JavaEditorState(val editor : org.eclipse.ui.IEditorPart) {
   
   var completedMethods : List[MethodDeclaration] = List()
 }
+object JavaEditorState {
+  private val states =
+    scala.collection.mutable.HashMap[IEditorPart, JavaEditorState]()
+  def requireStateFor(part : IEditorPart) =
+    states.getOrElseUpdate(part, { new JavaEditorState(part) })
+}
 
 class ProveMethodAction extends KAction
     with EclipseJavaHelper
@@ -79,7 +87,7 @@ class ProveMethodAction extends KAction
       //plan:
       // a: get project
       val edi : ITextEditor = editor.asInstanceOf[ITextEditor]
-      val jes : JavaEditorState = new JavaEditorState(edi) /* for now */
+      val jes = JavaEditorState.requireStateFor(edi)
       val prov = edi.getDocumentProvider
       val doc = prov.getDocument(edi.getEditorInput)
       val bla = getRoot(edi.getEditorInput)
@@ -178,6 +186,13 @@ class JavaProofInitialisationJob(jes : JavaEditorState)
         for (s <- prfhead)
           jes.coqTop.interp(true, false, s)        
       case None =>
+    }
+    val goals = jes.coqTop.goals match {
+      case CoqTypes.Good(a) => a
+      case _ => None
+    }
+    CoqJob.asyncExec {
+      jes.setGoals(goals)
     }
     //register handlers!
     Status.OK_STATUS

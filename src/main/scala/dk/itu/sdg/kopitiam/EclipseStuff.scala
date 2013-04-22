@@ -933,13 +933,18 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
       case Some(ed) => ed.removeListener(this)
       case None =>
     }
-    if (e.isInstanceOf[CoqTopContainer]) {
-      val ed = e.asInstanceOf[CoqTopContainer]
-      activeContainer = Some(ed)
-      ed.addListener(this)
-      writeGoal(ed.goals)
-    } else
-      activeContainer = None
+    activeContainer = if (e.isInstanceOf[CoqTopContainer]) {
+      Some(e.asInstanceOf[CoqTopContainer])
+    } else if (e.isInstanceOf[ITextEditor]) {
+      Some(JavaEditorState.requireStateFor(e))
+    } else None
+    activeContainer match {
+      case Some(c) =>
+        c.addListener(this)
+        writeGoal(c.goals)
+      case None =>
+        writeGoal(None)
+    }
   }
   
   import org.eclipse.ui.IWorkbenchPartReference
