@@ -149,10 +149,17 @@ class JavaProofInitialisationJob(jes : JavaEditorState)
     val basename = fei.getFile.getName().dropRight(5)
     val model = proj.getFile(new Path(basename + "_model.v"))
     if (!model.exists) {
-      EclipseBoilerPlate.warnUser("Please write a model file for this Java file named '" + basename + "_model'.", "")
+      EclipseBoilerPlate.warnUser("Model file missing",
+          "Please write a model file for this Java file named '" +
+          basename + "_model'.")
       return Status.OK_STATUS
-    } else
-      new CoqCompileJob(model.getProject.getLocation.toFile, model.getName, true).schedule
+    } else {
+      val ccj = new CoqCompileJob(model)
+      ccj.schedule
+      ccj.join
+      if (ccj.getResult != Status.OK_STATUS)
+        return ccj.getResult
+    }
     //send over definition and spec
     jes.compilationUnit match {
       case Some(x) =>

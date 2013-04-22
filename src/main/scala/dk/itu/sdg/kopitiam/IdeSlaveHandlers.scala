@@ -190,8 +190,7 @@ class CompileCoqHandler extends EditorHandler {
     import org.eclipse.ui.IFileEditorInput
     if (isEnabled()) {
       val f = editor.getEditorInput().asInstanceOf[IFileEditorInput].getFile
-      new CoqCompileJob(
-          f.getParent.getLocation.toFile, f.getName, false).schedule()
+      new CoqCompileJob(f).schedule()
     }
     null
   }

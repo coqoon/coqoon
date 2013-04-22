@@ -1049,13 +1049,19 @@ class Startup extends IStartup {
   }
 }
 
+import org.eclipse.core.resources.IFile
 import org.eclipse.core.runtime.jobs.Job
-import java.io.File
-class CoqCompileJob (path : File, name : String, requiressuccess : Boolean) extends Job (name : String) {
 
+class CoqCompileJob (source : IFile)
+    extends Job ("Compiling Coq file " + source.getName) {
   import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status}
   import java.io.File
   override def run (mon : IProgressMonitor) : IStatus = {
+    println("CoqCompileJob(" + source + ") is running")
+    
+    val name = source.getProjectRelativePath.toOSString
+    val path = source.getProject.getLocation.toFile
+    
     if (EclipseConsole.out == null)
       EclipseConsole.initConsole
     val coqc = CoqTopIdeSlave.getProgramPath("coqc")
@@ -1065,9 +1071,10 @@ class CoqCompileJob (path : File, name : String, requiressuccess : Boolean) exte
       val lp = new File(loadp).exists
       val cmdarr =
         if (lp)
-          List(coqc, "-I", loadp, name)
+          List(coqc, "-R", "src/", "", "-I", loadp, name)
         else
-          List(coqc, name)
+          List(coqc, "-R", "src/", "", name)
+      println(cmdarr)
       val coqcp = new ProcessBuilder(cmdarr : _*)
             .directory(path)
             .redirectErrorStream(true)
@@ -1080,11 +1087,9 @@ class CoqCompileJob (path : File, name : String, requiressuccess : Boolean) exte
         line = ou.readLine()
       }
       coqcp.waitFor
-      if (requiressuccess)
-        if (coqcp.exitValue != 0) {
-          (/*CoqCommands.empty*/)
-        } else
-          (/*CoqCommands.step*/)
+      if (coqcp.exitValue != 0)
+        return new Status(IStatus.ERROR,
+            "dk.itu.sdg.kopitiam", "Oh no! Last output was " + line)
     }
     Status.OK_STATUS
   }
