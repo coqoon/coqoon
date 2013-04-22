@@ -1065,7 +1065,12 @@ class CoqCompileJob (source : IFile)
     println("CoqCompileJob(" + source + ") is running")
     
     val name = source.getProjectRelativePath.toOSString
+    val output = source.getLocation.removeFileExtension.
+        addFileExtension("vo").toFile
     val path = source.getProject.getLocation.toFile
+    
+    if (output.lastModified > source.getLocation.toFile.lastModified)
+      return Status.OK_STATUS
     
     if (EclipseConsole.out == null)
       EclipseConsole.initConsole
