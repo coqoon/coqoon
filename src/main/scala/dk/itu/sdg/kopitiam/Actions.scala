@@ -25,18 +25,6 @@ abstract class KAction extends IHandler {
   def doit () : Unit
 }
 
-class CompileCoqAction extends KAction {
-  import org.eclipse.ui.{IFileEditorInput, PlatformUI}
-  override def doit () : Unit = {
-    val acted = PlatformUI.getWorkbench.getActiveWorkbenchWindow.getActivePage.getActiveEditor
-    val ip = acted.getEditorInput
-    assert(ip.isInstanceOf[IFileEditorInput])
-    val r = ip.asInstanceOf[IFileEditorInput].getFile
-    new CoqCompileJob(r.getProject.getLocation.toFile, r.getName, false).schedule
-  }
-}
-object CompileCoqAction extends CompileCoqAction { }
-
 class JavaEditorState(val editor : org.eclipse.ui.IEditorPart) {
   import org.eclipse.jdt.core.dom._
   
