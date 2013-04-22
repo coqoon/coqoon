@@ -12,10 +12,32 @@ case class CoqStep(
     text : String,
     synthetic : Boolean) // true iff this step doesn't need to be rewound
 
-import scala.collection.mutable.Stack
-trait Editor extends org.eclipse.ui.IEditorPart {
-  def steps : Stack[CoqStep]
+trait CoqTopContainer {
   def coqTop : CoqTopIdeSlave_v20120710
+  
+  private var goals_ : Option[CoqTypes.goals] = None
+  def goals = goals_
+  def setGoals(g : Option[CoqTypes.goals]) = {
+    goals_ = g
+    fireChange(CoqTopContainer.PROPERTY_GOALS)
+  }
+  
+  import org.eclipse.ui.IPropertyListener
+  
+  private var listeners = Set[IPropertyListener]()
+  def addListener(l : IPropertyListener) = (listeners += l)
+  def removeListener(l : IPropertyListener) = (listeners -= l)
+  def fireChange(propertyID : Int) = listeners.map {
+    _.propertyChanged(this, propertyID)
+  }
+}
+object CoqTopContainer {
+  final val PROPERTY_GOALS = 1234567;
+}
+    
+import scala.collection.mutable.Stack
+trait Editor extends CoqTopContainer with org.eclipse.ui.IEditorPart {
+  def steps : Stack[CoqStep]
   
   def document : String
   def cursorPosition : Int
@@ -25,9 +47,6 @@ trait Editor extends org.eclipse.ui.IEditorPart {
   
   def completed : Int
   def setCompleted(offset : Int)
-  
-  def goals : CoqTypes.goals
-  def setGoals(goals : CoqTypes.goals)
   
   var enabled_ : Boolean = true
   

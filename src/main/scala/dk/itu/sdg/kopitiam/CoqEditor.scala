@@ -13,7 +13,7 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   override def document = getSourceViewer().getDocument().get()
   override def cursorPosition =
     getSourceViewer().getTextWidget().getCaretOffset()
-    
+  
   private var underwayV : Int = 0
   override def underway = underwayV
   override def setUnderway(offset : Int) = {
@@ -28,13 +28,6 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   override def setCompleted(offset : Int) = {
     completedV = offset
     addAnnotations_(completed, underway)
-  }
-  
-  private var goalsV : CoqTypes.goals = goals
-  override def goals = goalsV
-  override def setGoals(goals : CoqTypes.goals) = {
-    goalsV = goals
-    firePropertyChange(CoqEditorConstants.PROPERTY_GOALS)
   }
   
   private var coqTopV : CoqTopIdeSlave_v20120710 = null
@@ -333,10 +326,6 @@ protected class CoqContentProvider extends ITreeContentProvider {
     //Console.println("getParent " + obj)
     null //FIXME: Figure out how to do this - perhaps compute a table of parents?
   }
-}
-
-object CoqEditorConstants {
-  final val PROPERTY_GOALS = 1234567;
 }
 
 import org.eclipse.ui.editors.text.TextFileDocumentProvider

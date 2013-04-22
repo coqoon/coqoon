@@ -60,7 +60,7 @@ class RestartCoqJob(editor : Editor) extends CoqJob("Restart Coq", editor) {
   override def run(monitor : IProgressMonitor) = {
     editor.steps.synchronized { editor.steps.clear }
     CoqJob.asyncExec {
-      editor.setGoals(null)
+      editor.setGoals(None)
       editor.setUnderway(0)
     }
     editor.coqTop.restart
@@ -96,8 +96,8 @@ abstract class StepJob(
   protected def doComplete(
       f : Option[() => Unit], status : IStatus) : IStatus = {
     val goals = editor.coqTop.goals match {
-      case CoqTypes.Good(Some(g)) => g
-      case _ => null
+      case CoqTypes.Good(g) => g
+      case _ => None
     }
     CoqJob.asyncExec {
       f.map { _() }

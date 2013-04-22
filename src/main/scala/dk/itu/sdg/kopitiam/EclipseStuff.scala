@@ -909,10 +909,9 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   import org.eclipse.ui.texteditor.ITextEditor
   
   override def propertyChanged (source : Object, propID : Int) = {
-    if (source.isInstanceOf[ITextEditor] &&
-        source.isInstanceOf[Editor] &&
-        propID == CoqEditorConstants.PROPERTY_GOALS)
-      writeGoal(source.asInstanceOf[Editor])
+    if (source.isInstanceOf[CoqTopContainer] &&
+        propID == CoqTopContainer.PROPERTY_GOALS)
+      writeGoal(source.asInstanceOf[CoqTopContainer].goals)
   }
 
   import org.eclipse.ui.IViewSite
@@ -927,40 +926,40 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   }
   
   import org.eclipse.ui.IEditorPart
-  private var activeEditor : Option[Editor] = None
-  private def setActiveEditor (e : IEditorPart) = {
+  private var activeContainer : Option[CoqTopContainer] = None
+  private def setActiveContainer (e : IEditorPart) = {
     println("" + this + ".setActiveEditor(" + e + ")")
-    activeEditor match {
-      case Some(ed) => ed.removePropertyListener(this)
+    activeContainer match {
+      case Some(ed) => ed.removeListener(this)
       case None =>
     }
-    if (e.isInstanceOf[ITextEditor] && e.isInstanceOf[Editor]) {
-      val ed = e.asInstanceOf[Editor]
-      activeEditor = Some(ed)
-      ed.addPropertyListener(this)
-      writeGoal(ed)
+    if (e.isInstanceOf[CoqTopContainer]) {
+      val ed = e.asInstanceOf[CoqTopContainer]
+      activeContainer = Some(ed)
+      ed.addListener(this)
+      writeGoal(ed.goals)
     } else
-      activeEditor = None
+      activeContainer = None
   }
   
   import org.eclipse.ui.IWorkbenchPartReference
   override def partOpened (ref : IWorkbenchPartReference) = {
     val p = ref.getPart(false)
     if (p == this)
-      setActiveEditor(
+      setActiveContainer(
           getSite.getWorkbenchWindow().getActivePage().getActiveEditor())
   }
   
   override def partClosed (ref : IWorkbenchPartReference) = {
     val p = ref.getPart(false)
-    if (this == p || Some(p) == activeEditor)
-      setActiveEditor(null)
+    if (this == p || Some(p) == activeContainer)
+      setActiveContainer(null)
   }
   
   override def partActivated (ref : IWorkbenchPartReference) = {
     val p = ref.getPart(false)
-    if (p.isInstanceOf[IEditorPart] && Some(p) != activeEditor)
-      setActiveEditor(p.asInstanceOf[IEditorPart])
+    if (p.isInstanceOf[IEditorPart] && Some(p) != activeContainer)
+      setActiveContainer(p.asInstanceOf[IEditorPart])
   }
 
   override def partDeactivated (ref : IWorkbenchPartReference) = ()
@@ -998,11 +997,12 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
     }
   }*/
   
-  private def writeGoal (ed : Editor) : Unit = {
+  private def writeGoal (coqGoals : Option[CoqTypes.goals]) : Unit = {
     if (!comp.isDisposed) {
-      val goalData = if (ed != null && ed.goals != null) {
-        ed.goals.fg_goals
-      } else List.empty
+      val goalData = coqGoals match {
+        case None => List.empty
+        case Some(x) => x.fg_goals
+      }
       if (subgoals.length < goalData.length) {
         while (subgoals.length != goalData.length) {
           val ti = new TabItem(goals, SWT.NONE)
