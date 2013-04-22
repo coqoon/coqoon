@@ -1,6 +1,6 @@
 package dk.itu.sdg.kopitiam
 
-import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status}
+import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status, SubMonitor}
 import org.eclipse.core.runtime.jobs.ISchedulingRule
 case class EditorRule(
     editor : Editor) extends ISchedulingRule {
@@ -19,32 +19,46 @@ abstract class CoqJob(
 
 class InitialiseCoqJob(editor : Editor)
     extends CoqJob("Initialise Coq", editor) {
-  override def run(monitor : IProgressMonitor) = {
-    editor.preExecuteJob
-    val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-    editor.coqTop.interp(false, false, "Add LoadPath \"" + loadp + "\".")
-    
-    import org.eclipse.ui.IFileEditorInput
-    import org.eclipse.core.resources.IResource
-    
-    val input = editor.getEditorInput
-    val res : Option[IResource] =
-      if (input.isInstanceOf[IFileEditorInput]) {
-        Some(input.asInstanceOf[IFileEditorInput].getFile)
-      } else None
+  override def run(monitor : IProgressMonitor) =
+    InitialiseCoqJob.run(editor, monitor)
+}
+object InitialiseCoqJob {
+  def run(editor : Editor, monitor_ : IProgressMonitor) : IStatus = {
+    val monitor = SubMonitor.convert(monitor_, "Initialising Coq", 2)
+    try {
+      editor.preExecuteJob
       
-    res match {
-      case Some(r) =>
-        editor.coqTop.interp(false, false,
-            "Add Rec LoadPath \"" +
-            r.getProject.getFolder("src").getLocation.toOSString + "\".")
-      case None =>
-        Console.println("shouldn't happen - trying to get ProjectDir from " +
-            input + ", which is not an IFileEditorInput")
-    }
+      monitor.subTask("Adding global loadpath entries")
+      val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
+      editor.coqTop.interp(false, false, "Add LoadPath \"" + loadp + "\".")
+      monitor.worked(1)
+      
+      monitor.subTask("Adding project loadpath entries")
+      
+      import org.eclipse.ui.IFileEditorInput
+      import org.eclipse.core.resources.IResource
+      
+      val input = editor.getEditorInput
+      val res : Option[IResource] =
+        if (input.isInstanceOf[IFileEditorInput]) {
+          Some(input.asInstanceOf[IFileEditorInput].getFile)
+        } else None
+        
+      res match {
+        case Some(r) =>
+          editor.coqTop.interp(false, false,
+              "Add Rec LoadPath \"" +
+              r.getProject.getFolder("src").getLocation.toOSString + "\".")
+        case None =>
+          Console.println("shouldn't happen - trying to get ProjectDir from " +
+              input + ", which is not an IFileEditorInput")
+      }
 
-    editor.postExecuteJob
-    Status.OK_STATUS
+      monitor.worked(1)
+      
+      editor.postExecuteJob
+      Status.OK_STATUS
+    } finally monitor_.done
   }
 }
 
@@ -56,16 +70,31 @@ private object CoqJob {
     })
 }
 
-class RestartCoqJob(editor : Editor) extends CoqJob("Restart Coq", editor) {
-  override def run(monitor : IProgressMonitor) = {
-    editor.steps.synchronized { editor.steps.clear }
-    CoqJob.asyncExec {
-      editor.setGoals(None)
-      editor.setUnderway(0)
-    }
-    editor.coqTop.restart
-    new InitialiseCoqJob(editor).schedule()
-    Status.OK_STATUS
+class RestartCoqJob(editor : Editor) extends CoqJob("Restarting Coq", editor) {
+  override def run(monitor : IProgressMonitor) =
+    RestartCoqJob.run(editor, monitor)
+}
+object RestartCoqJob {
+  def run(editor : Editor, monitor_ : IProgressMonitor) : IStatus = {
+    val monitor = SubMonitor.convert(monitor_, "Restarting Coq", 3)
+    try {
+      monitor.subTask("Clearing state")
+      editor.steps.synchronized { editor.steps.clear }
+      CoqJob.asyncExec {
+        editor.setGoals(None)
+        editor.setUnderway(0)
+      }
+      monitor.worked(1)
+      
+      monitor.subTask("Restarting Coq")
+      editor.coqTop.restart
+      monitor.worked(1)
+      
+      monitor.subTask("Re-initialising Coq")
+      InitialiseCoqJob.run(editor, monitor.newChild(1))
+      
+      Status.OK_STATUS
+    } finally monitor_.done
   }
 }
 
