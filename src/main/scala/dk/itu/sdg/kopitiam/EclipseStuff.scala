@@ -1090,9 +1090,9 @@ object CoqCompileJob {
         val lp = new File(loadp).exists
         val cmdarr =
           if (lp)
-            List(coqc, "-R", "src/", "", "-I", loadp, name)
+            List(coqc, "-noglob", "-R", "src/", "", "-I", loadp, name)
           else
-            List(coqc, "-R", "src/", "", name)
+            List(coqc, "-noglob", "-R", "src/", "", name)
         println(cmdarr)
         val coqcp = new ProcessBuilder(cmdarr : _*)
               .directory(path)
