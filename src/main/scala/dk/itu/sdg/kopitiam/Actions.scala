@@ -63,6 +63,17 @@ object JavaEditorState {
     states.getOrElseUpdate(part, { new JavaEditorState(part) })
 }
 
+import org.eclipse.ui.texteditor.ITextEditor
+import org.eclipse.core.runtime.IAdapterFactory
+class JavaEditorStateFactory extends IAdapterFactory {
+  override def getAdapterList = Array(classOf[CoqTopContainer])
+  override def getAdapter(a : Any, klass : Class[_]) = {
+    if (a.isInstanceOf[ITextEditor] && klass == classOf[CoqTopContainer]) {
+      JavaEditorState.requireStateFor(a.asInstanceOf[ITextEditor])
+    } else null
+  }
+}
+
 class ProveMethodAction extends KAction
     with EclipseJavaHelper
     with CoreJavaChecker with org.eclipse.ui.IEditorActionDelegate {
@@ -76,8 +87,6 @@ class ProveMethodAction extends KAction
   override def selectionChanged(a : IAction, b : ISelection) = ()
   
   import org.eclipse.jface.text.ITextSelection
-  import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
-  import org.eclipse.ui.texteditor.ITextEditor
   import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.core.resources.IMarker
   override def execute (ev : ExecutionEvent) : Object = {
