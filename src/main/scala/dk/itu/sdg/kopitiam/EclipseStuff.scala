@@ -898,12 +898,68 @@ object EclipseConsole {
 import org.eclipse.ui.part.ViewPart
 import org.eclipse.ui.{IPropertyListener, IPartListener2}
 
+import org.eclipse.swt.widgets.{Composite, Control, Text}
+
+trait GoalPresenter {
+  def init(parent : Composite)
+  def render(goals : Option[CoqTypes.goals])
+  def dispose
+}
+
+import org.eclipse.swt.SWT
+import org.eclipse.swt.layout.FillLayout
+import org.eclipse.swt.widgets.{TabFolder, TabItem}
+
+class DefaultGoalPresenter extends GoalPresenter {
+  private var goals : TabFolder = null
+  override def init(parent : Composite) = {
+    goals = new TabFolder(parent, SWT.NONE)
+    goals
+  }
+  
+  override def dispose = goals.dispose
+  
+  private def subgoals = goals.getItems()
+  
+  override def render(coqGoals : Option[CoqTypes.goals]) = {
+    val goalData = coqGoals match {
+      case None => List.empty
+      case Some(x) => x.fg_goals
+    }
+    if (subgoals.length < goalData.length) {
+      while (subgoals.length != goalData.length) {
+        val ti = new TabItem(goals, SWT.NONE)
+        val area = new Composite(goals, SWT.NONE)
+        area.setLayout(new FillLayout(SWT.VERTICAL))
+        ti.setControl(area)
+        
+        // val sash = new Sash(area, SWT.HORIZONTAL)
+        new Text(area,
+            SWT.BORDER | SWT.READ_ONLY | SWT.MULTI |
+            SWT.H_SCROLL | SWT.V_SCROLL)
+        new Text(area,
+            SWT.BORDER | SWT.READ_ONLY | SWT.MULTI |
+            SWT.H_SCROLL | SWT.V_SCROLL)
+        ti.setText(subgoals.length.toString)
+      }
+    } else {
+      while (subgoals.length != goalData.length)
+        subgoals.last.dispose()
+    }
+    goals.pack
+    goalData.zip(subgoals).foreach(_ match {
+      case (goal, control) =>
+        val comp = control.getControl().asInstanceOf[Composite]
+        comp.getChildren()(0).asInstanceOf[Text].setText(goal.goal_hyp.mkString("\n"))
+        comp.getChildren()(1).asInstanceOf[Text].setText(goal.goal_ccl)
+    })
+  }
+}
+
 class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
-  import org.eclipse.swt.widgets.{Composite,Text}
-  import org.eclipse.swt.SWT
   import org.eclipse.swt.layout.{FormData,FormLayout,FormAttachment}
   import org.eclipse.swt.graphics.{Color,RGB,Rectangle}
-  import org.eclipse.swt.widgets.{Display,Sash,Listener,Event,TabFolder,TabItem}
+  import org.eclipse.swt.widgets.{Display,Sash,Listener,Event}
 //  import org.eclipse.swt.custom.{CTabFolder,CTabItem}
   
   override def propertyChanged (source : Object, propID : Int) = {
@@ -919,6 +975,7 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   }
   
   override def dispose = {
+    presenter.dispose
     getSite.getWorkbenchWindow().getPartService().removePartListener(this)
     super.dispose
   }
@@ -974,9 +1031,8 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   override def partInputChanged (part : IWorkbenchPartReference) : Unit = { }
   override def partVisible (part : IWorkbenchPartReference) : Unit = { }
 
+  private var presenter : GoalPresenter = new DefaultGoalPresenter
   
-  var goals : TabFolder = null
-  def subgoals = goals.getItems()
   var comp : Composite = null
 
   import org.eclipse.swt.layout.FillLayout
@@ -985,7 +1041,7 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
     comp = new Composite(parent, SWT.NONE)
     comp.setLayout(new FillLayout())
 
-    goals = new TabFolder(comp, SWT.NONE)
+    presenter.init(comp)
   }
 
   /*class SashListener(sash : Sash, comp : Composite, limit : Int)
@@ -1003,40 +1059,9 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   }*/
   
   private def writeGoal (coqGoals : Option[CoqTypes.goals]) : Unit = {
-    if (!comp.isDisposed) {
-      val goalData = coqGoals match {
-        case None => List.empty
-        case Some(x) => x.fg_goals
-      }
-      if (subgoals.length < goalData.length) {
-        while (subgoals.length != goalData.length) {
-          val ti = new TabItem(goals, SWT.NONE)
-          val area = new Composite(goals, SWT.NONE)
-          area.setLayout(new FillLayout(SWT.VERTICAL))
-          ti.setControl(area)
-          
-          // val sash = new Sash(area, SWT.HORIZONTAL)
-          new Text(area,
-              SWT.BORDER | SWT.READ_ONLY | SWT.MULTI |
-              SWT.H_SCROLL | SWT.V_SCROLL)
-          new Text(area,
-              SWT.BORDER | SWT.READ_ONLY | SWT.MULTI |
-              SWT.H_SCROLL | SWT.V_SCROLL)
-          ti.setText(subgoals.length.toString)
-        }
-      } else {
-        while (subgoals.length != goalData.length)
-          subgoals.last.dispose()
-      }
-      goals.pack
-      goalData.zip(subgoals).foreach(_ match {
-        case (goal, control) =>
-          val comp = control.getControl().asInstanceOf[Composite]
-          comp.getChildren()(0).asInstanceOf[Text].setText(goal.goal_hyp.mkString("\n"))
-          comp.getChildren()(1).asInstanceOf[Text].setText(goal.goal_ccl)
-      })
-      comp.layout
-    }
+    if (!comp.isDisposed)
+      presenter.render(coqGoals)
+    comp.layout
   }
 
   def setFocus() : Unit = {
