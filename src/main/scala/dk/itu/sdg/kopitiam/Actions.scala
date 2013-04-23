@@ -2,33 +2,41 @@
 
 package dk.itu.sdg.kopitiam
 
-import org.eclipse.core.commands.{IHandler,ExecutionEvent}
+import org.eclipse.ui.ISources
+import org.eclipse.ui.texteditor.ITextEditor
+import org.eclipse.core.commands.{IHandler,AbstractHandler,ExecutionEvent}
+import org.eclipse.core.expressions.IEvaluationContext
 
-abstract class KAction extends IHandler {
-  import org.eclipse.ui.IWorkbenchWindow
-  import org.eclipse.jface.action.IAction
-  import org.eclipse.jface.viewers.ISelection
-  import org.eclipse.core.commands.IHandlerListener
-
-  override def dispose () : Unit = ()
-
-  //I've no clue why this code is around and whether it is useful at all
-  private var handlers : List[IHandlerListener] = List[IHandlerListener]()
-  override def addHandlerListener (h : IHandlerListener) : Unit = { handlers ::= h }
-  override def removeHandlerListener (h : IHandlerListener) : Unit =
-    { handlers = handlers.filterNot(_ == h) }
-
-  override def execute (ev : ExecutionEvent) : Object = { doit; null }
-
-  override def isEnabled () : Boolean = true
+abstract class KAction extends AbstractHandler {
+  protected var editor : ITextEditor = null
+  
+  protected def getState : JavaEditorState =
+    JavaEditorState.requireStateFor(editor)
+  
+  override def setEnabled(evaluationContext : Object) = {
+    val activeEditor = if (evaluationContext != null) {
+      evaluationContext.asInstanceOf[IEvaluationContext].getVariable(
+          ISources.ACTIVE_EDITOR_NAME)
+    } else org.eclipse.ui.PlatformUI.getWorkbench().
+        getActiveWorkbenchWindow().getActivePage().getActiveEditor()
+    if (activeEditor != null && activeEditor.isInstanceOf[ITextEditor]) {
+      editor = activeEditor.asInstanceOf[ITextEditor]
+      setBaseEnabled(calculateEnabled)
+    } else setBaseEnabled(false)
+  }
+  
+  def calculateEnabled : Boolean = true
+  
   override def isHandled () : Boolean = true
-  def doit () : Unit
 }
 
 import org.eclipse.ui.IEditorPart
 
-class JavaEditorState(val editor : IEditorPart) extends CoqTopContainer {
+class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
   import org.eclipse.jdt.core.dom._
+  
+  def getIDocument =
+    editor.getDocumentProvider.getDocument(editor.getEditorInput)
   
   private var coqTopV : CoqTopIdeSlave_v20120710 = null
   def coqTop = {
@@ -49,17 +57,20 @@ class JavaEditorState(val editor : IEditorPart) extends CoqTopContainer {
   def compilationUnit : Option[CompilationUnit] = cu
   def setCompilationUnit (a : Option[CompilationUnit]) = cu = a
   
-  def complete : Option[ASTNode] = None
-  def setComplete(a : Option[ASTNode]) = ()
-  def underway : Option[ASTNode] = None
-  def setUnderway(a : Option[ASTNode]) = ()
+  private var completeV : Option[Statement] = None
+  def complete : Option[Statement] = completeV
+  def setComplete(a : Option[Statement]) = (completeV = a)
+  
+  private var underwayV : Option[Statement] = None
+  def underway : Option[Statement] = underwayV
+  def setUnderway(a : Option[Statement]) = (underwayV = a)
   
   var completedMethods : List[MethodDeclaration] = List()
 }
 object JavaEditorState {
   private val states =
-    scala.collection.mutable.HashMap[IEditorPart, JavaEditorState]()
-  def requireStateFor(part : IEditorPart) =
+    scala.collection.mutable.HashMap[ITextEditor, JavaEditorState]()
+  def requireStateFor(part : ITextEditor) =
     states.getOrElseUpdate(part, { new JavaEditorState(part) })
 }
 
@@ -78,28 +89,26 @@ class ProveMethodAction extends KAction
     with EclipseJavaHelper
     with CoreJavaChecker with org.eclipse.ui.IEditorActionDelegate {
   import org.eclipse.ui.IEditorPart
-  var editor : IEditorPart = null
   
   import org.eclipse.jface.action.IAction
   import org.eclipse.jface.viewers.ISelection
   override def run(a : IAction) = execute(null)
-  override def setActiveEditor(a : IAction, b : IEditorPart) = (editor = b)
+  override def setActiveEditor(a : IAction, b : IEditorPart) = {
+    editor = b.asInstanceOf[ITextEditor]
+  }
   override def selectionChanged(a : IAction, b : ISelection) = ()
   
   import org.eclipse.jface.text.ITextSelection
   import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.core.resources.IMarker
   override def execute (ev : ExecutionEvent) : Object = {
-    if (false) //! DocumentState.readyForInput)
-      EclipseBoilerPlate.warnUser("Not ready yet", "Sorry, Coq interaction is active. Maybe it is doing a Qed.")
-    else {
+    if (isEnabled()) {
       //plan:
       // a: get project
-      val edi : ITextEditor = editor.asInstanceOf[ITextEditor]
-      val jes = JavaEditorState.requireStateFor(edi)
-      val prov = edi.getDocumentProvider
-      val doc = prov.getDocument(edi.getEditorInput)
-      val bla = getRoot(edi.getEditorInput)
+      val jes = getState
+      val prov = editor.getDocumentProvider
+      val doc = prov.getDocument(editor.getEditorInput)
+      val bla = getRoot(editor.getEditorInput)
       val cu = getCompilationUnit(bla)
       jes.setCompilationUnit(Some(cu))
       jes.method.map(_ => { jes.setUnderway(None); jes.setMethod(None) })
@@ -108,7 +117,7 @@ class ProveMethodAction extends KAction
         // b: if outdated coqString: translate -- need to verify outdated...
         // c: find method and statement we want to prove
         if (walkAST(jes, cu, doc)) { //no errors!
-          val selection = edi.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
+          val selection = editor.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
           val off = selection.getOffset
           val node = findASTNode(cu, off, 0)
           val md = findMethod(node)
@@ -128,9 +137,7 @@ class ProveMethodAction extends KAction
     }
     null
   }
-  override def doit () : Unit = { }
 }
-object ProveMethodAction extends ProveMethodAction { }
 
 import org.eclipse.ui.IFileEditorInput
 import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status, SubMonitor}
@@ -229,7 +236,59 @@ object JavaProofInitialisationJob {
         jes.setGoals(goals)
       }
       //register handlers!
+      import org.eclipse.ui.handlers.IHandlerService
+      val ihs_ = jes.editor.getSite.getService(classOf[IHandlerService])
+      val ihs = ihs_.asInstanceOf[IHandlerService]
+      ihs.activateHandler("Kopitiam.step_forward", new JavaStepForwardHandler)
       Status.OK_STATUS
     } finally monitor_.done
+  }
+}
+
+class JavaStepForwardHandler
+    extends KAction with EclipseJavaHelper with JavaASTUtils {
+  override def execute(ev : ExecutionEvent) = {
+    if (isEnabled()) {
+      val jes = getState
+
+      var captureNext: Boolean = (jes.complete == None)
+
+      import org.eclipse.jdt.core.dom.Statement
+      
+      val print: Statement => Option[String] = x =>
+        if (captureNext) {
+          val ps = printProofScript(jes.getIDocument, x)
+          ps match {
+            case None => None
+            case Some(ps) =>
+              jes.setUnderway(Some(x))
+              Some(ps)
+          }
+        } else {
+          if (jes.complete.get == x)
+            captureNext = true
+          None
+        }
+
+      traverseAST(jes.method.get, true, true, print) match {
+        case a : List[String] if a.size == 1 =>
+          jes.coqTop.interp(false, false, a.head) match {
+            case CoqTypes.Good(msg) =>
+              jes.setComplete(jes.underway)
+            case CoqTypes.Fail((position, msg)) =>
+              jes.setUnderway(jes.complete)
+            case CoqTypes.Unsafe(msg) =>
+              println("I have no idea " + msg)
+          }
+        case _ => None
+      }
+      
+      jes.coqTop.goals match {
+        case CoqTypes.Good(goals) =>
+          jes.setGoals(goals)
+        case _ => jes.setGoals(None)
+      }
+    }
+    null
   }
 }
