@@ -151,7 +151,7 @@ trait EclipseJavaHelper extends VisitingAST {
           val body = x.getBody
           val name = x.getName.getIdentifier
           val st = (x.getModifiers & Modifier.STATIC) == Modifier.STATIC
-          val arguments = scala.collection.JavaConversions.asBuffer(x.parameters).map(_.asInstanceOf[SingleVariableDeclaration]).toList.map(_.getName)
+          val arguments = scala.collection.JavaConversions.asScalaBuffer(x.parameters).map(_.asInstanceOf[SingleVariableDeclaration]).toList.map(_.getName)
           val argli = arguments.map(printE(_))
           val arglis = if (st) argli else "\"this\"" :: argli
           val arglist = arglis.mkString("[", ";", "]")
@@ -282,7 +282,7 @@ trait EclipseJavaHelper extends VisitingAST {
           }
           //class def (Build_Class) - fields + methods
           val nam = x.getName.getIdentifier
-          val fieldnames = x.getFields.map(x => scala.collection.JavaConversions.asBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList.map(_.getName.getIdentifier)).flatten
+          val fieldnames = x.getFields.map(x => scala.collection.JavaConversions.asScalaBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList.map(_.getName.getIdentifier)).flatten
           val fields = fieldnames.foldRight("(SS.empty)")("(SS.add \"" + _ + "\" " + _ + ")")
           val metstring = methods.foldRight("(SM.empty _)")("(SM.add " + _ + " " + _ + ")")
           val cd = List(
@@ -297,7 +297,7 @@ trait EclipseJavaHelper extends VisitingAST {
           var classes : Set[String] = Set[String]()
           var pname : Option[String] = None
           var todo : Stack[AbstractTypeDeclaration] = Stack[AbstractTypeDeclaration]()
-          todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.types).map(_.asInstanceOf[AbstractTypeDeclaration]))
+          todo = todo.pushAll(scala.collection.JavaConversions.asScalaBuffer(x.types).map(_.asInstanceOf[AbstractTypeDeclaration]))
           while (!todo.isEmpty) {
             val t = todo.top
             todo = todo.pop
@@ -357,7 +357,7 @@ trait EclipseJavaHelper extends VisitingAST {
     private def getBodyString (b : Statement) : Option[String] =
       b match {
         case x : Block =>
-          val bod = scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]).toList
+          val bod = scala.collection.JavaConversions.asScalaBuffer(x.statements).map(_.asInstanceOf[Statement]).toList
           val bs = bod.map(getBodyString(_))
           Some(printB(bs.flatMap(x => x)))
         case x : ExpressionStatement =>
@@ -533,7 +533,7 @@ trait EclipseJavaHelper extends VisitingAST {
             "`false"
         case x : ClassInstanceCreation =>
           val n = x.getType.toString
-          val a = scala.collection.JavaConversions.asBuffer(x.arguments)
+          val a = scala.collection.JavaConversions.asScalaBuffer(x.arguments)
           if (a.size != 0) //for now!
             reportError("for now only constructors without arguments are supported", x)
           //val as = a.map(printE(_)).mkString("[", "; ", "]")
@@ -555,7 +555,7 @@ trait EclipseJavaHelper extends VisitingAST {
         case x : MethodInvocation =>
           val n = x.getName
           val e = x.getExpression
-          val a = scala.collection.JavaConversions.asBuffer(x.arguments).map(_.asInstanceOf[Expression])
+          val a = scala.collection.JavaConversions.asScalaBuffer(x.arguments).map(_.asInstanceOf[Expression])
           val as = a.map(printE(_)).mkString("[", "; ", "]")
           val st = (x.resolveMethodBinding.getModifiers & Modifier.STATIC) == Modifier.STATIC
           val expr =

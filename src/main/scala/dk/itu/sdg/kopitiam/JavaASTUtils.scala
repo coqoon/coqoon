@@ -45,7 +45,7 @@ trait JavaASTUtils {
       todo = todo.pop
       st match {
         case x : Block =>
-          val body = scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement])
+          val body = scala.collection.JavaConversions.asScalaBuffer(x.statements).map(_.asInstanceOf[Statement])
           if (forward)
             todo = todo.pushAll(body.reverse)
           else
@@ -77,7 +77,7 @@ trait JavaASTUtils {
   def traverseCU [A](c : CompilationUnit, callback : MethodDeclaration => A) : List[A] = {
     var res : List[A] = List[A]()
     var todo : Stack[AbstractTypeDeclaration] = Stack[AbstractTypeDeclaration]()
-    todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(c.types).map(_.asInstanceOf[AbstractTypeDeclaration]))
+    todo = todo.pushAll(scala.collection.JavaConversions.asScalaBuffer(c.types).map(_.asInstanceOf[AbstractTypeDeclaration]))
     while (!todo.isEmpty) {
       val t = todo.top
       todo = todo.pop

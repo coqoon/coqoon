@@ -538,7 +538,7 @@ object JavaPosition extends EclipseJavaHelper with JavaASTUtils {
 
               val r = traverseAST(x, false, true, cb)
               assert(r.size == 1)
-              next = Some(r.first)
+              next = Some(r.head)
             }
         }
     }
@@ -563,7 +563,7 @@ object JavaPosition extends EclipseJavaHelper with JavaASTUtils {
     val r = traverseAST(method.get, false, true, find)
     assert(r.size == 1 || r.size == 0)
     if (r.size == 1)
-      next = Some(r.first)
+      next = Some(r.head)
     next match {
       case None =>
         val sh = method.get.getProperty(EclipseJavaASTProperties.coqShell)
@@ -610,8 +610,8 @@ object JavaPosition extends EclipseJavaHelper with JavaASTUtils {
           todot = todot.push(y.getThenStatement)
         case x : Block =>
           assert(nextto.isInstanceOf[Block])
-          todof = todof.pushAll(scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]).reverse)
-          todot = todot.pushAll(scala.collection.JavaConversions.asBuffer(nextto.asInstanceOf[Block].statements).map(_.asInstanceOf[Statement]).reverse)
+          todof = todof.pushAll(scala.collection.JavaConversions.asScalaBuffer(x.statements).map(_.asInstanceOf[Statement]).reverse)
+          todot = todot.pushAll(scala.collection.JavaConversions.asScalaBuffer(nextto.asInstanceOf[Block].statements).map(_.asInstanceOf[Statement]).reverse)
         case x : Statement =>
           assert(x.getClass == nextto.getClass)
           val cs = x.getProperty(EclipseJavaASTProperties.coqShell)
@@ -681,7 +681,7 @@ object JavaPosition extends EclipseJavaHelper with JavaASTUtils {
     val r = traverseAST(method.get, true, true, print)
     assert(r.size == 1 || r.size == 0)
     if (r.size == 1)
-      Some(r.first)
+      Some(r.head)
     else
       None
   }
