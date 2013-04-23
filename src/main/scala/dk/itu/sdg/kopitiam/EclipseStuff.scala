@@ -905,8 +905,6 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   import org.eclipse.swt.graphics.{Color,RGB,Rectangle}
   import org.eclipse.swt.widgets.{Display,Sash,Listener,Event,TabFolder,TabItem}
 //  import org.eclipse.swt.custom.{CTabFolder,CTabItem}
-
-  import org.eclipse.ui.texteditor.ITextEditor
   
   override def propertyChanged (source : Object, propID : Int) = {
     if (source.isInstanceOf[CoqTopContainer] &&
@@ -933,11 +931,13 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
       case Some(ed) => ed.removeListener(this)
       case None =>
     }
-    activeContainer = if (e.isInstanceOf[CoqTopContainer]) {
-      Some(e.asInstanceOf[CoqTopContainer])
-    } else if (e.isInstanceOf[ITextEditor]) {
-      Some(JavaEditorState.requireStateFor(e))
-    } else None
+    activeContainer = Option(e).flatMap(a => {
+      val klass = classOf[CoqTopContainer]
+      val adapter = a.getAdapter(klass)
+      if (klass.isInstance(adapter)) {
+        Some(klass.cast(adapter))
+      } else None
+    })
     activeContainer match {
       case Some(c) =>
         c.addListener(this)
