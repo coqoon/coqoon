@@ -60,35 +60,9 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     activateEditor(ed)
   }
 
-  def maybeInsert (ed : ITextEditor) : Unit = {
-    val edi = ed.getEditorInput
-    val nam = edi.getName
-    val doc = ed.getDocumentProvider.getDocument(edi)
-    if (! EclipseTables.DocToProject.contains(doc)) {
-      val basenam = nam.split("\\.")(0)
-      val basename =
-        if (basenam.endsWith("_model"))
-          basenam.substring(0, basenam.size - 6)
-        else
-          basenam
-      val proj = EclipseTables.StringToProject.getOrElse(basename, {
-        val p = new CoqJavaProject(basename)
-        EclipseTables.StringToProject += basename -> p
-        Console.println("....instantiated new project....")
-        p
-      })
-
-      Console.println("inserted " + nam + " into DocToProject table")
-      EclipseTables.DocToProject += doc -> proj
-    }
-  }
-
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
-  def activateEditor (ed : IWorkbenchPart) : Unit = {
+  def activateEditor (ed : IWorkbenchPart) : Unit =
     Console.println("activated: " + ed)
-    if (ed.isInstanceOf[CoqEditor] || ed.isInstanceOf[JavaEditor])
-      maybeInsert(ed.asInstanceOf[ITextEditor])
-  }
 
   override def partOpened (part : IWorkbenchPartReference) : Unit =
     { handlePartRef(part) }
@@ -96,15 +70,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   override def windowActivated (window : IWorkbenchWindow) : Unit =
     { window.getPartService.addPartListener(this) }
 
-  override def partClosed (part : IWorkbenchPartReference) : Unit = {
-    val p = part.getPart(false)
-    if (p.isInstanceOf[ITextEditor]) {
-      val txt = p.asInstanceOf[ITextEditor]
-      val doc = txt.getDocumentProvider.getDocument(txt.getEditorInput)
-      if (EclipseTables.DocToProject.contains(doc))
-        EclipseTables.DocToProject.remove(doc)
-    }
-  }
+  override def partClosed (part : IWorkbenchPartReference) : Unit = { }
   override def partBroughtToTop (part : IWorkbenchPartReference) : Unit = { }
   override def partDeactivated (part : IWorkbenchPartReference) : Unit = { }
   override def partHidden (part : IWorkbenchPartReference) : Unit = { }
@@ -117,8 +83,8 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   override def documentChanged (event : DocumentEvent) : Unit = {
     val doc = event.getDocument
     //Console.println("doc " + doc + " changed [@" + event.getOffset + "], len: " + event.getLength)
-    if (EclipseTables.DocToProject.contains(doc)) {
-      val proj = EclipseTables.DocToProject(doc)
+    if (false) {
+      val proj : CoqJavaProject = null
       if (proj.isJava(doc)) {
         var foundchange : Boolean = false
         if (proj.proofShell != None) {

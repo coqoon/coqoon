@@ -43,14 +43,6 @@ class CoqJavaProject (basename : String) {
   def isCoqModel (doc : IDocument) : Boolean = false
 }
 
-object EclipseTables {
-  import scala.collection.mutable.HashMap
-  import org.eclipse.jface.text.IDocument
-
-  val DocToProject = new HashMap[IDocument, CoqJavaProject]()
-  val StringToProject = new HashMap[String, CoqJavaProject]()
-}
-
 object JavaPosition extends EclipseJavaHelper with JavaASTUtils {
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   var editor : JavaEditor = null
@@ -75,13 +67,7 @@ object JavaPosition extends EclipseJavaHelper with JavaASTUtils {
     } else null
   }
 
-  def getProj () : CoqJavaProject = {
-    val doc = getDoc
-    if (doc != null)
-      EclipseTables.DocToProject(doc)
-    else
-      null
-  }
+  def getProj() : CoqJavaProject = null
 
   import org.eclipse.jdt.core.dom.CompilationUnit
   def generateCertificate (c : CompilationUnit) : String = {
