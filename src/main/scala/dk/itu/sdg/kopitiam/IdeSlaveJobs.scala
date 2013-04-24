@@ -116,12 +116,6 @@ abstract class StepJob(
   
   protected def doCancel = doComplete(partialCCB, Status.CANCEL_STATUS)
   
-  protected def doStep(step : CoqStep) : CoqTypes.value[String] =
-    if (step.synthetic)
-      CoqTypes.Good("")
-    else
-      editor.coqTop.interp(false, false, step.text)
-  
   protected def doComplete(
       f : Option[() => Unit], status : IStatus) : IStatus = {
     val goals = editor.coqTop.goals match {
@@ -184,7 +178,7 @@ class StepForwardJob(
       if (monitor.isCanceled())
         return doCancel
       monitor.subTask(step.text.trim)
-      doStep(step) match {
+      step.run(editor.coqTop) match {
         case CoqTypes.Good(s) =>
           editor.steps.synchronized { editor.steps.push(step) }
           monitor.worked(1)

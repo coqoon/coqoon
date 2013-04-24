@@ -7,11 +7,19 @@
 
 package dk.itu.sdg.kopitiam
 
+trait CoqCommand {
+  def run(coqTop : CoqTopIdeSlave_v20120710) : CoqTypes.value[String]
+}
+
 case class CoqStep(
     offset : Int,
     text : String,
-    synthetic : Boolean) // true iff this step doesn't need to be rewound
-
+    synthetic : Boolean) extends CoqCommand {
+  override def run(coqTop : CoqTopIdeSlave_v20120710) = if (!synthetic) {
+    coqTop.interp(false, false, text)
+  } else CoqTypes.Good("")
+}
+    
 trait CoqTopContainer {
   def coqTop : CoqTopIdeSlave_v20120710
   
