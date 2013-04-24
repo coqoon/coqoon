@@ -57,9 +57,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     activateEditor(ed)
   }
 
-  import org.eclipse.jface.text.{IPainter, ITextViewerExtension4}
-  import org.eclipse.jface.text.source.{AnnotationPainter, IAnnotationAccess, Annotation, ISourceViewer}
-  def maybeInsert (ed : ITextEditor, viewer : ISourceViewer) : Unit = {
+  def maybeInsert (ed : ITextEditor) : Unit = {
     val edi = ed.getEditorInput
     val nam = edi.getName
     val doc = ed.getDocumentProvider.getDocument(edi)
@@ -70,40 +68,24 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
           basenam.substring(0, basenam.size - 6)
         else
           basenam
-      val proj = EclipseTables.StringToProject.getOrElse(basename, { val p = new CoqJavaProject(basename); EclipseTables.StringToProject += basename -> p; Console.println("....instantiated new project...."); p })
+      val proj = EclipseTables.StringToProject.getOrElse(basename, {
+        val p = new CoqJavaProject(basename)
+        EclipseTables.StringToProject += basename -> p
+        Console.println("....instantiated new project....")
+        p
+      })
       proj.setDocument(doc, nam)
 
       Console.println("inserted " + nam + " into DocToProject table")
       EclipseTables.DocToProject += doc -> proj
-
-      //install painter!
-      val access = new IAnnotationAccess () {
-        def getType (ann : Annotation) : Object = ann.getType
-        def isMultiLine (ann : Annotation) : Boolean = true
-        def isTemporary (ann : Annotation) : Boolean = true
-      }
-      val painter = new AnnotationPainter(viewer, access)
-      if (viewer.isInstanceOf[ITextViewerExtension4])
-        viewer.asInstanceOf[ITextViewerExtension4].addTextPresentationListener(painter)
-      painter.addHighlightAnnotationType("dk.itu.sdg.kopitiam.processed")
-      painter.addHighlightAnnotationType("dk.itu.sdg.kopitiam.processing")
-      painter.setAnnotationTypeColor("dk.itu.sdg.kopitiam.processed", getPrefColor("coqSentBg"))
-      painter.setAnnotationTypeColor("dk.itu.sdg.kopitiam.processing", getPrefColor("coqSentProcessBg"))
-      Console.println("installed painter " + painter + " is painting? " + painter.isPaintingAnnotations)
-      painter.paint(IPainter.TEXT_CHANGE) //in order to activate it - better idea?
     }
   }
 
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   def activateEditor (ed : IWorkbenchPart) : Unit = {
     Console.println("activated: " + ed)
-    if (ed.isInstanceOf[CoqEditor]) {
-      val txt = ed.asInstanceOf[CoqEditor]
-      maybeInsert(txt, txt.getSource)
-    } else if (ed.isInstanceOf[JavaEditor]) {
-      val txt = ed.asInstanceOf[JavaEditor]
-      maybeInsert(txt, txt.getViewer)
-    }
+    if (ed.isInstanceOf[CoqEditor] || ed.isInstanceOf[JavaEditor])
+      maybeInsert(ed.asInstanceOf[ITextEditor])
   }
 
   override def partOpened (part : IWorkbenchPartReference) : Unit =

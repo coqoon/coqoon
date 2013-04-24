@@ -317,6 +317,7 @@
             highlightPreferenceValue="true"
             icon="icons/checkmark.gif"
             includeOnPreferencePage="true"
+            label="Coq Proven Method"
             overviewRulerPreferenceKey="dk.itu.sdg.kopitiam.proverannotation.overviewrulerkey"
             overviewRulerPreferenceValue="true"
             textPreferenceKey="provenmarkerIndicationInText"
@@ -324,6 +325,40 @@
             textStylePreferenceKey="dk.itu.sdg.kopitiam.proverannotation.textStyle"
             textStylePreferenceValue="BOX"
             verticalRulerPreferenceKey="provenmarkerIndicationInVerticalRuler"
+            verticalRulerPreferenceValue="true">
+      </specification>
+      <specification
+            annotationType="dk.itu.sdg.kopitiam.processed"
+            colorPreferenceKey="coqSentBg"
+            colorPreferenceValue="118,255,133"
+            highlightPreferenceKey="dk.itu.sdg.kopitiam.processed.mycolorbackgroundhighlightkey"
+            highlightPreferenceValue="true"
+            includeOnPreferencePage="true"
+            label="Coq Processed"
+            overviewRulerPreferenceKey="dk.itu.sdg.kopitiam.processed.overviewrulerkey"
+            overviewRulerPreferenceValue="true"
+            textPreferenceKey="processedIndicationInText"
+            textPreferenceValue="true"
+            textStylePreferenceKey="dk.itu.sdg.kopitiam.processed.textStyle"
+            textStylePreferenceValue="BOX"
+            verticalRulerPreferenceKey="processedIndicationInVerticalRuler"
+            verticalRulerPreferenceValue="true">
+      </specification>
+      <specification
+            annotationType="dk.itu.sdg.kopitiam.processing"
+            colorPreferenceKey="coqSentProcessBg"
+            colorPreferenceValue="244,255,200"
+            highlightPreferenceKey="dk.itu.sdg.kopitiam.processing.mycolorbackgroundhighlightkey"
+            highlightPreferenceValue="true"
+            includeOnPreferencePage="true"
+            label="Coq Processing"
+            overviewRulerPreferenceKey="dk.itu.sdg.kopitiam.processing.overviewrulerkey"
+            overviewRulerPreferenceValue="true"
+            textPreferenceKey="processingIndicationInText"
+            textPreferenceValue="true"
+            textStylePreferenceKey="dk.itu.sdg.kopitiam.processing.textStyle"
+            textStylePreferenceValue="BOX"
+            verticalRulerPreferenceKey="processingIndicationInVerticalRuler"
             verticalRulerPreferenceValue="true">
       </specification>
    </extension>
