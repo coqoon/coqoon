@@ -895,16 +895,6 @@ object EclipseConsole {
 //   view.display(myConsole);
 }
 
-import org.eclipse.ui.IStartup
-class Startup extends IStartup {
-  import org.eclipse.core.runtime.Platform
-  
-  override def earlyStartup () : Unit = {
-    Console.println("earlyStartup called")
-    DocumentMonitor.init
-  }
-}
-
 import org.eclipse.core.resources.IFile
 import org.eclipse.core.runtime.jobs.Job
 import org.eclipse.core.runtime.{SubMonitor, IProgressMonitor}

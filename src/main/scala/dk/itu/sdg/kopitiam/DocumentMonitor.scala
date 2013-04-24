@@ -38,10 +38,13 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   }
 
   def init () : Unit = {
-    val wins = PlatformUI.getWorkbench.getWorkbenchWindows
-    wins.map(x => x.getPartService.addPartListener(this))
-    wins.map(x => x.getPages.toList.map(y => y.getEditorReferences.toList.map(z => handlePart(z.getEditor(false)))))
     val wb = PlatformUI.getWorkbench
+    wb.getWorkbenchWindows.map(x => {
+      x.getPartService.addPartListener(this)
+      x.getPages.toList.map(y =>
+        y.getEditorReferences.toList.map(z =>
+          handlePart(z.getEditor(false))))
+    })
     wb.getDisplay.asyncExec(new Runnable() {
       def run () = {
         val win = wb.getActiveWorkbenchWindow
