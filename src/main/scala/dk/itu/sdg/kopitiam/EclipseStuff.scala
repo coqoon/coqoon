@@ -33,128 +33,14 @@ class CoqJavaProject (basename : String) {
   def base_name : String = basename
 
   import org.eclipse.jface.text.IDocument
-  private var javaSource : Option[IDocument] = None
-  private var coqModel : Option[IDocument] = None
-  var modelNewerThanSource : Boolean = true
-  var javaNewerThanSource : Boolean = true
   var ASTdirty : Boolean = false
   var proofShell : Option[CoqShellTokens] = None
 
   import org.eclipse.jdt.core.dom.CompilationUnit
   var program : Option[CompilationUnit] = None
 
-  def gotClosed (doc : IDocument) : Unit = {
-    javaSource match {
-      case Some(d) => if (d == doc) javaSource = None
-      case _ =>
-    }
-    coqModel match {
-      case Some(d) => if (d == doc) coqModel = None
-      case _ =>
-    }
-  }
-
-  //XXX: this was broken, but didn't hurt too much -- maybe we don't need this anymore?
-  def setDocument (doc : IDocument, name : String) : Unit = {
-    if (name.equals(basename + ".java")) {
-      assert(javaSource == None)
-      javaSource = Some(doc)
-    } else if (name.equals(basename + "_model.v")) {
-      assert(coqModel == None)
-      coqModel = Some(doc)
-    } else
-      Console.println("huh? " + name)
-  }
-
-  private def optEq (x : Option[IDocument], y : IDocument) : Boolean = {
-    x match {
-      case Some(x2) => x2 == y
-      case _ => false
-    }
-  }
-
-  def isJava (doc : IDocument) : Boolean = { optEq(javaSource, doc) }
-  def isCoqModel (doc : IDocument) : Boolean = { optEq(coqModel, doc) }
-
-  import org.eclipse.ui.{IFileEditorInput, PlatformUI}
-  import org.eclipse.ui.part.FileEditorInput
-  import org.eclipse.core.resources.{IFile, IMarker, IProject}
-  import org.eclipse.swt.widgets.Display
-  import org.eclipse.jdt.core.dom.MethodDeclaration
-  def proveMethod (meth : MethodDeclaration) : Unit = {
-    /*CoqCommands.doLater(() => {
-      if (DocumentState.activeEditor != null) {
-        DocumentState.resetState
-        DocumentState.activeEditor.addAnnotations(0, 0)
-        DocumentState.activeEditor.invalidate
-        DocumentState.setBusy
-        val shell = CoqTop.dummy
-      }
-      (CoqCommands.step)
-    })*/
-    /*CoqCommands.doLater*/(() => {
-      proofShell match {
-        case None =>
-          Console.println("sending defs + spec")
-          //DocumentState._content = getCoqString
-          //CoqStepAllAction.doitH
-        case Some(x) =>
-          val sh : CoqShellTokens = JavaPosition.method match {
-            case None => x
-            case Some(y) =>
-              if (y == meth) {
-                val sh = y.getProperty(EclipseJavaASTProperties.coqShell)
-                if (sh != null && sh.isInstanceOf[CoqShellTokens])
-                  sh.asInstanceOf[CoqShellTokens]
-                else
-                  x
-              } else x
-          }
-          Console.println("have a PS: " + sh.globalStep + " < " + CoqTop.dummy.globalStep)
-          if (sh.globalStep < CoqTop.dummy.globalStep) {
-            JavaPosition.cur = None
-            JavaPosition.next = None
-            JavaPosition.emptyCoqShells
-            JavaPosition.method = None
-            Console.println("backtracking to shell " + sh)
-            /*CoqTop.writeToCoq*/("Backtrack " + sh.globalStep + " 0 " + CoqTop.dummy.context.length + ".")
-          } else
-            (/*CoqCommands.step*/)
-      }
-    })
-    /*CoqCommands.doLater*/(() => {
-      if (proofShell == None) {
-        Console.println("preserving proof shell: " + CoqTop.dummy)
-        proofShell = Some(CoqTop.dummy)
-      }
-      if (JavaPosition.method == None) {
-        Console.println("assigning method to JP ")
-        //story so far: model is now updated, java might be newly generated!
-        JavaPosition.method = Some(meth)
-        val prf = meth.getProperty(EclipseJavaASTProperties.coqProof)
-        assert(prf != null)
-        val p = prf.asInstanceOf[String]
-        Console.println("p is " + p)
-        //DocumentState._content = Some(DocumentState._content.getOrElse("") + p)
-        //CoqStepAllAction.doitH
-      } else
-        (/*CoqCommands.step*/)
-    })
-  }
-
-  def getCoqString () : Option[String] = {
-    program match {
-      case None =>
-        Console.println("no program!")
-        None
-      case Some(x) =>
-        val pdef = x.getProperty(EclipseJavaASTProperties.coqDefinition).asInstanceOf[String]
-        val spec = x.getProperty(EclipseJavaASTProperties.coqSpecification).asInstanceOf[String]
-        val res = pdef + spec
-        Console.println("getcoqstring returns " + res)
-        Some(res)
-    }
-  }
+  def isJava (doc : IDocument) : Boolean = false
+  def isCoqModel (doc : IDocument) : Boolean = false
 }
 
 object EclipseTables {

@@ -77,7 +77,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         Console.println("....instantiated new project....")
         p
       })
-      proj.setDocument(doc, nam)
 
       Console.println("inserted " + nam + " into DocToProject table")
       EclipseTables.DocToProject += doc -> proj
@@ -102,10 +101,8 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
     if (p.isInstanceOf[ITextEditor]) {
       val txt = p.asInstanceOf[ITextEditor]
       val doc = txt.getDocumentProvider.getDocument(txt.getEditorInput)
-      if (EclipseTables.DocToProject.contains(doc)) {
-        EclipseTables.DocToProject(doc).gotClosed(doc)
+      if (EclipseTables.DocToProject.contains(doc))
         EclipseTables.DocToProject.remove(doc)
-      }
     }
   }
   override def partBroughtToTop (part : IWorkbenchPartReference) : Unit = { }
@@ -221,7 +218,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       }
       if (proj.isCoqModel(doc)) {
         Console.println("model updated, setting boolean")
-        proj.modelNewerThanSource = true
         JavaPosition.unmarkProofs
         proj.proofShell match {
           case None =>
