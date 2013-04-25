@@ -59,11 +59,80 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
   
   private var completeV : Option[Statement] = None
   def complete : Option[Statement] = completeV
-  def setComplete(a : Option[Statement]) = (completeV = a)
+  def setComplete(a : Option[Statement]) = {
+    completeV = a
+    addAnnotations(complete, underway)
+  }
   
   private var underwayV : Option[Statement] = None
   def underway : Option[Statement] = underwayV
-  def setUnderway(a : Option[Statement]) = (underwayV = a)
+  def setUnderway(a : Option[Statement]) = {
+    underwayV = a
+    addAnnotations(complete, underway)
+  }
+  
+  private def start(a : ASTNode) = a.getStartPosition
+  private def end(a : ASTNode) = start(a) + a.getLength
+  
+  import org.eclipse.jface.text.Position
+  import org.eclipse.jface.text.source.{
+    Annotation, IAnnotationModelExtension}
+  private var completeA : Option[Annotation] = None
+  private var underwayA : Option[Annotation] = None
+  private def addAnnotations(
+      complete : Option[Statement], underway : Option[Statement]) = {
+    val doc = getIDocument
+    val model =
+      editor.getDocumentProvider.getAnnotationModel(editor.getEditorInput)
+    val modelEx = model.asInstanceOf[IAnnotationModelExtension]
+    model.connect(doc)
+    try {
+      val start = method.get.getStartPosition
+      val underway = this.underway.getOrElse { method.get }
+      val completeRange = complete.flatMap(x => Some(new Position(
+          start, end(x) - start)))
+      val underwayRange = complete match {
+        case None => Some(new Position(
+            start, end(underway) - start))
+        case Some(x) if x != underway => Some(new Position(
+            end(x), end(underway) - end(x)))
+        case _ => None
+      }
+      
+      completeRange match {
+        case Some(r) =>
+          completeA match {
+            case None =>
+              completeA = Some(new Annotation(
+                  "dk.itu.sdg.kopitiam.processed", false, "Processed Proof"))
+              model.addAnnotation(completeA.get, r)
+            case Some(a) =>
+              modelEx.modifyAnnotationPosition(a, r)
+          }
+        case None =>
+          completeA.map(a => model.removeAnnotation(a))
+          completeA = None
+      }
+      
+      underwayRange match {
+        case Some(r) =>
+          underwayA match {
+            case None =>
+              underwayA = Some(new Annotation(
+                  "dk.itu.sdg.kopitiam.processing", false, "Processing Proof"))
+              model.addAnnotation(underwayA.get, r)
+            case Some(a) =>
+              modelEx.modifyAnnotationPosition(a, r)
+          }
+        case None =>
+          underwayA.map(a => model.removeAnnotation(a))
+          underwayA = None
+      }
+      println(
+          "completeRange is " + completeRange + ", " +
+          "underwayRange is " + underwayRange)
+    } finally model.disconnect(doc)
+  }
   
   var completedMethods : List[MethodDeclaration] = List()
 }
