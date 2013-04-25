@@ -72,9 +72,9 @@ object JavaPosition extends EclipseJavaHelper with JavaASTUtils {
   import org.eclipse.jdt.core.dom.CompilationUnit
   def generateCertificate (c : CompilationUnit) : String = {
     //prog
-    val pdef = c.getProperty(EclipseJavaASTProperties.coqDefinition).asInstanceOf[String]
+    val pdef = EclipseJavaASTProperties.getDefinition(c).get.mkString("\n")
     //spec
-    val spec = c.getProperty(EclipseJavaASTProperties.coqSpecification).asInstanceOf[String]
+    val spec = EclipseJavaASTProperties.getSpecification(c).get.mkString("\n")
     //prog_valid
 
     //proofs

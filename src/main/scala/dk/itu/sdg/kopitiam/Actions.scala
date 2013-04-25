@@ -199,10 +199,8 @@ object JavaProofInitialisationJob {
       //send over definition and spec
       jes.compilationUnit match {
         case Some(x) =>
-          val pdef = x.getProperty(EclipseJavaASTProperties.coqDefinition).
-              asInstanceOf[List[String]]
-          val spec = x.getProperty(EclipseJavaASTProperties.coqSpecification).
-              asInstanceOf[List[String]]
+          val pdef = EclipseJavaASTProperties.getDefinition(x).get
+          val spec = EclipseJavaASTProperties.getSpecification(x).get
           val steps = pdef ++ spec
           val loopProgress = monitor.newChild(1,
               SubMonitor.SUPPRESS_ALL_LABELS).setWorkRemaining(steps.length)

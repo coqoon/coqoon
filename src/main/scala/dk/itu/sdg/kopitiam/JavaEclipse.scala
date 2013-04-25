@@ -3,12 +3,29 @@
 package dk.itu.sdg.kopitiam
 
 object EclipseJavaASTProperties {
-  val coqDefinition : String = "dk.itu.sdg.kopitiam.coqDefinition"
-  val coqSpecification : String = "dk.itu.sdg.kopitiam.coqSpecification"
+  import org.eclipse.jdt.core.dom._
+  private val coqDefinition : String = "dk.itu.sdg.kopitiam.coqDefinition"
+  def getDefinition(a : ASTNode) : Option[List[String]] = 
+    Option(a.getProperty(coqDefinition)).map { _.asInstanceOf[List[String]] }
+  def setDefinition(a : ASTNode, p : Option[List[String]]) =
+    a.setProperty(coqDefinition, p.orNull)
+    
+  private val coqSpecification : String = "dk.itu.sdg.kopitiam.coqSpecification"
+  def getSpecification(a : ASTNode) : Option[List[String]] =
+    Option(a.getProperty(coqSpecification)).map { _.asInstanceOf[List[String]] }
+  def setSpecification(a : ASTNode, p : Option[List[String]]) =
+    a.setProperty(coqSpecification, p.orNull)
+    
   val coqProof : String = "dk.itu.sdg.kopitiam.coqProof"
   val coqEnd : String = "dk.itu.sdg.kopitiam.coqEnd"
   val coqShell : String = "dk.itu.sdg.kopitiam.coqShell"
-  val method : String = "dk.itu.sdg.kopitiam.method"
+    
+  private val method : String = "dk.itu.sdg.kopitiam.method"
+  def getMethod(a : ASTNode) : Option[MethodDeclaration] =
+    Option(a.getProperty(method)).map { _.asInstanceOf[MethodDeclaration] }
+  def setMethod(a : ASTNode, p : Option[MethodDeclaration]) =
+    a.setProperty(method, p.orNull)
+  
   val precondition : String = "dk.itu.sdg.kopitiam.precondition"
   val postcondition : String = "dk.itu.sdg.kopitiam.postcondition"
   val quantification : String = "dk.itu.sdg.kopitiam.quantification"
@@ -59,9 +76,7 @@ trait EclipseJavaHelper extends VisitingAST {
     else {
       x match {
         case y : MethodDeclaration => Some(y)
-        case y : Initializer =>
-          val m = y.getProperty(EclipseJavaASTProperties.method)
-          if (m != null) Some(m.asInstanceOf[MethodDeclaration]) else None
+        case y : Initializer => EclipseJavaASTProperties.getMethod(y)
         case y => findMethod(y.getParent)
       }
     }
@@ -164,7 +179,7 @@ trait EclipseJavaHelper extends VisitingAST {
                     "Definition " + name + "_body := " + y + ".",
                     "Definition " + id + " := Build_Method " + arglist +
                         " " + name + "_body " + ret + ".")
-                x.setProperty(EclipseJavaASTProperties.coqDefinition, defs)
+                EclipseJavaASTProperties.setDefinition(x, Some(defs))
               case _ =>
             }
           }
@@ -175,7 +190,7 @@ trait EclipseJavaHelper extends VisitingAST {
 
           for (s <- specs) {
             //adjust pointers!
-            s.setProperty(EclipseJavaASTProperties.method, x)
+            EclipseJavaASTProperties.setMethod(s, Some(x))
             val spectxt = doc.get(s.getStartPosition, s.getLength)
             val lvaridx = spectxt.indexOf("lvars:")
             if (lvaridx > -1) {
@@ -247,7 +262,7 @@ trait EclipseJavaHelper extends VisitingAST {
           //set offsets for quant._1, pre._1, post._1
 
           //Console.println("spec: " + spec)
-          x.setProperty(EclipseJavaASTProperties.coqSpecification, List(spec))
+          EclipseJavaASTProperties.setSpecification(x, Some(List(spec)))
           specs = List[Initializer]()
 
 
@@ -290,7 +305,7 @@ trait EclipseJavaHelper extends VisitingAST {
                   " " + metstring + ".")
 
           //Console.println(cd)
-          x.setProperty(EclipseJavaASTProperties.coqDefinition, cd)
+          EclipseJavaASTProperties.setDefinition(x, Some(cd))
         case x : CompilationUnit =>
           var spec : List[String] = List[String]()
           var prog : List[String] = List[String]()
@@ -310,17 +325,11 @@ trait EclipseJavaHelper extends VisitingAST {
                 for (x <- x.getMethods) {
                   //Console.println("setting offset for method [" + x.getName.getIdentifier + "]: " + spec.mkString("\n").length)
                   x.setProperty(EclipseJavaASTProperties.coqOffset, spec.mkString("\n").length)
-                  val sp = x.getProperty(EclipseJavaASTProperties.coqSpecification)
-                  if (sp != null)
-                    spec ++= sp.asInstanceOf[List[String]]
-                  val p = x.getProperty(EclipseJavaASTProperties.coqDefinition)
-                  if (p != null)
-                    prog ++= p.asInstanceOf[List[String]]
+                  EclipseJavaASTProperties.getSpecification(x) map { spec ++= _ }
+                  EclipseJavaASTProperties.getDefinition(x) map { prog ++= _ }
                   //Console.println("  got m " + x.getName.getIdentifier)
                 }
-                val p = x.getProperty(EclipseJavaASTProperties.coqDefinition)
-                if (p != null)
-                  prog ++= p.asInstanceOf[List[String]]
+                EclipseJavaASTProperties.getDefinition(x) map { prog ++= _ }
               case y =>
             }
           }
@@ -347,8 +356,8 @@ trait EclipseJavaHelper extends VisitingAST {
         		  	  "Open Scope asn_scope.") ++ spec.reverse
 
           //x.setProperty(EclipseJavaASTProperties.specOffset, p.length + specpre.length + 1)
-          x.setProperty(EclipseJavaASTProperties.coqDefinition, prog)
-          x.setProperty(EclipseJavaASTProperties.coqSpecification, spec)
+          EclipseJavaASTProperties.setDefinition(x, Some(prog))
+          EclipseJavaASTProperties.setSpecification(x, Some(spec))
           x.setProperty(EclipseJavaASTProperties.coqEnd, "End " + n + "_spec.")
         case _ =>
       }
