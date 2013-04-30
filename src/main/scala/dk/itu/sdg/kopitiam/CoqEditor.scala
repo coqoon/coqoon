@@ -112,10 +112,10 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
     viewer
   }
 
-  import org.eclipse.jface.text.source.{Annotation, IAnnotationModelExtension}
-  private var processed : Option[Annotation] = None
-  private var processing : Option[Annotation] = None
-
+  import org.eclipse.jface.text.source.Annotation
+  private var annotationPair : (Option[Annotation], Option[Annotation]) =
+      (None, None)
+  
   def addAnnotations (first : Int, second : Int) : Unit = {
     // second is underway, which must always be >= first
     underwayV = if (second < first) first else second
@@ -127,41 +127,15 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   private def addAnnotations_ (first : Int, second : Int) : Unit = {
     val provider = getDocumentProvider
     val doc = provider.getDocument(getEditorInput)
-    //I get IAnnotationModel here, but need IAnnotationModelExtension
-    //(for modifyAnnotationPosition) - disjoint from IAnnotationModel
-    val annmodel = provider.getAnnotationModel(getEditorInput)
-    annmodel.connect(doc)
-    val p = new Position(0, first)
-    processed match {
-      case None =>
-        val ann = new Annotation("dk.itu.sdg.kopitiam.processed", false, "Processed Proof")
-        annmodel.addAnnotation(ann, p)
-        processed = Some(ann)
-      case Some(x) =>
-        val op = annmodel.getPosition(x)
-        val tst = ((op.getLength > p.getLength) || (op.getOffset != p.getOffset))
-        annmodel.asInstanceOf[IAnnotationModelExtension].modifyAnnotationPosition(x, p)
-        if (tst)
-          invalidate
-    }
-    val p2 = if (second > first) new Position(first, second - first) else null
-    processing match {
-      case None =>
-        if (p2 != null) {
-          val ann2 = new Annotation("dk.itu.sdg.kopitiam.processing", false, "Processing Proof")
-          annmodel.addAnnotation(ann2, p2)
-          processing = Some(ann2)
-        }
-      case Some(x) =>
-        if (p2 != null)
-          annmodel.asInstanceOf[IAnnotationModelExtension].modifyAnnotationPosition(x, p2)
-        else {
-          annmodel.removeAnnotation(x)
-          processing = None
-          invalidate
-        }
-    }
-    annmodel.disconnect(doc)
+    val model = provider.getAnnotationModel(getEditorInput)
+    model.connect(doc)
+    try {
+      annotationPair = JavaEditorState.doSplitAnnotations(
+          JavaEditorState.getSplitAnnotationRanges(
+              Some(0), Some(first), Some(second)),
+          annotationPair, model)
+    } finally model.disconnect(doc)
+    invalidate()
   }
 
   def invalidate () : Unit = {
