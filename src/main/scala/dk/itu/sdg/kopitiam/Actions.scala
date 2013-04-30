@@ -31,7 +31,6 @@ abstract class KAction extends AbstractHandler {
 }
 
 import org.eclipse.ui.IEditorPart
-import org.eclipse.ui.handlers.IHandlerActivation
 
 class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
   import org.eclipse.jdt.core.dom._
@@ -39,6 +38,10 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
   def getIDocument =
     editor.getDocumentProvider.getDocument(editor.getEditorInput)
   
+  import org.eclipse.ui.handlers.IHandlerService
+  def getHandlerService = editor.getSite.
+      getService(classOf[IHandlerService]).asInstanceOf[IHandlerService]
+    
   private var coqTopV : CoqTopIdeSlave_v20120710 = null
   def coqTop = {
     if (coqTopV == null) {
@@ -139,16 +142,18 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
     })
   }
   
-  var handlerActivations : List[IHandlerActivation] = List()
+  import org.eclipse.ui.handlers.IHandlerActivation
+  private var handlerActivations : List[IHandlerActivation] = List()
+  
+  def activateHandler(id : String, handler : IHandler) = {
+    val activation = getHandlerService.activateHandler(id, handler)
+    handlerActivations :+= activation
+    activation
+  }
   
   def deactivateHandlers = {
-    import org.eclipse.ui.handlers.IHandlerService
-    val ihs_ = editor.getSite.getService(classOf[IHandlerService])
-    val ihs = ihs_.asInstanceOf[IHandlerService]
-    
     import scala.collection.JavaConversions._
-    ihs.deactivateHandlers(handlerActivations)
-    
+    getHandlerService.deactivateHandlers(handlerActivations)
     handlerActivations = List()
   }
 }
@@ -364,11 +369,7 @@ object JavaProofInitialisationJob {
         jes.setGoals(goals)
       }
       //register handlers!
-      import org.eclipse.ui.handlers.IHandlerService
-      val ihs_ = jes.editor.getSite.getService(classOf[IHandlerService])
-      val ihs = ihs_.asInstanceOf[IHandlerService]
-      jes.handlerActivations :+= ihs.activateHandler(
-          "Kopitiam.step_forward", new JavaStepForwardHandler)
+      jes.activateHandler("Kopitiam.step_forward", new JavaStepForwardHandler)
       Status.OK_STATUS
     } finally monitor_.done
   }
