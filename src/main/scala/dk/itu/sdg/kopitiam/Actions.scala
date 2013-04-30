@@ -31,6 +31,7 @@ abstract class KAction extends AbstractHandler {
 }
 
 import org.eclipse.ui.IEditorPart
+import org.eclipse.ui.handlers.IHandlerActivation
 
 class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
   import org.eclipse.jdt.core.dom._
@@ -51,7 +52,13 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
   
   private var m : Option[MethodDeclaration] = None
   def method : Option[MethodDeclaration] = m
-  def setMethod(a : Option[MethodDeclaration]) = m = a
+  def setMethod(a : Option[MethodDeclaration]) = {
+    m = a
+    if (a == None) {
+      setUnderway(None)
+      deactivateHandlers
+    }
+  }
     
   private var cu : Option[CompilationUnit] = None
   def compilationUnit : Option[CompilationUnit] = cu
@@ -68,11 +75,29 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
   def underway : Option[Statement] = underwayV
   def setUnderway(a : Option[Statement]) = {
     underwayV = a
+    (underway, complete) match {
+      case (Some(un), Some(co)) if co.getStartPosition > un.getStartPosition =>
+        completeV = underwayV
+      case (None, _) =>
+        completeV = underwayV
+      case _ =>
+    }
     addAnnotations(complete, underway)
   }
   
   private def start(a : ASTNode) = a.getStartPosition
   private def end(a : ASTNode) = start(a) + a.getLength
+  
+  import org.eclipse.jface.text.source.IAnnotationModel
+  private def doConnectedToAnnotationModel(f : IAnnotationModel => Unit) = {
+    val doc = getIDocument
+    val model =
+      editor.getDocumentProvider.getAnnotationModel(editor.getEditorInput)
+    model.connect(doc)
+    try {
+      f(model)
+    } finally model.disconnect(doc)
+  }
   
   import org.eclipse.jface.text.Position
   import org.eclipse.jface.text.source.{
@@ -80,61 +105,96 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
   private var completeA : Option[Annotation] = None
   private var underwayA : Option[Annotation] = None
   private def addAnnotations(
-      complete : Option[Statement], underway : Option[Statement]) = {
-    val doc = getIDocument
-    val model =
-      editor.getDocumentProvider.getAnnotationModel(editor.getEditorInput)
+      complete : Option[Statement], underway : Option[Statement]) : Unit =
+    doConnectedToAnnotationModel { addAnnotations(complete, underway, _) }
+  
+  private def addAnnotations(
+      complete : Option[Statement], underway : Option[Statement],
+      model : IAnnotationModel) : Unit = {
     val modelEx = model.asInstanceOf[IAnnotationModelExtension]
-    model.connect(doc)
-    try {
-      val start = method.get.getStartPosition
-      val underway = this.underway.getOrElse { method.get }
-      val completeRange = complete.flatMap(x => Some(new Position(
-          start, end(x) - start)))
-      val underwayRange = complete match {
-        case None => Some(new Position(
-            start, end(underway) - start))
-        case Some(x) if x != underway => Some(new Position(
-            end(x), end(underway) - end(x)))
+
+    val start = method.map(a => a.getStartPosition)
+    
+    val completeRange = method.flatMap(_ => complete.flatMap(
+        x => Some(new Position(start.get, end(x) - start.get))))
+    val underwayRange = method.flatMap(_ => underway.flatMap(u =>
+      complete match {
+        case None =>
+          Some(new Position(start.get, end(u) - start.get))
+        case Some(x) if x != underway =>
+          Some(new Position(end(x), end(u) - end(x)))
         case _ => None
-      }
-      
-      completeRange match {
-        case Some(r) =>
-          completeA match {
-            case None =>
-              completeA = Some(new Annotation(
-                  "dk.itu.sdg.kopitiam.processed", false, "Processed Proof"))
-              model.addAnnotation(completeA.get, r)
-            case Some(a) =>
-              modelEx.modifyAnnotationPosition(a, r)
-          }
-        case None =>
-          completeA.map(a => model.removeAnnotation(a))
-          completeA = None
-      }
-      
-      underwayRange match {
-        case Some(r) =>
-          underwayA match {
-            case None =>
-              underwayA = Some(new Annotation(
-                  "dk.itu.sdg.kopitiam.processing", false, "Processing Proof"))
-              model.addAnnotation(underwayA.get, r)
-            case Some(a) =>
-              modelEx.modifyAnnotationPosition(a, r)
-          }
-        case None =>
-          underwayA.map(a => model.removeAnnotation(a))
-          underwayA = None
-      }
-      println(
-          "completeRange is " + completeRange + ", " +
-          "underwayRange is " + underwayRange)
-    } finally model.disconnect(doc)
+      }))
+
+    completeRange match {
+      case Some(r) =>
+        completeA match {
+          case None =>
+            completeA = Some(new Annotation(
+              "dk.itu.sdg.kopitiam.processed", false, "Processed Proof"))
+            model.addAnnotation(completeA.get, r)
+          case Some(a) =>
+            modelEx.modifyAnnotationPosition(a, r)
+        }
+      case None =>
+        completeA.map(a => model.removeAnnotation(a))
+        completeA = None
+    }
+
+    underwayRange match {
+      case Some(r) =>
+        underwayA match {
+          case None =>
+            underwayA = Some(new Annotation(
+              "dk.itu.sdg.kopitiam.processing", false, "Processing Proof"))
+            model.addAnnotation(underwayA.get, r)
+          case Some(a) =>
+            modelEx.modifyAnnotationPosition(a, r)
+        }
+      case None =>
+        underwayA.map(a => model.removeAnnotation(a))
+        underwayA = None
+    }
+    println(
+      "completeRange is " + completeRange + ", " +
+      "underwayRange is " + underwayRange)
   }
   
+  private var completedA =
+    scala.collection.mutable.HashMap[MethodDeclaration, Annotation]()
+  
   var completedMethods : List[MethodDeclaration] = List()
+  
+  def annotateCompletedMethods : Unit =
+    doConnectedToAnnotationModel { annotateCompletedMethods(_) }
+  
+  def annotateCompletedMethods(model : IAnnotationModel) : Unit = {
+    completedMethods.map(a => {
+      completedA.get(a) match {
+        case Some(ann) =>
+          /* do nothing */
+        case None =>
+          val ann = new Annotation(
+              "dk.itu.sdg.kopitiam.provenannotation", false, "Proven Method")
+          completedA.put(a, ann)
+          model.addAnnotation(ann, new Position(
+              a.getStartPosition, a.getLength))
+      }
+    })
+  }
+  
+  var handlerActivations : List[IHandlerActivation] = List()
+  
+  def deactivateHandlers = {
+    import org.eclipse.ui.handlers.IHandlerService
+    val ihs_ = editor.getSite.getService(classOf[IHandlerService])
+    val ihs = ihs_.asInstanceOf[IHandlerService]
+    
+    import scala.collection.JavaConversions._
+    ihs.deactivateHandlers(handlerActivations)
+    
+    handlerActivations = List()
+  }
 }
 object JavaEditorState {
   private val states =
@@ -306,7 +366,8 @@ object JavaProofInitialisationJob {
       import org.eclipse.ui.handlers.IHandlerService
       val ihs_ = jes.editor.getSite.getService(classOf[IHandlerService])
       val ihs = ihs_.asInstanceOf[IHandlerService]
-      ihs.activateHandler("Kopitiam.step_forward", new JavaStepForwardHandler)
+      jes.handlerActivations :+= ihs.activateHandler(
+          "Kopitiam.step_forward", new JavaStepForwardHandler)
       Status.OK_STATUS
     } finally monitor_.done
   }
@@ -353,6 +414,21 @@ class JavaStepForwardHandler
       jes.coqTop.goals match {
         case CoqTypes.Good(goals) =>
           jes.setGoals(goals)
+          goals match {
+            case Some(goals)
+                if !(goals.fg_goals.isEmpty && goals.bg_goals.isEmpty) =>
+            case _ =>
+              jes.coqTop.interp(false, false, "Qed.") match {
+                case CoqTypes.Good(s) =>
+                  val method = jes.method.get
+                  jes.completedMethods :+= method
+                case _ =>
+              }
+              /* Whether we succeeded or not, there's nothing more to do */
+              jes.setMethod(None)
+              jes.setUnderway(None)
+              jes.annotateCompletedMethods
+          }
         case _ => jes.setGoals(None)
       }
     }
