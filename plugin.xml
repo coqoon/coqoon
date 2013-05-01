@@ -148,6 +148,12 @@
             id="Kopitiam.interrupt"
             name="Interrupt Coq command">
       </command>
+      <command
+            categoryId="Kopitiam.category"
+            defaultHandler="dk.itu.sdg.kopitiam.ProveMethodAction"
+            id="Kopitiam.verify_method"
+            name="Verify method command">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.contexts">
@@ -224,6 +230,18 @@
             </command>
          </toolbar>
       </menuContribution>
+      <menuContribution
+            allPopups="true"
+            locationURI="popup:org.eclipse.jdt.ui.CompilationUnitEditor.EditorContext">
+         <command
+               commandId="Kopitiam.verify_method"
+               icon="icons/icon_lego.gif"
+               id="dk.itu.sdg.kopitiam.popupContribution"
+               label="Verify method"
+               style="push"
+               tooltip="Verify method">
+         </command>
+      </menuContribution>
 <!--      <menuContribution
             locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
          <command
@@ -258,29 +276,6 @@
       <type
             name="dk.itu.sdg.kopitiam.processing">
       </type>
-   </extension>
-   <extension
-         point="org.eclipse.ui.popupMenus">
-      <viewerContribution
-            id="dk.itu.sdg.kopitiam.popupContribution"
-            targetID="#CompilationUnitEditorContext">
-         <action
-               class="dk.itu.sdg.kopitiam.ProveMethodAction"
-               id="dk.itu.sdg.kopitiam.popup.provemethod"
-               label="Verify Method"
-               menubarPath="group.add">
-         </action>
-      </viewerContribution>
-<!--      <viewerContribution
-            id="dk.itu.sdg.kopitiam.popupContribution"
-            targetID="#CompilationUnitRulerContext">
-         <action
-               class="dk.itu.sdg.kopitiam.ProveMethodAction"
-               id="dk.itu.sdg.kopitiam.popup.provemethodruler"
-               label="Prove Method"
-               menubarPath="group.add">
-         </action>
-      </viewerContribution> -->
    </extension>
    <extension
          id="dk.itu.sdg.kopitiam.provenmarker"

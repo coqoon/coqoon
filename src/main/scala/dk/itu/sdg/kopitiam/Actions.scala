@@ -2,35 +2,8 @@
 
 package dk.itu.sdg.kopitiam
 
-import org.eclipse.ui.ISources
 import org.eclipse.ui.texteditor.ITextEditor
-import org.eclipse.core.commands.{IHandler,AbstractHandler,ExecutionEvent}
-import org.eclipse.core.expressions.IEvaluationContext
-
-abstract class KAction extends AbstractHandler {
-  protected var editor : ITextEditor = null
-  
-  protected def getState : JavaEditorState =
-    JavaEditorState.requireStateFor(editor)
-  
-  override def setEnabled(evaluationContext : Object) = {
-    val activeEditor = if (evaluationContext != null) {
-      evaluationContext.asInstanceOf[IEvaluationContext].getVariable(
-          ISources.ACTIVE_EDITOR_NAME)
-    } else org.eclipse.ui.PlatformUI.getWorkbench().
-        getActiveWorkbenchWindow().getActivePage().getActiveEditor()
-    if (activeEditor != null && activeEditor.isInstanceOf[ITextEditor]) {
-      editor = activeEditor.asInstanceOf[ITextEditor]
-      setBaseEnabled(calculateEnabled)
-    } else setBaseEnabled(false)
-  }
-  
-  def calculateEnabled : Boolean = true
-  
-  override def isHandled () : Boolean = true
-}
-
-import org.eclipse.ui.IEditorPart
+import org.eclipse.core.commands.{IHandler, ExecutionEvent}
 
 class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
   import org.eclipse.jdt.core.dom._
@@ -220,22 +193,9 @@ class JavaEditorStateFactory extends IAdapterFactory {
   }
 }
 
-class ProveMethodAction extends KAction
-    with EclipseJavaHelper
-    with CoreJavaChecker with org.eclipse.ui.IEditorActionDelegate {
-  import org.eclipse.ui.IEditorPart
-  
-  import org.eclipse.jface.action.IAction
-  import org.eclipse.jface.viewers.ISelection
-  override def run(a : IAction) = execute(null)
-  override def setActiveEditor(a : IAction, b : IEditorPart) = {
-    editor = b.asInstanceOf[ITextEditor]
-  }
-  override def selectionChanged(a : IAction, b : ISelection) = ()
-  
+class ProveMethodAction extends JavaEditorHandler
+    with EclipseJavaHelper with CoreJavaChecker {
   import org.eclipse.jface.text.ITextSelection
-  import org.eclipse.ui.part.FileEditorInput
-  import org.eclipse.core.resources.IMarker
   override def execute (ev : ExecutionEvent) : Object = {
     if (isEnabled()) {
       //plan:
