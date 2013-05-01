@@ -150,7 +150,7 @@
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.ProveMethodAction"
+            defaultHandler="dk.itu.sdg.kopitiam.VerifyMethodHandler"
             id="Kopitiam.verify_method"
             name="Verify method command">
       </command>
