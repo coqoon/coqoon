@@ -63,29 +63,15 @@ trait Editor extends CoqTopContainer with org.eclipse.ui.IEditorPart {
   def postExecuteJob = (enabled_ = true)
 }
 
-import org.eclipse.ui.ISources
-import org.eclipse.core.commands.{AbstractHandler,ExecutionEvent}
-import org.eclipse.core.expressions.IEvaluationContext
-
-abstract class EditorHandler extends AbstractHandler {
-  protected var editor : Editor = null
-  
-  override def setEnabled(evaluationContext : Object) = {
-    val activeEditor = if (evaluationContext != null) {
-      evaluationContext.asInstanceOf[IEvaluationContext].getVariable(
-          ISources.ACTIVE_EDITOR_NAME)
-    } else org.eclipse.ui.PlatformUI.getWorkbench().
-        getActiveWorkbenchWindow().getActivePage().getActiveEditor()
-    if (activeEditor != null && activeEditor.isInstanceOf[CoqEditor]) {
-      editor = activeEditor.asInstanceOf[CoqEditor]
-      setBaseEnabled(editor.enabled && calculateEnabled)
-    } else setBaseEnabled(false)
+abstract class CoqEditorHandler extends EditorHandler {
+  override def calculateEnabled = (editor != null && editor.enabled)
+  override def editor : Editor = {
+    if (super.editor.isInstanceOf[Editor]) {
+      super.editor.asInstanceOf[Editor]
+    } else null
   }
-  
-  def calculateEnabled : Boolean = true
 }
-
-object EditorHandler {
+object CoqEditorHandler {
   def makeStep(doc : String, offset : Int) : Option[CoqStep] = {
     val length = CoqTop.findNextCommand(doc.substring(offset))
     if (length != -1) {
@@ -133,11 +119,13 @@ object EditorHandler {
     }
   }
 }
-    
-class StepForwardHandler extends EditorHandler {
+
+import org.eclipse.core.commands.ExecutionEvent
+
+class StepForwardHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
-      EditorHandler.makeStep(editor.document, editor.underway) match {
+      CoqEditorHandler.makeStep(editor.document, editor.underway) match {
         case Some(step) =>
           // We're running in the UI thread, so always move the underway marker
           editor.setUnderway(step.offset + step.text.length())
@@ -149,11 +137,11 @@ class StepForwardHandler extends EditorHandler {
   }
 }
 
-class StepAllHandler extends EditorHandler {
+class StepAllHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
       val doc = editor.document
-      val steps = EditorHandler.makeSteps(doc, editor.underway, doc.length)
+      val steps = CoqEditorHandler.makeSteps(doc, editor.underway, doc.length)
       if (steps.length > 0) {
         editor.setUnderway(steps.last.offset + steps.last.text.length)
         new StepForwardJob(editor, steps).schedule()
@@ -163,20 +151,20 @@ class StepAllHandler extends EditorHandler {
   }
 }
 
-class StepToCursorHandler extends EditorHandler {
+class StepToCursorHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
       val underwayPos = editor.underway
       val cursorPos = editor.cursorPosition
       if (cursorPos > underwayPos) { // Forwards!
-        val steps = EditorHandler.makeSteps(
+        val steps = CoqEditorHandler.makeSteps(
           editor.document, editor.underway, editor.cursorPosition)
         if (steps.length > 0) {
           editor.setUnderway(steps.last.offset + steps.last.text.length)
           new StepForwardJob(editor, steps).schedule()
         }
       } else if (cursorPos < underwayPos) { // Backwards!
-        EditorHandler.doStepBack(editor,
+        CoqEditorHandler.doStepBack(editor,
             _.prefixLength(a => (cursorPos < (a.offset + a.text.length))))
       }
     }
@@ -184,27 +172,27 @@ class StepToCursorHandler extends EditorHandler {
   }
 }
 
-class StepBackHandler extends EditorHandler {
+class StepBackHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled())
-      EditorHandler.doStepBack(editor, a => if (a.length > 0) 1 else 0)
+      CoqEditorHandler.doStepBack(editor, a => if (a.length > 0) 1 else 0)
     null
   }
   
   override def calculateEnabled = (editor.steps.length > 0)
 }
 
-class RetractAllHandler extends EditorHandler {
+class RetractAllHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled())
-      EditorHandler.doStepBack(editor, _.length)
+      CoqEditorHandler.doStepBack(editor, _.length)
     null
   }
   
   override def calculateEnabled = (editor.steps.length > 0)
 }
 
-class RestartCoqHandler extends EditorHandler {
+class RestartCoqHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled())
       new RestartCoqJob(editor).schedule()
@@ -212,7 +200,7 @@ class RestartCoqHandler extends EditorHandler {
   }
 }
 
-class CompileCoqHandler extends EditorHandler {
+class CompileCoqHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     import org.eclipse.ui.IFileEditorInput
     if (isEnabled()) {

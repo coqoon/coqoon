@@ -1,9 +1,23 @@
 package dk.itu.sdg.kopitiam
 
+import org.eclipse.ui.texteditor.ITextEditor
+
+abstract class JavaEditorHandler extends EditorHandler {
+  override def editor : ITextEditor = {
+    if (super.editor.isInstanceOf[ITextEditor]) {
+      super.editor.asInstanceOf[ITextEditor]
+    } else null
+  }
+  
+  override def calculateEnabled = (editor != null)
+  
+  protected def getState = JavaEditorState.requireStateFor(editor)
+}
+
 import org.eclipse.core.commands.ExecutionEvent
 
 class JavaStepForwardHandler
-    extends KAction with EclipseJavaHelper with JavaASTUtils {
+    extends JavaEditorHandler with EclipseJavaHelper with JavaASTUtils {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
       val jes = getState

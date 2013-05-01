@@ -240,7 +240,7 @@ private class CoqDocumentListener(
 
     val off = ev.getOffset
     if (off < editor.completed)
-      EditorHandler.doStepBack(editor,
+      CoqEditorHandler.doStepBack(editor,
           _.prefixLength(a => (off < (a.offset + a.text.length))))
   }
   
