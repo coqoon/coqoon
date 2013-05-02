@@ -38,9 +38,17 @@ trait CoqTopContainer {
   def fireChange(propertyID : Int) = listeners.map {
     _.propertyChanged(this, propertyID)
   }
+  
+  private var busy_ = false
+  def busy = busy_
+  def setBusy(b : Boolean) = {
+    busy_ = b
+    fireChange(CoqTopContainer.PROPERTY_BUSY)
+  }
 }
 object CoqTopContainer {
-  final val PROPERTY_GOALS = 1234567;
+  final val PROPERTY_BUSY = 979
+  final val PROPERTY_GOALS = 1979
 }
     
 import scala.collection.mutable.Stack

@@ -20,5 +20,20 @@ abstract class EditorHandler extends AbstractHandler {
     } else setBaseEnabled(false)
   }
   
+  protected def getCoqTopContainer = {
+    if (editor != null) {
+      val ad = editor.getAdapter(classOf[CoqTopContainer])
+      if (ad != null && ad.isInstanceOf[CoqTopContainer]) {
+        ad.asInstanceOf[CoqTopContainer]
+      } else null
+    } else null
+  }
+  
+  import org.eclipse.core.runtime.jobs.Job
+  protected def scheduleJob(j : Job) = {
+    getCoqTopContainer.setBusy(true)
+    j.schedule
+  }
+  
   def calculateEnabled : Boolean = true
 }
