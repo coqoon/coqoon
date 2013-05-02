@@ -37,8 +37,10 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
         case Some(m : CoqTopIdeSlave_v20120710) => m
         case _ => null
       }
-      if (coqTopV != null)
+      if (coqTopV != null) {
+        setBusy(true)
         new InitialiseCoqJob(this).schedule()
+      }
     }
     coqTopV
   }

@@ -26,8 +26,6 @@ object InitialiseCoqJob {
   def run(editor : Editor, monitor_ : IProgressMonitor) : IStatus = {
     val monitor = SubMonitor.convert(monitor_, "Initialising Coq", 2)
     try {
-      editor.preExecuteJob
-      
       monitor.subTask("Adding global loadpath entries")
       val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
       editor.coqTop.interp(false, false, "Add LoadPath \"" + loadp + "\".")
@@ -56,7 +54,6 @@ object InitialiseCoqJob {
 
       monitor.worked(1)
       
-      editor.postExecuteJob
       Status.OK_STATUS
     } finally monitor_.done
   }
@@ -126,7 +123,7 @@ abstract class StepJob(
       f.map { _() }
       editor.setGoals(goals)
     }
-    editor.postExecuteJob
+    editor.setBusy(false)
     status
   }
 }
@@ -173,7 +170,6 @@ class StepForwardJob(
     steps : List[CoqStep]) extends StepJob("Step forward", editor) {
   override def run(monitor : IProgressMonitor) : IStatus = {
     monitor.beginTask("Step forward", steps.length)
-    editor.preExecuteJob
     for (step <- steps) {
       if (monitor.isCanceled())
         return doCancel
