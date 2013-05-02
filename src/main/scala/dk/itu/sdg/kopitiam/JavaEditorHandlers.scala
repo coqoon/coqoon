@@ -83,39 +83,11 @@ class JavaStepForwardHandler
             captureNext = true
           None
         }
-
+      
       traverseAST(jes.method.get, true, true, print) match {
         case a : List[String] if a.size == 1 =>
-          jes.coqTop.interp(false, false, a.head) match {
-            case CoqTypes.Good(msg) =>
-              jes.setComplete(jes.underway)
-            case CoqTypes.Fail((position, msg)) =>
-              jes.setUnderway(jes.complete)
-            case CoqTypes.Unsafe(msg) =>
-              println("I have no idea " + msg)
-          }
-        case _ => None
-      }
-      
-      jes.coqTop.goals match {
-        case CoqTypes.Good(goals) =>
-          jes.setGoals(goals)
-          goals match {
-            case Some(goals)
-                if !(goals.fg_goals.isEmpty && goals.bg_goals.isEmpty) =>
-            case _ =>
-              jes.coqTop.interp(false, false, "Qed.") match {
-                case CoqTypes.Good(s) =>
-                  val method = jes.method.get
-                  jes.completedMethods :+= method
-                case _ =>
-              }
-              /* Whether we succeeded or not, there's nothing more to do */
-              jes.setMethod(None)
-              jes.setUnderway(None)
-              jes.annotateCompletedMethods
-          }
-        case _ => jes.setGoals(None)
+          scheduleJob(new JavaStepJob(a.head, jes))
+        case _ =>
       }
     }
     null

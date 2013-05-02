@@ -100,3 +100,60 @@ object JavaProofInitialisationJob {
     } finally monitor_.done
   }
 }
+
+private object JavaJob {
+  def asyncExec(f : => Unit) =
+    org.eclipse.ui.PlatformUI.getWorkbench.getDisplay.asyncExec(
+        new Runnable() {
+      override def run = f
+    })
+}
+
+class JavaStepJob(step : String, jes : JavaEditorState)
+    extends Job("Stepping forward") {
+  override def run(monitor_ : IProgressMonitor) =
+    JavaStepJob.run(step, jes, monitor_)
+}
+object JavaStepJob {
+  def run(
+      step : String, jes : JavaEditorState,
+      monitor_ : IProgressMonitor) : IStatus = {
+    val monitor = SubMonitor.convert(
+        monitor_, "Java step", 1)
+    try {
+      monitor.subTask(step)
+      jes.coqTop.interp(false, false, step) match {
+        case CoqTypes.Good(msg) =>
+          JavaJob.asyncExec { jes.setComplete(jes.underway) }
+          Status.OK_STATUS
+        case CoqTypes.Fail(ep) =>
+          JavaJob.asyncExec { jes.setUnderway(jes.complete) }
+          new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2.trim)
+      }
+    } finally {
+      jes.coqTop.goals match {
+        case CoqTypes.Good(goals) =>
+          goals match {
+            case Some(goals)
+                if goals.fg_goals.isEmpty && goals.bg_goals.isEmpty =>
+              jes.coqTop.interp(false, false, "Qed.") match {
+                case CoqTypes.Good(s) =>
+                  val method = jes.method.get
+                  jes.completedMethods :+= method
+                case _ =>
+              }
+              /* Whether we succeeded or not, there's nothing more to do */
+              jes.setMethod(None)
+              jes.setUnderway(None)
+              jes.annotateCompletedMethods
+            case _ =>
+          }
+          JavaJob.asyncExec { jes.setGoals(goals) }
+        case _ =>
+          JavaJob.asyncExec { jes.setGoals(None) }
+      }
+      jes.setBusy(false)
+      monitor_.done
+    }
+  }
+}
