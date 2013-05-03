@@ -111,8 +111,11 @@ private object JavaJob {
 
 class JavaStepJob(step : String, jes : JavaEditorState)
     extends Job("Stepping forward") {
-  override def run(monitor_ : IProgressMonitor) =
-    JavaStepJob.run(step, jes, monitor_)
+  override def run(monitor_ : IProgressMonitor) = {
+    try {
+      JavaStepJob.run(step, jes, monitor_)
+    } finally jes.setBusy(false)
+  }
 }
 object JavaStepJob {
   def run(
@@ -152,7 +155,6 @@ object JavaStepJob {
         case _ =>
           JavaJob.asyncExec { jes.setGoals(None) }
       }
-      jes.setBusy(false)
       monitor_.done
     }
   }

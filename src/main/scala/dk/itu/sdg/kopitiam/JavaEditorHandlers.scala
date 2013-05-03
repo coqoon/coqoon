@@ -11,7 +11,14 @@ abstract class JavaEditorHandler extends EditorHandler {
     } else null
   }
   
-  override def calculateEnabled = (editor != null)
+  override def calculateEnabled : Boolean = {
+    if (editor == null)
+      return false
+    val state = getState
+    if (state == null || state.busy)
+      return false
+    return true
+  }
   
   protected def getState = JavaEditorState.requireStateFor(editor)
 }
