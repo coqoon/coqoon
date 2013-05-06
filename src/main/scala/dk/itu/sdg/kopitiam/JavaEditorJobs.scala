@@ -97,6 +97,7 @@ object JavaProofInitialisationJob {
       //register handlers!
       jes.activateHandler("Kopitiam.step_forward", new JavaStepForwardHandler)
       jes.activateHandler("Kopitiam.step_all", new JavaStepAllHandler)
+      jes.activateHandler("Kopitiam.step_cursor", new JavaStepToCursorHandler)
       Status.OK_STATUS
     } finally monitor_.done
   }

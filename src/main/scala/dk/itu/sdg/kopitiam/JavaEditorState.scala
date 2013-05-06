@@ -8,6 +8,13 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
   
   def getIDocument =
     editor.getDocumentProvider.getDocument(editor.getEditorInput)
+  def cursorPosition : Int = {
+    import org.eclipse.jface.text.ITextSelection
+    val selection = editor.getSelectionProvider.getSelection
+    if (selection != null && selection.isInstanceOf[ITextSelection]) {
+      selection.asInstanceOf[ITextSelection].getOffset
+    } else 0
+  }
   
   import org.eclipse.ui.handlers.IHandlerService
   def getHandlerService = editor.getSite.

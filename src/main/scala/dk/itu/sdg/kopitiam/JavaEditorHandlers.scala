@@ -52,8 +52,7 @@ class VerifyMethodHandler extends JavaEditorHandler
         // b: if outdated coqString: translate -- need to verify outdated...
         // c: find method and statement we want to prove
         if (walkAST(jes, cu, doc)) { //no errors!
-          val selection = editor.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
-          val off = selection.getOffset
+          val off = jes.cursorPosition
           val node = findASTNode(cu, off, 0)
           val md = findMethod(node)
           md match {
@@ -79,10 +78,9 @@ class JavaStepForwardHandler extends JavaEditorHandler {
     if (isEnabled()) {
       val jes = getState
       JavaStepForwardHandler.collectProofScript(jes, false) match {
-        case a : List[(Statement, String)] if a.size == 1 =>
-          jes.setUnderway(Some(a.last._1))
-          scheduleJob(
-              new JavaStepJob(a.map(b => new JavaStep(b._1, b._2)), jes))
+        case a : List[JavaStep] if a.size == 1 =>
+          jes.setUnderway(Some(a.last.node))
+          scheduleJob(new JavaStepJob(a, jes))
         case _ =>
       }
     }
@@ -91,15 +89,23 @@ class JavaStepForwardHandler extends JavaEditorHandler {
 }
 protected object JavaStepForwardHandler {
   def collectProofScript(
-      jes : JavaEditorState, multiple : Boolean) :
-      List[(Statement, String)] = {
-    val captureP : (Statement => Boolean) = jes.complete match {
-      case Some(a) => (b => b.getStartPosition > a.getStartPosition)
-      case None => (_ => true)
+      jes : JavaEditorState, multiple : Boolean, limit : Option[Int] = None) :
+      List[JavaStep] = {
+    val captureP : (Statement => Boolean) = (jes.complete, limit) match {
+      case (Some(a), Some(b)) =>
+        (c => c.getStartPosition > a.getStartPosition &&
+            (c.getStartPosition + c.getLength <= b))
+      case (Some(a), None) =>
+        (c => c.getStartPosition > a.getStartPosition)
+      case (None, Some(b)) =>
+        (c => c.getStartPosition + c.getLength <= b)
+      case (None, None) =>
+        (_ => true)
     }
-    def print(x : Statement) : Option[(Statement, String)] =
+    def print(x : Statement) : Option[JavaStep] =
       if (captureP(x)) {
-        JavaASTUtils.printProofScript(jes.getIDocument, x).map(a => (x, a))
+        JavaASTUtils.printProofScript(jes.getIDocument, x).map(
+            a => JavaStep(x, a))
       } else None
     
     JavaASTUtils.traverseAST(jes.method.get, true, !multiple, print)
@@ -111,10 +117,25 @@ class JavaStepAllHandler extends JavaEditorHandler {
     if (isEnabled()) {
       val jes = getState
       JavaStepForwardHandler.collectProofScript(jes, true) match {
-        case a : List[(Statement, String)] if a.size > 0 =>
-          jes.setUnderway(Some(a.last._1))
-          scheduleJob(
-              new JavaStepJob(a.map(b => new JavaStep(b._1, b._2)), jes))
+        case a : List[JavaStep] if a.size > 0 =>
+          jes.setUnderway(Some(a.last.node))
+          scheduleJob(new JavaStepJob(a, jes))
+        case _ =>
+      }
+    }
+    null
+  }
+}
+
+class JavaStepToCursorHandler extends JavaEditorHandler {
+  override def execute(ev : ExecutionEvent) = {
+    if (isEnabled()) {
+      val jes = getState
+      JavaStepForwardHandler.collectProofScript(
+          jes, true, Some(jes.cursorPosition)) match {
+        case a : List[JavaStep] if a.size > 0 =>
+          jes.setUnderway(Some(a.last.node))
+          scheduleJob(new JavaStepJob(a, jes))
         case _ =>
       }
     }
