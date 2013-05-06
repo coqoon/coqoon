@@ -93,22 +93,15 @@ protected object JavaStepForwardHandler {
   def collectProofScript(
       jes : JavaEditorState, multiple : Boolean) :
       List[(Statement, String)] = {
-    var captureNext : Boolean = (jes.complete == None)
-
-    def print(x: Statement): Option[(Statement, String)] =
-      if (captureNext) {
-        val ps = JavaASTUtils.printProofScript(jes.getIDocument, x)
-        ps match {
-          case None => None
-          case Some(ps) =>
-            Some((x, ps))
-        }
-      } else {
-        if (jes.complete.get == x)
-          captureNext = true
-        None
-      }
-
+    val captureP : (Statement => Boolean) = jes.complete match {
+      case Some(a) => (b => b.getStartPosition > a.getStartPosition)
+      case None => (_ => true)
+    }
+    def print(x : Statement) : Option[(Statement, String)] =
+      if (captureP(x)) {
+        JavaASTUtils.printProofScript(jes.getIDocument, x).map(a => (x, a))
+      } else None
+    
     JavaASTUtils.traverseAST(jes.method.get, true, !multiple, print)
   }
 }
