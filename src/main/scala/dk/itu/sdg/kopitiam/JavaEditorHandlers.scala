@@ -100,7 +100,42 @@ class JavaStepForwardHandler
       traverseAST(jes.method.get, true, true, print) match {
         case a : List[(Statement, String)] if a.size == 1 =>
           scheduleJob(
-              new JavaStepJob(List(JavaStep(a.head._1, a.head._2)), jes))
+              new JavaStepJob(a.map(b => new JavaStep(b._1, b._2)), jes))
+        case _ =>
+      }
+    }
+    null
+  }
+}
+
+class JavaStepAllHandler
+    extends JavaEditorHandler with EclipseJavaHelper with JavaASTUtils {
+  override def execute(ev : ExecutionEvent) = {
+    if (isEnabled()) {
+      val jes = getState
+
+      var captureNext: Boolean = (jes.complete == None)
+      
+      def print(x : Statement) : Option[(Statement, String)] = {
+        if (captureNext) {
+          val ps = printProofScript(jes.getIDocument, x)
+          ps match {
+            case None => None
+            case Some(ps) =>
+              jes.setUnderway(Some(x))
+              Some((x, ps))
+          }
+        } else {
+          if (jes.complete.get == x)
+            captureNext = true
+          None
+        }
+      }
+      
+      traverseAST(jes.method.get, true, false, print) match {
+        case a : List[(Statement, String)] if a.size > 0 =>
+          scheduleJob(
+              new JavaStepJob(a.map(b => new JavaStep(b._1, b._2)), jes))
         case _ =>
       }
     }
