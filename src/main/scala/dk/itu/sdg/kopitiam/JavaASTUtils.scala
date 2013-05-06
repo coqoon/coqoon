@@ -2,7 +2,7 @@
 
 package dk.itu.sdg.kopitiam
 
-trait JavaASTUtils {
+object JavaASTUtils {
 
   import org.eclipse.jdt.core.dom.{EmptyStatement, Statement}
   import org.eclipse.jface.text.IDocument
@@ -97,4 +97,3 @@ trait JavaASTUtils {
     traverseCU(c, ctr).size
   }
 }
-

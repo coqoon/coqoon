@@ -89,7 +89,7 @@ class JavaStepForwardHandler extends JavaEditorHandler {
     null
   }
 }
-protected object JavaStepForwardHandler extends JavaASTUtils {
+protected object JavaStepForwardHandler {
   def collectProofScript(
       jes : JavaEditorState, multiple : Boolean) :
       List[(Statement, String)] = {
@@ -97,7 +97,7 @@ protected object JavaStepForwardHandler extends JavaASTUtils {
 
     def print(x: Statement): Option[(Statement, String)] =
       if (captureNext) {
-        val ps = printProofScript(jes.getIDocument, x)
+        val ps = JavaASTUtils.printProofScript(jes.getIDocument, x)
         ps match {
           case None => None
           case Some(ps) =>
@@ -109,7 +109,7 @@ protected object JavaStepForwardHandler extends JavaASTUtils {
         None
       }
 
-    traverseAST(jes.method.get, true, !multiple, print)
+    JavaASTUtils.traverseAST(jes.method.get, true, !multiple, print)
   }
 }
 

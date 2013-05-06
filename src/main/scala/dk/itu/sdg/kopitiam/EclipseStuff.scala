@@ -43,7 +43,8 @@ class CoqJavaProject (basename : String) {
   def isCoqModel (doc : IDocument) : Boolean = false
 }
 
-object JavaPosition extends EclipseJavaHelper with JavaASTUtils {
+object JavaPosition extends EclipseJavaHelper {
+  import JavaASTUtils._
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   var editor : JavaEditor = null
 
