@@ -74,31 +74,13 @@ class VerifyMethodHandler extends JavaEditorHandler
   }
 }
 
-class JavaStepForwardHandler
-    extends JavaEditorHandler with EclipseJavaHelper with JavaASTUtils {
+class JavaStepForwardHandler extends JavaEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
       val jes = getState
-
-      var captureNext: Boolean = (jes.complete == None)
-
-      def print(x : Statement) : Option[(Statement, String)] =
-        if (captureNext) {
-          val ps = printProofScript(jes.getIDocument, x)
-          ps match {
-            case None => None
-            case Some(ps) =>
-              jes.setUnderway(Some(x))
-              Some((x, ps))
-          }
-        } else {
-          if (jes.complete.get == x)
-            captureNext = true
-          None
-        }
-      
-      traverseAST(jes.method.get, true, true, print) match {
+      JavaStepForwardHandler.collectProofScript(jes, false) match {
         case a : List[(Statement, String)] if a.size == 1 =>
+          jes.setUnderway(Some(a.last._1))
           scheduleJob(
               new JavaStepJob(a.map(b => new JavaStep(b._1, b._2)), jes))
         case _ =>
@@ -107,33 +89,37 @@ class JavaStepForwardHandler
     null
   }
 }
+protected object JavaStepForwardHandler extends JavaASTUtils {
+  def collectProofScript(
+      jes : JavaEditorState, multiple : Boolean) :
+      List[(Statement, String)] = {
+    var captureNext : Boolean = (jes.complete == None)
 
-class JavaStepAllHandler
-    extends JavaEditorHandler with EclipseJavaHelper with JavaASTUtils {
+    def print(x: Statement): Option[(Statement, String)] =
+      if (captureNext) {
+        val ps = printProofScript(jes.getIDocument, x)
+        ps match {
+          case None => None
+          case Some(ps) =>
+            Some((x, ps))
+        }
+      } else {
+        if (jes.complete.get == x)
+          captureNext = true
+        None
+      }
+
+    traverseAST(jes.method.get, true, !multiple, print)
+  }
+}
+
+class JavaStepAllHandler extends JavaEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
       val jes = getState
-
-      var captureNext: Boolean = (jes.complete == None)
-      
-      def print(x : Statement) : Option[(Statement, String)] = {
-        if (captureNext) {
-          val ps = printProofScript(jes.getIDocument, x)
-          ps match {
-            case None => None
-            case Some(ps) =>
-              jes.setUnderway(Some(x))
-              Some((x, ps))
-          }
-        } else {
-          if (jes.complete.get == x)
-            captureNext = true
-          None
-        }
-      }
-      
-      traverseAST(jes.method.get, true, false, print) match {
+      JavaStepForwardHandler.collectProofScript(jes, true) match {
         case a : List[(Statement, String)] if a.size > 0 =>
+          jes.setUnderway(Some(a.last._1))
           scheduleJob(
               new JavaStepJob(a.map(b => new JavaStep(b._1, b._2)), jes))
         case _ =>
