@@ -51,15 +51,6 @@ object JavaPosition extends EclipseJavaHelper {
   import org.eclipse.jdt.core.dom.MethodDeclaration
   var method : Option[MethodDeclaration] = None
 
-  import org.eclipse.jface.text.Position
-  import org.eclipse.jface.text.source.Annotation
-  var processed : Option[Annotation] = None
-  var processing : Option[Annotation] = None
-
-  var specprocessed : List[Annotation] = List[Annotation]()
-  var specprocessing : Option[Annotation] = None
-
-
   import org.eclipse.jface.text.IDocument
   def getDoc () : IDocument = {
     if (editor != null) {
@@ -285,45 +276,11 @@ object JavaPosition extends EclipseJavaHelper {
     }
   }
 
-  import org.eclipse.swt.widgets.Display
-  def removeMarkers () : Unit = {
-    if (editor != null) {
-      val prov = editor.getDocumentProvider
-      val doc = prov.getDocument(editor.getEditorInput)
-      val annmodel = prov.getAnnotationModel(editor.getEditorInput)
-      annmodel.connect(doc)
-      processed match {
-        case Some(x) => annmodel.removeAnnotation(x)
-        case None =>
-      }
-      processed = None
-      processing match {
-        case Some(x) => annmodel.removeAnnotation(x)
-        case None =>
-      }
-      processing = None
-      specprocessing match {
-        case Some(x) => annmodel.removeAnnotation(x)
-        case None =>
-      }
-      specprocessing = None
-      specprocessed.foreach(annmodel.removeAnnotation(_))
-      specprocessed = List[Annotation]()
-      annmodel.disconnect(doc)
-      cur = None
-      next = None
-      Display.getDefault.asyncExec(
-        new Runnable() {
-          def run() = { if (editor != null) editor.getViewer.invalidateTextPresentation }})
-    }
-  }
-
   def retract () : Unit = {
     val mn = (method != None)
     Console.println("retracting with " + editor + " and method? " + mn)
     if (editor != null && method != None) {
       Console.println("hello my friend, NONONONO")
-      removeMarkers
       emptyCoqShells
       method = None
       if (getProj != null)
@@ -359,21 +316,6 @@ object JavaPosition extends EclipseJavaHelper {
         traverseAST(x, false, false, clean)
       case None =>
     }
-    val prov = editor.getDocumentProvider
-    val doc = prov.getDocument(editor.getEditorInput)
-    val annmodel = prov.getAnnotationModel(editor.getEditorInput)
-    annmodel.connect(doc)
-    processed match {
-      case Some(x) => annmodel.removeAnnotation(x)
-      case None =>
-    }
-    processed = None
-    processing match {
-      case Some(x) => annmodel.removeAnnotation(x)
-      case None =>
-    }
-    processing = None
-    annmodel.disconnect(doc)
   }
 
   def getASTbeforeOff (off : Int) : Option[Statement] = {
@@ -605,81 +547,6 @@ object JavaPosition extends EclipseJavaHelper {
               Console.println("preserving for " + x + " shell " + CoqTop.dummy)
               x.setProperty(EclipseJavaASTProperties.coqShell, CoqTop.dummy)
           }
-
-
-        val end =
-          cur match {
-            case None =>
-              val c1 = doc.getLineOfOffset(start)
-              doc.getLineOffset(c1 + 1) - 2
-            case Some(x) =>
-              x.getStartPosition + x.getLength
-          }
-
-        val annmodel = prov.getAnnotationModel(editor.getEditorInput)
-        annmodel.connect(doc)
-
-        if ((proc && undo) || (!proc && !undo)) {
-          processing match {
-            case Some(x) =>
-              Console.println("removing processing")
-              annmodel.removeAnnotation(x)
-              Display.getDefault.asyncExec(
-                new Runnable() {
-                  def run() = { editor.getViewer.invalidateTextPresentation }})
-            case None =>
-          }
-          processing = None
-        }
-
-        if ((!proc && undo) || (!proc && !undo)) {
-          //re-mark green!
-          val p = new Position(start, end - start)
-          processed match {
-            case Some(x) =>
-              val op = annmodel.getPosition(x)
-              Console.println("adjusting processed: was " + op.getLength + " now " + p.getLength)
-              val tst = ((op.getLength > p.getLength) || (op.getOffset != p.getOffset))
-              annmodel.asInstanceOf[IAnnotationModelExtension].modifyAnnotationPosition(x, p)
-              if (tst)
-                Display.getDefault.asyncExec(
-                  new Runnable() {
-                    def run() = { editor.getViewer.invalidateTextPresentation }})
-            case None =>
-              Console.println("new processed annotation")
-              val ann = new Annotation("dk.itu.sdg.kopitiam.processed", false, "Proof")
-              annmodel.addAnnotation(ann, p)
-              processed = Some(ann)
-          }
-        }
-
-        if (proc && !undo) {
-          val pp : Int = processed match {
-            case None =>
-              start
-            case Some(x) =>
-              Console.println("found a processed!")
-              val p = annmodel.getPosition(x)
-              p.getOffset + p.getLength
-          }
-          val rend : Int =
-            next match {
-              case None => end
-              case Some(x) => x.getStartPosition + x.getLength
-            }
-          val txt = "dk.itu.sdg.kopitiam.processing"
-          val sma = new Annotation(txt, false, "Proof")
-          Console.println("new processing annotation (st " + start + " pp " + pp + " end " + end + ")")
-          annmodel.addAnnotation(sma, new Position(pp, rend - pp))
-          processing match {
-            case Some(x) =>
-              Console.println("remove processing again")
-              annmodel.removeAnnotation(x)
-            case None =>
-          }
-          processing = Some(sma)
-        }
-        annmodel.disconnect(doc)
       }
 /*      if (proj.modelShell != None) {
         val coqoff = (if (proc) DocumentState.sendlen else 0) + DocumentState.position //- proj.program.get.getSpecOffset - method.get.getSpecOff - method.get.getSpecLength - 1
