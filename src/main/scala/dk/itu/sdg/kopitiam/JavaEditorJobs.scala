@@ -109,36 +109,47 @@ private object JavaJob {
     })
 }
 
-class JavaStepJob(step : String, jes : JavaEditorState)
+class JavaStepJob(steps : List[JavaStep], jes : JavaEditorState)
     extends Job("Stepping forward") {
-  override def run(monitor_ : IProgressMonitor) = {
+  override def run(monitor_ : IProgressMonitor) : IStatus = {
     try {
-      JavaStepJob.run(step, jes, monitor_)
+      JavaStepJob.run(steps, jes, monitor_)
     } finally jes.setBusy(false)
   }
 }
 object JavaStepJob {
-  def run(
-      step : String, jes : JavaEditorState,
-      monitor_ : IProgressMonitor) : IStatus = {
-    val monitor = SubMonitor.convert(
-        monitor_, "Java step", 1)
-    try {
-      monitor.subTask(step)
-      jes.coqTop.interp(false, false, step) match {
+  private def doSteps(
+      steps : List[JavaStep], jes : JavaEditorState,
+      monitor : IProgressMonitor) : IStatus = {
+    for (step <- steps) {
+      monitor.subTask(step.text)
+      jes.coqTop.interp(false, false, step.text) match {
         case CoqTypes.Good(msg) =>
-          JavaJob.asyncExec { jes.setComplete(jes.underway) }
-          Status.OK_STATUS
+          JavaJob.asyncExec { jes.setComplete(Some(step.node)) }
+        case CoqTypes.Unsafe(msg) =>
+          JavaJob.asyncExec { jes.setComplete(Some(step.node)) }
         case CoqTypes.Fail(ep) =>
           JavaJob.asyncExec { jes.setUnderway(jes.complete) }
-          new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2.trim)
+          return new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2.trim)
       }
+      monitor.worked(1)
+    }
+    Status.OK_STATUS
+  }
+  def run(
+      steps : List[JavaStep], jes : JavaEditorState,
+      monitor_ : IProgressMonitor) : IStatus = {
+    val monitor = SubMonitor.convert(
+        monitor_, "Java step", steps.size)
+    try {
+      doSteps(steps, jes, monitor)
     } finally {
       jes.coqTop.goals match {
         case CoqTypes.Good(goals) =>
           goals match {
             case Some(goals)
                 if goals.fg_goals.isEmpty && goals.bg_goals.isEmpty =>
+              monitor.subTask("Finishing proof")
               jes.coqTop.interp(false, false, "Qed.") match {
                 case CoqTypes.Good(s) =>
                   val method = jes.method.get

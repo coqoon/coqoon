@@ -2,7 +2,15 @@
 
 package dk.itu.sdg.kopitiam
 
+import org.eclipse.jdt.core.dom.Statement
 import org.eclipse.ui.texteditor.ITextEditor
+
+case class JavaStep(
+    node : Statement,
+    text : String) extends CoqCommand {
+  override def run(coqTop : CoqTopIdeSlave_v20120710) =
+    coqTop.interp(false, false, text)
+}
 
 abstract class JavaEditorHandler extends EditorHandler {
   override def editor : ITextEditor = {
@@ -74,16 +82,14 @@ class JavaStepForwardHandler
 
       var captureNext: Boolean = (jes.complete == None)
 
-      import org.eclipse.jdt.core.dom.Statement
-      
-      val print: Statement => Option[String] = x =>
+      def print(x : Statement) : Option[(Statement, String)] =
         if (captureNext) {
           val ps = printProofScript(jes.getIDocument, x)
           ps match {
             case None => None
             case Some(ps) =>
               jes.setUnderway(Some(x))
-              Some(ps)
+              Some((x, ps))
           }
         } else {
           if (jes.complete.get == x)
@@ -92,8 +98,9 @@ class JavaStepForwardHandler
         }
       
       traverseAST(jes.method.get, true, true, print) match {
-        case a : List[String] if a.size == 1 =>
-          scheduleJob(new JavaStepJob(a.head, jes))
+        case a : List[(Statement, String)] if a.size == 1 =>
+          scheduleJob(
+              new JavaStepJob(List(JavaStep(a.head._1, a.head._2)), jes))
         case _ =>
       }
     }
