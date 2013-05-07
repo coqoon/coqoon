@@ -45,12 +45,14 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
     coqTopV
   }
   
-  private val listener = new CoqDocumentListener(this)
+  import org.eclipse.jface.text.reconciler.MonoReconciler
+  private val reconciler =
+    new MonoReconciler(new CoqProofReconcilingStrategy(this), true)
+  reconciler.setDelay(0)
   
   import org.eclipse.ui.IEditorSite
   override def init(site : IEditorSite, input : IEditorInput) = {
     super.init(site, input)
-    listener.updateDocument(input)
   }
   
   override def dispose = {
@@ -58,7 +60,7 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
       coqTopV.kill
       coqTopV = null
     }
-    listener.updateDocument(null)
+    reconciler.uninstall
     super.dispose
   }
     
@@ -109,8 +111,10 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   //Create the source viewer as one that supports folding
   override def createSourceViewer (parent : Composite, ruler : IVerticalRuler, styles : Int) : ISourceViewer = {
     import org.eclipse.jface.text.source.projection.ProjectionViewer
-    val viewer : ISourceViewer = new ProjectionViewer(parent, ruler, getOverviewRuler(), isOverviewRulerVisible(), styles)
+    val viewer : ISourceViewer = new ProjectionViewer(
+        parent, ruler, getOverviewRuler(), isOverviewRulerVisible(), styles)
     getSourceViewerDecorationSupport(viewer)
+    reconciler.install(viewer)
     viewer
   }
 
@@ -212,26 +216,18 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   }
 }
 
-import org.eclipse.jface.text.{IDocument,DocumentEvent,IDocumentListener}
-private class CoqDocumentListener(
-    editor : CoqEditor) extends IDocumentListener {
-  private var input : IEditorInput = null
-  private var document : IDocument = null
-  
-  def updateDocument(input : IEditorInput) = {
-    this.input = input
-    val newDocument = editor.getDocumentProvider.getDocument(input)
-    if (document != null && newDocument != document)
-      document.removeDocumentListener(this)
-    document = newDocument
-    if (document != null)
-      document.addDocumentListener(this)
-  }
+import org.eclipse.jface.text.reconciler.IReconcilingStrategy
+private class CoqProofReconcilingStrategy(
+    editor : CoqEditor) extends IReconcilingStrategy {
+  import org.eclipse.jface.text.{IRegion, Region, IDocument}
+  import org.eclipse.jface.text.reconciler.DirtyRegion
   
   import org.eclipse.ui.IFileEditorInput
   import org.eclipse.core.resources.{IMarker,IResource}
   
-  override def documentChanged(ev : DocumentEvent) = {
+  override def reconcile(r : IRegion) : Unit = {
+    val input = editor.getEditorInput
+    
     if (input != null && input.isInstanceOf[IFileEditorInput]) {
       val file = input.asInstanceOf[IFileEditorInput].getFile()
       if (file.findMarkers(
@@ -240,13 +236,15 @@ private class CoqDocumentListener(
             file, IMarker.PROBLEM, true, IResource.DEPTH_ZERO).schedule
     }
 
-    val off = ev.getOffset
+    val off = r.getOffset
     if (off < editor.completed)
       CoqEditorHandler.doStepBack(editor,
           _.prefixLength(a => (off < (a.offset + a.text.length))))
   }
   
-  override def documentAboutToBeChanged(ev : DocumentEvent) = ()
+  override def reconcile(dr : DirtyRegion, r : IRegion) = reconcile(r)
+  
+  override def setDocument(newDocument : IDocument) = ()
 }
 
 import org.eclipse.jface.viewers.ITreeContentProvider
