@@ -217,65 +217,6 @@ object JavaPosition extends EclipseJavaHelper {
     }
   }*/
 
-  import scala.collection.mutable.HashMap
-  def markproven (s : Int, l : Int) = {
-    //getProj.provenMethods ::= method.get
-    val ps = proofScript(method.get)
-    markHelper("Verified using: " + ps, s, l, "dk.itu.sdg.kopitiam.provenmarker", IMarker.SEVERITY_ERROR) match {
-      case Some(x) =>
-        proofmarkers += method.get.getName.getIdentifier -> x
-      case None =>
-    }
-  }
-
-  def unmarkProof (m : MethodDeclaration) : Unit = {
-    val nam = m.getName.getIdentifier
-    if (proofmarkers.contains(nam)) {
-      proofmarkers(nam).delete
-      proofmarkers -= nam
-    }
-  }
-
-  def unmarkProofs () : Unit = {
-    for ((name, marker) <- proofmarkers) marker.delete
-    proofmarkers.clear
-  }
-
-  var markers : List[IMarker] = List[IMarker]()
-  val proofmarkers : HashMap[String, IMarker] = new HashMap[String, IMarker]()
-
-  def unmark () : Unit = {
-    markers.foreach(_.delete)
-    markers = List[IMarker]()
-  }
-
-  def mark (message : String, spos : Int, len : Int, typ : String, severity : Int) : Unit = {
-    markHelper(message, spos, len, typ, severity) match {
-      case Some(x) => markers ::= x
-      case None =>
-    }
-  }
-
-  def markHelper (message : String, spos : Int, len : Int, typ : String, severity : Int) : Option[IMarker] = {
-    val file = editor.getEditorInput
-    if (file.isInstanceOf[IFileEditorInput]) {
-      val rfile = file.asInstanceOf[IFileEditorInput].getFile
-      val mark = rfile.createMarker(typ)
-      mark.setAttribute(IMarker.MESSAGE, message)
-      mark.setAttribute(IMarker.LOCATION, rfile.getName)
-      if (spos >= 0) {
-        mark.setAttribute(IMarker.CHAR_START, spos)
-        mark.setAttribute(IMarker.CHAR_END, spos + len)
-      }
-      mark.setAttribute(IMarker.TRANSIENT, true)
-      mark.setAttribute(IMarker.SEVERITY, severity)
-      Some(mark)
-    } else {
-      Console.println("no fileeditorinput " + file)
-      None
-    }
-  }
-
   def retract () : Unit = {
     val mn = (method != None)
     Console.println("retracting with " + editor + " and method? " + mn)

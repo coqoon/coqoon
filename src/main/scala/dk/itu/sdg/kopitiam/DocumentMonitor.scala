@@ -122,7 +122,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                     case Some(p) =>
                       JavaPosition.findMethod(JavaPosition.findASTNode(p, off, 0)) match {
                         case None => //
-                        case Some(x) => JavaPosition.unmarkProof(x)
+                        case Some(x) => //JavaPosition.unmarkProof(x)
                       }
                   }
                   JavaPosition.cur match {
@@ -172,11 +172,11 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         if (!foundchange) {
           //change to actual java code!
           proj.ASTdirty = true
-          JavaPosition.unmarkProofs
+          //JavaPosition.unmarkProofs
           proj.proofShell match {
             case None =>
             case Some(x) =>
-              JavaPosition.unmark
+              //JavaPosition.unmark
               JavaPosition.retract
               //CoqRetractAction.doitH
           }
@@ -184,11 +184,11 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
       }
       if (proj.isCoqModel(doc)) {
         Console.println("model updated, setting boolean")
-        JavaPosition.unmarkProofs
+        //JavaPosition.unmarkProofs
         proj.proofShell match {
           case None =>
           case Some(x) =>
-            JavaPosition.unmark
+            //JavaPosition.unmark
             JavaPosition.retract
             //CoqRetractAction.doitH
         }
