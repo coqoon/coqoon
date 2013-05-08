@@ -18,7 +18,8 @@ object EclipseJavaASTProperties {
     
   val coqProof : String = "dk.itu.sdg.kopitiam.coqProof"
   val coqEnd : String = "dk.itu.sdg.kopitiam.coqEnd"
-  val coqShell : String = "dk.itu.sdg.kopitiam.coqShell"
+  
+  def getShell(a : ASTNode) : Option[CoqShellTokens] = None
     
   private val method : String = "dk.itu.sdg.kopitiam.method"
   def getMethod(a : ASTNode) : Option[MethodDeclaration] =

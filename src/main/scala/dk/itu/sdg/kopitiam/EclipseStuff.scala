@@ -308,144 +308,13 @@ object JavaPosition extends EclipseJavaHelper {
     res + rs.mkString("\n") + "\nQed."
   }
 
-  def emptyCoqShells () : Unit = {
-    method match {
-      case Some(x) =>
-        x.setProperty(EclipseJavaASTProperties.coqShell, null)
-        val clean : Statement => Option[Unit] = x => { x.setProperty(EclipseJavaASTProperties.coqShell, null); None }
-        traverseAST(x, false, false, clean)
-      case None =>
-    }
-  }
+  def emptyCoqShells () : Unit = (/* do nothing */)
 
-  def getASTbeforeOff (off : Int) : Option[Statement] = {
-    Console.println("Called with off " + off)
-    assert(next == None)
-    getProj.program match {
-      case None => None
-      case Some(x) =>
-        val n = findASTNode(x, off, 0)
-        Console.println("n is " + n.getClass.toString + ": " + n)
-        findMethod(n) match {
-          case None =>
-          case Some(x) =>
-            Console.println("Is the method the same? " + (x == method.get))
-            if (x == method.get) {
-              Console.println("YEP")
-              var nx : Boolean = false
+  def getASTbeforeOff (off : Int) : Option[Statement] = (/* do nothing */ None)
 
-              val cb : Statement => Option[Statement] = x => {
-                val r =
-                  if (nx) {
-                    val cs = x.getProperty(EclipseJavaASTProperties.coqShell)
-                    if (cs != null)
-                      Some(x)
-                    else
-                      None
-                  } else {
-                    x.setProperty(EclipseJavaASTProperties.coqShell, null)
-                    None
-                  }
-                if (n == x)
-                  nx = true
-                r
-              }
+  def getLastCoqStatement () : Option[CoqShellTokens] = (/* do nothing */ None)
 
-              val r = traverseAST(x, false, true, cb)
-              assert(r.size == 1)
-              next = Some(r.head)
-            }
-        }
-    }
-    next
-  }
-
-  def getLastCoqStatement () : Option[CoqShellTokens] = {
-    assert(next == None)
-
-    val find : Statement => Option[Statement] = x => {
-      val sh = x.getProperty(EclipseJavaASTProperties.coqShell)
-      if (sh != null)
-        cur match {
-          case None => None
-          case Some(y) =>
-            if (x != y)
-              Some(x)
-            else
-              None
-        } else None
-    }
-    val r = traverseAST(method.get, false, true, find)
-    assert(r.size == 1 || r.size == 0)
-    if (r.size == 1)
-      next = Some(r.head)
-    next match {
-      case None =>
-        val sh = method.get.getProperty(EclipseJavaASTProperties.coqShell)
-        if (sh != null)
-          Some(sh.asInstanceOf[CoqShellTokens])
-        else
-          JavaPosition.getProj.proofShell
-      case Some(x) =>
-        val sh = x.getProperty(EclipseJavaASTProperties.coqShell)
-        assert(sh != null && sh.isInstanceOf[CoqShellTokens])
-        Some(sh.asInstanceOf[CoqShellTokens])
-    }
-  }
-
-  def copyProps (from : MethodDeclaration, to : MethodDeclaration) : Unit = {
-    //implicit assumption is that structure up until cur is the same!
-    var newcur : Option[Statement] = None
-    var todof : Stack[Statement] = Stack[Statement]()
-    todof = todof.push(from.getBody)
-    var todot : Stack[Statement] = Stack[Statement]()
-    todot = todot.push(to.getBody)
-    to.setProperty(EclipseJavaASTProperties.coqShell, from.getProperty(EclipseJavaASTProperties.coqShell))
-    var end : Boolean = false
-    while (!end && !todof.isEmpty) {
-      val nextfrom = todof.top
-      todof = todof.pop
-      val nextto = todot.top
-      todot = todot.pop
-      nextfrom match {
-        case x : WhileStatement =>
-          assert(nextto.isInstanceOf[WhileStatement])
-          todof = todof.push(x.getBody)
-          todot = todot.push(nextto.asInstanceOf[WhileStatement].getBody)
-        case x : IfStatement =>
-          assert(nextto.isInstanceOf[IfStatement])
-          val y = nextto.asInstanceOf[IfStatement]
-          val el = x.getElseStatement
-          val elt = y.getElseStatement
-          if (el != null)
-            todof = todof.push(el)
-          if (elt != null)
-            todot = todot.push(elt)
-          todof = todof.push(x.getThenStatement)
-          todot = todot.push(y.getThenStatement)
-        case x : Block =>
-          assert(nextto.isInstanceOf[Block])
-          todof = todof.pushAll(scala.collection.JavaConversions.asScalaBuffer(x.statements).map(_.asInstanceOf[Statement]).reverse)
-          todot = todot.pushAll(scala.collection.JavaConversions.asScalaBuffer(nextto.asInstanceOf[Block].statements).map(_.asInstanceOf[Statement]).reverse)
-        case x : Statement =>
-          assert(x.getClass == nextto.getClass)
-          val cs = x.getProperty(EclipseJavaASTProperties.coqShell)
-          if (cs != null)
-            nextto.setProperty(EclipseJavaASTProperties.coqShell, cs)
-          cur match {
-            case Some(y) =>
-              if (x == y) {
-                end = true
-                cur = Some(nextto)
-              }
-            case None =>
-              end = true
-              Console.println("how did that happen?, cur is none here :/")
-              //how did that happen?
-          }
-      }
-    }
-  }
+  def copyProps (from : MethodDeclaration, to : MethodDeclaration) = (/* do nothing */)
 
   import org.eclipse.jface.text.ITextSelection
   def getCoqCommand () : Option[String] = {
@@ -520,12 +389,6 @@ object JavaPosition extends EclipseJavaHelper {
         val start = method.get.getStartPosition
 
         if (!proc && undo) {
-          cur match {
-            case Some(x) =>
-              Console.println("removing coqshell property")
-              x.setProperty(EclipseJavaASTProperties.coqShell, null)
-            case None =>
-          }
           cur = next
           next = None
         }
@@ -536,17 +399,6 @@ object JavaPosition extends EclipseJavaHelper {
           cur = next
           next = None
         }
-
-        //preserve current shell -- if success!
-        if (!proc && !undo)
-          cur match {
-            case None =>
-              Console.println("preserving initial coq shell")
-              method.get.setProperty(EclipseJavaASTProperties.coqShell, CoqTop.dummy)
-            case Some(x) =>
-              Console.println("preserving for " + x + " shell " + CoqTop.dummy)
-              x.setProperty(EclipseJavaASTProperties.coqShell, CoqTop.dummy)
-          }
       }
 /*      if (proj.modelShell != None) {
         val coqoff = (if (proc) DocumentState.sendlen else 0) + DocumentState.position //- proj.program.get.getSpecOffset - method.get.getSpecOff - method.get.getSpecLength - 1

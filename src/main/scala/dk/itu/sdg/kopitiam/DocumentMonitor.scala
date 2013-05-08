@@ -136,7 +136,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                           JavaPosition.getASTbeforeOff(off) match {
                             case Some(bt) =>
                               Console.println("backtracking to " + bt)
-                              val csss = bt.getProperty(EclipseJavaASTProperties.coqShell)
+                              val csss = EclipseJavaASTProperties.getShell(bt)
                               if (csss != null)
                                 //invalidate! everything!
                                 Some(csss.asInstanceOf[CoqShellTokens])
@@ -147,7 +147,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                               val bla = JavaPosition.method
                               bla match {
                                 case Some(x) =>
-                                  val csss = x.getProperty(EclipseJavaASTProperties.coqShell)
+                                  val csss = EclipseJavaASTProperties.getShell(x)
                                   if (csss != null)
                                     Some(csss.asInstanceOf[CoqShellTokens])
                                   else
