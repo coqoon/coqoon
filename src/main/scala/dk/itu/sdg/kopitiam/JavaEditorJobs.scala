@@ -124,11 +124,15 @@ object JavaStepJob {
       steps : List[JavaStep], jes : JavaEditorState,
       monitor : IProgressMonitor) : IStatus = {
     for (step <- steps) {
+      if (monitor.isCanceled())
+        return Status.CANCEL_STATUS
       monitor.subTask(step.text)
       jes.coqTop.interp(false, false, step.text) match {
         case CoqTypes.Good(msg) =>
+          jes.steps.synchronized { jes.steps.push(step) }
           JavaJob.asyncExec { jes.setComplete(Some(step.node)) }
         case CoqTypes.Unsafe(msg) =>
+          jes.steps.synchronized { jes.steps.push(step) }
           JavaJob.asyncExec { jes.setComplete(Some(step.node)) }
         case CoqTypes.Fail(ep) =>
           JavaJob.asyncExec { jes.setUnderway(jes.complete) }

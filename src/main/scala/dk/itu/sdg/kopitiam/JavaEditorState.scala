@@ -6,6 +6,10 @@ import org.eclipse.core.commands.{IHandler, ExecutionEvent}
 class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
   import org.eclipse.jdt.core.dom._
   
+  import scala.collection.mutable.Stack
+  private val stepsV : Stack[JavaStep] = Stack[JavaStep]()
+  def steps = stepsV
+  
   def getIDocument =
     editor.getDocumentProvider.getDocument(editor.getEditorInput)
   def cursorPosition : Int = {
