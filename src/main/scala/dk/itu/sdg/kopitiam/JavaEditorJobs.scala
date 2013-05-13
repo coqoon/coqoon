@@ -98,6 +98,8 @@ object JavaProofInitialisationJob {
       jes.activateHandler("Kopitiam.step_forward", new JavaStepForwardHandler)
       jes.activateHandler("Kopitiam.step_all", new JavaStepAllHandler)
       jes.activateHandler("Kopitiam.step_cursor", new JavaStepToCursorHandler)
+      jes.activateHandler("Kopitiam.step_backward", new JavaStepBackHandler)
+      jes.activateHandler("Kopitiam.retract", new JavaRetractAllHandler)
       Status.OK_STATUS
     } finally monitor_.done
   }

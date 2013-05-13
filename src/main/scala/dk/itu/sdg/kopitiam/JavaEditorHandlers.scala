@@ -30,6 +30,20 @@ abstract class JavaEditorHandler extends EditorHandler {
   
   protected def getState = JavaEditorState.requireStateFor(editor)
 }
+object JavaEditorHandler {
+  import scala.collection.mutable.Stack
+  def doStepBack(jes : JavaEditorState, f : Stack[JavaStep] => Int) = {
+    val p = CoqEditorHandler.getStepBackPair(jes.steps, f)
+    if (p._1 > 0) {
+      /*jes.setUnderway(p._2 match {
+        case None => None
+        case Some(x) => Some(x.node)
+      })*/
+      // jes.setBusy(true)
+      println(p)
+    }
+  }
+}
 
 import org.eclipse.core.commands.ExecutionEvent
 
@@ -131,14 +145,44 @@ class JavaStepToCursorHandler extends JavaEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
       val jes = getState
-      JavaStepForwardHandler.collectProofScript(
-          jes, true, Some(jes.cursorPosition)) match {
-        case a : List[JavaStep] if a.size > 0 =>
-          jes.setUnderway(Some(a.last.node))
-          scheduleJob(new JavaStepJob(a, jes))
-        case _ =>
+      val underwayPos =
+        jes.underway.map(a => a.getStartPosition + a.getLength) getOrElse 0
+      val cursorPos = jes.cursorPosition
+      if (cursorPos > underwayPos) { /* Forwards! */
+        JavaStepForwardHandler.collectProofScript(
+            jes, true, Some(jes.cursorPosition)) match {
+          case a : List[JavaStep] if a.size > 0 =>
+            jes.setUnderway(Some(a.last.node))
+            scheduleJob(new JavaStepJob(a, jes))
+          case _ =>
+        }
+      } else if (cursorPos < underwayPos) { /* Backwards! */
+        JavaEditorHandler.doStepBack(jes, _.prefixLength(
+            a => (cursorPos < (a.node.getStartPosition + a.node.getLength))))
       }
     }
     null
   }
+}
+
+class JavaStepBackHandler extends JavaEditorHandler {
+  override def execute(ev : ExecutionEvent) = {
+    if (isEnabled())
+      JavaEditorHandler.doStepBack(getState, a => if (a.length > 0) 1 else 0)
+    null
+  }
+  
+  override def calculateEnabled =
+    super.calculateEnabled && (getState.steps.length > 0)
+}
+
+class JavaRetractAllHandler extends JavaEditorHandler {
+  override def execute(ev : ExecutionEvent) = {
+    if (isEnabled())
+      JavaEditorHandler.doStepBack(getState, _.length)
+    null
+  }
+  
+  override def calculateEnabled =
+    super.calculateEnabled && (getState.steps.length > 0)
 }
