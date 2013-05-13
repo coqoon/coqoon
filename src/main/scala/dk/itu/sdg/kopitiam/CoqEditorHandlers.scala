@@ -19,8 +19,7 @@ case class CoqStep(
     coqTop.interp(false, false, text)
   } else CoqTypes.Good("")
 }
-   
-    
+
 import scala.collection.mutable.Stack
 trait Editor extends CoqTopContainer with org.eclipse.ui.IEditorPart {
   def steps : Stack[CoqStep]
@@ -173,6 +172,16 @@ class RestartCoqHandler extends CoqEditorHandler {
       new RestartCoqJob(editor).schedule()
     null
   }
+}
+
+class InterruptCoqHandler extends CoqEditorHandler {
+  override def execute(ev : ExecutionEvent) = {
+    if (isEnabled())
+      editor.coqTop.interrupt
+    null
+  }
+  
+  override def calculateEnabled = (editor != null && editor.busy)
 }
 
 class CompileCoqHandler extends CoqEditorHandler {

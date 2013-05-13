@@ -145,6 +145,7 @@
       </command>
       <command
             categoryId="Kopitiam.category"
+            defaultHandler="dk.itu.sdg.kopitiam.InterruptCoqHandler"
             id="Kopitiam.interrupt"
             name="Interrupt Coq command">
       </command>
