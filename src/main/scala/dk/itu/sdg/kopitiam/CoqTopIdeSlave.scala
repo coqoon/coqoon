@@ -19,7 +19,7 @@ trait CoqTopIdeSlave {
 object CoqTopIdeSlave {
   def forVersion(version : String) : Option[CoqTopIdeSlave] = {
     version match {
-      case "20120710" => Some(new CoqTopIdeSlaveImpl())
+      case "20120710" => CoqTopIdeSlave_v20120710()
       case _ => None
     }
   }
@@ -36,13 +36,18 @@ object CoqTopIdeSlave {
   }
   
   def getProgramPath(program : String, dir : String) : String = {
-    def isWindows =
-      System.getProperty("os.name").toLowerCase.contains("windows")
-    val programName = (if (isWindows) program + ".exe" else program)
+    val programName = (if (PlatformUtilities.isWindows) {
+      program + ".exe"
+    } else program)
     if (dir == null || dir.length == 0) {
       programName
     } else dir + File.separator + programName
   }
+}
+
+private object PlatformUtilities {
+  def getOSName = System.getProperty("os.name").toLowerCase
+  def isWindows = getOSName.contains("windows")
 }
 
 trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
@@ -65,11 +70,17 @@ trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
   def quit : value[Unit]
   /* ? */ def about : value[coq_info]
 }
+object CoqTopIdeSlave_v20120710 {
+  def apply() : Option[CoqTopIdeSlave_v20120710] =
+    if (PlatformUtilities.isWindows) {
+      Some(new CoqTopIdeSlaveImplWindows())
+    } else Some(new CoqTopIdeSlaveImplPOSIX())
+}
 
-private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
-  import java.io.{InputStreamReader, OutputStreamWriter, Reader, Writer}
-  import scala.sys.process.{Process, ProcessIO}
-  
+import java.io.{Reader, Writer}
+import scala.sys.process.Process
+
+private abstract class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
   private var in : Writer = null
   private var out : Reader = null
   
@@ -87,18 +98,22 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
     out = null
   }
   
+  protected def start : (Writer, Reader, Process)
+  
   override def restart = {
     kill
-    pr = Process(Seq(CoqTopIdeSlave.getProgramPath, "-ideslave")).run(
-      new ProcessIO(
-        a => in = new OutputStreamWriter(a),
-        a => out = new InputStreamReader(a),
-        _ => ()))
+    start match {
+      case (in, out, pr) =>
+        this.in = in
+        this.out = out
+        this.pr = pr
+    }
   }
-  restart
   
   import scala.xml.{Attribute, Elem, Node, Null, Text, XML}
   private def sendRaw(n : Elem) : Elem = synchronized {
+    if (in == null || out == null || pr == null)
+      restart
     in.write(n.toString())
     in.flush()
     println("TO   " + n.toString())
@@ -273,8 +288,6 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
     }
   }
   
-  override def interrupt = Unit // TODO
-  
   override def interp(r : CoqTypes.raw, v : CoqTypes.verbose, s : String) =
     send(
       (<call val="interp">{s}</call> %
@@ -404,4 +417,58 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
         CoqTypes.coq_info(
           cif(0).text, cif(1).text, cif(2).text, cif(3).text)
       })
+}
+
+import java.io.{InputStreamReader, OutputStreamWriter}
+import scala.sys.process.ProcessIO
+
+private class CoqTopIdeSlaveImplWindows extends CoqTopIdeSlaveImpl {
+  override protected def start : (Writer, Reader, Process) = {
+    var in : Writer = null
+    var out : Reader = null
+    var pr = Process(Seq(CoqTopIdeSlave.getProgramPath, "-ideslave")).run(
+      new ProcessIO(
+        a => in = new OutputStreamWriter(a),
+        a => out = new InputStreamReader(a),
+        _ => ()))
+    (in, out, pr)
+  }
+  
+  override def interrupt = Unit // TODO
+}
+
+private class CoqTopIdeSlaveImplPOSIX extends CoqTopIdeSlaveImpl {
+  private var pid : String = null
+  
+  override def kill = {
+    pid = null
+    super.kill
+  }
+  
+  override protected def start : (Writer, Reader, Process) = {
+    var in : Writer = null
+    var out : Reader = null
+    var pr = Process(Seq(
+        "/bin/sh", "-c", "echo $$; exec \"$@\"", "coqtop-wrapper",
+        CoqTopIdeSlave.getProgramPath, "-ideslave")).run(
+      new ProcessIO(
+        a => in = new OutputStreamWriter(a),
+        a => out = new InputStreamReader(a),
+        _ => ()))
+    
+    val sb = new StringBuilder
+    var a : Int = out.read
+    while (a != -1 && a != '\n') {
+      sb += a.asInstanceOf[Char]
+      a = out.read
+    }
+    pid = sb.toString
+    
+    (in, out, pr)
+  }
+  
+  override def interrupt = {
+    if (pid != null) 
+      Process(Seq("kill", "-INT", pid)).run
+  }
 }
