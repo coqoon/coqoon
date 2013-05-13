@@ -66,3 +66,16 @@ object CoqTopContainer {
   final val PROPERTY_BUSY = 979
   final val PROPERTY_GOALS = 1979
 }
+
+import org.eclipse.core.commands.ExecutionEvent
+
+class InterruptCoqHandler extends EditorHandler {
+  override def execute(ev : ExecutionEvent) = {
+    if (isEnabled())
+      getCoqTopContainer.coqTop.interrupt
+    null
+  }
+  
+  override def calculateEnabled =
+    (getCoqTopContainer != null && getCoqTopContainer.busy)
+}

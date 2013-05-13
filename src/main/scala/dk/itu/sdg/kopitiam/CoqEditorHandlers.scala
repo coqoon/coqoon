@@ -173,16 +173,6 @@ class RestartCoqHandler extends CoqEditorHandler {
   }
 }
 
-class InterruptCoqHandler extends CoqEditorHandler {
-  override def execute(ev : ExecutionEvent) = {
-    if (isEnabled())
-      editor.coqTop.interrupt
-    null
-  }
-  
-  override def calculateEnabled = (editor != null && editor.busy)
-}
-
 class CompileCoqHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     import org.eclipse.ui.IFileEditorInput
