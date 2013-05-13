@@ -66,21 +66,20 @@ object CoqEditorHandler {
     steps.result
   }
   
-  def getStepBackPair(
-      editor : Editor,
-      f : Stack[CoqStep] => Int) : (Int, Option[CoqStep]) = {
+  def getStepBackPair[A <: CoqCommand](
+      steps : Stack[A], f : Stack[A] => Int) : (Int, Option[A]) = {
     var count : Int = 0
-    var mostRecent : Option[CoqStep] = None
-    editor.steps.synchronized {
-      count = f(editor.steps)
-      if (count > 0 && editor.steps.length - count > 0)
-        mostRecent = Some(editor.steps(count))
+    var mostRecent : Option[A] = None
+    steps.synchronized {
+      count = f(steps)
+      if (count > 0 && steps.length - count > 0)
+        mostRecent = Some(steps(count))
     }
     (count, mostRecent)
   }
   
   def doStepBack(editor : Editor, f : Stack[CoqStep] => Int) = {
-    val p = getStepBackPair(editor, f)
+    val p = getStepBackPair(editor.steps, f)
     if (p._1 > 0) {
       editor.setUnderway(p._2 match {
         case None => 0
