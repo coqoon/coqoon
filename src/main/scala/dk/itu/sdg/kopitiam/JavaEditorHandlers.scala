@@ -35,12 +35,12 @@ object JavaEditorHandler {
   def doStepBack(jes : JavaEditorState, f : Stack[JavaStep] => Int) = {
     val p = CoqEditorHandler.getStepBackPair(jes.steps, f)
     if (p._1 > 0) {
-      /*jes.setUnderway(p._2 match {
+      jes.setUnderway(p._2 match {
         case None => None
         case Some(x) => Some(x.node)
-      })*/
-      // jes.setBusy(true)
-      println(p)
+      })
+      jes.setBusy(true)
+      new JavaStepBackJob(jes, p._1).schedule()
     }
   }
 }
@@ -94,7 +94,7 @@ class JavaStepForwardHandler extends JavaEditorHandler {
       JavaStepForwardHandler.collectProofScript(jes, false) match {
         case a : List[JavaStep] if a.size == 1 =>
           jes.setUnderway(Some(a.last.node))
-          scheduleJob(new JavaStepJob(a, jes))
+          scheduleJob(new JavaStepForwardJob(a, jes))
         case _ =>
       }
     }
@@ -133,7 +133,7 @@ class JavaStepAllHandler extends JavaEditorHandler {
       JavaStepForwardHandler.collectProofScript(jes, true) match {
         case a : List[JavaStep] if a.size > 0 =>
           jes.setUnderway(Some(a.last.node))
-          scheduleJob(new JavaStepJob(a, jes))
+          scheduleJob(new JavaStepForwardJob(a, jes))
         case _ =>
       }
     }
@@ -153,7 +153,7 @@ class JavaStepToCursorHandler extends JavaEditorHandler {
             jes, true, Some(jes.cursorPosition)) match {
           case a : List[JavaStep] if a.size > 0 =>
             jes.setUnderway(Some(a.last.node))
-            scheduleJob(new JavaStepJob(a, jes))
+            scheduleJob(new JavaStepForwardJob(a, jes))
           case _ =>
         }
       } else if (cursorPos < underwayPos) { /* Backwards! */

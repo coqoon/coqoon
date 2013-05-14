@@ -105,15 +105,15 @@ object JavaProofInitialisationJob {
   }
 }
 
-class JavaStepJob(steps : List[JavaStep], jes : JavaEditorState)
+class JavaStepForwardJob(steps : List[JavaStep], jes : JavaEditorState)
     extends Job("Stepping forward") {
   override def run(monitor_ : IProgressMonitor) : IStatus = {
     try {
-      JavaStepJob.run(steps, jes, monitor_)
+      JavaStepForwardJob.run(steps, jes, monitor_)
     } finally jes.setBusy(false)
   }
 }
-object JavaStepJob {
+object JavaStepForwardJob {
   private def doSteps(
       steps : List[JavaStep], jes : JavaEditorState,
       monitor : IProgressMonitor) : IStatus = {
@@ -168,5 +168,25 @@ object JavaStepJob {
       }
       monitor_.done
     }
+  }
+}
+
+class JavaStepBackJob(jes : JavaEditorState, stepCount : Int)
+    extends Job("Stepping forward") {
+  override def run(monitor_ : IProgressMonitor) : IStatus = {
+    try {
+      JavaStepBackJob.run(jes, stepCount, monitor_)
+    } finally jes.setBusy(false)
+  }
+}
+object JavaStepBackJob {
+  def run(
+      jes : JavaEditorState, stepCount : Int,
+      monitor_ : IProgressMonitor) : IStatus = {
+    val monitor = SubMonitor.convert(
+        monitor_, "Java step back", 1)
+    try {
+      Status.OK_STATUS
+    } finally monitor.done
   }
 }
