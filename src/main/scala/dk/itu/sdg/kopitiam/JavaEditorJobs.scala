@@ -157,9 +157,11 @@ object JavaStepForwardJob {
                 case _ =>
               }
               /* Whether we succeeded or not, there's nothing more to do */
-              jes.setMethod(None)
-              jes.setUnderway(None)
-              jes.annotateCompletedMethods
+              UIUtils.asyncExec {
+                jes.setMethod(None)
+                jes.setUnderway(None)
+                jes.annotateCompletedMethods
+              }
             case _ =>
           }
           UIUtils.asyncExec { jes.setGoals(goals) }
@@ -180,13 +182,54 @@ class JavaStepBackJob(jes : JavaEditorState, stepCount : Int)
   }
 }
 object JavaStepBackJob {
+  private def doSteps(
+      jes : JavaEditorState, stepCount : Int,
+      monitor_ : IProgressMonitor) : IStatus = {
+    val steps = jes.steps.synchronized { jes.steps.take(stepCount) }
+    val rewindCount = steps.size /* XXX: synthetic steps? */
+    jes.coqTop.rewind(rewindCount) match {
+      case CoqTypes.Good(extra) =>
+        jes.steps.synchronized {
+          for (step <- steps)
+            jes.steps.pop
+          
+          if (extra > 0) {
+            // XXX: synthetic steps
+            var redoSteps = jes.steps.take(extra).toList.reverse
+            for (step <- redoSteps)
+              jes.steps.pop
+            new JavaStepForwardJob(redoSteps, jes).schedule()
+          }
+        }
+      case CoqTypes.Fail(ep) =>
+        val completed = jes.steps.synchronized {
+          jes.steps.headOption match {
+            case None => None
+            case Some(step) => Some(step.node)
+          }
+        }
+        UIUtils.asyncExec { jes.setUnderway(completed) }
+        return new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2.trim)
+    }
+    Status.OK_STATUS
+  }
   def run(
       jes : JavaEditorState, stepCount : Int,
       monitor_ : IProgressMonitor) : IStatus = {
     val monitor = SubMonitor.convert(
         monitor_, "Java step back", 1)
     try {
-      Status.OK_STATUS
-    } finally monitor.done
+      doSteps(jes, stepCount, monitor_)
+    } finally {
+      val goals = jes.coqTop.goals match {
+        case CoqTypes.Good(g) => g
+        case _ => None
+      }
+      UIUtils.asyncExec {
+        jes.setGoals(goals)
+      }
+      jes.setBusy(false)
+      monitor.done
+    }
   }
 }
