@@ -390,11 +390,9 @@ object JavaPosition extends EclipseJavaHelper {
 object EclipseBoilerPlate {
   import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.dialogs.MessageDialog
-  def warnUser (title : String, message : String) : Unit = {
-    Display.getDefault.syncExec(
-      new Runnable() {
-        def run() = MessageDialog.openWarning(Display.getDefault.getActiveShell, title, message)
-      })
+  def warnUser (title : String, message : String) : Unit = UIUtils.syncExec {
+    MessageDialog.openWarning(
+        UIUtils.getDisplay.getActiveShell, title, message)
   }
 }
 

@@ -52,7 +52,7 @@ trait CoqTopContainer {
   private var listeners = Set[IPropertyListener]()
   def addListener(l : IPropertyListener) = (listeners += l)
   def removeListener(l : IPropertyListener) = (listeners -= l)
-  def fireChange(propertyID : Int) =
+  def fireChange(propertyID : Int) : Unit =
     listeners.map(_.propertyChanged(this, propertyID))
   
   private var busy_ : Boolean = false

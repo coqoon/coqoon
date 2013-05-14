@@ -141,10 +141,8 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
     invalidate()
   }
 
-  def invalidate () : Unit = {
-    Display.getDefault.asyncExec(
-      new Runnable() {
-        def run() = { getSourceViewer.invalidateTextPresentation }})
+  def invalidate () : Unit = UIUtils.asyncExec {
+    getSourceViewer.invalidateTextPresentation
   }
 
   def getSource () : ISourceViewer = {
@@ -382,11 +380,9 @@ class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor
     val outline = CoqDocumentProvider.getOutline(document) // updates model as side effect
     if (editor != null) {
       val outlinePage = editor.getAdapter(classOf[IContentOutlinePage]).asInstanceOf[CoqContentOutlinePage]
-      Display.getDefault.asyncExec(new java.lang.Runnable {
-        def run() : Unit = {
-          outlinePage.update() //Update GUI outline
-        }
-      })
+      UIUtils.asyncExec {
+        outlinePage.update() //Update GUI outline
+      }
     } else
       println(" null editor")
 

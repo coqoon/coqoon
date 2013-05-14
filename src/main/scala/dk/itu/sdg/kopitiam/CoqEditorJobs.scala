@@ -53,14 +53,6 @@ object InitialiseCoqJob {
   }
 }
 
-private object CoqJob {
-  def asyncExec(f : => Unit) =
-    org.eclipse.ui.PlatformUI.getWorkbench.getDisplay.asyncExec(
-        new Runnable() {
-      override def run = f
-    })
-}
-
 class RestartCoqJob(editor : Editor) extends CoqJob("Restarting Coq", editor) {
   override def run(monitor : IProgressMonitor) =
     RestartCoqJob.run(editor, monitor)
@@ -71,7 +63,7 @@ object RestartCoqJob {
     try {
       monitor.subTask("Clearing state")
       editor.steps.synchronized { editor.steps.clear }
-      CoqJob.asyncExec {
+      UIUtils.asyncExec {
         editor.setGoals(None)
         editor.setUnderway(0)
       }
@@ -113,7 +105,7 @@ abstract class StepJob(
       case CoqTypes.Good(g) => g
       case _ => None
     }
-    CoqJob.asyncExec {
+    UIUtils.asyncExec {
       f.map { _() }
       editor.setGoals(goals)
     }
@@ -172,7 +164,7 @@ class StepForwardJob(
         case CoqTypes.Good(s) =>
           editor.steps.synchronized { editor.steps.push(step) }
           monitor.worked(1)
-          CoqJob.asyncExec {
+          UIUtils.asyncExec {
             editor.setCompleted(step.offset + step.text.length)
           }
         case CoqTypes.Fail(err) =>

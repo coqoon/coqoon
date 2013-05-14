@@ -91,7 +91,7 @@ object JavaProofInitialisationJob {
         case CoqTypes.Good(a) => a
         case _ => None
       }
-      CoqJob.asyncExec {
+      UIUtils.asyncExec {
         jes.setGoals(goals)
       }
       //register handlers!
@@ -103,14 +103,6 @@ object JavaProofInitialisationJob {
       Status.OK_STATUS
     } finally monitor_.done
   }
-}
-
-private object JavaJob {
-  def asyncExec(f : => Unit) =
-    org.eclipse.ui.PlatformUI.getWorkbench.getDisplay.asyncExec(
-        new Runnable() {
-      override def run = f
-    })
 }
 
 class JavaStepJob(steps : List[JavaStep], jes : JavaEditorState)
@@ -132,12 +124,12 @@ object JavaStepJob {
       jes.coqTop.interp(false, false, step.text) match {
         case CoqTypes.Good(msg) =>
           jes.steps.synchronized { jes.steps.push(step) }
-          JavaJob.asyncExec { jes.setComplete(Some(step.node)) }
+          UIUtils.asyncExec { jes.setComplete(Some(step.node)) }
         case CoqTypes.Unsafe(msg) =>
           jes.steps.synchronized { jes.steps.push(step) }
-          JavaJob.asyncExec { jes.setComplete(Some(step.node)) }
+          UIUtils.asyncExec { jes.setComplete(Some(step.node)) }
         case CoqTypes.Fail(ep) =>
-          JavaJob.asyncExec { jes.setUnderway(jes.complete) }
+          UIUtils.asyncExec { jes.setUnderway(jes.complete) }
           return new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2.trim)
       }
       monitor.worked(1)
@@ -170,9 +162,9 @@ object JavaStepJob {
               jes.annotateCompletedMethods
             case _ =>
           }
-          JavaJob.asyncExec { jes.setGoals(goals) }
+          UIUtils.asyncExec { jes.setGoals(goals) }
         case _ =>
-          JavaJob.asyncExec { jes.setGoals(None) }
+          UIUtils.asyncExec { jes.setGoals(None) }
       }
       monitor_.done
     }

@@ -45,13 +45,11 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         y.getEditorReferences.toList.map(z =>
           handlePart(z.getEditor(false))))
     })
-    wb.getDisplay.asyncExec(new Runnable() {
-      def run () = {
-        val win = wb.getActiveWorkbenchWindow
-        assert(win != null)
-        activateEditor(win.getActivePage.getActiveEditor)
-      }
-    })
+    UIUtils.asyncExec {
+      val win = wb.getActiveWorkbenchWindow
+      assert(win != null)
+      activateEditor(win.getActivePage.getActiveEditor)
+    }
   }
 
 
