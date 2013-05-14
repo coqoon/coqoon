@@ -17,13 +17,6 @@ trait CoqTopIdeSlave {
 }
 
 object CoqTopIdeSlave {
-  def forVersion(version : String) : Option[CoqTopIdeSlave] = {
-    version match {
-      case "20120710" => CoqTopIdeSlave_v20120710()
-      case _ => None
-    }
-  }
-  
   import java.io.File
   def checkProgramPath() : Boolean = new File(getProgramPath).exists()
   

@@ -26,12 +26,8 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
     
   private var coqTopV : CoqTopIdeSlave_v20120710 = null
   def coqTop = {
-    if (coqTopV == null) {
-      coqTopV = CoqTopIdeSlave.forVersion("20120710") match {
-        case Some(m : CoqTopIdeSlave_v20120710) => m
-        case _ => null
-      }
-    }
+    if (coqTopV == null)
+      coqTopV = CoqTopIdeSlave_v20120710().orNull
     coqTopV
   }
   

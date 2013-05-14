@@ -33,10 +33,7 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   private var coqTopV : CoqTopIdeSlave_v20120710 = null
   override def coqTop = {
     if (coqTopV == null) {
-      coqTopV = CoqTopIdeSlave.forVersion("20120710") match {
-        case Some(m : CoqTopIdeSlave_v20120710) => m
-        case _ => null
-      }
+      coqTopV = CoqTopIdeSlave_v20120710().orNull
       if (coqTopV != null) {
         setBusy(true)
         new InitialiseCoqJob(this).schedule()
