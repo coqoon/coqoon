@@ -75,6 +75,9 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
     try {
       f(model)
     } finally model.disconnect(doc)
+    println(editor.getAdapter(classOf[org.eclipse.jface.text.source.ISourceViewer]))
+    editor.asInstanceOf[org.eclipse.jdt.internal.ui.javaeditor.JavaEditor].
+        getViewer.invalidateTextPresentation /* XXX */
   }
   
   import org.eclipse.jface.text.Position
