@@ -45,22 +45,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
         y.getEditorReferences.toList.map(z =>
           handlePart(z.getEditor(false))))
     })
-    UIUtils.asyncExec {
-      val win = wb.getActiveWorkbenchWindow
-      assert(win != null)
-      activateEditor(win.getActivePage.getActiveEditor)
-    }
   }
-
-
-  override def partActivated (part : IWorkbenchPartReference) : Unit = {
-    val ed = part.getPart(false)
-    activateEditor(ed)
-  }
-
-  import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
-  def activateEditor (ed : IWorkbenchPart) : Unit =
-    Console.println("activated: " + ed)
 
   override def partOpened (part : IWorkbenchPartReference) : Unit =
     { handlePartRef(part) }
@@ -68,6 +53,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
   override def windowActivated (window : IWorkbenchWindow) : Unit =
     { window.getPartService.addPartListener(this) }
 
+  override def partActivated (part : IWorkbenchPartReference) : Unit = ()
   override def partClosed (part : IWorkbenchPartReference) : Unit = { }
   override def partBroughtToTop (part : IWorkbenchPartReference) : Unit = { }
   override def partDeactivated (part : IWorkbenchPartReference) : Unit = { }
