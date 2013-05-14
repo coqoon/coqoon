@@ -45,16 +45,16 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
   def compilationUnit : Option[CompilationUnit] = cu
   def setCompilationUnit (a : Option[CompilationUnit]) = cu = a
   
-  private var completeV : Option[Statement] = None
-  def complete : Option[Statement] = completeV
-  def setComplete(a : Option[Statement]) = {
+  private var completeV : Option[ASTNode] = None
+  def complete : Option[ASTNode] = completeV
+  def setComplete(a : Option[ASTNode]) = {
     completeV = a
     addAnnotations(complete, underway)
   }
   
-  private var underwayV : Option[Statement] = None
-  def underway : Option[Statement] = underwayV
-  def setUnderway(a : Option[Statement]) = {
+  private var underwayV : Option[ASTNode] = None
+  def underway : Option[ASTNode] = underwayV
+  def setUnderway(a : Option[ASTNode]) = {
     underwayV = a
     (underway, complete) match {
       case (Some(un), Some(co)) if co.getStartPosition > un.getStartPosition =>
@@ -80,14 +80,14 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
   import org.eclipse.jface.text.Position
   import org.eclipse.jface.text.source.Annotation
   private def addAnnotations(
-      complete : Option[Statement], underway : Option[Statement]) : Unit =
+      complete : Option[ASTNode], underway : Option[ASTNode]) : Unit =
     doConnectedToAnnotationModel { addAnnotations(complete, underway, _) }
   
   private var annotationPair : (Option[Annotation], Option[Annotation]) =
       (None, None)
   
   private def addAnnotations(
-      complete : Option[Statement], underway : Option[Statement],
+      complete : Option[ASTNode], underway : Option[ASTNode],
       model : IAnnotationModel) : Unit = {
     annotationPair = JavaEditorState.doSplitAnnotations(
         JavaEditorState.getSplitAnnotationRanges(
