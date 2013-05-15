@@ -465,7 +465,6 @@ object CoqCompileJob {
             List(coqc, "-noglob", "-R", "src/", "", "-I", loadp, name)
           else
             List(coqc, "-noglob", "-R", "src/", "", name)
-        println(cmdarr)
         val coqcp = new ProcessBuilder(cmdarr : _*)
               .directory(path)
               .redirectErrorStream(true)

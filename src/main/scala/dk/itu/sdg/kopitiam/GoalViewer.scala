@@ -89,7 +89,6 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   import org.eclipse.ui.IEditorPart
   private var activeContainer : Option[CoqTopContainer] = None
   private def setActiveContainer (e : IEditorPart) = {
-    println("" + this + ".setActiveEditor(" + e + ")")
     activeContainer match {
       case Some(ed) => ed.removeListener(this)
       case None =>
