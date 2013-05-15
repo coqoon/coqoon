@@ -66,3 +66,31 @@ object CreateErrorMarkerJob {
       resource : IResource, region : (Int, Int), message : String) : CreateErrorMarkerJob =
     new CreateErrorMarkerJob(resource, region, message)
 }
+
+import org.eclipse.core.runtime.jobs.Job
+import org.eclipse.core.runtime.SubMonitor
+
+abstract class JobBase(name : String) extends Job(name) {
+  protected def runner : JobRunner[_]
+  protected def container : CoqTopContainer
+  
+  final override def run(monitor_ : IProgressMonitor) : IStatus =
+    try {
+      runner.run(monitor_)._1
+    } finally container.setBusy(false)
+}
+
+trait JobRunner[A] {
+  protected def finish(result : A, monitor : SubMonitor) : (IStatus, A)
+  protected def doOperation(monitor : SubMonitor) : A
+  
+  final def run(monitor_ : IProgressMonitor) : (IStatus, A) = {
+    val monitor = SubMonitor.convert(monitor_)
+    try {
+      wrapOperation(monitor)
+    } finally monitor.done
+  }
+  
+  final protected def wrapOperation(monitor : SubMonitor) : (IStatus, A) =
+    finish(doOperation(monitor), monitor)
+}
