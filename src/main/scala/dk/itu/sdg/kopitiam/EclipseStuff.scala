@@ -240,9 +240,9 @@ object JavaPosition extends EclipseJavaHelper {
     val prov = editor.getDocumentProvider
     val ei = editor.getEditorInput
     val doc = prov.getDocument(ei)
-    val prf = m.getProperty(EclipseJavaASTProperties.coqProof)
+    val prf = EclipseJavaASTProperties.getProof(m).get
     assert(prf != null)
-    var res : String = prf.asInstanceOf[String]
+    var res : String = prf.mkString("\n")
 
     val printer : Statement => Option[String] = x => printProofScript(doc, x)
     val rs = traverseAST(m, true, false, printer)

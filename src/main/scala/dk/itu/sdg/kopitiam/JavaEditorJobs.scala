@@ -76,8 +76,7 @@ object JavaProofInitialisationJob {
       //send over beginning of proof
       jes.method match {
         case Some(meth) =>
-          val prfhead = meth.getProperty(EclipseJavaASTProperties.coqProof).
-              asInstanceOf[List[String]]
+          val prfhead = EclipseJavaASTProperties.getProof(meth).get
           val loopProgress = monitor.newChild(1,
               SubMonitor.SUPPRESS_ALL_LABELS).setWorkRemaining(prfhead.length)
           for (s <- prfhead) {

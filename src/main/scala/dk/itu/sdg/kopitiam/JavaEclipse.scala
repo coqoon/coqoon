@@ -15,8 +15,13 @@ object EclipseJavaASTProperties {
     Option(a.getProperty(coqSpecification)).map { _.asInstanceOf[List[String]] }
   def setSpecification(a : ASTNode, p : Option[List[String]]) =
     a.setProperty(coqSpecification, p.orNull)
+  
+  private val coqProof : String = "dk.itu.sdg.kopitiam.coqProof"
+  def getProof(a : ASTNode) : Option[List[String]] =
+    Option(a.getProperty(coqProof)).map { _.asInstanceOf[List[String]] }
+  def setProof(a : ASTNode, p : Option[List[String]]) =
+    a.setProperty(coqProof, p.orNull)
     
-  val coqProof : String = "dk.itu.sdg.kopitiam.coqProof"
   val coqEnd : String = "dk.itu.sdg.kopitiam.coqEnd"
   
   def getShell(a : ASTNode) : Option[CoqShellTokens] = None
@@ -278,8 +283,7 @@ trait EclipseJavaHelper extends VisitingAST {
         		  		     "Proof.",
         		  		     "unfold " + name + "_spec" + suff + "; unfold_spec.")
           //Console.println("proof is " + prfhead)
-          x.setProperty(EclipseJavaASTProperties.coqProof, prfhead)
-
+          EclipseJavaASTProperties.setProof(x, Some(prfhead))
         case x => //Console.println("found here: " + x.getClass.toString)
       }
       true
