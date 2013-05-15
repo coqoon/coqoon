@@ -65,8 +65,8 @@ object JavaProofInitialisationJob {
           val steps = pdef ++ spec
           val loopProgress = monitor.newChild(1,
               SubMonitor.SUPPRESS_ALL_LABELS).setWorkRemaining(steps.length)
-          for (s <- pdef ++ spec) {
-            jes.coqTop.interp(true, false, s)
+          for (s <- steps) {
+            jes.coqTop.interp(false, false, s)
             loopProgress.worked(1)
           }
         case None =>
@@ -81,7 +81,7 @@ object JavaProofInitialisationJob {
           val loopProgress = monitor.newChild(1,
               SubMonitor.SUPPRESS_ALL_LABELS).setWorkRemaining(prfhead.length)
           for (s <- prfhead) {
-            jes.coqTop.interp(true, false, s)
+            jes.coqTop.interp(false, false, s)
             loopProgress.worked(1)
           }
         case None =>
