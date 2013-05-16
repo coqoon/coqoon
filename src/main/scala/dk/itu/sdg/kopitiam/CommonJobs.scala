@@ -72,11 +72,17 @@ import org.eclipse.core.runtime.SubMonitor
 
 abstract class JobBase(name : String) extends Job(name) {
   protected def runner : JobRunner[_]
+  
+  override def run(monitor_ : IProgressMonitor) : IStatus =
+    runner.run(monitor_)._1
+}
+
+abstract class CoqJobBase(name : String) extends JobBase(name) {
   protected def container : CoqTopContainer
   
-  final override def run(monitor_ : IProgressMonitor) : IStatus =
+  override def run(monitor_ : IProgressMonitor) : IStatus =
     try {
-      runner.run(monitor_)._1
+      super.run(monitor_)
     } finally container.setBusy(false)
 }
 
@@ -84,7 +90,7 @@ trait JobRunner[A] {
   protected def finish(result : A, monitor : SubMonitor) : (IStatus, A)
   protected def doOperation(monitor : SubMonitor) : A
   
-  final def run(monitor_ : IProgressMonitor) : (IStatus, A) = {
+  def run(monitor_ : IProgressMonitor) : (IStatus, A) = {
     val monitor = SubMonitor.convert(monitor_)
     try {
       wrapOperation(monitor)
@@ -93,4 +99,9 @@ trait JobRunner[A] {
   
   final protected def wrapOperation(monitor : SubMonitor) : (IStatus, A) =
     finish(doOperation(monitor), monitor)
+}
+
+trait SimpleJobRunner extends JobRunner[IStatus] {
+  override protected def finish(result : IStatus, monitor : SubMonitor) =
+    (result, result)
 }

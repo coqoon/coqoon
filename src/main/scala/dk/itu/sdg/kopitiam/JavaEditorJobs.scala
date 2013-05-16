@@ -6,13 +6,13 @@ import org.eclipse.core.runtime.Path
 import org.eclipse.core.runtime.jobs.Job
 
 class JavaProofInitialisationJob(jes : JavaEditorState)
-    extends JobBase("Initialising Java proof mode") {
+    extends CoqJobBase("Initialising Java proof mode") {
   override def runner = new JavaProofInitialisationRunner(jes)
   override def container = jes
 }
 class JavaProofInitialisationRunner(
-    jes : JavaEditorState) extends JobRunner[Unit] {
-  override def doOperation(monitor : SubMonitor) : Unit = {
+    jes : JavaEditorState) extends SimpleJobRunner {
+  override def doOperation(monitor : SubMonitor) : IStatus = {
     monitor.beginTask("Initialising Java proof mode", 4)
     monitor.subTask("Performing custom Coq initialisation")
     val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
@@ -46,11 +46,11 @@ class JavaProofInitialisationRunner(
       EclipseBoilerPlate.warnUser("Model file missing",
         "Please write a model file for this Java file named '" +
           basename + "_model'.")
-      return
+      return Status.OK_STATUS
     } else {
       val ccj = CoqCompileJob.run(model, monitor.newChild(1))
       if (ccj != Status.OK_STATUS)
-        return
+        return Status.OK_STATUS
     }
     monitor.setWorkRemaining(2)
 
@@ -97,9 +97,8 @@ class JavaProofInitialisationRunner(
     jes.activateHandler("Kopitiam.step_cursor", new JavaStepToCursorHandler)
     jes.activateHandler("Kopitiam.step_backward", new JavaStepBackHandler)
     jes.activateHandler("Kopitiam.retract", new JavaRetractAllHandler)
+    Status.OK_STATUS
   }
-  
-  override def finish(a : Unit, monitor : SubMonitor) = (Status.OK_STATUS, a)
 }
 
 abstract class CoqStepRunner[A](container : CoqTopContainer)
@@ -133,7 +132,7 @@ object CoqStepRunner {
 }
 
 class JavaStepForwardJob(steps : List[JavaStep], jes : JavaEditorState)
-    extends JobBase("Stepping forward") {
+    extends CoqJobBase("Stepping forward") {
   override def runner = new JavaStepForwardRunner(jes, steps)
   override def container = jes
 }
@@ -185,7 +184,7 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
 }
 
 class JavaStepBackJob(jes : JavaEditorState, stepCount : Int)
-    extends JobBase("Stepping forward") {
+    extends CoqJobBase("Stepping forward") {
   override def runner = new JavaStepBackRunner(jes, stepCount)
   override def container = jes
 }
