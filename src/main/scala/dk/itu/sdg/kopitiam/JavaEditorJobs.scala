@@ -50,7 +50,7 @@ class JavaProofInitialisationRunner(
     } else {
       val ccj = new CoqCompileRunner(model).run(monitor.newChild(1))._1
       if (ccj != Status.OK_STATUS)
-        return Status.OK_STATUS
+        return ccj
     }
     monitor.setWorkRemaining(2)
 

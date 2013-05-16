@@ -467,15 +467,17 @@ class CoqCompileRunner(source : IFile) extends SimpleJobRunner {
             .start();
       import java.io._
       val ou = new BufferedReader(new InputStreamReader(coqcp.getInputStream()))
+      var output = List[String]()
       var line : String = ou.readLine()
       while (line != null) {
         EclipseConsole.out.println(line)
+        output :+= line
         line = ou.readLine()
       }
       coqcp.waitFor
       if (coqcp.exitValue != 0)
-        return new Status(IStatus.ERROR,
-            "dk.itu.sdg.kopitiam", "Oh no! Last output was " + line)
+        return new Status(
+            IStatus.ERROR, "dk.itu.sdg.kopitiam", output.mkString("\n"))
       
       monitor.worked(1)
     }
