@@ -430,60 +430,55 @@ import org.eclipse.core.resources.IFile
 import org.eclipse.core.runtime.jobs.Job
 import org.eclipse.core.runtime.{SubMonitor, IProgressMonitor}
 
-class CoqCompileJob (source : IFile)
-    extends Job("Compiling Coq file " + source.getName) {
-  override def run(monitor : IProgressMonitor) =
-    CoqCompileJob.run(source, monitor)
+class CoqCompileJob(source : IFile)
+    extends JobBase("Compiling Coq file " + source.getName) {
+  override protected def runner = new CoqCompileRunner(source)
 }
-object CoqCompileJob {
+class CoqCompileRunner(source : IFile) extends SimpleJobRunner {
   import org.eclipse.core.runtime.{IStatus, Status}
   import java.io.File
   
-  def run(source : IFile, monitor_ : IProgressMonitor) : IStatus = {
-    val monitor = SubMonitor.convert(
-        monitor_, "Compiling " + source.getName, 1)
-    try {
-      println("CoqCompileJob(" + source + ") is running")
-      
-      val name = source.getProjectRelativePath.toOSString
-      val output = source.getLocation.removeFileExtension.
-          addFileExtension("vo").toFile
-      val path = source.getProject.getLocation.toFile
-      
-      if (output.lastModified > source.getLocation.toFile.lastModified)
-        return Status.OK_STATUS
-      
-      if (EclipseConsole.out == null)
-        EclipseConsole.initConsole
-      val coqc = CoqTopIdeSlave.getProgramPath("coqc")
-      //what about dependencies?? <- need Add LoadPath explicitly in .v!
-      if (new File(coqc).exists) {
-        val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-        val lp = new File(loadp).exists
-        val cmdarr =
-          if (lp)
-            List(coqc, "-noglob", "-R", "src/", "", "-I", loadp, name)
-          else
-            List(coqc, "-noglob", "-R", "src/", "", name)
-        val coqcp = new ProcessBuilder(cmdarr : _*)
-              .directory(path)
-              .redirectErrorStream(true)
-              .start();
-        import java.io._
-        val ou = new BufferedReader(new InputStreamReader(coqcp.getInputStream()))
-        var line : String = ou.readLine()
-        while (line != null) {
-          EclipseConsole.out.println(line)
-          line = ou.readLine()
-        }
-        coqcp.waitFor
-        if (coqcp.exitValue != 0)
-          return new Status(IStatus.ERROR,
-              "dk.itu.sdg.kopitiam", "Oh no! Last output was " + line)
-        
-        monitor.worked(1)
+  override protected def doOperation(monitor : SubMonitor) : IStatus = {
+    println("CoqCompileJob(" + source + ") is running")
+    
+    val name = source.getProjectRelativePath.toOSString
+    val output = source.getLocation.removeFileExtension.
+        addFileExtension("vo").toFile
+    val path = source.getProject.getLocation.toFile
+    
+    if (output.lastModified > source.getLocation.toFile.lastModified)
+      return Status.OK_STATUS
+    
+    if (EclipseConsole.out == null)
+      EclipseConsole.initConsole
+    val coqc = CoqTopIdeSlave.getProgramPath("coqc")
+    //what about dependencies?? <- need Add LoadPath explicitly in .v!
+    if (new File(coqc).exists) {
+      val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
+      val lp = new File(loadp).exists
+      val cmdarr =
+        if (lp)
+          List(coqc, "-noglob", "-R", "src/", "", "-I", loadp, name)
+        else
+          List(coqc, "-noglob", "-R", "src/", "", name)
+      val coqcp = new ProcessBuilder(cmdarr : _*)
+            .directory(path)
+            .redirectErrorStream(true)
+            .start();
+      import java.io._
+      val ou = new BufferedReader(new InputStreamReader(coqcp.getInputStream()))
+      var line : String = ou.readLine()
+      while (line != null) {
+        EclipseConsole.out.println(line)
+        line = ou.readLine()
       }
-      Status.OK_STATUS
-    } finally monitor_.done
+      coqcp.waitFor
+      if (coqcp.exitValue != 0)
+        return new Status(IStatus.ERROR,
+            "dk.itu.sdg.kopitiam", "Oh no! Last output was " + line)
+      
+      monitor.worked(1)
+    }
+    Status.OK_STATUS
   }
 }
