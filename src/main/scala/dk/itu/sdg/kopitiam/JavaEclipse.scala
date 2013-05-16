@@ -24,8 +24,6 @@ object EclipseJavaASTProperties {
     
   val coqEnd : String = "dk.itu.sdg.kopitiam.coqEnd"
   
-  def getShell(a : ASTNode) : Option[CoqShellTokens] = None
-    
   private val method : String = "dk.itu.sdg.kopitiam.method"
   def getMethod(a : ASTNode) : Option[MethodDeclaration] =
     Option(a.getProperty(method)).map { _.asInstanceOf[MethodDeclaration] }

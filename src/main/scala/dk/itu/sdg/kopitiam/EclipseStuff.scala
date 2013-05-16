@@ -34,7 +34,7 @@ class CoqJavaProject (basename : String) {
 
   import org.eclipse.jface.text.IDocument
   var ASTdirty : Boolean = false
-  var proofShell : Option[CoqShellTokens] = None
+  var proofShell : Option[_] = None
 
   import org.eclipse.jdt.core.dom.CompilationUnit
   var program : Option[CompilationUnit] = None
@@ -252,8 +252,6 @@ object JavaPosition extends EclipseJavaHelper {
   def emptyCoqShells () : Unit = (/* do nothing */)
 
   def getASTbeforeOff (off : Int) : Option[Statement] = (/* do nothing */ None)
-
-  def getLastCoqStatement () : Option[CoqShellTokens] = (/* do nothing */ None)
 
   def copyProps (from : MethodDeclaration, to : MethodDeclaration) = (/* do nothing */)
 

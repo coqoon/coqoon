@@ -115,36 +115,6 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                       Console.println("Is " + (x.getStartPosition + x.getLength) + " > " + off + "?")
                       if (x.getStartPosition + x.getLength > off) {
                         //backtrack!
-                        //also removes the coqShell props!
-                        val css =
-                          JavaPosition.getASTbeforeOff(off) match {
-                            case Some(bt) =>
-                              Console.println("backtracking to " + bt)
-                              val csss = EclipseJavaASTProperties.getShell(bt)
-                              if (csss != null)
-                                //invalidate! everything!
-                                Some(csss.asInstanceOf[CoqShellTokens])
-                              else
-                                None
-                            case None =>
-                              //start of method...
-                              val bla = JavaPosition.method
-                              bla match {
-                                case Some(x) =>
-                                  val csss = EclipseJavaASTProperties.getShell(x)
-                                  if (csss != null)
-                                    Some(csss.asInstanceOf[CoqShellTokens])
-                                  else
-                                    None
-                                case None => None
-                              }
-                          }
-                        css match {
-                          case None =>
-                          case Some(x) =>
-                            val cs = CoqTop.dummy
-                            /*CoqTop.writeToCoq*/("Backtrack " + x.globalStep + " " + x.localStep + " " + (cs.context.length - x.context.length) + ".")
-                        }
                       }
                   }
                   proj.ASTdirty = true

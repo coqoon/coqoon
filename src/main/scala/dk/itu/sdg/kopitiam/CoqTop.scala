@@ -2,13 +2,7 @@
 
 package dk.itu.sdg.kopitiam
 
-case class CoqShellTokens (theorem : String, globalStep : Int, context : List[String], localStep : Int) {
-  override def toString = theorem + " " + globalStep + " " + context + " " + localStep
-}
-
 object CoqTop {
-  val dummy = new CoqShellTokens("Coq", 0, List(), 0)
-
   def findNextCommand (s : String) : Int = {
     if (s == "") -1
     else {
