@@ -5,8 +5,7 @@ package dk.itu.sdg.kopitiam
 object JavaASTUtils {
 
   import org.eclipse.jdt.core.dom.{EmptyStatement, Statement}
-  import org.eclipse.jface.text.IDocument
-  def printProofScript (document : IDocument, statement : Statement) : Option[String] =
+  def printProofScript (statement : Statement) : Option[String] =
     statement match {
       case x : EmptyStatement =>
         statement.getProperty("dk.itu.sdg.kopitiam.contentExpr") match {

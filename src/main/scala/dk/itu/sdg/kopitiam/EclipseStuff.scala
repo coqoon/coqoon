@@ -84,16 +84,6 @@ object JavaPosition extends EclipseJavaHelper {
   import org.eclipse.jdt.core.dom.Initializer
   /*override def dispatch (x : CoqResponse) : Unit = {
     x match {
-      case CoqProofCompleted() =>
-        if (editor != null) {
-          CoqCommands.doLater(() => {
-            DocumentState.setBusy
-            CoqTop.writeToCoq("Qed.")
-          })
-          //if for some reason the Shell came before the proof completed
-          if (DocumentState.readyForInput)
-            CoqCommands.step
-        }
       case CoqTheoremDefined(x) =>
         if (editor != null && x.startsWith("valid_")) { // + method.get.id)) {
           //what about specifications!?
@@ -208,26 +198,8 @@ object JavaPosition extends EclipseJavaHelper {
               }
           }
         }
-      case CoqShellReady(monoton, tokens) =>
-        if (monoton)
-          reAnnotate(false, false)
-        else
-          reAnnotate(true, true)
-      case _ =>
     }
   }*/
-
-  def retract () : Unit = {
-    val mn = (method != None)
-    Console.println("retracting with " + editor + " and method? " + mn)
-    if (editor != null && method != None) {
-      Console.println("hello my friend, NONONONO")
-      emptyCoqShells
-      method = None
-      if (getProj != null)
-        getProj.proofShell = None
-    }
-  }
 
   import org.eclipse.jdt.core.dom.Statement
   var cur : Option[Statement] = None
@@ -244,144 +216,9 @@ object JavaPosition extends EclipseJavaHelper {
     assert(prf != null)
     var res : String = prf.mkString("\n")
 
-    val printer : Statement => Option[String] = x => printProofScript(doc, x)
+    val printer : Statement => Option[String] = x => printProofScript(x)
     val rs = traverseAST(m, true, false, printer)
     res + rs.mkString("\n") + "\nQed."
-  }
-
-  def emptyCoqShells () : Unit = (/* do nothing */)
-
-  def getASTbeforeOff (off : Int) : Option[Statement] = (/* do nothing */ None)
-
-  def copyProps (from : MethodDeclaration, to : MethodDeclaration) = (/* do nothing */)
-
-  import org.eclipse.jface.text.ITextSelection
-  def getCoqCommand () : Option[String] = {
-    val prov = editor.getDocumentProvider
-    val ei = editor.getEditorInput
-    val doc = prov.getDocument(ei)
-    //hold on if ASTdirty or modelNewerThanSource!
-    assert(next == None)
-    if (getProj.ASTdirty) {
-      //good news: we do not need to backtrack (already done)
-      //bad news: we need to update our internal representation
-      // and copy over properties (at least CoqShell)
-      val bla = getRoot(ei)
-      val cu = getCompilationUnit(bla)
-      walkAST(null, cu, doc)
-
-      val selection = editor.getSelectionProvider.getSelection.asInstanceOf[ITextSelection]
-      val off = selection.getOffset
-      val node = findASTNode(cu, off, 0)
-      findMethod(node) match {
-        case None =>
-        case Some(md) =>
-          //copy over
-          copyProps(method.get, md)
-          getProj.program = Some(cu)
-          method = Some(md)
-          getProj.ASTdirty = false
-      }
-    }
-
-    var active : Boolean = (cur == None)
-
-    val print : Statement => Option[String] = x =>
-      if (active) {
-        val ps = printProofScript(doc, x)
-        ps match {
-          case None => None
-          case Some(ps) =>
-            next = Some(x)
-            Some(ps)
-        }
-      } else {
-        if (cur.get == x)
-          active = true
-        None
-      }
-
-    val r = traverseAST(method.get, true, true, print)
-    assert(r.size == 1 || r.size == 0)
-    if (r.size == 1)
-      Some(r.head)
-    else
-      None
-  }
-
-  import org.eclipse.swt.widgets.Display
-  import org.eclipse.jface.text.source.IAnnotationModelExtension
-  def reAnnotate (proc : Boolean, undo : Boolean) : Unit = {
-    //4 cases:
-    // #t #f => processing       remove nothing, mark yellow
-    // #t #t => problem marker   remove yellow, mark nothing
-    // #f #t => real undo        remove green, mark green
-    // #f #f => processed!       remove yellow & green, mark green
-    if (editor != null && method != None) {
-      Console.println("reannotate called with proc " + proc + " undo " + undo + " method " + (method != None) + " editor " + editor)
-      val prov = editor.getDocumentProvider
-      val doc = prov.getDocument(editor.getEditorInput)
-      val proj = getProj
-      if (proj.proofShell != None) {
-        //we're in proof mode!
-
-        val start = method.get.getStartPosition
-
-        if (!proc && undo) {
-          cur = next
-          next = None
-        }
-
-        Console.println(" reAnn (cur: " + cur + " next: " + next + ") proc " + proc + " undo " + undo)
-        if (next != None && !proc && !undo) {
-          Console.println("  ass " + cur + " now " + next)
-          cur = next
-          next = None
-        }
-      }
-/*      if (proj.modelShell != None) {
-        val coqoff = (if (proc) DocumentState.sendlen else 0) + DocumentState.position //- proj.program.get.getSpecOffset - method.get.getSpecOff - method.get.getSpecLength - 1
-        Console.println("spec? coqoff here is now " + coqoff)
-        val annmodel = prov.getAnnotationModel(editor.getEditorInput)
-        annmodel.connect(doc)
-        if ((proc && undo) || (!proc && !undo)) {
-          specprocessing match {
-            case Some(x) => annmodel.removeAnnotation(x)
-            case None =>
-          }
-          specprocessing = None
-        }
-
-        if (coqoff == 0 && !(proc && undo)) {
-          //search in method specs for min/max
-          //mark these!
-          var start : Int = Int.MaxValue
-          var end : Int = 0
-/*          for (s <- method.get.getSpecs) {
-            if (s.pos.line < start)
-              start = s.pos.line
-            if (s.pos.line > end)
-              end = s.pos.line
-          }
-*/
-          val txt =
-            if (proc)
-              "dk.itu.sdg.kopitiam.processing"
-            else
-              "dk.itu.sdg.kopitiam.processed"
-          val soff = doc.getLineOffset(start - 1)
-          val eoff = doc.getLineOffset(end) - 1
-          Console.println("spec coloring " + txt + " annotation for lines: " + start + " -- " + end)
-          val sma = new Annotation(txt, false, "Proof")
-          annmodel.addAnnotation(sma, new Position(soff, eoff - soff))
-          if (proc)
-            specprocessing = Some(sma)
-          else
-            specprocessed ::= sma
-        }
-        annmodel.disconnect(doc)
-      } */
-    }
   }
 }
 

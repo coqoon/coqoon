@@ -131,7 +131,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
             case None =>
             case Some(x) =>
               //JavaPosition.unmark
-              JavaPosition.retract
+              //JavaPosition.retract
               //CoqRetractAction.doitH
           }
         }
@@ -143,7 +143,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
           case None =>
           case Some(x) =>
             //JavaPosition.unmark
-            JavaPosition.retract
+            //JavaPosition.retract
             //CoqRetractAction.doitH
         }
         //DocumentState._content = None
