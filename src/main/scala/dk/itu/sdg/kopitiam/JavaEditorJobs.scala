@@ -170,12 +170,12 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
           case CoqTypes.Good(s) =>
             val method = jes.method.get
             jes.completedMethods :+= method
+            
+            UIUtils.asyncExec {
+              jes.setMethod(None)
+              jes.annotateCompletedMethods
+            }
           case _ =>
-        }
-        /* Whether we succeeded or not, there's nothing more to do */
-        UIUtils.asyncExec {
-          jes.setMethod(None)
-          jes.annotateCompletedMethods
         }
       case _ =>
     }
