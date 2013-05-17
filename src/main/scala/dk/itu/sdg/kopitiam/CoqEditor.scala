@@ -45,7 +45,7 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   import org.eclipse.jface.text.reconciler.MonoReconciler
   private val reconciler =
     new MonoReconciler(new CoqProofReconcilingStrategy(this), true)
-  reconciler.setDelay(0)
+  reconciler.setDelay(1)
   
   import org.eclipse.ui.IEditorSite
   override def init(site : IEditorSite, input : IEditorInput) = {
@@ -232,9 +232,13 @@ private class CoqProofReconcilingStrategy(
     }
 
     val off = r.getOffset
-    if (off < editor.completed)
-      CoqEditorHandler.doStepBack(editor,
-          _.prefixLength(a => (off < (a.offset + a.text.length))))
+    if (off < editor.underway) {
+      if (editor.busy)
+        editor.coqTop.interrupt
+      if (off < editor.completed)
+        CoqEditorHandler.doStepBack(editor,
+            _.prefixLength(a => (off < (a.offset + a.text.length))))
+    }
   }
   
   override def reconcile(dr : DirtyRegion, r : IRegion) = reconcile(r)
