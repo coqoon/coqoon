@@ -111,17 +111,25 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
     doConnectedToAnnotationModel { annotateCompletedMethods(_) }
   
   def annotateCompletedMethods(model : IAnnotationModel) : Unit = {
+    import org.eclipse.jface.text.source.IAnnotationModelExtension
+    val modelEx = model.asInstanceOf[IAnnotationModelExtension]
+    var remainingA = completedA.clone
     completedMethods.map(a => {
+      val pos = new Position(a.getStartPosition, a.getLength)
       completedA.get(a) match {
         case Some(ann) =>
-          /* do nothing */
+          modelEx.modifyAnnotationPosition(ann, pos)
         case None =>
           val ann = new Annotation(
               "dk.itu.sdg.kopitiam.provenannotation", false, "Proven Method")
           completedA.put(a, ann)
-          model.addAnnotation(ann, new Position(
-              a.getStartPosition, a.getLength))
+          model.addAnnotation(ann, pos)
       }
+      remainingA -= a
+    })
+    remainingA.map(a => {
+      completedA.remove(a._1)
+      model.removeAnnotation(a._2)
     })
   }
   
@@ -288,7 +296,7 @@ private class JavaEditorReconcilingStrategy(
         UIUtils.asyncExec {
           JavaEditorHandler.doStepBack(jes, _.length)
           jes.setMethod(None)
-          jes.completedMethods = List() //XXX: doesn't really retract the annotations
+          jes.completedMethods = List()
           jes.annotateCompletedMethods
         }
     }
