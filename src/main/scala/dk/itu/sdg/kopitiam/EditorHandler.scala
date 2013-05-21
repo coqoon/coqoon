@@ -1,3 +1,10 @@
+/* EditorHandler.scala
+ * Command handler base classes and common command handlers
+ * Copyright © 2013 Alexander Faithfull
+ * 
+ * You may use, copy, modify and/or redistribute this code subject to the terms
+ * of either the license of Kopitiam or the Apache License, version 2.0 */
+
 package dk.itu.sdg.kopitiam
 
 import org.eclipse.ui.{ISources, IEditorPart}
