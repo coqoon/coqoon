@@ -29,8 +29,6 @@ class KopitiamPreferencePage extends FieldEditorPreferencePage with IWorkbenchPr
   }
 }
 
-object KopitiamPreferencePage extends KopitiamPreferencePage { }
-
 class KopitiamColorPreferencePage extends FieldEditorPreferencePage with IWorkbenchPreferencePage {
   import org.eclipse.ui.IWorkbench
 
@@ -49,5 +47,3 @@ class KopitiamColorPreferencePage extends FieldEditorPreferencePage with IWorkbe
       addField(new ColorFieldEditor(pref, label, getFieldEditorParent))
  }
 }
-
-object KopitiamColorPreferencePage extends KopitiamColorPreferencePage
