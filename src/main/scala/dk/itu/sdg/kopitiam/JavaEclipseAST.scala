@@ -2,7 +2,7 @@
 
 package dk.itu.sdg.kopitiam
 
-trait VisitingAST {
+object VisitingAST {
   import org.eclipse.jdt.core.IJavaElement
   import org.eclipse.jdt.core.dom.SimpleName
   def isField (y : SimpleName) : Boolean = {

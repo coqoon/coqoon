@@ -104,7 +104,8 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with IDocumen
                   proj.program match {
                     case None => //
                     case Some(p) =>
-                      JavaPosition.findMethod(JavaPosition.findASTNode(p, off, 0)) match {
+                      import EclipseJavaHelper.{findMethod, findASTNode}
+                      findMethod(findASTNode(p, off, 0)) match {
                         case None => //
                         case Some(x) => //JavaPosition.unmarkProof(x)
                       }

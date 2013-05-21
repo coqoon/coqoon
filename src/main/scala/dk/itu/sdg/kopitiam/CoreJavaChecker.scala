@@ -2,7 +2,7 @@
 
 package dk.itu.sdg.kopitiam
 
-trait CoreJavaChecker extends VisitingAST {
+object CoreJavaChecker {
   import org.eclipse.jface.text.IDocument
   import org.eclipse.jdt.core.dom.ASTNode
   def checkAST (jes : JavaEditorState, root : ASTNode, doc : IDocument) : Boolean = {
@@ -12,7 +12,7 @@ trait CoreJavaChecker extends VisitingAST {
     co.getSuccess
   }
 
-  class CheckCoreJava (jes : JavaEditorState, doc : IDocument) extends ReportingVisitor(jes) {
+  private class CheckCoreJava (jes : JavaEditorState, doc : IDocument) extends VisitingAST.ReportingVisitor(jes) {
     import org.eclipse.jdt.core.dom.{ArrayAccess, ArrayCreation, ArrayInitializer, Assignment, CastExpression, ClassInstanceCreation, ConditionalExpression, Expression, FieldAccess, InfixExpression, InstanceofExpression, MethodInvocation, PostfixExpression, PrefixExpression, QualifiedName, SimpleName, SuperFieldAccess, SuperMethodInvocation, ThisExpression}
     def checkExpression (node : Expression) : Unit =
       node match {
@@ -160,7 +160,7 @@ trait CoreJavaChecker extends VisitingAST {
         case x : QualifiedName => false
         case x : ClassInstanceCreation => false
         case x : MethodInvocation => false
-        case x : SimpleName => ! isField(x)
+        case x : SimpleName => ! VisitingAST.isField(x)
         case x : ParenthesizedExpression => containsRealExpressions(x.getExpression)
         case x : InfixExpression =>
           //both must be good
@@ -236,4 +236,3 @@ trait CoreJavaChecker extends VisitingAST {
     }
   }
 }
-object CoreJavaChecker extends CoreJavaChecker

@@ -47,8 +47,8 @@ object JavaEditorHandler {
 
 import org.eclipse.core.commands.ExecutionEvent
 
-class VerifyMethodHandler extends JavaEditorHandler
-    with EclipseJavaHelper with CoreJavaChecker {
+class VerifyMethodHandler extends JavaEditorHandler {
+  import EclipseJavaHelper._
   import org.eclipse.jface.text.ITextSelection
   override def execute (ev : ExecutionEvent) : Object = {
     if (isEnabled()) {
@@ -62,7 +62,7 @@ class VerifyMethodHandler extends JavaEditorHandler
       jes.setCompilationUnit(Some(cu))
       jes.method.map(_ => { jes.setUnderway(None); jes.setMethod(None) })
       // a': CoreJava checking!
-      if (checkAST(jes, cu, doc)) { //no errors!
+      if (CoreJavaChecker.checkAST(jes, cu, doc)) { //no errors!
         // b: if outdated coqString: translate -- need to verify outdated...
         // c: find method and statement we want to prove
         if (walkAST(jes, cu, doc)) { //no errors!

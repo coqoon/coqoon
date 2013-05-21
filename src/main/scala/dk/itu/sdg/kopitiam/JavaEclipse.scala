@@ -37,7 +37,7 @@ object EclipseJavaASTProperties {
   val specOffset : String = "dk.itu.sdg.kopitiam.specOffset"
 }
 
-trait EclipseJavaHelper extends VisitingAST {
+object EclipseJavaHelper {
   import org.eclipse.jdt.core.ITypeRoot
   import org.eclipse.jdt.ui.JavaUI
   import org.eclipse.ui.IEditorInput
@@ -101,7 +101,7 @@ trait EclipseJavaHelper extends VisitingAST {
     }
   }
 
-  class NodeFinder (off : Int, len : Int) extends Visitor {
+  class NodeFinder (off : Int, len : Int) extends VisitingAST.Visitor {
     import org.eclipse.jdt.core.dom.Statement
     var coveringNode : Option[ASTNode] = None
     var coveredNode : Option[ASTNode] = None
@@ -141,7 +141,7 @@ trait EclipseJavaHelper extends VisitingAST {
     co.getSuccess
   }
 
-  class CoqOutput (jes : JavaEditorState, doc : IDocument) extends ReportingVisitor(jes) {
+  class CoqOutput (jes : JavaEditorState, doc : IDocument) extends VisitingAST.ReportingVisitor(jes) {
     import scala.collection.immutable.Stack
     var offset : Int = 0;
     var specs : List[Initializer] = List[Initializer]()
@@ -386,7 +386,7 @@ trait EclipseJavaHelper extends VisitingAST {
                   case y : QualifiedName =>
                     "(cwrite " + printE(y) + " " + printE(r) + ")"
                   case y =>
-                    if (y.isInstanceOf[SimpleName] && isField(y.asInstanceOf[SimpleName]))
+                    if (y.isInstanceOf[SimpleName] && VisitingAST.isField(y.asInstanceOf[SimpleName]))
                       "(cwrite \"this\" " + printE(y) + " " + printE(r) + ")"
                     else
                       r match {
@@ -402,7 +402,7 @@ trait EclipseJavaHelper extends VisitingAST {
                         case y : QualifiedName =>
                           "(cread " + printE(l) + " " + printE(y) + ")"
                         case y : SimpleName =>
-                          if (isField(y))
+                          if (VisitingAST.isField(y))
                             "(cread " + printE(l) + " \"this\" " + printE(y) + ")"
                           else
                             "(cassign " + printE(l) + " " + printE(y) + ")"
@@ -473,7 +473,7 @@ trait EclipseJavaHelper extends VisitingAST {
                   case y : FieldAccess =>
                     "(cread " + nam + " " + inite + ")"
                   case y : SimpleName =>
-                    if (isField(y))
+                    if (VisitingAST.isField(y))
                       "(cread " + nam + " \"this\" " + inite + ")"
                     else
                       "(cassign " + nam + " " + inite + ")"
@@ -602,7 +602,4 @@ trait EclipseJavaHelper extends VisitingAST {
       r
     }
   }
-
-
 }
-object EclipseJavaHelper extends EclipseJavaHelper

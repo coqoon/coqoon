@@ -43,8 +43,7 @@ class CoqJavaProject (basename : String) {
   def isCoqModel (doc : IDocument) : Boolean = false
 }
 
-object JavaPosition extends EclipseJavaHelper {
-  import JavaASTUtils._
+object JavaPosition {
   import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   var editor : JavaEditor = null
 
@@ -70,7 +69,7 @@ object JavaPosition extends EclipseJavaHelper {
     //prog_valid
 
     //proofs
-    val ps = traverseCU(c, proofScript)
+    val ps = JavaASTUtils.traverseCU(c, proofScript)
     //prog_valid_proof
 
     //end
@@ -216,8 +215,8 @@ object JavaPosition extends EclipseJavaHelper {
     assert(prf != null)
     var res : String = prf.mkString("\n")
 
-    val printer : Statement => Option[String] = x => printProofScript(x)
-    val rs = traverseAST(m, true, false, printer)
+    val printer : Statement => Option[String] = x => JavaASTUtils.printProofScript(x)
+    val rs = JavaASTUtils.traverseAST(m, true, false, printer)
     res + rs.mkString("\n") + "\nQed."
   }
 }
