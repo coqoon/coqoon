@@ -39,6 +39,7 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
   def setMethod(a : Option[MethodDeclaration]) = {
     m = a
     if (a == None) {
+      setGoals(None)
       setUnderway(None)
       deactivateHandlers
     }
