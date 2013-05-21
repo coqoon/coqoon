@@ -236,4 +236,4 @@ trait CoreJavaChecker extends VisitingAST {
     }
   }
 }
-
+object CoreJavaChecker extends CoreJavaChecker
