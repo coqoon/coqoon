@@ -4,6 +4,9 @@ import org.eclipse.ui.texteditor.ITextEditor
 import org.eclipse.core.commands.{IHandler, ExecutionEvent}
 
 class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
+  @deprecated
+  type ForbiddenJavaEditor = org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
+  
   import org.eclipse.jdt.core.dom._
   
   import scala.collection.mutable.Stack
@@ -75,7 +78,7 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
     try {
       f(model)
     } finally model.disconnect(doc)
-    editor.asInstanceOf[org.eclipse.jdt.internal.ui.javaeditor.JavaEditor].
+    editor.asInstanceOf[ForbiddenJavaEditor].
         getViewer.invalidateTextPresentation /* XXX */
   }
   
@@ -136,6 +139,40 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
     getHandlerService.deactivateHandlers(handlerActivations)
     handlerActivations = List()
   }
+  
+  def updateASTifValid (off : Int) = {
+    val prov = editor.getDocumentProvider
+    val doc = prov.getDocument(editor.getEditorInput)
+    val bla = EclipseJavaHelper.getRoot(editor.getEditorInput)
+    val cu = EclipseJavaHelper.getCompilationUnit(bla)
+    if (CoreJavaChecker.checkAST(this, cu, doc)) {
+      if (EclipseJavaHelper.walkAST(this, cu, doc)) {
+    	setCompilationUnit(Some(cu))
+        val node = EclipseJavaHelper.findASTNode(cu, off, 0)
+        val oldm = method
+        val md = EclipseJavaHelper.findMethod(node)
+        md match {
+          case None =>
+          case Some(x) => setMethod(Some(x))
+        }
+    	
+    	val newSteps = JavaStepForwardHandler.collectProofScript(
+    	    this, true, Some(node.getStartPosition))
+    	steps.clear
+    	steps.pushAll(newSteps)
+    	
+    	//adjustprovenmethods(cu)
+    	setUnderway(Some(steps.top.node))
+    	setComplete(Some(steps.top.node))
+      }
+    }
+  }  
+  
+  import org.eclipse.jface.text.reconciler.MonoReconciler
+  private val reconciler =
+    new MonoReconciler(new JavaEditorReconcilingStrategy(this), true)
+  reconciler.setDelay(1)
+  reconciler.install(editor.asInstanceOf[ForbiddenJavaEditor].getViewer)
 }
 object JavaEditorState {
   private val states =
@@ -198,4 +235,66 @@ class JavaEditorStateFactory extends IAdapterFactory {
       JavaEditorState.requireStateFor(a.asInstanceOf[ITextEditor])
     } else null
   }
+}
+
+import org.eclipse.jface.text.reconciler.IReconcilingStrategy
+private class JavaEditorReconcilingStrategy(
+    jes : JavaEditorState) extends IReconcilingStrategy {
+  import org.eclipse.jface.text.{IRegion, Region, IDocument}
+  import org.eclipse.jface.text.reconciler.DirtyRegion
+  
+  import org.eclipse.ui.IFileEditorInput
+  import org.eclipse.core.resources.{IMarker,IResource}
+  
+  override def reconcile(r : IRegion) : Unit = {
+    if (jes.method == None)
+      return
+    
+    val input = jes.editor.getEditorInput
+    
+    if (input != null && input.isInstanceOf[IFileEditorInput]) {
+      val file = input.asInstanceOf[IFileEditorInput].getFile()
+      if (file.findMarkers(
+          IMarker.PROBLEM, true, IResource.DEPTH_ZERO).length > 0)
+        new DeleteErrorMarkersJob(
+            file, IMarker.PROBLEM, true, IResource.DEPTH_ZERO).schedule
+    }
+
+    val off = r.getOffset
+    val node = EclipseJavaHelper.findASTNode(jes.method.orNull, off, 0)
+    println("Println debugging is great, " + node)
+
+    node match {
+      case e: org.eclipse.jdt.core.dom.EmptyStatement =>
+
+        val underwayOffset =
+          jes.underway.map(a => a.getStartPosition + a.getLength).getOrElse { Int.MinValue }
+
+        if (off < underwayOffset) {
+          if (jes.busy)
+            jes.coqTop.interrupt
+          val completeOffset =
+            jes.complete.map(a => a.getStartPosition + a.getLength).getOrElse { Int.MinValue }
+          if (off < completeOffset)
+            UIUtils.asyncExec {
+              JavaEditorHandler.doStepBack(jes, _.prefixLength(
+                a => (off < (a.node.getStartPosition + a.node.getLength))))
+            }
+        }
+
+        jes.updateASTifValid(off)
+        
+      case _ =>
+        UIUtils.asyncExec {
+          JavaEditorHandler.doStepBack(jes, _.length)
+          jes.setMethod(None)
+          jes.completedMethods = List() //XXX: doesn't really retract the annotations
+          jes.annotateCompletedMethods
+        }
+    }
+  }
+  
+  override def reconcile(dr : DirtyRegion, r : IRegion) = reconcile(r)
+  
+  override def setDocument(newDocument : IDocument) = ()
 }

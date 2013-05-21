@@ -101,7 +101,7 @@ class JavaStepForwardHandler extends JavaEditorHandler {
     null
   }
 }
-protected object JavaStepForwardHandler {
+object JavaStepForwardHandler {
   def collectProofScript(
       jes : JavaEditorState, multiple : Boolean, limit : Option[Int] = None) :
       List[JavaStep] = {
