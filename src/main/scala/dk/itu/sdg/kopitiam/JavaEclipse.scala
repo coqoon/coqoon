@@ -114,7 +114,7 @@ trait EclipseJavaHelper extends VisitingAST {
         else if (ns <= off && off + len <= ne)
           coveringNode = Some(node)
         if (off <= ns && ne <= off + len) {
-          if (coveringNode == node) {
+          if (coveringNode == Some(node)) {
             coveredNode = Some(node)
             true
           } else if (coveredNode == None)
@@ -605,3 +605,4 @@ trait EclipseJavaHelper extends VisitingAST {
 
 
 }
+object EclipseJavaHelper extends EclipseJavaHelper
