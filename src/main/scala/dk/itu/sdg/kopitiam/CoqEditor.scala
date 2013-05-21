@@ -236,8 +236,10 @@ private class CoqProofReconcilingStrategy(
       if (editor.busy)
         editor.coqTop.interrupt
       if (off < editor.completed)
-        CoqEditorHandler.doStepBack(editor,
-            _.prefixLength(a => (off < (a.offset + a.text.length))))
+        UIUtils.asyncExec {
+          CoqEditorHandler.doStepBack(editor,
+              _.prefixLength(a => (off < (a.offset + a.text.length))))
+        }
     }
   }
   
