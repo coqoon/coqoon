@@ -182,6 +182,9 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
     new MonoReconciler(new JavaEditorReconcilingStrategy(this), true)
   reconciler.setDelay(1)
   reconciler.install(editor.asInstanceOf[ForbiddenJavaEditor].getViewer)
+  
+  def createCertificate =
+    JavaEditorState.createCertificate(compilationUnit.get)
 }
 object JavaEditorState {
   private val states =

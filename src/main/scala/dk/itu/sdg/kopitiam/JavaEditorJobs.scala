@@ -171,6 +171,13 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
             val method = jes.method.get
             jes.completedMethods :+= method
             
+            val c = jes.compilationUnit.get
+            if (jes.completedMethods.size == JavaASTUtils.countMethods(c)) {
+              println(
+                  "*** Program is correct, proof certificate follows:\n" +
+                  jes.createCertificate)
+            }
+            
             UIUtils.asyncExec {
               jes.setMethod(None)
               jes.annotateCompletedMethods

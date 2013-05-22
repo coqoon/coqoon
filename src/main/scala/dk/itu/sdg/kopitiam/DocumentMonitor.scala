@@ -74,6 +74,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with EclipseU
                   Console.println("it's the proof you changed... (to " + nncon + ")")
                   //change to proof script - might need to backtrack
                   //remove proven marker if edit in there...
+                  /*
                   proj.program match {
                     case None => //
                     case Some(p) =>
@@ -91,6 +92,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with EclipseU
                         //backtrack!
                       }
                   }
+                  */
                   proj.ASTdirty = true
                   foundchange = true
                 }
