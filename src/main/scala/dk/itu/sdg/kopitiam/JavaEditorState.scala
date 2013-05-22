@@ -240,7 +240,7 @@ object JavaEditorState {
     import EclipseJavaASTProperties._
     (getDefinition(cu).get ++ getSpecification(cu).get ++
         (JavaASTUtils.traverseCU(cu, getProofScript).flatten) :+
-        cu.getProperty(coqEnd).asInstanceOf[String]).mkString("\n")
+        getEnd(cu).get).mkString("\n")
   }
   
   import org.eclipse.jdt.core.dom.MethodDeclaration

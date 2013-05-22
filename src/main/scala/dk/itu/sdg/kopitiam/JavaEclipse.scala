@@ -21,8 +21,12 @@ object EclipseJavaASTProperties {
     Option(a.getProperty(coqProof)).map { _.asInstanceOf[List[String]] }
   def setProof(a : ASTNode, p : Option[List[String]]) =
     a.setProperty(coqProof, p.orNull)
-    
-  val coqEnd : String = "dk.itu.sdg.kopitiam.coqEnd"
+  
+  private val coqEnd : String = "dk.itu.sdg.kopitiam.coqEnd"
+  def getEnd(a : ASTNode) : Option[String] =
+    Option(a.getProperty(coqEnd)).map { _.asInstanceOf[String] }
+  def setEnd(a : ASTNode, p : Option[String]) =
+    a.setProperty(coqEnd, p.orNull)
   
   private val method : String = "dk.itu.sdg.kopitiam.method"
   def getMethod(a : ASTNode) : Option[MethodDeclaration] =
@@ -361,7 +365,7 @@ object EclipseJavaHelper {
           //x.setProperty(EclipseJavaASTProperties.specOffset, p.length + specpre.length + 1)
           EclipseJavaASTProperties.setDefinition(x, Some(prog))
           EclipseJavaASTProperties.setSpecification(x, Some(spec))
-          x.setProperty(EclipseJavaASTProperties.coqEnd, "End " + n + "_spec.")
+          EclipseJavaASTProperties.setEnd(x, Some("End " + n + "_spec."))
         case _ =>
       }
 
