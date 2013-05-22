@@ -37,41 +37,6 @@ class CoqJavaProject {
 }
 
 object JavaPosition {
-  import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
-  var editor : JavaEditor = null
-
-  import org.eclipse.jdt.core.dom.MethodDeclaration
-  var method : Option[MethodDeclaration] = None
-
-  import org.eclipse.jface.text.IDocument
-  def getDoc () : IDocument = {
-    if (editor != null) {
-      val prov = editor.getDocumentProvider
-      prov.getDocument(editor.getEditorInput)
-    } else null
-  }
-
-  import org.eclipse.jdt.core.dom.CompilationUnit
-  def generateCertificate (c : CompilationUnit) : String = {
-    //prog
-    val pdef = EclipseJavaASTProperties.getDefinition(c).get.mkString("\n")
-    //spec
-    val spec = EclipseJavaASTProperties.getSpecification(c).get.mkString("\n")
-    //prog_valid
-
-    //proofs
-    val ps = JavaASTUtils.traverseCU(c, proofScript)
-    //prog_valid_proof
-
-    //end
-    val en = c.getProperty(EclipseJavaASTProperties.coqEnd).asInstanceOf[String]
-    pdef + spec + ps.mkString("\n") + "\n" + en
-  }
-
-  import org.eclipse.ui.IFileEditorInput
-  import org.eclipse.core.resources.{IFile, IMarker, IResource}
-  import java.io.ByteArrayInputStream
-  import org.eclipse.jdt.core.dom.Initializer
   /*override def dispatch (x : CoqResponse) : Unit = {
     x match {
       case CoqTheoremDefined(x) =>
@@ -194,22 +159,6 @@ object JavaPosition {
   import org.eclipse.jdt.core.dom.Statement
   var cur : Option[Statement] = None
   var next : Option[Statement] = None
-
-  import org.eclipse.jdt.core.dom.{EmptyStatement, WhileStatement, IfStatement, Block}
-  import scala.collection.immutable.Stack
-
-  def proofScript (m : MethodDeclaration) : String = {
-    val prov = editor.getDocumentProvider
-    val ei = editor.getEditorInput
-    val doc = prov.getDocument(ei)
-    val prf = EclipseJavaASTProperties.getProof(m).get
-    assert(prf != null)
-    var res : String = prf.mkString("\n")
-
-    val printer : Statement => Option[String] = x => JavaASTUtils.printProofScript(x)
-    val rs = JavaASTUtils.traverseAST(m, true, false, printer)
-    res + rs.mkString("\n") + "\nQed."
-  }
 }
 
 object EclipseBoilerPlate {
