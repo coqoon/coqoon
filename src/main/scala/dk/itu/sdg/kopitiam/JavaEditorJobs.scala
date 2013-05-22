@@ -170,6 +170,7 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
           case CoqTypes.Good(s) =>
             val method = jes.method.get
             jes.completedMethods :+= method
+            jes.steps.synchronized { jes.steps.clear }
             
             val c = jes.compilationUnit.get
             if (jes.completedMethods.size == JavaASTUtils.countMethods(c)) {
