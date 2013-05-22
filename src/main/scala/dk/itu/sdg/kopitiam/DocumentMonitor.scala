@@ -42,9 +42,9 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with EclipseU
     //Console.println("doc " + doc + " changed [@" + event.getOffset + "], len: " + event.getLength)
     if (false) {
       val proj : CoqJavaProject = null
-      if (proj.isJava(doc)) {
+      if (false /* proj.isJava(doc) */) {
         var foundchange : Boolean = false
-        if (proj.proofShell != None) {
+        if (false /* proj.proofShell != None */) {
           //we're in proof mode and actually care!
           val content = doc.get
           val off = event.getOffset
@@ -102,7 +102,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with EclipseU
           proj.ASTdirty = true
         }
       }
-      if (proj.isCoqModel(doc))
+      if (false /* proj.isCoqModel(doc) */)
         (/* do nothing */)
     }
   }

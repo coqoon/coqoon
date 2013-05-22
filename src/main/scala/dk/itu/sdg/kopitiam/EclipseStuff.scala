@@ -29,18 +29,11 @@ trait EclipseUtils {
   }
 }
 
-class CoqJavaProject (basename : String) {
-  def base_name : String = basename
-
-  import org.eclipse.jface.text.IDocument
+class CoqJavaProject {
   var ASTdirty : Boolean = false
-  var proofShell : Option[_] = None
 
   import org.eclipse.jdt.core.dom.CompilationUnit
   var program : Option[CompilationUnit] = None
-
-  def isJava (doc : IDocument) : Boolean = false
-  def isCoqModel (doc : IDocument) : Boolean = false
 }
 
 object JavaPosition {
@@ -57,8 +50,6 @@ object JavaPosition {
       prov.getDocument(editor.getEditorInput)
     } else null
   }
-
-  def getProj() : CoqJavaProject = null
 
   import org.eclipse.jdt.core.dom.CompilationUnit
   def generateCertificate (c : CompilationUnit) : String = {
