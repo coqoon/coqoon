@@ -233,6 +233,21 @@ object JavaEditorState {
     (_do(r._1, e._1, "dk.itu.sdg.kopitiam.processed", "Processed Proof"),
      _do(r._2, e._2, "dk.itu.sdg.kopitiam.processing", "Processing Proof"))
   }
+  
+  import org.eclipse.jdt.core.dom.CompilationUnit
+  
+  def createCertificate(cu : CompilationUnit) = {
+    import EclipseJavaASTProperties._
+    (getDefinition(cu).get ++ getSpecification(cu).get ++
+        (JavaASTUtils.traverseCU(cu, getProofScript).flatten) :+
+        cu.getProperty(coqEnd).asInstanceOf[String]).mkString("\n")
+  }
+  
+  import org.eclipse.jdt.core.dom.MethodDeclaration
+  
+  def getProofScript(m : MethodDeclaration) =
+    EclipseJavaASTProperties.getProof(m).get ++ JavaASTUtils.traverseAST(
+        m, true, false, s => JavaASTUtils.printProofScript(s)) :+ "Qed."
 }
 
 import org.eclipse.ui.texteditor.ITextEditor
