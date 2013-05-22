@@ -7,8 +7,6 @@
 
 package dk.itu.sdg.kopitiam
 
-import org.eclipse.ui.PlatformUI
-
 object UIUtils {
   import org.eclipse.ui.PlatformUI
   def getDisplay = PlatformUI.getWorkbench.getDisplay

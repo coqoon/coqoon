@@ -126,7 +126,6 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   }
   
   import org.eclipse.jface.text.Position
-  import org.eclipse.swt.widgets.Display
   private def addAnnotations_ (first : Int, second : Int) : Unit = {
     val provider = getDocumentProvider
     val doc = provider.getDocument(getEditorInput)
@@ -375,7 +374,6 @@ import org.eclipse.jface.text.IDocument
 class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor) extends IReconcilingStrategy with EclipseUtils {
   import dk.itu.sdg.coqparser.VernacularRegion
   import org.eclipse.jface.text.{IDocument, IRegion, Position}
-  import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.text.reconciler._
   import org.eclipse.ui.views.contentoutline.IContentOutlinePage
 
@@ -412,7 +410,6 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
   import org.eclipse.jface.text.{TextAttribute,IDocument}
   import org.eclipse.jface.text.reconciler.{IReconciler, MonoReconciler}
   import org.eclipse.swt.graphics.{Color,RGB}
-  import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.text.source.ISourceViewer
   import org.eclipse.jface.text.contentassist.{IContentAssistant,ContentAssistant}
 
