@@ -131,13 +131,13 @@ object CoqStepRunner {
   }
 }
 
-class JavaStepForwardJob(steps : List[JavaStep], jes : JavaEditorState)
-    extends CoqJobBase("Stepping forward") {
-  override def runner = new JavaStepForwardRunner(jes, steps)
-  override def container = jes
-}
-class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
-    extends CoqStepRunner[String](jes) {
+abstract class CoqStepForwardRunner[A <: CoqCommand](
+    container : CoqTopContainer, steps : Seq[A])
+    extends CoqStepRunner[String](container) {
+  protected def onFail(step : A)
+  protected def onGood(step : A)
+  protected def onUnsafe(step : A) = onGood(step)
+  
   override def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
     monitor.beginTask("Step forward", steps.length)
@@ -145,21 +145,31 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
       if (monitor.isCanceled())
         return CoqTypes.Good("(cancelled)")
       monitor.subTask(step.text.trim)
-      step.run(jes.coqTop) match {
-        case CoqTypes.Good(msg) =>
-          jes.steps.synchronized { jes.steps.push(step) }
-          UIUtils.asyncExec { jes.setComplete(Some(step.node)) }
-        case CoqTypes.Unsafe(msg) =>
-          jes.steps.synchronized { jes.steps.push(step) }
-          UIUtils.asyncExec { jes.setComplete(Some(step.node)) }
-        case CoqTypes.Fail(ep) =>
-          UIUtils.asyncExec { jes.setUnderway(jes.complete) }
-          return CoqTypes.Fail(ep)
+      step.run(container.coqTop) match {
+        case CoqTypes.Good(msg) => onGood(step)
+        case CoqTypes.Unsafe(msg) => onUnsafe(step)
+        case CoqTypes.Fail(ep) => onFail(step); return CoqTypes.Fail(ep)
       }
       monitor.worked(1)
     }
     CoqTypes.Good("")
   }
+}
+
+class JavaStepForwardJob(steps : List[JavaStep], jes : JavaEditorState)
+    extends CoqJobBase("Stepping forward") {
+  override def runner = new JavaStepForwardRunner(jes, steps)
+  override def container = jes
+}
+class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
+    extends CoqStepForwardRunner(jes, steps) {
+  override protected def onGood(step : JavaStep) = {
+    jes.steps.synchronized { jes.steps.push(step) }
+    UIUtils.asyncExec { jes.setComplete(Some(step.node)) }
+  }
+  
+  override protected def onFail(step : JavaStep) =
+    UIUtils.asyncExec { jes.setUnderway(jes.complete) }
   
   override def finish(
       result : CoqTypes.value[String], monitor : SubMonitor) = {

@@ -130,30 +130,12 @@ class StepForwardJob(
 
 class StepForwardRunner(
     editor : Editor,
-    steps : List[CoqStep]) extends CoqStepRunner[String](editor) {
-  override def doOperation(monitor : SubMonitor) : CoqTypes.value[String] = {
-    monitor.beginTask("Step forward", steps.length)
-    for (step <- steps) {
-      if (monitor.isCanceled())
-        return CoqTypes.Good("(cancelled)")
-      monitor.subTask(step.text.trim)
-      step.run(editor.coqTop) match {
-        case CoqTypes.Good(msg) =>
-          editor.steps.synchronized { editor.steps.push(step) }
-          UIUtils.asyncExec {
-            editor.setCompleted(step.offset + step.text.length)
-          }
-        case CoqTypes.Unsafe(msg) =>
-          editor.steps.synchronized { editor.steps.push(step) }
-          UIUtils.asyncExec {
-            editor.setCompleted(step.offset + step.text.length)
-          }
-        case CoqTypes.Fail(ep) =>
-          UIUtils.asyncExec { editor.setUnderway(editor.completed) }
-          return CoqTypes.Fail(ep)
-      }
-      monitor.worked(1)
-    }
-    CoqTypes.Good("")
+    steps : List[CoqStep]) extends CoqStepForwardRunner(editor, steps) {
+  override protected def onGood(step : CoqStep) = {
+    editor.steps.synchronized { editor.steps.push(step) }
+    UIUtils.asyncExec { editor.setCompleted(step.offset + step.text.length) }
   }
+  
+  override protected def onFail(step : CoqStep) =
+    UIUtils.asyncExec { editor.setUnderway(editor.completed) }
 }
