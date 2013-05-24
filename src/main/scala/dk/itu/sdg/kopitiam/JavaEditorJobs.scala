@@ -127,7 +127,7 @@ object CoqStepRunner {
     case CoqTypes.Good(_) => Status.OK_STATUS
     case CoqTypes.Unsafe(_) => Status.OK_STATUS
     case CoqTypes.Fail(ep) =>
-      new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2)
+      new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2.trim)
   }
 }
 
@@ -144,7 +144,7 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
     for (step <- steps) {
       if (monitor.isCanceled())
         return CoqTypes.Good("(cancelled)")
-      monitor.subTask(step.text)
+      monitor.subTask(step.text.trim)
       jes.coqTop.interp(false, false, step.text) match {
         case CoqTypes.Good(msg) =>
           jes.steps.synchronized { jes.steps.push(step) }
@@ -154,7 +154,7 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
           UIUtils.asyncExec { jes.setComplete(Some(step.node)) }
         case CoqTypes.Fail(ep) =>
           UIUtils.asyncExec { jes.setUnderway(jes.complete) }
-          CoqTypes.Fail(ep)
+          return CoqTypes.Fail(ep)
       }
       monitor.worked(1)
     }
@@ -198,13 +198,15 @@ class JavaStepBackJob(jes : JavaEditorState, stepCount : Int)
 }
 class JavaStepBackRunner(jes : JavaEditorState, stepCount : Int)
     extends CoqStepRunner[String](jes) {
-  override def doOperation(
+  override protected def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
     monitor.beginTask("Java step back", 2)
+    
     val steps = jes.steps.synchronized { jes.steps.take(stepCount) }
     val rewindCount = steps.size /* XXX: synthetic steps? */
     jes.coqTop.rewind(rewindCount) match {
       case CoqTypes.Good(extra) =>
+        monitor.worked(1)
         jes.steps.synchronized {
           for (step <- steps)
             jes.steps.pop
@@ -214,7 +216,7 @@ class JavaStepBackRunner(jes : JavaEditorState, stepCount : Int)
             var redoSteps = jes.steps.take(extra).toList.reverse
             for (step <- redoSteps)
               jes.steps.pop
-            new JavaStepForwardJob(redoSteps, jes).schedule()
+            new JavaStepForwardRunner(jes, redoSteps).run(monitor.newChild(1))
           }
         }
         CoqTypes.Good("")
