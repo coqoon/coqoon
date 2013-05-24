@@ -6,11 +6,8 @@ import org.eclipse.jdt.core.dom.Statement
 import org.eclipse.ui.texteditor.ITextEditor
 
 case class JavaStep(
-    node : Statement,
-    text : String) extends CoqCommand {
-  override def run(coqTop : CoqTopIdeSlave_v20120710) =
-    coqTop.interp(false, false, text)
-}
+    val node : Statement,
+    override val text : String) extends CoqCommand(text)
 
 abstract class JavaEditorHandler extends EditorHandler {
   override def editor : ITextEditor = {

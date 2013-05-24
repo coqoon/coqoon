@@ -137,7 +137,7 @@ class StepForwardRunner(
       if (monitor.isCanceled())
         return CoqTypes.Good("(cancelled)")
       monitor.subTask(step.text.trim)
-      editor.coqTop.interp(false, false, step.text) match {
+      step.run(editor.coqTop) match {
         case CoqTypes.Good(msg) =>
           editor.steps.synchronized { editor.steps.push(step) }
           UIUtils.asyncExec {

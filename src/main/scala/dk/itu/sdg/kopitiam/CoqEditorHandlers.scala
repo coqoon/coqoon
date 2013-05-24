@@ -7,16 +7,17 @@
 
 package dk.itu.sdg.kopitiam
 
-trait CoqCommand {
-  def run(coqTop : CoqTopIdeSlave_v20120710) : CoqTypes.value[String]
+abstract class CoqCommand(val text : String) {
+  def run(coqTop : CoqTopIdeSlave_v20120710) : CoqTypes.value[String] =
+    coqTop.interp(false, false, text)
 }
 
 case class CoqStep(
-    offset : Int,
-    text : String,
-    synthetic : Boolean) extends CoqCommand {
+    val offset : Int,
+    override val text : String,
+    val synthetic : Boolean) extends CoqCommand(text) {
   override def run(coqTop : CoqTopIdeSlave_v20120710) = if (!synthetic) {
-    coqTop.interp(false, false, text)
+    super.run(coqTop)
   } else CoqTypes.Good("")
 }
 

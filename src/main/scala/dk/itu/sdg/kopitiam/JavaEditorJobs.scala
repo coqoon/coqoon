@@ -145,7 +145,7 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
       if (monitor.isCanceled())
         return CoqTypes.Good("(cancelled)")
       monitor.subTask(step.text.trim)
-      jes.coqTop.interp(false, false, step.text) match {
+      step.run(jes.coqTop) match {
         case CoqTypes.Good(msg) =>
           jes.steps.synchronized { jes.steps.push(step) }
           UIUtils.asyncExec { jes.setComplete(Some(step.node)) }
