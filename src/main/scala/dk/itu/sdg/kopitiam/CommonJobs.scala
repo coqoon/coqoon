@@ -86,6 +86,7 @@ abstract class JobBase(name : String) extends Job(name) {
 
 abstract class CoqJobBase(name : String) extends JobBase(name) {
   protected def container : CoqTopContainer
+  setRule(ObjectRule(container))
   
   override def run(monitor_ : IProgressMonitor) : IStatus =
     try {
@@ -111,4 +112,59 @@ trait JobRunner[A] {
 trait SimpleJobRunner extends JobRunner[IStatus] {
   override protected def finish(result : IStatus, monitor : SubMonitor) =
     (result, result)
+}
+
+abstract class CoqStepRunner[A](container : CoqTopContainer)
+    extends JobRunner[CoqTypes.value[A]] {
+  protected def updateGoals = {
+    val goals = container.coqTop.goals match {
+      case CoqTypes.Good(g) => g
+      case _ => None
+    }
+    UIUtils.asyncExec {
+      container.setGoals(goals)
+    }
+    goals
+  }
+  
+  override def finish(
+      result : CoqTypes.value[A], monitor : SubMonitor) = {
+    updateGoals
+    (if (!monitor.isCanceled()) {
+      CoqStepRunner.valueToStatus(result)
+    } else Status.CANCEL_STATUS, result)
+  }
+}
+object CoqStepRunner {
+  def valueToStatus(value : CoqTypes.value[_]) = value match {
+    case CoqTypes.Good(_) => Status.OK_STATUS
+    case CoqTypes.Unsafe(_) => Status.OK_STATUS
+    case CoqTypes.Fail(ep) =>
+      new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2.trim)
+  }
+}
+
+abstract class CoqStepForwardRunner[A <: CoqCommand](
+    container : CoqTopContainer, steps : Seq[A])
+    extends CoqStepRunner[String](container) {
+  protected def onFail(step : A)
+  protected def onGood(step : A)
+  protected def onUnsafe(step : A) = onGood(step)
+  
+  override def doOperation(
+      monitor : SubMonitor) : CoqTypes.value[String] = {
+    monitor.beginTask("Step forward", steps.length)
+    for (step <- steps) {
+      if (monitor.isCanceled())
+        return CoqTypes.Good("(cancelled)")
+      monitor.subTask(step.text.trim)
+      step.run(container.coqTop) match {
+        case CoqTypes.Good(msg) => onGood(step)
+        case CoqTypes.Unsafe(msg) => onUnsafe(step)
+        case CoqTypes.Fail(ep) => onFail(step); return CoqTypes.Fail(ep)
+      }
+      monitor.worked(1)
+    }
+    CoqTypes.Good("")
+  }
 }

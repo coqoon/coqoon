@@ -44,8 +44,6 @@ class InitialiseCoqRunner(editor : Editor) extends SimpleJobRunner {
 
 abstract class CoqEditorJob(
     name : String, editor : Editor) extends CoqJobBase(name) {
-  /* Two CoqJobs operating on the same Editor should conflict */
-  setRule(ObjectRule(editor))
   /* Make sure that this editor's coqtop instance has been initialised */
   editor.coqTop
   
