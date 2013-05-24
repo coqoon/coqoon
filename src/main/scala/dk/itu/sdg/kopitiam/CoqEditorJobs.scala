@@ -43,11 +43,9 @@ class InitialiseCoqRunner(editor : Editor) extends SimpleJobRunner {
 }
 
 abstract class CoqEditorJob(
-    name : String, editor : Editor) extends CoqJobBase(name) {
+    name : String, editor : Editor) extends CoqJobBase(name, editor) {
   /* Make sure that this editor's coqtop instance has been initialised */
   editor.coqTop
-  
-  override def container = editor
 }
 
 class RestartCoqJob(editor : Editor)

@@ -6,9 +6,8 @@ import org.eclipse.core.runtime.Path
 import org.eclipse.core.runtime.jobs.Job
 
 class JavaProofInitialisationJob(jes : JavaEditorState)
-    extends CoqJobBase("Initialising Java proof mode") {
+    extends CoqJobBase("Initialising Java proof mode", jes) {
   override def runner = new JavaProofInitialisationRunner(jes)
-  override def container = jes
 }
 class JavaProofInitialisationRunner(
     jes : JavaEditorState) extends SimpleJobRunner {
@@ -102,9 +101,8 @@ class JavaProofInitialisationRunner(
 }
 
 class JavaStepForwardJob(steps : List[JavaStep], jes : JavaEditorState)
-    extends CoqJobBase("Stepping forward") {
+    extends CoqJobBase("Stepping forward", jes) {
   override def runner = new JavaStepForwardRunner(jes, steps)
-  override def container = jes
 }
 class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
     extends CoqStepForwardRunner(jes, steps) {
@@ -147,9 +145,8 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
 }
 
 class JavaStepBackJob(jes : JavaEditorState, stepCount : Int)
-    extends CoqJobBase("Stepping forward") {
+    extends CoqJobBase("Stepping forward", jes) {
   override def runner = new JavaStepBackRunner(jes, stepCount)
-  override def container = jes
 }
 class JavaStepBackRunner(jes : JavaEditorState, stepCount : Int)
     extends CoqStepRunner[String](jes) {

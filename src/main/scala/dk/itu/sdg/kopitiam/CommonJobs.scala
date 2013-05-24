@@ -84,8 +84,8 @@ abstract class JobBase(name : String) extends Job(name) {
     runner.run(monitor_)._1
 }
 
-abstract class CoqJobBase(name : String) extends JobBase(name) {
-  protected def container : CoqTopContainer
+abstract class CoqJobBase(
+    name : String, container : CoqTopContainer) extends JobBase(name) {
   setRule(ObjectRule(container))
   
   override def run(monitor_ : IProgressMonitor) : IStatus =
