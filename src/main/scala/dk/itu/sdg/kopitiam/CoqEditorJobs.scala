@@ -69,11 +69,11 @@ object RestartCoqJob {
       }
       monitor.worked(1)
       
-      monitor.subTask("Restarting Coq")
-      editor.coqTop.restart
+      monitor.subTask("Stopping Coq")
+      editor.coqTop.kill
       monitor.worked(1)
       
-      monitor.subTask("Re-initialising Coq")
+      monitor.subTask("Starting Coq")
       InitialiseCoqJob.run(editor, monitor.newChild(1))
       
       Status.OK_STATUS

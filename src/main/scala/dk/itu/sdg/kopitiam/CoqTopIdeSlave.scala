@@ -12,7 +12,6 @@ trait CoqTopIdeSlave {
   def version : String
   
   def kill
-  def restart
   def interrupt
 }
 
@@ -93,20 +92,15 @@ private abstract class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
   
   protected def start : (Writer, Reader, Process)
   
-  override def restart = {
-    kill
-    start match {
-      case (in, out, pr) =>
-        this.in = in
-        this.out = out
-        this.pr = pr
-    }
-  }
-  
   import scala.xml.{Attribute, Elem, Node, Null, Text, XML}
   private def sendRaw(n : Elem) : Elem = synchronized {
     if (in == null || out == null || pr == null)
-      restart
+      start match {
+        case (in, out, pr) =>
+          this.in = in
+          this.out = out
+          this.pr = pr
+      }
     in.write(n.toString())
     in.flush()
     println("TO   " + n.toString())
