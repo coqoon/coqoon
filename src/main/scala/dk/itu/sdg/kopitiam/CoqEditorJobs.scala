@@ -12,7 +12,7 @@ class InitialiseCoqRunner(editor : Editor) extends SimpleJobRunner {
     
     monitor.subTask("Adding global loadpath entries")
     val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-    editor.coqTop.interp(false, false, "Add LoadPath \"" + loadp + "\".")
+    editor.coqTop.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
     monitor.worked(1)
 
     monitor.subTask("Adding project loadpath entries")

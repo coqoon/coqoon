@@ -15,7 +15,7 @@ class JavaProofInitialisationRunner(
     monitor.beginTask("Initialising Java proof mode", 4)
     monitor.subTask("Performing custom Coq initialisation")
     val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-    jes.coqTop.interp(false, false, "Add LoadPath \"" + loadp + "\".")
+    jes.coqTop.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
 
     import org.eclipse.core.resources.IResource
 

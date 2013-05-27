@@ -103,7 +103,7 @@ class CoqCompileRunner(source : IFile) extends SimpleJobRunner {
       val lp = new File(loadp).exists
       val cmdarr =
         if (lp)
-          List(coqc, "-noglob", "-R", "src/", "", "-I", loadp, name)
+          List(coqc, "-noglob", "-R", "src/", "", "-R", loadp, "", name)
         else
           List(coqc, "-noglob", "-R", "src/", "", name)
       val coqcp = new ProcessBuilder(cmdarr : _*)
