@@ -10,35 +10,34 @@ class InitialiseCoqRunner(editor : Editor) extends SimpleJobRunner {
   override def doOperation(monitor : SubMonitor) : IStatus = {
     monitor.beginTask("Initialising Coq", 2)
     
-    monitor.subTask("Adding global loadpath entries")
-    val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-    editor.coqTop.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
-    monitor.worked(1)
+    CoqStepRunner.valueToStatus(editor.coqTop.transaction[Unit](ct => {
+      monitor.subTask("Adding global loadpath entries")
+      val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
+      ct.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
+      monitor.worked(1)
 
-    monitor.subTask("Adding project loadpath entries")
+      monitor.subTask("Adding project loadpath entries")
 
-    import org.eclipse.ui.IFileEditorInput
-    import org.eclipse.core.resources.IResource
+      import org.eclipse.ui.IFileEditorInput
+      import org.eclipse.core.resources.IResource
 
-    val input = editor.getEditorInput
-    val res: Option[IResource] =
-      if (input.isInstanceOf[IFileEditorInput]) {
-        Some(input.asInstanceOf[IFileEditorInput].getFile)
-      } else None
+      val input = editor.getEditorInput
+      val res: Option[IResource] =
+        if (input.isInstanceOf[IFileEditorInput]) {
+          Some(input.asInstanceOf[IFileEditorInput].getFile)
+        } else None
 
-    res match {
-      case Some(r) =>
-        editor.coqTop.interp(false, false,
-          "Add Rec LoadPath \"" +
-            r.getProject.getFolder("src").getLocation.toOSString + "\".")
-      case None =>
-        Console.println("shouldn't happen - trying to get ProjectDir from " +
-          input + ", which is not an IFileEditorInput")
-    }
+      res match {
+        case Some(r) =>
+          ct.interp(false, false, "Add Rec LoadPath \"" +
+              r.getProject.getFolder("src").getLocation.toOSString + "\".")
+        case None =>
+          Console.println("shouldn't happen - trying to get ProjectDir from " +
+            input + ", which is not an IFileEditorInput")
+      }
 
-    monitor.worked(1)
-
-    Status.OK_STATUS
+      monitor.worked(1)
+    }))
   }
 }
 
