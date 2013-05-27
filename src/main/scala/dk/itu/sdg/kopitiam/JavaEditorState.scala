@@ -230,7 +230,7 @@ object JavaEditorState {
           Some(an)
       }
       case None =>
-        a.map(b => model.removeAnnotation(b))
+        a.map(model.removeAnnotation)
         None
     }
     (_do(r._1, e._1, "dk.itu.sdg.kopitiam.processed", "Processed Proof"),
@@ -250,7 +250,7 @@ object JavaEditorState {
   
   def getProofScript(m : MethodDeclaration) =
     EclipseJavaASTProperties.getProof(m).get ++ JavaASTUtils.traverseAST(
-        m, true, false, s => JavaASTUtils.printProofScript(s)) :+ "Qed."
+        m, true, false, JavaASTUtils.printProofScript) :+ "Qed."
 }
 
 import org.eclipse.ui.texteditor.ITextEditor

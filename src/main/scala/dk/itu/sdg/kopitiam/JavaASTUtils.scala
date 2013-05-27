@@ -94,8 +94,5 @@ object JavaASTUtils {
     res.reverse
   }
 
-  def countMethods (c : CompilationUnit) : Int = {
-    val ctr : MethodDeclaration => Int = x => 1
-    traverseCU(c, ctr).size
-  }
+  def countMethods (c : CompilationUnit) : Int = traverseCU(c, _ => 1).size
 }

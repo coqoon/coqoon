@@ -45,10 +45,7 @@ class DefaultGoalPresenter extends GoalPresenter {
             SWT.H_SCROLL | SWT.V_SCROLL)
         ti.setText(subgoals.length.toString)
       }
-    } else {
-      while (subgoals.length != goalData.length)
-        subgoals.last.dispose()
-    }
+    } else subgoals.drop(goalData.length).map(_.dispose)
     goals.pack
     goalData.zip(subgoals).foreach(_ match {
       case (goal, control) =>

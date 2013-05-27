@@ -337,7 +337,7 @@
       <specification
             annotationType="dk.itu.sdg.kopitiam.processing"
             colorPreferenceKey="coqSentProcessBg"
-            colorPreferenceValue="244,255,200"
+            colorPreferenceValue="255,241,117"
             highlightPreferenceKey="dk.itu.sdg.kopitiam.processing.mycolorbackgroundhighlightkey"
             highlightPreferenceValue="true"
             includeOnPreferencePage="true"
