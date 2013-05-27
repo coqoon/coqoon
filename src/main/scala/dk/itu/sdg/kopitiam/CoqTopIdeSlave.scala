@@ -58,7 +58,8 @@ trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
   def evars : value[Option[List[evar]]]
   def search(sf : search_flags) : value[List[coq_object[String]]]
   def get_options : value[List[Pair[option_name, option_state]]]
-  def set_options(options : List[Pair[option_name, option_value]])
+  def set_options(
+      options : List[Pair[option_name, option_value]]) : value[Unit]
   def quit : value[Unit]
   /* ? */ def about : value[coq_info]
 }
@@ -381,7 +382,8 @@ private abstract class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
       options : List[Pair[CoqTypes.option_name, CoqTypes.option_value]]) :
           Elem = {
     val children = wrapOptions(options)
-    Elem(null, "setoptions", Null, scala.xml.TopScope, children : _*)
+    Elem(null,
+        "call", ("val", "setoptions"), scala.xml.TopScope, children : _*)
   }
               
   override def set_options(
