@@ -63,7 +63,13 @@ class JavaProofInitialisationRunner(
         val loopProgress = monitor.newChild(1,
           SubMonitor.SUPPRESS_ALL_LABELS).setWorkRemaining(steps.length)
         for (s <- steps) {
-          jes.coqTop.interp(false, false, s)
+          jes.coqTop.interp(false, false, s) match {
+            case CoqTypes.Good(_) =>
+            case CoqTypes.Unsafe(_) =>
+            case CoqTypes.Fail(ep) =>
+              return new Status(
+                  IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2.trim)
+          }
           loopProgress.worked(1)
         }
       case None =>
@@ -77,7 +83,13 @@ class JavaProofInitialisationRunner(
         val loopProgress = monitor.newChild(1,
           SubMonitor.SUPPRESS_ALL_LABELS).setWorkRemaining(prfhead.length)
         for (s <- prfhead) {
-          jes.coqTop.interp(false, false, s)
+          jes.coqTop.interp(false, false, s) match {
+            case CoqTypes.Good(_) =>
+            case CoqTypes.Unsafe(_) =>
+            case CoqTypes.Fail(ep) =>
+              return new Status(
+                  IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2.trim)
+          }
           loopProgress.worked(1)
         }
       case None =>
