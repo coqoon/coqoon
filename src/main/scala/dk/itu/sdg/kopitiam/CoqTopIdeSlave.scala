@@ -62,6 +62,20 @@ trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
       options : List[Pair[option_name, option_value]]) : value[Unit]
   def quit : value[Unit]
   /* ? */ def about : value[coq_info]
+  
+  def transaction[A](f : CoqTopIdeSlave_v20120710 => A) : value[A] = {
+    val status = this.status match {
+      case Good(s) => Some(s.status_statenum)
+      case _ => None
+    }
+    try {
+      CoqTypes.Good(f(new ExceptionalCoqTopIdeSlave_v20120710(this)))
+    } catch {
+      case CoqFail(ep) =>
+        interp(true, false, "BackTo " + status.getOrElse(1) + ".")
+        CoqTypes.Fail[A](ep)
+    }
+  }
 }
 object CoqTopIdeSlave_v20120710 {
   def apply() : Option[CoqTopIdeSlave_v20120710] =
@@ -461,3 +475,35 @@ private class CoqTopIdeSlaveImplPOSIX extends CoqTopIdeSlaveImpl {
       Process(Seq("kill", "-INT", pid)).run
   }
 }
+
+private class ExceptionalCoqTopIdeSlave_v20120710(
+    base : CoqTopIdeSlave_v20120710) extends CoqTopIdeSlave_v20120710 {
+  import CoqTypes._
+  
+  private def check[A](result : value[A]) : value[A] = result match {
+    case Good(a) => result
+    case Unsafe(a) => result
+    case Fail(ep) => throw new CoqFail(ep)
+  }
+  
+  override def kill = base.kill
+  override def interrupt = base.interrupt
+  
+  override def interp(raw : raw, verbose : verbose, string : String) =
+    check(base.interp(raw, verbose, string))
+  override def rewind(steps : Int) = check(base.rewind(steps))
+  override def goals = check(base.goals)
+  override def hints = check(base.hints)
+  override def status = check(base.status)
+  override def inloadpath(dir : String) = check(base.inloadpath(dir))
+  override def mkcases(inductive : String) = check(base.mkcases(inductive))
+  override def evars = check(base.evars)
+  override def search(sf : search_flags) = check(base.search(sf))
+  override def get_options = check(base.get_options)
+  override def set_options(options : List[Pair[option_name, option_value]]) =
+    check(base.set_options(options))
+  override def quit = check(base.quit)
+  override def about = check(base.about)
+}
+private case class CoqFail(
+    ep : Pair[CoqTypes.location, String]) extends Exception
