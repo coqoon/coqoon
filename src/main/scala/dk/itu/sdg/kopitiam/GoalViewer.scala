@@ -56,6 +56,66 @@ class DefaultGoalPresenter extends GoalPresenter {
   }
 }
 
+class TabularGoalPresenter extends GoalPresenter {
+  import org.eclipse.swt.widgets.{TabFolder, TabItem}
+  import org.eclipse.swt.widgets.{Table, TableItem, TableColumn}
+  
+  private var goals : TabFolder = null
+  override def init(parent : Composite) = {
+    goals = new TabFolder(parent, SWT.NONE)
+    goals
+  }
+  
+  override def dispose = goals.dispose
+  
+  private def subgoals = goals.getItems()
+  
+  override def render(coqGoals : Option[CoqTypes.goals]) = {
+    val goalData = coqGoals match {
+      case None => List.empty
+      case Some(x) => x.fg_goals
+    }
+    if (subgoals.length <= goalData.length) {
+      while (subgoals.length != goalData.length) {
+        val ti = new TabItem(goals, SWT.NONE)
+        val area = new Composite(goals, SWT.NONE)
+        area.setLayout(new FillLayout(SWT.VERTICAL))
+        ti.setControl(area)
+        
+        // val sash = new Sash(area, SWT.HORIZONTAL)
+        val ta = new Table(area, SWT.BORDER | SWT.MULTI)
+        new TableColumn(ta, SWT.LEFT).setText("Name")
+        new TableColumn(ta, SWT.LEFT).setText("Value")
+        ta.setColumnOrder(Array(0, 1))
+        ta.setLinesVisible(true)
+        ta.setHeaderVisible(true)
+        new Text(area,
+            SWT.BORDER | SWT.READ_ONLY | SWT.MULTI |
+            SWT.H_SCROLL | SWT.V_SCROLL)
+        ti.setText(subgoals.length.toString)
+      }
+    } else subgoals.drop(goalData.length).map(_.dispose)
+    goals.pack
+    goalData.zip(subgoals).foreach(_ match {
+      case (goal, control) =>
+        val comp = control.getControl().asInstanceOf[Composite]
+        
+        val table = comp.getChildren()(0).asInstanceOf[Table]
+        if (table.getItems.length < goal.goal_hyp.length) {
+          while (table.getItems.length < goal.goal_hyp.length)
+            new TableItem(table, SWT.NONE)
+        } else table.getItems.drop(goal.goal_hyp.length).map(_.dispose)
+        table.getColumns.map(_.pack)
+        table.getItems.zip(goal.goal_hyp).foreach(_ match {
+          case (entry, hypothesis) =>
+            entry.setText(hypothesis.split(":", 2).map(_.trim))
+        })
+        
+        comp.getChildren()(1).asInstanceOf[Text].setText(goal.goal_ccl)
+    })
+  }
+}
+
 import org.eclipse.ui.part.ViewPart
 import org.eclipse.ui.{IPropertyListener, IPartListener2}
 
