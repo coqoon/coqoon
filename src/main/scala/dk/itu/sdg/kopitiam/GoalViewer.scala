@@ -138,7 +138,7 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   }
   
   override def dispose = {
-    presenter.dispose
+    setPresenter(null)
     getSite.getWorkbenchWindow().getPartService().removePartListener(this)
     super.dispose
   }
@@ -193,7 +193,7 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   override def partInputChanged (part : IWorkbenchPartReference) : Unit = { }
   override def partVisible (part : IWorkbenchPartReference) : Unit = { }
 
-  private var presenter : GoalPresenter = new DefaultGoalPresenter
+  private var presenter : GoalPresenter = null
   
   var comp : Composite = null
 
@@ -202,10 +202,19 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   override def createPartControl (parent : Composite) : Unit = {
     comp = new Composite(parent, SWT.NONE)
     comp.setLayout(new FillLayout())
-
-    presenter.init(comp)
+    setPresenter(new DefaultGoalPresenter)
   }
 
+  private def setPresenter(gp : GoalPresenter) = {
+    if (presenter != null)
+      presenter.dispose
+    presenter = gp
+    if (presenter != null) {
+      presenter.init(comp)
+      writeGoal(activeContainer.flatMap(_.goals))
+    }
+  }
+  
   /*class SashListener(sash : Sash, comp : Composite, limit : Int)
       extends Listener {
     override def handleEvent (e : Event) = {
@@ -221,7 +230,7 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   }*/
   
   private def writeGoal (coqGoals : Option[CoqTypes.goals]) : Unit = {
-    if (!comp.isDisposed)
+    if (!comp.isDisposed && presenter != null)
       presenter.render(coqGoals)
     comp.layout
   }
