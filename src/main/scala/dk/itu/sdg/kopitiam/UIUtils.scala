@@ -20,4 +20,9 @@ object UIUtils {
   def asyncExec(r : => Unit) : Unit = asyncExec(new Runnable() {
     override def run = r
   })
+  
+  def openWarning(title : String, message : String) = syncExec {
+    org.eclipse.jface.dialogs.MessageDialog.openWarning(
+        getDisplay.getActiveShell, title, message)
+  }
 }

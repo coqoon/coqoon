@@ -44,7 +44,7 @@ class JavaProofInitialisationRunner(
       val basename = fei.getFile.getName().dropRight(5)
       val model = proj.getFile(new Path(basename + "_model.v"))
       if (!model.exists) {
-        EclipseBoilerPlate.warnUser("Model file missing",
+        UIUtils.openWarning("Model file missing",
           "Please write a model file for this Java file named '" +
             basename + "_model'.")
         return Status.OK_STATUS

@@ -67,10 +67,13 @@ class VerifyMethodHandler extends JavaEditorHandler {
           val node = findASTNode(cu, off, 0)
           val md = findMethod(node)
           md match {
-            case None => EclipseBoilerPlate.warnUser("Cursor not inside of method", "Please put the cursor inside of the method to verify")
+            case None => UIUtils.openWarning(
+                "Cursor not inside of method",
+                "Please put the cursor inside of the method to verify")
             case Some(x) =>
               if (jes.completedMethods.contains(x))
-                EclipseBoilerPlate.warnUser("Already proven", "Sorry, this method was already proven")
+                UIUtils.openWarning("Already proven",
+                    "Sorry, this method was already proven")
               else {
                 jes.setMethod(Some(x))
                 new JavaProofInitialisationJob(jes).schedule

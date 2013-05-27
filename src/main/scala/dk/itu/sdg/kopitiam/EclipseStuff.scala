@@ -28,19 +28,6 @@ trait EclipseUtils {
   }
 }
 
-class CoqJavaProject {
-  var ASTdirty : Boolean = false
-}
-
-object EclipseBoilerPlate {
-  import org.eclipse.swt.widgets.Display
-  import org.eclipse.jface.dialogs.MessageDialog
-  def warnUser (title : String, message : String) : Unit = UIUtils.syncExec {
-    MessageDialog.openWarning(
-        UIUtils.getDisplay.getActiveShell, title, message)
-  }
-}
-
 object EclipseConsole {
   import org.eclipse.ui.console.{MessageConsole,MessageConsoleStream,IConsole,IConsoleManager,ConsolePlugin}
   var out : MessageConsoleStream = null

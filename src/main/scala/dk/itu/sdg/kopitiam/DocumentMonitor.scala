@@ -41,7 +41,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with EclipseU
     val doc = event.getDocument
     //Console.println("doc " + doc + " changed [@" + event.getOffset + "], len: " + event.getLength)
     if (false) {
-      val proj : CoqJavaProject = null
+      (/* val proj : CoqJavaProject = null */)
       if (false /* proj.isJava(doc) */) {
         var foundchange : Boolean = false
         if (false /* proj.proofShell != None */) {
@@ -93,7 +93,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with EclipseU
                       }
                   }
                   */
-                  proj.ASTdirty = true
+                  (/* proj.ASTdirty = true */)
                   foundchange = true
                 }
               }
@@ -101,7 +101,7 @@ object DocumentMonitor extends IPartListener2 with IWindowListener with EclipseU
         }
         if (!foundchange) {
           //change to actual java code!
-          proj.ASTdirty = true
+          (/* proj.ASTdirty = true */)
         }
       }
       if (false /* proj.isCoqModel(doc) */)
