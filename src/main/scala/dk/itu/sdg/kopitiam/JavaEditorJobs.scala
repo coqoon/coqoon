@@ -13,102 +13,92 @@ class JavaProofInitialisationRunner(
     jes : JavaEditorState) extends SimpleJobRunner {
   override def doOperation(monitor : SubMonitor) : IStatus = {
     monitor.beginTask("Initialising Java proof mode", 4)
-    monitor.subTask("Performing custom Coq initialisation")
-    val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-    jes.coqTop.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
+    
+    CoqStepRunner.valueToStatus(jes.coqTop.transaction[Unit](ct => {
+      monitor.subTask("Performing custom Coq initialisation")
+      val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
+      ct.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
 
-    import org.eclipse.core.resources.IResource
+      import org.eclipse.core.resources.IResource
 
-    val input = jes.editor.getEditorInput
-    val res: Option[IResource] =
-      if (input.isInstanceOf[IFileEditorInput]) {
-        Some(input.asInstanceOf[IFileEditorInput].getFile)
-      } else None
+      val input = jes.editor.getEditorInput
+      val res: Option[IResource] =
+        if (input.isInstanceOf[IFileEditorInput]) {
+          Some(input.asInstanceOf[IFileEditorInput].getFile)
+        } else None
 
-    res match {
-      case Some(r) =>
-        jes.coqTop.interp(false, false,
-          "Add Rec LoadPath \"" +
-            r.getProject.getFolder("src").getLocation.toOSString + "\".")
-      case None =>
-        Console.println("shouldn't happen - trying to get ProjectDir from " +
-          input + ", which is not an IFileEditorInput")
-    }
-    monitor.worked(1)
+      res match {
+        case Some(r) =>
+          ct.interp(false, false,
+            "Add Rec LoadPath \"" +
+              r.getProject.getFolder("src").getLocation.toOSString + "\".")
+        case None =>
+          Console.println("shouldn't happen - trying to get ProjectDir from " +
+            input + ", which is not an IFileEditorInput")
+      }
+      monitor.worked(1)
 
-    monitor.subTask("Preparing model")
-    val fei = jes.editor.getEditorInput().asInstanceOf[IFileEditorInput]
-    val proj = fei.getFile.getParent
-    val basename = fei.getFile.getName().dropRight(5)
-    val model = proj.getFile(new Path(basename + "_model.v"))
-    if (!model.exists) {
-      EclipseBoilerPlate.warnUser("Model file missing",
-        "Please write a model file for this Java file named '" +
-          basename + "_model'.")
-      return Status.OK_STATUS
-    } else {
-      val ccj = new CoqCompileRunner(model).run(monitor.newChild(1))._1
-      if (ccj != Status.OK_STATUS)
-        return ccj
-    }
-    monitor.setWorkRemaining(2)
+      monitor.subTask("Preparing model")
+      val fei = jes.editor.getEditorInput().asInstanceOf[IFileEditorInput]
+      val proj = fei.getFile.getParent
+      val basename = fei.getFile.getName().dropRight(5)
+      val model = proj.getFile(new Path(basename + "_model.v"))
+      if (!model.exists) {
+        EclipseBoilerPlate.warnUser("Model file missing",
+          "Please write a model file for this Java file named '" +
+            basename + "_model'.")
+        return Status.OK_STATUS
+      } else {
+        val ccj = new CoqCompileRunner(model).run(monitor.newChild(1))._1
+        if (ccj != Status.OK_STATUS)
+          return ccj
+      }
+      monitor.setWorkRemaining(2)
 
-    monitor.subTask("Setting up definitions and specification")
-    //send over definition and spec
-    jes.compilationUnit match {
-      case Some(x) =>
-        val pdef = EclipseJavaASTProperties.getDefinition(x).get
-        val spec = EclipseJavaASTProperties.getSpecification(x).get
-        val steps = pdef ++ spec
-        val loopProgress = monitor.newChild(1,
-          SubMonitor.SUPPRESS_ALL_LABELS).setWorkRemaining(steps.length)
-        for (s <- steps) {
-          jes.coqTop.interp(false, false, s) match {
-            case CoqTypes.Good(_) =>
-            case CoqTypes.Unsafe(_) =>
-            case CoqTypes.Fail(ep) =>
-              return new Status(
-                  IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2.trim)
+      monitor.subTask("Setting up definitions and specification")
+      //send over definition and spec
+      jes.compilationUnit match {
+        case Some(x) =>
+          val pdef = EclipseJavaASTProperties.getDefinition(x).get
+          val spec = EclipseJavaASTProperties.getSpecification(x).get
+          val steps = pdef ++ spec
+          val loopProgress = monitor.newChild(1,
+            SubMonitor.SUPPRESS_ALL_LABELS).setWorkRemaining(steps.length)
+          for (s <- steps) {
+            ct.interp(false, false, s)
+            loopProgress.worked(1)
           }
-          loopProgress.worked(1)
-        }
-      case None =>
-    }
+        case None =>
+      }
 
-    monitor.subTask("Setting up method proof environment")
-    //send over beginning of proof
-    jes.method match {
-      case Some(meth) =>
-        val prfhead = EclipseJavaASTProperties.getProof(meth).get
-        val loopProgress = monitor.newChild(1,
-          SubMonitor.SUPPRESS_ALL_LABELS).setWorkRemaining(prfhead.length)
-        for (s <- prfhead) {
-          jes.coqTop.interp(false, false, s) match {
-            case CoqTypes.Good(_) =>
-            case CoqTypes.Unsafe(_) =>
-            case CoqTypes.Fail(ep) =>
-              return new Status(
-                  IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2.trim)
+      monitor.subTask("Setting up method proof environment")
+      //send over beginning of proof
+      jes.method match {
+        case Some(meth) =>
+          val prfhead = EclipseJavaASTProperties.getProof(meth).get
+          val loopProgress = monitor.newChild(1,
+            SubMonitor.SUPPRESS_ALL_LABELS).setWorkRemaining(prfhead.length)
+          for (s <- prfhead) {
+            ct.interp(false, false, s)
+            loopProgress.worked(1)
           }
-          loopProgress.worked(1)
-        }
-      case None =>
-    }
+        case None =>
+      }
 
-    val goals = jes.coqTop.goals match {
-      case CoqTypes.Good(a) => a
-      case _ => None
-    }
-    UIUtils.asyncExec {
-      jes.setGoals(goals)
-    }
-    //register handlers!
-    jes.activateHandler("Kopitiam.step_forward", new JavaStepForwardHandler)
-    jes.activateHandler("Kopitiam.step_all", new JavaStepAllHandler)
-    jes.activateHandler("Kopitiam.step_cursor", new JavaStepToCursorHandler)
-    jes.activateHandler("Kopitiam.step_backward", new JavaStepBackHandler)
-    jes.activateHandler("Kopitiam.retract", new JavaRetractAllHandler)
-    Status.OK_STATUS
+      val goals = ct.goals match {
+        case CoqTypes.Good(a) => a
+        case _ => None
+      }
+      UIUtils.asyncExec {
+        jes.setGoals(goals)
+      }
+      //register handlers!
+      jes.activateHandler("Kopitiam.step_forward", new JavaStepForwardHandler)
+      jes.activateHandler("Kopitiam.step_all", new JavaStepAllHandler)
+      jes.activateHandler("Kopitiam.step_cursor", new JavaStepToCursorHandler)
+      jes.activateHandler("Kopitiam.step_backward", new JavaStepBackHandler)
+      jes.activateHandler("Kopitiam.retract", new JavaRetractAllHandler)
+    }))
   }
 }
 
