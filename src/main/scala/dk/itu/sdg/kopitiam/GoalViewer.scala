@@ -203,6 +203,24 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
     comp = new Composite(parent, SWT.NONE)
     comp.setLayout(new FillLayout())
     setPresenter(new DefaultGoalPresenter)
+    
+    import org.eclipse.jface.action.{Action, IAction}
+    val mm = getViewSite.getActionBars.getMenuManager
+    mm.add(new Action("No presenter") {
+      override def run =
+        if (presenter != null)
+          setPresenter(null)
+    })
+    mm.add(new Action("Default presenter") {
+      override def run =
+        if (presenter == null || !presenter.isInstanceOf[DefaultGoalPresenter])
+          setPresenter(new DefaultGoalPresenter)
+    })
+    mm.add(new Action("Tabular presenter") {
+      override def run =
+        if (presenter == null || !presenter.isInstanceOf[TabularGoalPresenter])
+          setPresenter(new TabularGoalPresenter)
+    })
   }
 
   private def setPresenter(gp : GoalPresenter) = {
