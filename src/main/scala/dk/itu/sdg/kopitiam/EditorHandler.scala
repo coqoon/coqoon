@@ -74,6 +74,17 @@ object CoqTopContainer {
   final val PROPERTY_GOALS = 1979
 }
 
+trait CoqTopEditorContainer extends CoqTopContainer {
+  import org.eclipse.jface.text.{IDocument, ITextSelection}
+  import org.eclipse.ui.texteditor.ITextEditor
+  
+  def editor : ITextEditor
+  def document : IDocument =
+    editor.getDocumentProvider.getDocument(editor.getEditorInput)
+  def cursorPosition : Int = editor.getSelectionProvider.
+      getSelection.asInstanceOf[ITextSelection].getOffset
+}
+
 import org.eclipse.core.commands.ExecutionEvent
 
 class InterruptCoqHandler extends EditorHandler {
