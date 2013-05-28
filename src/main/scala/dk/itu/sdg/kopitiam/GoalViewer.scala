@@ -36,7 +36,6 @@ class DefaultGoalPresenter extends GoalPresenter {
         area.setLayout(new FillLayout(SWT.VERTICAL))
         ti.setControl(area)
         
-        // val sash = new Sash(area, SWT.HORIZONTAL)
         new Text(area,
             SWT.BORDER | SWT.READ_ONLY | SWT.MULTI |
             SWT.H_SCROLL | SWT.V_SCROLL)
@@ -82,7 +81,6 @@ class TabularGoalPresenter extends GoalPresenter {
         area.setLayout(new FillLayout(SWT.VERTICAL))
         ti.setControl(area)
         
-        // val sash = new Sash(area, SWT.HORIZONTAL)
         val ta = new Table(area, SWT.BORDER | SWT.MULTI)
         new TableColumn(ta, SWT.LEFT).setText("Name")
         new TableColumn(ta, SWT.LEFT).setText("Value")
@@ -121,9 +119,6 @@ import org.eclipse.ui.{IPropertyListener, IPartListener2}
 
 class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   import org.eclipse.swt.layout.{FormData,FormLayout,FormAttachment}
-  import org.eclipse.swt.graphics.{Color,RGB,Rectangle}
-  import org.eclipse.swt.widgets.{Display,Sash,Listener,Event}
-//  import org.eclipse.swt.custom.{CTabFolder,CTabItem}
   
   override def propertyChanged (source : Object, propID : Int) = {
     if (source.isInstanceOf[CoqTopContainer] &&
@@ -233,27 +228,11 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
     }
   }
   
-  /*class SashListener(sash : Sash, comp : Composite, limit : Int)
-      extends Listener {
-    override def handleEvent (e : Event) = {
-      val sashRect : Rectangle = sash.getBounds()
-      val shellRect : Rectangle = comp.getClientArea()
-      val top = shellRect.height - sashRect.height - limit
-      e.y = scala.math.max(scala.math.min(e.y, top), limit)
-      if (e.y != sashRect.y)  {
-        sashData.top = new FormAttachment (0, e.y)
-        comp.layout()
-      }
-    }
-  }*/
-  
   private def writeGoal (coqGoals : Option[CoqTypes.goals]) : Unit = {
     if (!comp.isDisposed && presenter != null)
       presenter.render(coqGoals)
     comp.layout
   }
 
-  def setFocus() : Unit = {
-  //  viewer.getControl.setFocus
-  }
+  def setFocus() : Unit = comp.setFocus
 }
