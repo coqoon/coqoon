@@ -3,7 +3,7 @@ package dk.itu.sdg.kopitiam
 import org.eclipse.ui.texteditor.ITextEditor
 import org.eclipse.core.commands.{IHandler, ExecutionEvent}
 
-class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
+class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
   @deprecated
   type ForbiddenJavaEditor = org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   
@@ -12,16 +12,6 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
   import scala.collection.mutable.Stack
   private val stepsV : Stack[JavaStep] = Stack[JavaStep]()
   def steps = stepsV
-  
-  def getIDocument =
-    editor.getDocumentProvider.getDocument(editor.getEditorInput)
-  def cursorPosition : Int = {
-    import org.eclipse.jface.text.ITextSelection
-    val selection = editor.getSelectionProvider.getSelection
-    if (selection != null && selection.isInstanceOf[ITextSelection]) {
-      selection.asInstanceOf[ITextSelection].getOffset
-    } else 0
-  }
   
   import org.eclipse.ui.handlers.IHandlerService
   def getHandlerService = editor.getSite.
@@ -72,7 +62,7 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopContainer {
     
   import org.eclipse.jface.text.source.IAnnotationModel
   private def doConnectedToAnnotationModel(f : IAnnotationModel => Unit) = {
-    val doc = getIDocument
+    val doc = document
     val model =
       editor.getDocumentProvider.getAnnotationModel(editor.getEditorInput)
     model.connect(doc)

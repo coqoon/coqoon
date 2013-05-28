@@ -10,10 +10,6 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   private var stepsV : Stack[CoqStep] = Stack[CoqStep]()
   override def steps = stepsV
   
-  override def document = getSourceViewer().getDocument().get()
-  override def cursorPosition =
-    getSourceViewer().getTextWidget().getCaretOffset()
-  
   private var underwayV : Int = 0
   override def underway = underwayV
   override def setUnderway(offset : Int) = {

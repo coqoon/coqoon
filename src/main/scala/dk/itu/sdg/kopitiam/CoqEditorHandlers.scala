@@ -22,11 +22,11 @@ case class CoqStep(
 }
 
 import scala.collection.mutable.Stack
-trait Editor extends CoqTopContainer with org.eclipse.ui.IEditorPart {
+trait Editor
+    extends CoqTopEditorContainer with org.eclipse.ui.texteditor.ITextEditor {
   def steps : Stack[CoqStep]
   
-  def document : String
-  def cursorPosition : Int
+  override def editor = this
   
   def underway : Int
   def setUnderway(offset : Int)
@@ -97,7 +97,7 @@ import org.eclipse.core.commands.ExecutionEvent
 class StepForwardHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
-      CoqEditorHandler.makeStep(editor.document, editor.underway) match {
+      CoqEditorHandler.makeStep(editor.document.get, editor.underway) match {
         case Some(step) =>
           // We're running in the UI thread, so always move the underway marker
           editor.setUnderway(step.offset + step.text.length())
@@ -112,7 +112,7 @@ class StepForwardHandler extends CoqEditorHandler {
 class StepAllHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
-      val doc = editor.document
+      val doc = editor.document.get
       val steps = CoqEditorHandler.makeSteps(doc, editor.underway, doc.length)
       if (steps.length > 0) {
         editor.setUnderway(steps.last.offset + steps.last.text.length)
@@ -130,7 +130,7 @@ class StepToCursorHandler extends CoqEditorHandler {
       val cursorPos = editor.cursorPosition
       if (cursorPos > underwayPos) { // Forwards!
         val steps = CoqEditorHandler.makeSteps(
-          editor.document, editor.underway, editor.cursorPosition)
+          editor.document.get, editor.underway, editor.cursorPosition)
         if (steps.length > 0) {
           editor.setUnderway(steps.last.offset + steps.last.text.length)
           scheduleJob(new StepForwardJob(editor, steps))
