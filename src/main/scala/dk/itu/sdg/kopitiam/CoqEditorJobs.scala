@@ -2,11 +2,11 @@ package dk.itu.sdg.kopitiam
 
 import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status, SubMonitor}
 
-class InitialiseCoqJob(editor : Editor) extends JobBase("Initialise Coq") {
+class InitialiseCoqJob(editor : CoqEditor) extends JobBase("Initialise Coq") {
   setRule(ObjectRule(editor))
   override def runner = new InitialiseCoqRunner(editor)
 }
-class InitialiseCoqRunner(editor : Editor) extends SimpleJobRunner {
+class InitialiseCoqRunner(editor : CoqEditor) extends SimpleJobRunner {
   override def doOperation(monitor : SubMonitor) : IStatus = {
     monitor.beginTask("Initialising Coq", 2)
     
@@ -42,16 +42,16 @@ class InitialiseCoqRunner(editor : Editor) extends SimpleJobRunner {
 }
 
 abstract class CoqEditorJob(
-    name : String, editor : Editor) extends CoqJobBase(name, editor) {
+    name : String, editor : CoqEditor) extends CoqJobBase(name, editor) {
   /* Make sure that this editor's coqtop instance has been initialised */
   editor.coqTop
 }
 
-class RestartCoqJob(editor : Editor)
+class RestartCoqJob(editor : CoqEditor)
     extends CoqEditorJob("Restarting Coq", editor) {
   override def runner = new RestartCoqRunner(editor)
 }
-class RestartCoqRunner(editor : Editor) extends SimpleJobRunner {
+class RestartCoqRunner(editor : CoqEditor) extends SimpleJobRunner {
   override protected def doOperation(monitor : SubMonitor) : IStatus = {
     monitor.beginTask("Restarting Coq", 3)
     
@@ -75,12 +75,12 @@ class RestartCoqRunner(editor : Editor) extends SimpleJobRunner {
 }
 
 class StepBackJob(
-    editor : Editor,
+    editor : CoqEditor,
     stepCount : Int) extends CoqEditorJob("Step back", editor) {
   override def runner = new StepBackRunner(editor, stepCount)
 }
 
-class StepBackRunner(editor : Editor, stepCount : Int)
+class StepBackRunner(editor : CoqEditor, stepCount : Int)
     extends CoqStepRunner[String](editor) {
   override protected def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
@@ -118,13 +118,13 @@ class StepBackRunner(editor : Editor, stepCount : Int)
 }
 
 class StepForwardJob(
-    editor : Editor,
+    editor : CoqEditor,
     steps : List[CoqStep]) extends CoqEditorJob("Step forward", editor) {
   override def runner = new StepForwardRunner(editor, steps)
 }
 
 class StepForwardRunner(
-    editor : Editor,
+    editor : CoqEditor,
     steps : List[CoqStep]) extends CoqStepForwardRunner(editor, steps) {
   override protected def onGood(step : CoqStep) = {
     editor.steps.synchronized { editor.steps.push(step) }

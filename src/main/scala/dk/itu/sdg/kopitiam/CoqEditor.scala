@@ -5,14 +5,17 @@ package dk.itu.sdg.kopitiam
 import org.eclipse.ui.IEditorInput
 import org.eclipse.ui.editors.text.TextEditor
 
-class CoqEditor extends TextEditor with EclipseUtils with Editor {
+class CoqEditor
+    extends TextEditor with EclipseUtils with CoqTopEditorContainer {
+  override def editor = this
+  
   import scala.collection.mutable.Stack
   private var stepsV : Stack[CoqStep] = Stack[CoqStep]()
-  override def steps = stepsV
+  def steps = stepsV
   
   private var underwayV : Int = 0
-  override def underway = underwayV
-  override def setUnderway(offset : Int) = {
+  def underway = underwayV
+  def setUnderway(offset : Int) = {
     if (offset < completedV)
       completedV = offset
     underwayV = offset
@@ -20,8 +23,8 @@ class CoqEditor extends TextEditor with EclipseUtils with Editor {
   }
   
   private var completedV : Int = 0
-  override def completed = completedV
-  override def setCompleted(offset : Int) = {
+  def completed = completedV
+  def setCompleted(offset : Int) = {
     completedV = offset
     addAnnotations_(completed, underway)
   }
@@ -435,7 +438,8 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
 
 import org.eclipse.jface.text.contentassist.IContentAssistProcessor
 
-class CoqContentAssistantProcessor(val editor : Editor) extends IContentAssistProcessor {
+class CoqContentAssistantProcessor(
+    val editor : CoqEditor) extends IContentAssistProcessor {
   import org.eclipse.jface.text.contentassist.{IContextInformationValidator,IContextInformation,ICompletionProposal,CompletionProposal,ContextInformation}
   import org.eclipse.jface.text.ITextViewer
   import java.text.MessageFormat

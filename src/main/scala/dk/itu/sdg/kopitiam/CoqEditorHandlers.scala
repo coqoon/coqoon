@@ -22,24 +22,12 @@ case class CoqStep(
 }
 
 import scala.collection.mutable.Stack
-trait Editor
-    extends CoqTopEditorContainer with org.eclipse.ui.texteditor.ITextEditor {
-  def steps : Stack[CoqStep]
-  
-  override def editor = this
-  
-  def underway : Int
-  def setUnderway(offset : Int)
-  
-  def completed : Int
-  def setCompleted(offset : Int)
-}
 
 abstract class CoqEditorHandler extends EditorHandler {
   override def calculateEnabled = (editor != null && !editor.busy)
-  override def editor : Editor = {
-    if (super.editor.isInstanceOf[Editor]) {
-      super.editor.asInstanceOf[Editor]
+  override def editor : CoqEditor = {
+    if (super.editor.isInstanceOf[CoqEditor]) {
+      super.editor.asInstanceOf[CoqEditor]
     } else null
   }
 }
@@ -79,7 +67,7 @@ object CoqEditorHandler {
     (count, mostRecent)
   }
   
-  def doStepBack(editor : Editor, f : Stack[CoqStep] => Int) = {
+  def doStepBack(editor : CoqEditor, f : Stack[CoqStep] => Int) = {
     val p = getStepBackPair(editor.steps, f)
     if (p._1 > 0) {
       editor.setUnderway(p._2 match {
