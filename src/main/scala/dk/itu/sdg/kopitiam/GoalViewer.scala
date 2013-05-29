@@ -138,20 +138,14 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
     super.dispose
   }
   
-  import org.eclipse.ui.IEditorPart
+  import org.eclipse.ui.{IEditorPart, IWorkbenchPart}
   private var activeContainer : Option[CoqTopContainer] = None
-  private def setActiveContainer (e : IEditorPart) = {
+  private def setActiveContainer(e : IWorkbenchPart) = {
     activeContainer match {
       case Some(ed) => ed.removeListener(this)
       case None =>
     }
-    activeContainer = Option(e).flatMap(a => {
-      val klass = classOf[CoqTopContainer]
-      val adapter = a.getAdapter(klass)
-      if (klass.isInstance(adapter)) {
-        Some(klass.cast(adapter))
-      } else None
-    })
+    activeContainer = CoqTopContainer.adapt(e)
     activeContainer match {
       case Some(c) =>
         c.addListener(this)
@@ -171,14 +165,15 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   
   override def partClosed (ref : IWorkbenchPartReference) = {
     val p = ref.getPart(false)
-    if (this == p || Some(p) == activeContainer)
+    if (this == p || CoqTopContainer.adapt(p) == activeContainer)
       setActiveContainer(null)
   }
   
   override def partActivated (ref : IWorkbenchPartReference) = {
     val p = ref.getPart(false)
-    if (p.isInstanceOf[IEditorPart] && Some(p) != activeContainer)
-      setActiveContainer(p.asInstanceOf[IEditorPart])
+    if (p.isInstanceOf[IEditorPart] &&
+        CoqTopContainer.adapt(p) != activeContainer)
+      setActiveContainer(p)
   }
 
   override def partDeactivated (ref : IWorkbenchPartReference) = ()
