@@ -156,9 +156,18 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
     	steps.clear
     	steps.pushAll(newSteps)
     	
-    	//adjustprovenmethods(cu)
+    	val newCompletedMethods =
+    	  for (i <- completedMethods;
+    	       j <- Seq(cu.findDeclaringNode(i.resolveBinding.getKey))
+    	       if j != null && j.isInstanceOf[MethodDeclaration])
+    	    yield j.asInstanceOf[MethodDeclaration]
+    	val update = (completedMethods.size != newCompletedMethods.size)
+    	
     	UIUtils.asyncExec {
     	  setUnderway(Some(steps.top.node))
+    	  completedMethods = newCompletedMethods
+    	  if (update) /* XXX: is this test good enough? */
+    	    annotateCompletedMethods
     	}
       }
     }
