@@ -104,13 +104,20 @@ class JavaStepForwardHandler extends JavaEditorHandler {
 object JavaStepForwardHandler {
   def collectProofScript(
       jes : JavaEditorState, multiple : Boolean, limit : Option[Int] = None) :
-      List[JavaStep] = {
-    val captureP : (Statement => Boolean) = (jes.complete, limit) match {
+      List[JavaStep] =
+    collectProofScript(jes.method.get, multiple,
+        jes.complete.map { _.getStartPosition }, limit)
+  
+  import org.eclipse.jdt.core.dom.MethodDeclaration
+  def collectProofScript(
+      method : MethodDeclaration, multiple : Boolean,
+      start : Option[Int], end : Option[Int]) : List[JavaStep] = {
+    val captureP : (Statement => Boolean) = (start, end) match {
       case (Some(a), Some(b)) =>
-        (c => c.getStartPosition > a.getStartPosition &&
+        (c => c.getStartPosition > a &&
             (c.getStartPosition + c.getLength <= b))
       case (Some(a), None) =>
-        (c => c.getStartPosition > a.getStartPosition)
+        (c => c.getStartPosition > a)
       case (None, Some(b)) =>
         (c => c.getStartPosition + c.getLength <= b)
       case (None, None) =>
@@ -121,7 +128,7 @@ object JavaStepForwardHandler {
         JavaASTUtils.printProofScript(x).map(a => JavaStep(x, a))
       } else None
     
-    JavaASTUtils.traverseAST(jes.method.get, true, !multiple, print)
+    JavaASTUtils.traverseAST(method, true, !multiple, print)
   }
 }
 
