@@ -148,21 +148,18 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
       if (EclipseJavaHelper.walkAST(this, cu, doc)) {
     	setCompilationUnit(Some(cu))
         val node = EclipseJavaHelper.findASTNode(cu, off, 0)
-        val oldm = method
-        val md = EclipseJavaHelper.findMethod(node)
-        md match {
-          case None =>
-          case Some(x) => setMethod(Some(x))
-        }
+        setMethod(EclipseJavaHelper.findMethod(node))
     	
     	val newSteps = JavaStepForwardHandler.collectProofScript(
-    	    this, true, Some(node.getStartPosition))
+    	    method.get, true, None,
+    	    complete.map(a => a.getStartPosition + a.getLength))
     	steps.clear
     	steps.pushAll(newSteps)
     	
     	//adjustprovenmethods(cu)
-    	setUnderway(Some(steps.top.node))
-    	setComplete(Some(steps.top.node))
+    	UIUtils.asyncExec {
+    	  setUnderway(Some(steps.top.node))
+    	}
       }
     }
   }  
@@ -303,7 +300,7 @@ private class JavaEditorReconcilingStrategy(
         
       case _ =>
         UIUtils.asyncExec {
-          JavaEditorHandler.doStepBack(jes, _.length)
+          jes.coqTop.kill /* XXX: can't use a step back job (goal update) */
           jes.setMethod(None)
           jes.completedMethods = List()
           jes.annotateCompletedMethods
