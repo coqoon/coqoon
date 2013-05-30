@@ -32,12 +32,35 @@ abstract class CoqEditorHandler extends EditorHandler {
   }
 }
 object CoqEditorHandler {
-  def makeStep(doc : String, offset : Int) : Option[CoqStep] = {
-    val length = CoqTop.findNextCommand(doc.substring(offset))
-    if (length != -1) {
-      Some(CoqStep(offset, doc.substring(offset, offset + length), false))
-    } else None
+  def getNextCommand(doc : String, offset : Int = 0) : Option[String] = {
+    var i = offset
+    var commentDepth = 0
+    var inString = false
+    while (i < doc.length) {
+      if ((i < doc.length - 2) && doc.substring(i, i + 2) == "(*") {
+        commentDepth += 1
+        i += 2
+      } else if ((i < doc.length - 2) && doc.substring(i, i + 2) == "*)" &&
+          commentDepth > 0) {
+        commentDepth -= 1
+        i += 2
+      } else if (doc(i) == '"') {
+        inString = !inString
+        i += 1
+      } else if (doc(i) == '.' && commentDepth == 0 && !inString &&
+          (i + 1 == doc.length || doc(i + 1).isWhitespace) &&
+          (i == 0 || doc(i - 1) != '.')) {
+        return Some(doc.substring(offset, i + 1))
+      } else i += 1
+    }
+    None
   }
+  
+  def makeStep(doc : String, offset : Int) : Option[CoqStep] =
+    getNextCommand(doc, offset) match {
+      case Some(text) => Some(CoqStep(offset, text, false))
+      case _ => None
+    }
   
   def makeSteps(
       doc : String, from : Int, to : Int) : List[CoqStep] = {
