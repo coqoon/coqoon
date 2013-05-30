@@ -2,32 +2,6 @@
 
 package dk.itu.sdg.kopitiam
 
-trait EclipseUtils {
-  //Handy implicits and functions that make dealing with Eclipse less verbose
-  import org.eclipse.jface.text.Position
-  import org.eclipse.swt.graphics.{Color, RGB}
-  import dk.itu.sdg.parsing.{NoLengthPosition, LengthPosition, RegionPosition}
-
-  import UIUtils.getDisplay
-  def color (r : Int, g : Int, b : Int) = new Color(getDisplay, r, g, b)
-
-  implicit def pos2eclipsePos (pos : LengthPosition) : Position =
-    pos match {
-      case NoLengthPosition => new Position(0)
-      case RegionPosition(off, len) => new Position(off, len)
-    }
-
-  implicit def tuple2Color (vals : (Int, Int, Int)) : Color = color(vals._1, vals._2, vals._3)
-
-  implicit def rgb2color (rgb : RGB) : Color = new Color(getDisplay, rgb)
-
-  def getPrefColor (key : String) : RGB = {
-    import org.eclipse.jface.preference.PreferenceConverter
-    val store = Activator.getDefault.getPreferenceStore
-    PreferenceConverter.getColor(store, key)
-  }
-}
-
 object EclipseConsole {
   import org.eclipse.ui.console.{MessageConsole,MessageConsoleStream,IConsole,IConsoleManager,ConsolePlugin}
   var out : MessageConsoleStream = null

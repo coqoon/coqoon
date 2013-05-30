@@ -25,4 +25,16 @@ object UIUtils {
     org.eclipse.jface.dialogs.MessageDialog.openWarning(
         getDisplay.getActiveShell, title, message)
   }
+  
+  object Color {
+    import org.eclipse.swt.graphics.{RGB, Color}
+    def apply(r : Int, g : Int, b : Int) : Color =
+      new Color(getDisplay, r, g, b)
+    def apply(t : (Int, Int, Int)) : Color = apply(t._1, t._2, t._3)
+    def apply(c : RGB) = new Color(getDisplay, c)
+    
+    def fromPreference(key : String) =
+      apply(org.eclipse.jface.preference.PreferenceConverter.getColor(
+          Activator.getDefault.getPreferenceStore, key))
+  }
 }

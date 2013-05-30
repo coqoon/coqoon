@@ -5,8 +5,7 @@ package dk.itu.sdg.kopitiam
 import org.eclipse.ui.IEditorInput
 import org.eclipse.ui.editors.text.TextEditor
 
-class CoqEditor
-    extends TextEditor with EclipseUtils with CoqTopEditorContainer {
+class CoqEditor extends TextEditor with CoqTopEditorContainer {
   override def editor = this
   
   import scala.collection.mutable.Stack
@@ -124,7 +123,6 @@ class CoqEditor
     setCompleted(first)
   }
   
-  import org.eclipse.jface.text.Position
   private def addAnnotations_ (first : Int, second : Int) : Unit = {
     val provider = getDocumentProvider
     val doc = provider.getDocument(getEditorInput)
@@ -200,6 +198,13 @@ class CoqEditor
     Console.println("Updated folding " + annotations.toList)
   }
 
+  import dk.itu.sdg.parsing.{NoLengthPosition, LengthPosition, RegionPosition}
+
+  private def pos2eclipsePos (pos : LengthPosition) : Position = pos match {
+    case NoLengthPosition => new Position(0)
+    case RegionPosition(off, len) => new Position(off, len)
+  }
+  
   private def foldingAnnotations(region : VernacularRegion, document : IDocument) : Stream[(Position, ProjectionAnnotation)] = {
     //println("Collapsable " + region.outlineName + region.outlineNameExtra)
     if (region.pos.hasPosition && document.get(region.pos.offset, region.pos.length).count(_=='\n') >= 2)
@@ -339,20 +344,20 @@ object CoqWordDetector extends IWordDetector {
 import org.eclipse.jface.text.rules.RuleBasedScanner
 import dk.itu.sdg.coqparser.VernacularReserved
 
-object CoqTokenScanner extends RuleBasedScanner with VernacularReserved with EclipseUtils {
+object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
   import org.eclipse.jface.text.rules.{IToken, MultiLineRule, SingleLineRule, Token, WordRule}
   import org.eclipse.jface.text.{IDocument, TextAttribute}
   import org.eclipse.swt.SWT.{BOLD, ITALIC}
 
   //Console.println("Initializing CoqTokenScanner")
 
-  private val black = color(0, 0, 0)
-  private val white = color(255, 255, 255)
+  private val black = UIUtils.Color(0, 0, 0)
+  private val white = UIUtils.Color(255, 255, 255)
 
-  private val keywordToken : IToken = new Token(new TextAttribute(getPrefColor("coqKeywordFg"), white, 0))
-  private val definerToken : IToken = new Token(new TextAttribute(getPrefColor("coqKeywordFg"), white, 0))
-  private val opToken : IToken = new Token(new TextAttribute((0, 0, 30), white, 0))
-  private val commentToken : IToken = new Token(new TextAttribute((30, 30, 0), white, ITALIC))
+  private val keywordToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, 0))
+  private val definerToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, 0))
+  private val opToken : IToken = new Token(new TextAttribute(UIUtils.Color(0, 0, 30), white, 0))
+  private val commentToken : IToken = new Token(new TextAttribute(UIUtils.Color(30, 30, 0), white, ITALIC))
   private val otherToken : IToken = new Token(new TextAttribute(black, white, 0))
 
   private val rules = Seq(
@@ -370,7 +375,7 @@ object CoqTokenScanner extends RuleBasedScanner with VernacularReserved with Ecl
 
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
 import org.eclipse.jface.text.IDocument
-class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor) extends IReconcilingStrategy with EclipseUtils {
+class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor) extends IReconcilingStrategy {
   import dk.itu.sdg.coqparser.VernacularRegion
   import org.eclipse.jface.text.{IDocument, IRegion, Position}
   import org.eclipse.jface.text.reconciler._
