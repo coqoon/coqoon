@@ -12,7 +12,6 @@ class Activator extends AbstractUIPlugin {
     super.start(context)
     println("starting Kopitiam!")
     Activator.single = this
-    DocumentMonitor.init
   }
 
   override def stop(context : BundleContext) = {
