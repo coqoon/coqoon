@@ -171,7 +171,7 @@
             allPopups="false"
             locationURI="toolbar:org.eclipse.ui.main.toolbar">
          <toolbar
-               id="Kopitiam.toolbar1"
+               id="Kopitiam.coqToolbar"
                label="Kopitiam toolbar">
             <command
                   commandId="Kopitiam.step_backward"
@@ -242,6 +242,79 @@
                style="push"
                tooltip="Verify method">
          </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="menu:org.eclipse.ui.main.menu">
+         <menu
+               id="Kopitiam.coqMenu"
+               label="Coq">
+            <command
+                  commandId="Kopitiam.step_backward"
+                  icon="icons/up.gif"
+                  label="Undo"
+                  style="push"
+                  tooltip="Undo">
+            </command>
+            <command
+                  commandId="Kopitiam.retract"
+                  icon="icons/uptoo.gif"
+                  label="Retract"
+                  style="push"
+                  tooltip="Retract">
+            </command>
+            <command
+                  commandId="Kopitiam.step_forward"
+                  icon="icons/down.gif"
+                  label="Step"
+                  style="push"
+                  tooltip="Step">
+            </command>
+            <command
+                  commandId="Kopitiam.step_cursor"
+                  icon="icons/icon_lego.gif"
+                  label="Step Until Cursor"
+                  style="push"
+                  tooltip="Step Until Cursor">
+            </command>
+            <command
+                  commandId="Kopitiam.step_all"
+                  icon="icons/downtoo.gif"
+                  label="Step All"
+                  style="push"
+                  tooltip="Step All">
+            </command>
+            <command
+                  commandId="Kopitiam.restart_coq"
+                  icon="icons/dead.gif"
+                  label="Restart Coq"
+                  style="push"
+                  tooltip="Restart Coq">
+            </command>
+            <command
+                  commandId="Kopitiam.interrupt"
+                  icon="icons/stop.gif"
+                  label="Interrupt Coq"
+                  style="push"
+                  tooltip="Interrupt Coq">
+            </command>
+            <command
+                  commandId="Kopitiam.compile_coq"
+                  icon="icons/compile.gif"
+                  label="Compile"
+                  style="push"
+                  tooltip="Compile">
+            </command>
+            <visibleWhen
+                  checkEnabled="false">
+               <with
+                     variable="activeEditor">
+                  <adapt
+                        type="dk.itu.sdg.kopitiam.CoqTopContainer">
+                  </adapt>
+               </with>
+            </visibleWhen>
+         </menu>
       </menuContribution>
 <!--      <menuContribution
             locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
