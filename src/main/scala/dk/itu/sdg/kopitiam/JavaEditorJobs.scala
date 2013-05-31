@@ -145,7 +145,7 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
             
             UIUtils.asyncExec {
               jes.setMethod(None)
-              jes.annotateCompletedMethods
+              jes.markCompletedMethods
             }
           case _ =>
         }

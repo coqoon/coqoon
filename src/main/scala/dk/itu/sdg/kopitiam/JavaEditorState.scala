@@ -93,35 +93,21 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
         annotationPair, model)
   }
   
-  private var completedA =
-    scala.collection.mutable.HashMap[MethodDeclaration, Annotation]()
+  import org.eclipse.core.resources.IMarker
   
   var completedMethods : List[MethodDeclaration] = List()
   
-  def annotateCompletedMethods : Unit =
-    doConnectedToAnnotationModel { annotateCompletedMethods(_) }
-  
-  def annotateCompletedMethods(model : IAnnotationModel) : Unit = {
-    import org.eclipse.jface.text.source.IAnnotationModelExtension
-    val modelEx = model.asInstanceOf[IAnnotationModelExtension]
-    var remainingA = completedA.clone
-    completedMethods.map(a => {
-      val pos = new Position(a.getStartPosition, a.getLength)
-      completedA.get(a) match {
-        case Some(ann) =>
-          modelEx.modifyAnnotationPosition(ann, pos)
-        case None =>
-          val ann = new Annotation(
-              "dk.itu.sdg.kopitiam.provenannotation", false, "Proven Method")
-          completedA.put(a, ann)
-          model.addAnnotation(ann, pos)
-      }
-      remainingA -= a
-    })
-    remainingA.map(a => {
-      completedA.remove(a._1)
-      model.removeAnnotation(a._2)
-    })
+  def markCompletedMethods : Unit = {
+    import org.eclipse.ui.IFileEditorInput
+    import org.eclipse.core.resources.IResource
+    val input = editor.getEditorInput.asInstanceOf[IFileEditorInput].getFile
+    new DeleteMarkersJob(input, "dk.itu.sdg.kopitiam.provenmarker",
+        true, IResource.DEPTH_ZERO).schedule
+    completedMethods.map(a =>
+      new CreateMarkerJob(input,
+          (a.getStartPosition, a.getStartPosition + a.getLength),
+          "Proven:\n\n" + JavaEditorState.getProofScript(a).mkString("\n"),
+          "dk.itu.sdg.kopitiam.provenmarker", IMarker.SEVERITY_ERROR).schedule)
   }
   
   import org.eclipse.ui.handlers.IHandlerActivation
@@ -168,7 +154,7 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
     	  setUnderway(Some(steps.top.node))
     	  completedMethods = newCompletedMethods
     	  if (update) /* XXX: is this test good enough? */
-    	    annotateCompletedMethods
+    	    markCompletedMethods
     	}
       }
     }
@@ -313,7 +299,7 @@ private class JavaEditorReconcilingStrategy(
           jes.coqTop.kill /* XXX: can't use a step back job (goal update) */
           jes.setMethod(None)
           jes.completedMethods = List()
-          jes.annotateCompletedMethods
+          jes.markCompletedMethods
         }
     }
   }
