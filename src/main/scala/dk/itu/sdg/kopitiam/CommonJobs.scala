@@ -147,9 +147,10 @@ object CoqStepRunner {
 abstract class CoqStepForwardRunner[A <: CoqCommand](
     container : CoqTopContainer, steps : Seq[A])
     extends CoqStepRunner[String](container) {
-  protected def onFail(step : A)
-  protected def onGood(step : A)
-  protected def onUnsafe(step : A) = onGood(step)
+  protected def onFail(step : A, result : CoqTypes.Fail[String])
+  protected def onGood(step : A, result : CoqTypes.Good[String])
+  protected def onUnsafe(step : A, result : CoqTypes.Unsafe[String]) =
+    onGood(step, CoqTypes.Good[String](result.value))
   
   override def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
@@ -159,9 +160,11 @@ abstract class CoqStepForwardRunner[A <: CoqCommand](
         return CoqTypes.Good("(cancelled)")
       monitor.subTask(step.text.trim)
       step.run(container.coqTop) match {
-        case CoqTypes.Good(msg) => onGood(step)
-        case CoqTypes.Unsafe(msg) => onUnsafe(step)
-        case CoqTypes.Fail(ep) => onFail(step); return CoqTypes.Fail(ep)
+        case r : CoqTypes.Good[String] => onGood(step, r)
+        case r : CoqTypes.Unsafe[String] => onUnsafe(step, r)
+        case r : CoqTypes.Fail[String] =>
+          onFail(step, r)
+          return CoqTypes.Fail(r.value)
       }
       monitor.worked(1)
     }

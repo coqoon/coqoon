@@ -108,12 +108,14 @@ class JavaStepForwardJob(steps : List[JavaStep], jes : JavaEditorState)
 }
 class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
     extends CoqStepForwardRunner(jes, steps) {
-  override protected def onGood(step : JavaStep) = {
+  override protected def onGood(
+      step : JavaStep, result : CoqTypes.Good[String]) = {
     jes.steps.synchronized { jes.steps.push(step) }
     UIUtils.asyncExec { jes.setComplete(Some(step.node)) }
   }
   
-  override protected def onFail(step : JavaStep) =
+  override protected def onFail(
+      step : JavaStep, result : CoqTypes.Fail[String]) =
     UIUtils.asyncExec { jes.setUnderway(jes.complete) }
   
   override def finish(

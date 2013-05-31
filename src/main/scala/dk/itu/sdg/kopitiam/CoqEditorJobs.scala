@@ -126,11 +126,13 @@ class StepForwardJob(
 class StepForwardRunner(
     editor : CoqEditor,
     steps : List[CoqStep]) extends CoqStepForwardRunner(editor, steps) {
-  override protected def onGood(step : CoqStep) = {
+  override protected def onGood(
+      step : CoqStep, result : CoqTypes.Good[String]) = {
     editor.steps.synchronized { editor.steps.push(step) }
     UIUtils.asyncExec { editor.setCompleted(step.offset + step.text.length) }
   }
   
-  override protected def onFail(step : CoqStep) =
+  override protected def onFail(
+      step : CoqStep, result : CoqTypes.Fail[String]) =
     UIUtils.asyncExec { editor.setUnderway(editor.completed) }
 }
