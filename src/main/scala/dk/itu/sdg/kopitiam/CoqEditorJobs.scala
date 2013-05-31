@@ -133,6 +133,11 @@ class StepForwardRunner(
   }
   
   override protected def onFail(
-      step : CoqStep, result : CoqTypes.Fail[String]) =
+      step : CoqStep, result : CoqTypes.Fail[String]) = {
+    import org.eclipse.ui.IFileEditorInput
     UIUtils.asyncExec { editor.setUnderway(editor.completed) }
+    CreateErrorMarkerJob(
+        editor.getEditorInput.asInstanceOf[IFileEditorInput].getFile,
+        step, result.value).schedule
+  }
 }

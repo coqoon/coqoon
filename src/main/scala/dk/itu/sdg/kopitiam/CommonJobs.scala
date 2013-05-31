@@ -170,4 +170,11 @@ abstract class CoqStepForwardRunner[A <: CoqCommand](
     }
     CoqTypes.Good("")
   }
+
+  override def finish(result: CoqTypes.value[String], monitor: SubMonitor) = {
+    updateGoals
+    (if (!monitor.isCanceled()) {
+      Status.OK_STATUS
+    } else Status.CANCEL_STATUS, result)
+  }
 }
