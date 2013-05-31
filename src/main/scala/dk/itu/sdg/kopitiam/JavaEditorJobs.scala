@@ -6,7 +6,7 @@ import org.eclipse.core.runtime.Path
 import org.eclipse.core.runtime.jobs.Job
 
 class JavaProofInitialisationJob(jes : JavaEditorState)
-    extends CoqJobBase("Initialising Java proof mode", jes) {
+    extends ContainerJobBase("Initialising Java proof mode", jes) {
   override def runner = new JavaProofInitialisationRunner(jes)
 }
 class JavaProofInitialisationRunner(
@@ -14,7 +14,7 @@ class JavaProofInitialisationRunner(
   override def doOperation(monitor : SubMonitor) : IStatus = {
     monitor.beginTask("Initialising Java proof mode", 4)
     
-    CoqStepRunner.valueToStatus(jes.coqTop.transaction[Unit](ct => {
+    StepRunner.valueToStatus(jes.coqTop.transaction[Unit](ct => {
       monitor.subTask("Performing custom Coq initialisation")
       val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
       ct.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
@@ -103,11 +103,11 @@ class JavaProofInitialisationRunner(
 }
 
 class JavaStepForwardJob(steps : List[JavaStep], jes : JavaEditorState)
-    extends CoqJobBase("Stepping forward", jes) {
+    extends ContainerJobBase("Stepping forward", jes) {
   override def runner = new JavaStepForwardRunner(jes, steps)
 }
 class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
-    extends CoqStepForwardRunner(jes, steps) {
+    extends StepForwardRunner(jes, steps) {
   override protected def onGood(
       step : JavaStep, result : CoqTypes.Good[String]) = {
     jes.steps.synchronized { jes.steps.push(step) }
@@ -144,16 +144,16 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
         }
       case _ =>
     }
-    (CoqStepRunner.valueToStatus(result), result)
+    (StepRunner.valueToStatus(result), result)
   }
 }
 
 class JavaStepBackJob(jes : JavaEditorState, stepCount : Int)
-    extends CoqJobBase("Stepping forward", jes) {
+    extends ContainerJobBase("Stepping forward", jes) {
   override def runner = new JavaStepBackRunner(jes, stepCount)
 }
 class JavaStepBackRunner(jes : JavaEditorState, stepCount : Int)
-    extends CoqStepRunner[String](jes) {
+    extends StepRunner[String](jes) {
   override protected def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
     monitor.beginTask("Java step back", 2)

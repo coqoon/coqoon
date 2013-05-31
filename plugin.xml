@@ -103,31 +103,31 @@
       </category>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.StepForwardHandler"
+            defaultHandler="dk.itu.sdg.kopitiam.CoqStepForwardHandler"
             id="Kopitiam.step_forward"
             name="Step forward command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.StepBackHandler"
+            defaultHandler="dk.itu.sdg.kopitiam.CoqStepBackHandler"
             id="Kopitiam.step_backward"
             name="Step backward command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.StepToCursorHandler"
+            defaultHandler="dk.itu.sdg.kopitiam.CoqStepToCursorHandler"
             id="Kopitiam.step_cursor"
             name="Step to cursor command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.StepAllHandler"
+            defaultHandler="dk.itu.sdg.kopitiam.CoqStepAllHandler"
             id="Kopitiam.step_all"
             name="Step all command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.RetractAllHandler"
+            defaultHandler="dk.itu.sdg.kopitiam.CoqRetractAllHandler"
             id="Kopitiam.retract"
             name="Retract all command">
       </command>

@@ -98,21 +98,21 @@ object CoqEditorHandler {
         case Some(x) => x.offset + x.text.length
       })
       editor.setBusy(true)
-      new StepBackJob(editor, p._1).schedule()
+      new CoqStepBackJob(editor, p._1).schedule()
     }
   }
 }
 
 import org.eclipse.core.commands.ExecutionEvent
 
-class StepForwardHandler extends CoqEditorHandler {
+class CoqStepForwardHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
       CoqEditorHandler.makeStep(editor.document.get, editor.underway) match {
         case Some(step) =>
           // We're running in the UI thread, so always move the underway marker
           editor.setUnderway(step.offset + step.text.length())
-          scheduleJob(new StepForwardJob(editor, List(step)))
+          scheduleJob(new CoqStepForwardJob(editor, List(step)))
         case _ =>
       }
     }
@@ -120,21 +120,21 @@ class StepForwardHandler extends CoqEditorHandler {
   }
 }
 
-class StepAllHandler extends CoqEditorHandler {
+class CoqStepAllHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
       val doc = editor.document.get
       val steps = CoqEditorHandler.makeSteps(doc, editor.underway, doc.length)
       if (steps.length > 0) {
         editor.setUnderway(steps.last.offset + steps.last.text.length)
-        scheduleJob(new StepForwardJob(editor, steps))
+        scheduleJob(new CoqStepForwardJob(editor, steps))
       }
     }
     null
   }
 }
 
-class StepToCursorHandler extends CoqEditorHandler {
+class CoqStepToCursorHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
       val underwayPos = editor.underway
@@ -144,7 +144,7 @@ class StepToCursorHandler extends CoqEditorHandler {
           editor.document.get, editor.underway, editor.cursorPosition)
         if (steps.length > 0) {
           editor.setUnderway(steps.last.offset + steps.last.text.length)
-          scheduleJob(new StepForwardJob(editor, steps))
+          scheduleJob(new CoqStepForwardJob(editor, steps))
         }
       } else if (cursorPos < underwayPos) { // Backwards!
         CoqEditorHandler.doStepBack(editor,
@@ -155,7 +155,7 @@ class StepToCursorHandler extends CoqEditorHandler {
   }
 }
 
-class StepBackHandler extends CoqEditorHandler {
+class CoqStepBackHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled())
       CoqEditorHandler.doStepBack(editor, a => if (a.length > 0) 1 else 0)
@@ -166,7 +166,7 @@ class StepBackHandler extends CoqEditorHandler {
     super.calculateEnabled && (editor.steps.length > 0)
 }
 
-class RetractAllHandler extends CoqEditorHandler {
+class CoqRetractAllHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled())
       CoqEditorHandler.doStepBack(editor, _.length)

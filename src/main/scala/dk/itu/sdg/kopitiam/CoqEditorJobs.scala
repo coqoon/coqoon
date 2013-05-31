@@ -10,7 +10,7 @@ class InitialiseCoqRunner(editor : CoqEditor) extends SimpleJobRunner {
   override def doOperation(monitor : SubMonitor) : IStatus = {
     monitor.beginTask("Initialising Coq", 2)
     
-    CoqStepRunner.valueToStatus(editor.coqTop.transaction[Unit](ct => {
+    StepRunner.valueToStatus(editor.coqTop.transaction[Unit](ct => {
       monitor.subTask("Adding global loadpath entries")
       val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
       ct.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
@@ -42,7 +42,7 @@ class InitialiseCoqRunner(editor : CoqEditor) extends SimpleJobRunner {
 }
 
 abstract class CoqEditorJob(
-    name : String, editor : CoqEditor) extends CoqJobBase(name, editor) {
+    name : String, editor : CoqEditor) extends ContainerJobBase(name, editor) {
   /* Make sure that this editor's coqtop instance has been initialised */
   editor.coqTop
 }
@@ -74,14 +74,14 @@ class RestartCoqRunner(editor : CoqEditor) extends SimpleJobRunner {
   }
 }
 
-class StepBackJob(
+class CoqStepBackJob(
     editor : CoqEditor,
     stepCount : Int) extends CoqEditorJob("Step back", editor) {
-  override def runner = new StepBackRunner(editor, stepCount)
+  override def runner = new CoqStepBackRunner(editor, stepCount)
 }
 
-class StepBackRunner(editor : CoqEditor, stepCount : Int)
-    extends CoqStepRunner[String](editor) {
+class CoqStepBackRunner(editor : CoqEditor, stepCount : Int)
+    extends StepRunner[String](editor) {
   override protected def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
     monitor.beginTask("Step back", 2)
@@ -100,7 +100,7 @@ class StepBackRunner(editor : CoqEditor, stepCount : Int)
             var redoSteps = editor.steps.take(extra).toList.reverse
             for (step <- redoSteps)
               editor.steps.pop
-            new StepForwardRunner(editor, redoSteps).doOperation(monitor.newChild(1))
+            new CoqStepForwardRunner(editor, redoSteps).doOperation(monitor.newChild(1))
           }
         }
         CoqTypes.Good("")
@@ -117,15 +117,15 @@ class StepBackRunner(editor : CoqEditor, stepCount : Int)
   }
 }
 
-class StepForwardJob(
+class CoqStepForwardJob(
     editor : CoqEditor,
     steps : List[CoqStep]) extends CoqEditorJob("Step forward", editor) {
-  override def runner = new StepForwardRunner(editor, steps)
+  override def runner = new CoqStepForwardRunner(editor, steps)
 }
 
-class StepForwardRunner(
+class CoqStepForwardRunner(
     editor : CoqEditor,
-    steps : List[CoqStep]) extends CoqStepForwardRunner(editor, steps) {
+    steps : List[CoqStep]) extends StepForwardRunner(editor, steps) {
   override protected def onGood(
       step : CoqStep, result : CoqTypes.Good[String]) = {
     editor.steps.synchronized { editor.steps.push(step) }

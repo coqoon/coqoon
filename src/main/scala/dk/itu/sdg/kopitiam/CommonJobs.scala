@@ -84,7 +84,7 @@ abstract class JobBase(name : String) extends Job(name) {
     runner.run(monitor_)._1
 }
 
-abstract class CoqJobBase(
+abstract class ContainerJobBase(
     name : String, container : CoqTopContainer) extends JobBase(name) {
   setRule(ObjectRule(container))
   
@@ -114,7 +114,7 @@ trait SimpleJobRunner extends JobRunner[IStatus] {
     (result, result)
 }
 
-abstract class CoqStepRunner[A](container : CoqTopContainer)
+abstract class StepRunner[A](container : CoqTopContainer)
     extends JobRunner[CoqTypes.value[A]] {
   protected def updateGoals = {
     val goals = container.coqTop.goals match {
@@ -131,11 +131,11 @@ abstract class CoqStepRunner[A](container : CoqTopContainer)
       result : CoqTypes.value[A], monitor : SubMonitor) = {
     updateGoals
     (if (!monitor.isCanceled()) {
-      CoqStepRunner.valueToStatus(result)
+      StepRunner.valueToStatus(result)
     } else Status.CANCEL_STATUS, result)
   }
 }
-object CoqStepRunner {
+object StepRunner {
   def valueToStatus(value : CoqTypes.value[_]) = value match {
     case CoqTypes.Good(_) => Status.OK_STATUS
     case CoqTypes.Unsafe(_) => Status.OK_STATUS
@@ -144,9 +144,9 @@ object CoqStepRunner {
   }
 }
 
-abstract class CoqStepForwardRunner[A <: CoqCommand](
+abstract class StepForwardRunner[A <: CoqCommand](
     container : CoqTopContainer, steps : Seq[A])
-    extends CoqStepRunner[String](container) {
+    extends StepRunner[String](container) {
   protected def onFail(step : A, result : CoqTypes.Fail[String])
   protected def onGood(step : A, result : CoqTypes.Good[String])
   protected def onUnsafe(step : A, result : CoqTypes.Unsafe[String]) =
