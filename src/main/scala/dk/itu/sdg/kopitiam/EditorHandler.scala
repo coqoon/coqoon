@@ -12,6 +12,8 @@ import org.eclipse.core.commands.AbstractHandler
 import org.eclipse.core.expressions.IEvaluationContext
 
 abstract class EditorHandler extends AbstractHandler {
+  setBaseEnabled(false)
+  
   private var editorV : IEditorPart = null
   protected def editor = editorV
   
