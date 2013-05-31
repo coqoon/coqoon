@@ -230,7 +230,7 @@ private class CoqProofReconcilingStrategy(
       val file = input.asInstanceOf[IFileEditorInput].getFile()
       if (file.findMarkers(
           IMarker.PROBLEM, true, IResource.DEPTH_ZERO).length > 0)
-        new DeleteErrorMarkersJob(
+        new DeleteMarkersJob(
             file, IMarker.PROBLEM, true, IResource.DEPTH_ZERO).schedule
     }
 

@@ -34,7 +34,7 @@ abstract class MarkerJob(
   setSystem(true) /* Don't show this job in the UI */
 }
 
-class DeleteErrorMarkersJob(
+class DeleteMarkersJob(
     resource : IResource, type_ : String,
     includeSubtypes : Boolean, depth : Int) extends MarkerJob(resource) {
   override def runInWorkspace(monitor : IProgressMonitor) : IStatus = {
@@ -43,22 +43,27 @@ class DeleteErrorMarkersJob(
   }
 }
 
-class CreateErrorMarkerJob(
-    resource : IResource, region : (Int, Int), message : String)
-    extends MarkerJob(resource) {
+class CreateMarkerJob(
+    resource : IResource, region : (Int, Int), message : String,
+    type_ : String, severity : Int) extends MarkerJob(resource) {
   override def runInWorkspace(monitor : IProgressMonitor) : IStatus = {
-    val m = resource.createMarker(IMarker.PROBLEM)
+    val m = resource.createMarker(type_)
     import scala.collection.JavaConversions._
     m.setAttributes(Map(
         (IMarker.MESSAGE, message),
         (IMarker.LOCATION, resource.toString),
-        (IMarker.SEVERITY, IMarker.SEVERITY_ERROR),
+        (IMarker.SEVERITY, severity),
         (IMarker.CHAR_START, region._1),
         (IMarker.CHAR_END, region._2),
         (IMarker.TRANSIENT, true)))
     Status.OK_STATUS
   }
 }
+
+class CreateErrorMarkerJob(
+    resource : IResource, region : (Int, Int), message : String)
+    extends CreateMarkerJob(
+        resource, region, message, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
 object CreateErrorMarkerJob {
   def apply(
       resource : IResource, step : CoqStep, ep : (CoqTypes.location, String)) : CreateErrorMarkerJob = {
