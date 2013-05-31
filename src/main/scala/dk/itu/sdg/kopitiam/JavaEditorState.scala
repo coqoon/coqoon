@@ -152,7 +152,8 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
     	
     	val newSteps = JavaStepForwardHandler.collectProofScript(
     	    method.get, true, None,
-    	    complete.map(a => a.getStartPosition + a.getLength))
+    	    complete.map(a => a.getStartPosition + a.getLength).
+    	        orElse(Some(Int.MinValue)))
     	steps.clear
     	steps.pushAll(newSteps)
     	
