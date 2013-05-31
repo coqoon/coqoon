@@ -115,8 +115,15 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
   }
   
   override protected def onFail(
-      step : JavaStep, result : CoqTypes.Fail[String]) =
+      step : JavaStep, result : CoqTypes.Fail[String]) = {
+    import org.eclipse.ui.IFileEditorInput
     UIUtils.asyncExec { jes.setUnderway(jes.complete) }
+    val range = (step.node.getStartPosition,
+        step.node.getStartPosition + step.node.getLength)
+    CreateErrorMarkerJob(
+        jes.editor.getEditorInput.asInstanceOf[IFileEditorInput].getFile,
+        range, result.value._2).schedule
+  }
   
   override def finish(
       result : CoqTypes.value[String], monitor : SubMonitor) = {
@@ -144,7 +151,9 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
         }
       case _ =>
     }
-    (StepRunner.valueToStatus(result), result)
+    (if (!monitor.isCanceled) {
+      Status.OK_STATUS
+    } else Status.CANCEL_STATUS, result)
   }
 }
 
