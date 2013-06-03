@@ -118,11 +118,19 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
       step : JavaStep, result : CoqTypes.Fail[String]) = {
     import org.eclipse.ui.IFileEditorInput
     UIUtils.asyncExec { jes.setUnderway(jes.complete) }
-    val range = (step.node.getStartPosition,
-        step.node.getStartPosition + step.node.getLength)
+    val ep = result.value
+    import org.eclipse.jdt.core.dom.EmptyStatement
+    val range = ep._1 match {
+      case Some((start, end)) if step.node.isInstanceOf[EmptyStatement] =>
+        (step.node.getStartPosition + 2 + start,
+            step.node.getStartPosition + 2 + end)
+      case _ =>
+        (step.node.getStartPosition,
+            step.node.getStartPosition + step.node.getLength)
+    }
     CreateErrorMarkerJob(
         jes.editor.getEditorInput.asInstanceOf[IFileEditorInput].getFile,
-        range, result.value._2).schedule
+        range, ep._2).schedule
   }
   
   override def finish(
