@@ -1,5 +1,6 @@
-* Kopitiam 0.2.21 [02 June 2013]
+* Kopitiam 0.2.[21-24] [02 June 2013]
 ** more debug output
+** fix problem on windows where it tried to execute C:\program, instead of C:\program files\coq\bin\coqtop.exe -emacs
 * Kopitiam 0.2.20 [03 March 2013]
 ** support to switch java editor and work on different java projects at once
 ** safety and correctness
