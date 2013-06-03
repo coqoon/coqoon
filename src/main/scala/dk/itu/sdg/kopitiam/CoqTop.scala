@@ -22,7 +22,7 @@ class BusyStreamReader (input : InputStream) extends Runnable {
         //Console.println("first byte was " + f)
         inbuf(0) = f.toByte
         val bytesread = input.read(inbuf, 1, avail)
-        //Console.println("read " + bytesread + " (actors: " + callbacks.length + ")")
+        Console.println("read " + bytesread + " (actors: " + callbacks.length + ")")
         if (bytesread < avail) // && bytesread < bufsize)
           Console.println("bytesread " + bytesread + " < avail " + avail)
         if (bytesread > 0) {
@@ -73,7 +73,7 @@ object PrintActor {
 class PrintActorImplementation extends Actor {
   def receive = {
     case msg : String => {
-      //Console.println("received message:" + msg)
+      Console.println("received message:" + msg)
       val coqr = ParseCoqResponse.parse(msg.trim)
       //Console.println("parsed response is " + coqr)
       PrintActor.distribute(coqr)
@@ -338,9 +338,11 @@ object CoqTop {
       Console.println("can't find coqtop binary (in: " + coqpath + coqtopbinary + end + ")")
       return false
     }
-    if (isWin)
+    if (isWin) {
+      Console.println("executing " + coqpath + coqtopbinary + end + " " + coqarguments)
       coqprocess = Runtime.getRuntime.exec(coqpath + coqtopbinary + end + " " + coqarguments)
-    else {
+      Console.println(" execution, coqp is: " + coqprocess)
+    } else {
       //due to the lack of Java's possibility to send signals to processes,
       //we start coqtop in a shell (and thus can send ctrl+c sequences manually)
       ///bin/sh -c only works on unix; but happily there's cmd.exe /c on windows
@@ -369,6 +371,7 @@ object CoqTop {
     started = true
     new Thread(coqout).start
     new Thread(coqerr).start
+    Console.println("Coq started successfully")
     true
   }
 

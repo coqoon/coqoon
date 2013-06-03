@@ -1,3 +1,5 @@
+* Kopitiam 0.2.21 [02 June 2013]
+** more debug output
 * Kopitiam 0.2.20 [03 March 2013]
 ** support to switch java editor and work on different java projects at once
 ** safety and correctness
