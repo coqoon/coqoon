@@ -22,7 +22,7 @@ class BusyStreamReader (input : InputStream) extends Runnable {
         //Console.println("first byte was " + f)
         inbuf(0) = f.toByte
         val bytesread = input.read(inbuf, 1, avail)
-        Console.println("read " + bytesread + " (actors: " + callbacks.length + ")")
+        //Console.println("read " + bytesread + " (actors: " + callbacks.length + ")")
         if (bytesread < avail) // && bytesread < bufsize)
           Console.println("bytesread " + bytesread + " < avail " + avail)
         if (bytesread > 0) {
@@ -339,9 +339,15 @@ object CoqTop {
       return false
     }
     if (isWin) {
-      Console.println("executing " + coqpath + coqtopbinary + end + " " + coqarguments)
-      coqprocess = Runtime.getRuntime.exec(coqpath + coqtopbinary + end + " " + coqarguments)
+      try {
+      val cmdarr =
+          Array(coqpath + coqtopbinary + end, coqarguments)
+      coqprocess = Runtime.getRuntime.exec(cmdarr)
       Console.println(" execution, coqp is: " + coqprocess)
+      } catch {
+        case e =>
+          Console.println("caught Exception" + e)
+      }
     } else {
       //due to the lack of Java's possibility to send signals to processes,
       //we start coqtop in a shell (and thus can send ctrl+c sequences manually)
