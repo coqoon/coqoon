@@ -41,28 +41,36 @@ abstract class EditorHandler extends AbstractHandler {
 }
 
 trait CoqTopContainer {
+  private val lock = new Object
+  
   def coqTop : CoqTopIdeSlave_v20120710
   
   private var goals_ : Option[CoqTypes.goals] = None
-  def goals = goals_
+  def goals = lock synchronized { goals_ }
   def setGoals(g : Option[CoqTypes.goals]) = {
-    goals_ = g
+    lock synchronized { goals_ = g }
     fireChange(CoqTopContainer.PROPERTY_GOALS)
   }
   
   import org.eclipse.ui.IPropertyListener
   private var listeners = Set[IPropertyListener]()
-  def addListener(l : IPropertyListener) = (listeners += l)
-  def removeListener(l : IPropertyListener) = (listeners -= l)
+  def addListener(l : IPropertyListener) = lock synchronized (listeners += l)
+  def removeListener(l : IPropertyListener) = lock synchronized (listeners -= l)
   def fireChange(propertyID : Int) : Unit =
-    listeners.map(_.propertyChanged(this, propertyID))
+    lock synchronized { listeners }.map(_.propertyChanged(this, propertyID))
   
   private var busy_ : Boolean = false
-  def busy : Boolean = busy_
+  def busy : Boolean = lock synchronized { busy_ }
   def setBusy(b : Boolean) : Unit = {
-    busy_ = b
+    lock synchronized { busy_ = b }
     fireChange(CoqTopContainer.PROPERTY_BUSY)
   }
+  
+  private var flags = Set[String]()
+  def setFlag(name : String) = lock synchronized { flags += name }
+  def clearFlag(name : String) = lock synchronized { flags -= name }
+  def testFlag(name : String) = lock synchronized { flags.contains(name) }
+  def clearFlags = lock synchronized { flags = Set() }
 }
 object CoqTopContainer {
   final val PROPERTY_BUSY = 979
