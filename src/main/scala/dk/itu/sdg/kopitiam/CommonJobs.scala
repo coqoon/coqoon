@@ -85,8 +85,11 @@ import org.eclipse.core.runtime.SubMonitor
 abstract class JobBase(name : String) extends Job(name) {
   protected def runner : JobRunner[_]
   
-  override def run(monitor_ : IProgressMonitor) : IStatus =
+  override def run(monitor_ : IProgressMonitor) : IStatus = try {
     runner.run(monitor_)._1
+  } catch {
+    case StatusWrapper(status) => status
+  }
 }
 
 abstract class ContainerJobBase(
@@ -112,7 +115,12 @@ trait JobRunner[A] {
   
   final protected def wrapOperation(monitor : SubMonitor) : (IStatus, A) =
     finish(doOperation(monitor), monitor)
+  
+  protected def fail(status : IStatus) = throw StatusWrapper(status)
+  protected def cancel = fail(Status.CANCEL_STATUS)
 }
+
+case class StatusWrapper(status : IStatus) extends Exception
 
 trait SimpleJobRunner extends JobRunner[IStatus] {
   override protected def finish(result : IStatus, monitor : SubMonitor) =
