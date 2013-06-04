@@ -30,13 +30,8 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
   
   private var coqTopV : CoqTopIdeSlave_v20120710 = null
   override def coqTop = {
-    if (coqTopV == null) {
+    if (coqTopV == null)
       coqTopV = CoqTopIdeSlave_v20120710().orNull
-      if (coqTopV != null) {
-        setBusy(true)
-        new InitialiseCoqJob(this).schedule()
-      }
-    }
     coqTopV
   }
   
@@ -212,6 +207,9 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     else
      region.getOutline.flatMap(foldingAnnotations(_, document))
   }
+}
+object CoqEditor {
+  final val FLAG_INITIALISED = "CoqEditor.initialised"
 }
 
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy

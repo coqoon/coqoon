@@ -38,9 +38,11 @@ class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
 
       monitor.worked(1)
     }) match {
-      case CoqTypes.Fail((_, message)) => fail(
-          new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", message))
+      case CoqTypes.Fail((_, message)) =>
+        editor.clearFlag(CoqEditor.FLAG_INITIALISED)
+        fail(new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", message))
       case _ =>
+        editor.setFlag(CoqEditor.FLAG_INITIALISED)
     }
   }
 }
@@ -128,6 +130,11 @@ class CoqStepForwardJob(
 class CoqStepForwardRunner(
     editor : CoqEditor,
     steps : List[CoqStep]) extends StepForwardRunner(editor, steps) {
+  override protected def finish = {
+    UIUtils.asyncExec { editor.setUnderway(editor.completed) }
+    super.finish
+  }
+  
   override protected def onGood(
       step : CoqStep, result : CoqTypes.Good[String]) = {
     editor.steps.synchronized { editor.steps.push(step) }
@@ -137,9 +144,12 @@ class CoqStepForwardRunner(
   override protected def onFail(
       step : CoqStep, result : CoqTypes.Fail[String]) = {
     import org.eclipse.ui.IFileEditorInput
-    UIUtils.asyncExec { editor.setUnderway(editor.completed) }
     CreateErrorMarkerJob(
         editor.getEditorInput.asInstanceOf[IFileEditorInput].getFile,
         step, result.value).schedule
   }
+  
+  override protected def initialise =
+    if (!editor.testFlag(CoqEditor.FLAG_INITIALISED))
+      new InitialiseCoqRunner(editor).run(null)
 }

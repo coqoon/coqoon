@@ -136,7 +136,7 @@ abstract class StepRunner[A](container : CoqTopContainer)
     goals
   }
   
-  override def finish = updateGoals
+  override protected def finish = updateGoals
 }
 
 abstract class StepForwardRunner[A <: CoqCommand](
@@ -146,10 +146,12 @@ abstract class StepForwardRunner[A <: CoqCommand](
   protected def onGood(step : A, result : CoqTypes.Good[String])
   protected def onUnsafe(step : A, result : CoqTypes.Unsafe[String]) =
     onGood(step, CoqTypes.Good[String](result.value))
-  
+  protected def initialise = ()
+    
   override def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
     monitor.beginTask("Step forward", steps.length)
+    initialise
     for (step <- steps) {
       if (monitor.isCanceled)
         cancel
