@@ -40,11 +40,11 @@ class CoqCompileJob(source : IFile)
     extends JobBase("Compiling Coq file " + source.getName) {
   override protected def runner = new CoqCompileRunner(source)
 }
-class CoqCompileRunner(source : IFile) extends SimpleJobRunner {
+class CoqCompileRunner(source : IFile) extends JobRunner[Unit] {
   import org.eclipse.core.runtime.{IStatus, Status}
   import java.io.File
   
-  override protected def doOperation(monitor : SubMonitor) : IStatus = {
+  override protected def doOperation(monitor : SubMonitor) : Unit = {
     println("CoqCompileJob(" + source + ") is running")
     
     val name = source.getProjectRelativePath.toOSString
@@ -53,7 +53,7 @@ class CoqCompileRunner(source : IFile) extends SimpleJobRunner {
     val path = source.getProject.getLocation.toFile
     
     if (output.lastModified > source.getLocation.toFile.lastModified)
-      return Status.OK_STATUS
+      return
     
     if (EclipseConsole.out == null)
       EclipseConsole.initConsole
@@ -82,11 +82,10 @@ class CoqCompileRunner(source : IFile) extends SimpleJobRunner {
       }
       coqcp.waitFor
       if (coqcp.exitValue != 0)
-        return new Status(
-            IStatus.ERROR, "dk.itu.sdg.kopitiam", output.mkString("\n"))
+        fail(new Status(
+            IStatus.ERROR, "dk.itu.sdg.kopitiam", output.mkString("\n")))
       
       monitor.worked(1)
     }
-    Status.OK_STATUS
   }
 }

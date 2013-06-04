@@ -86,7 +86,8 @@ abstract class JobBase(name : String) extends Job(name) {
   protected def runner : JobRunner[_]
   
   override def run(monitor_ : IProgressMonitor) : IStatus = try {
-    runner.run(monitor_)._1
+    runner.run(monitor_)
+    Status.OK_STATUS
   } catch {
     case StatusWrapper(status) => status
   }
@@ -103,29 +104,24 @@ abstract class ContainerJobBase(
 }
 
 trait JobRunner[A] {
-  protected def finish(result : A, monitor : SubMonitor) : (IStatus, A)
+  protected def finish : Unit = ()
   protected def doOperation(monitor : SubMonitor) : A
   
-  def run(monitor_ : IProgressMonitor) : (IStatus, A) = {
+  def run(monitor_ : IProgressMonitor) : A = {
     val monitor = SubMonitor.convert(monitor_)
     try {
-      wrapOperation(monitor)
-    } finally monitor.done
+      doOperation(monitor)
+    } finally {
+      finish
+      monitor.done
+    }
   }
-  
-  final protected def wrapOperation(monitor : SubMonitor) : (IStatus, A) =
-    finish(doOperation(monitor), monitor)
   
   protected def fail(status : IStatus) = throw StatusWrapper(status)
   protected def cancel = fail(Status.CANCEL_STATUS)
 }
 
 case class StatusWrapper(status : IStatus) extends Exception
-
-trait SimpleJobRunner extends JobRunner[IStatus] {
-  override protected def finish(result : IStatus, monitor : SubMonitor) =
-    (result, result)
-}
 
 abstract class StepRunner[A](container : CoqTopContainer)
     extends JobRunner[CoqTypes.value[A]] {
@@ -140,21 +136,7 @@ abstract class StepRunner[A](container : CoqTopContainer)
     goals
   }
   
-  override def finish(
-      result : CoqTypes.value[A], monitor : SubMonitor) = {
-    updateGoals
-    (if (!monitor.isCanceled()) {
-      StepRunner.valueToStatus(result)
-    } else Status.CANCEL_STATUS, result)
-  }
-}
-object StepRunner {
-  def valueToStatus(value : CoqTypes.value[_]) = value match {
-    case CoqTypes.Good(_) => Status.OK_STATUS
-    case CoqTypes.Unsafe(_) => Status.OK_STATUS
-    case CoqTypes.Fail(ep) =>
-      new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", ep._2.trim)
-  }
+  override def finish = updateGoals
 }
 
 abstract class StepForwardRunner[A <: CoqCommand](
@@ -169,8 +151,8 @@ abstract class StepForwardRunner[A <: CoqCommand](
       monitor : SubMonitor) : CoqTypes.value[String] = {
     monitor.beginTask("Step forward", steps.length)
     for (step <- steps) {
-      if (monitor.isCanceled())
-        return CoqTypes.Good("(cancelled)")
+      if (monitor.isCanceled)
+        cancel
       monitor.subTask(step.text.trim)
       step.run(container.coqTop) match {
         case r : CoqTypes.Good[String] => onGood(step, r)
@@ -182,12 +164,5 @@ abstract class StepForwardRunner[A <: CoqCommand](
       monitor.worked(1)
     }
     CoqTypes.Good("")
-  }
-
-  override def finish(result: CoqTypes.value[String], monitor: SubMonitor) = {
-    updateGoals
-    (if (!monitor.isCanceled()) {
-      Status.OK_STATUS
-    } else Status.CANCEL_STATUS, result)
   }
 }

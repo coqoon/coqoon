@@ -6,11 +6,11 @@ class InitialiseCoqJob(editor : CoqEditor) extends JobBase("Initialise Coq") {
   setRule(ObjectRule(editor))
   override def runner = new InitialiseCoqRunner(editor)
 }
-class InitialiseCoqRunner(editor : CoqEditor) extends SimpleJobRunner {
-  override def doOperation(monitor : SubMonitor) : IStatus = {
+class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
+  override def doOperation(monitor : SubMonitor) = {
     monitor.beginTask("Initialising Coq", 2)
     
-    StepRunner.valueToStatus(editor.coqTop.transaction[Unit](ct => {
+    editor.coqTop.transaction[Unit](ct => {
       monitor.subTask("Adding global loadpath entries")
       val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
       ct.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
@@ -37,7 +37,11 @@ class InitialiseCoqRunner(editor : CoqEditor) extends SimpleJobRunner {
       }
 
       monitor.worked(1)
-    }))
+    }) match {
+      case CoqTypes.Fail((_, message)) => fail(
+          new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", message))
+      case _ =>
+    }
   }
 }
 
@@ -51,8 +55,8 @@ class RestartCoqJob(editor : CoqEditor)
     extends CoqEditorJob("Restarting Coq", editor) {
   override def runner = new RestartCoqRunner(editor)
 }
-class RestartCoqRunner(editor : CoqEditor) extends SimpleJobRunner {
-  override protected def doOperation(monitor : SubMonitor) : IStatus = {
+class RestartCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
+  override protected def doOperation(monitor : SubMonitor) = {
     monitor.beginTask("Restarting Coq", 3)
     
     monitor.subTask("Clearing state")
@@ -69,8 +73,6 @@ class RestartCoqRunner(editor : CoqEditor) extends SimpleJobRunner {
 
     monitor.subTask("Starting Coq")
     new InitialiseCoqRunner(editor).run(monitor.newChild(1))
-
-    Status.OK_STATUS
   }
 }
 

@@ -10,11 +10,11 @@ class JavaProofInitialisationJob(jes : JavaEditorState)
   override def runner = new JavaProofInitialisationRunner(jes)
 }
 class JavaProofInitialisationRunner(
-    jes : JavaEditorState) extends SimpleJobRunner {
-  override def doOperation(monitor : SubMonitor) : IStatus = {
+    jes : JavaEditorState) extends JobRunner[Unit] {
+  override def doOperation(monitor : SubMonitor) : Unit = {
     monitor.beginTask("Initialising Java proof mode", 4)
     
-    StepRunner.valueToStatus(jes.coqTop.transaction[Unit](ct => {
+    jes.coqTop.transaction[Unit](ct => {
       monitor.subTask("Performing custom Coq initialisation")
       val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
       ct.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
@@ -47,12 +47,8 @@ class JavaProofInitialisationRunner(
         UIUtils.openWarning("Model file missing",
           "Please write a model file for this Java file named '" +
             basename + "_model'.")
-        return Status.OK_STATUS
-      } else {
-        val ccj = new CoqCompileRunner(model).run(monitor.newChild(1))._1
-        if (ccj != Status.OK_STATUS)
-          return ccj
-      }
+        return
+      } else new CoqCompileRunner(model).run(monitor.newChild(1))
       monitor.setWorkRemaining(2)
 
       monitor.subTask("Setting up definitions and specification")
@@ -98,7 +94,11 @@ class JavaProofInitialisationRunner(
       jes.activateHandler("Kopitiam.step_cursor", new JavaStepToCursorHandler)
       jes.activateHandler("Kopitiam.step_backward", new JavaStepBackHandler)
       jes.activateHandler("Kopitiam.retract", new JavaRetractAllHandler)
-    }))
+    }) match {
+      case CoqTypes.Fail((_, message)) => fail(
+          new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", message))
+      case _ =>
+    }
   }
 }
 
@@ -133,11 +133,9 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
         range, ep._2).schedule
   }
   
-  override def finish(
-      result : CoqTypes.value[String], monitor : SubMonitor) = {
+  override def finish = {
     updateGoals match {
       case Some(goals) if goals.fg_goals.isEmpty && goals.bg_goals.isEmpty =>
-        monitor.subTask("Finishing proof")
         jes.coqTop.interp(false, false, "Qed.") match {
           case CoqTypes.Good(s) =>
             val method = jes.method.get
@@ -159,9 +157,6 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
         }
       case _ =>
     }
-    (if (!monitor.isCanceled) {
-      Status.OK_STATUS
-    } else Status.CANCEL_STATUS, result)
   }
 }
 
