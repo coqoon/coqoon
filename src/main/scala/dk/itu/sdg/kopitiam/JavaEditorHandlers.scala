@@ -5,6 +5,8 @@ package dk.itu.sdg.kopitiam
 import org.eclipse.jdt.core.dom.Statement
 import org.eclipse.ui.texteditor.ITextEditor
 
+import org.eclipse.core.commands.ExecutionEvent
+
 case class JavaStep(
     val node : Statement,
     override val text : String) extends CoqCommand(text)
@@ -41,8 +43,6 @@ object JavaEditorHandler {
     }
   }
 }
-
-import org.eclipse.core.commands.ExecutionEvent
 
 class VerifyMethodHandler extends JavaEditorHandler {
   import EclipseJavaHelper._
@@ -84,6 +84,67 @@ class VerifyMethodHandler extends JavaEditorHandler {
       }
     }
     null
+  }
+}
+
+import org.eclipse.core.resources.ResourcesPlugin
+
+class SaveProofCertificateHandler extends JavaEditorHandler {
+  import SaveProofCertificateHandler._
+  override def execute(ev : ExecutionEvent) = {
+    import org.eclipse.ui.ide.undo.{WorkspaceUndoUtil, CreateFileOperation}
+    import org.eclipse.ui.dialogs.SaveAsDialog
+    if (isEnabled()) {
+      val jes = getState
+      val shell = UIUtils.getActiveShell
+      val d = new org.eclipse.ui.dialogs.SaveAsDialog(shell)
+      d.setOriginalFile(getCertificateFile(jes))
+      if (d.open() == org.eclipse.jface.window.Window.OK) {
+        val ws = ResourcesPlugin.getWorkspace.getRoot
+        val file = ws.getFile(d.getResult)
+        val contents = new java.io.ByteArrayInputStream(
+          jes.createCertificate.getBytes(
+            java.nio.charset.Charset.forName("UTF-8")))
+        val monitor = UIUtils.getProgressMonitor(jes.editor)
+        if (!file.exists) {
+          UIUtils.getWorkbench.getOperationSupport.getOperationHistory.execute(
+            new CreateFileOperation(
+              ws.getFile(d.getResult), null, contents,
+              "Saving proof certificate"),
+            monitor, WorkspaceUndoUtil.getUIInfoAdapter(shell))
+        } else {
+          import org.eclipse.core.runtime.{
+            Status, CoreException, IProgressMonitor}
+          import org.eclipse.core.resources.{IResource, WorkspaceJob}
+          new WorkspaceJob("Saving proof certificate") {
+            setRule(ws.getWorkspace.getRuleFactory.modifyRule(file))
+            override def runInWorkspace(monitor : IProgressMonitor) = {
+              try {
+                file.setContents(contents, IResource.KEEP_HISTORY, monitor)
+                Status.OK_STATUS
+              } catch {
+                case e : CoreException => e.getStatus
+              }
+            }
+          }.schedule
+        }
+      }
+    }
+    null
+  }
+  
+  override def calculateEnabled = super.calculateEnabled &&
+      getState.completedMethods.size ==
+          JavaASTUtils.countMethods(getState.compilationUnit.get)
+}
+private object SaveProofCertificateHandler {
+  import org.eclipse.core.resources.IFile
+  def getCertificateFile(jes : JavaEditorState) : IFile = {
+    import org.eclipse.ui.IFileEditorInput
+    val path = jes.editor.getEditorInput.
+        asInstanceOf[IFileEditorInput].getFile.getFullPath
+    ResourcesPlugin.getWorkspace.getRoot.getFile(
+        path.removeFileExtension.addFileExtension("cert.v"))
   }
 }
 
