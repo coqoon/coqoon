@@ -153,7 +153,13 @@
             categoryId="Kopitiam.category"
             defaultHandler="dk.itu.sdg.kopitiam.VerifyMethodHandler"
             id="Kopitiam.verify_method"
-            name="Verify method command">
+            name="Verify Java method command">
+      </command>
+      <command
+            categoryId="Kopitiam.category"
+            defaultHandler="dk.itu.sdg.kopitiam.SaveProofCertificateHandler"
+            id="Kopitiam.save_proof_certificate"
+            name="Save Java proof certificate command">
       </command>
    </extension>
    <extension
@@ -241,6 +247,13 @@
                label="Verify method"
                style="push"
                tooltip="Verify method">
+         </command>
+         <command
+               commandId="Kopitiam.save_proof_certificate"
+               icon="icons/checkmark.gif"
+               label="Save proof certificate"
+               style="push"
+               tooltip="Save proof certificate">
          </command>
       </menuContribution>
       <menuContribution
