@@ -9,7 +9,9 @@ package dk.itu.sdg.kopitiam
 
 object UIUtils {
   import org.eclipse.ui.PlatformUI
-  def getDisplay = PlatformUI.getWorkbench.getDisplay
+  def getWorkbench = PlatformUI.getWorkbench
+  def getDisplay = getWorkbench.getDisplay
+  def getActiveShell = getDisplay.getActiveShell
   
   def syncExec(r : Runnable) : Unit = getDisplay.syncExec(r)
   def syncExec(r : => Unit) : Unit = syncExec(new Runnable() {
@@ -25,6 +27,14 @@ object UIUtils {
     org.eclipse.jface.dialogs.MessageDialog.openWarning(
         getDisplay.getActiveShell, title, message)
   }
+  
+  import org.eclipse.ui.IEditorPart
+  def getActionBars(editor : IEditorPart) =
+    editor.getEditorSite.getActionBars
+  def getStatusLineManager(editor : IEditorPart) =
+    getActionBars(editor).getStatusLineManager
+  def getProgressMonitor(editor : IEditorPart) =
+    getStatusLineManager(editor).getProgressMonitor
   
   object Color {
     import org.eclipse.swt.graphics.{RGB, Color}
