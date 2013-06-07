@@ -96,15 +96,14 @@ private object CEWrapper {
   }
 }
 
-abstract class JobBase(name : String) extends Job(name) {
-  protected def runner : JobRunner[_]
-  
+abstract class JobBase(
+    name : String, runner : JobRunner[_]) extends Job(name) {
   override def run(monitor_ : IProgressMonitor) : IStatus =
     CEWrapper.wrap { runner.run(monitor_) }
 }
 
-abstract class ContainerJobBase(
-    name : String, container : CoqTopContainer) extends JobBase(name) {
+abstract class ContainerJobBase(name : String, runner : JobRunner[_],
+    container : CoqTopContainer) extends JobBase(name, runner) {
   setRule(ObjectRule(container))
   
   override def run(monitor_ : IProgressMonitor) : IStatus =

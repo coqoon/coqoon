@@ -6,9 +6,8 @@ import org.eclipse.core.runtime.Path
 import org.eclipse.core.runtime.jobs.Job
 
 class JavaProofInitialisationJob(jes : JavaEditorState)
-    extends ContainerJobBase("Initialising Java proof mode", jes) {
-  override def runner = new JavaProofInitialisationRunner(jes)
-}
+    extends ContainerJobBase("Initialising Java proof mode",
+        new JavaProofInitialisationRunner(jes), jes)
 class JavaProofInitialisationRunner(
     jes : JavaEditorState) extends JobRunner[Unit] {
   override def doOperation(monitor : SubMonitor) : Unit = {
@@ -103,9 +102,8 @@ class JavaProofInitialisationRunner(
 }
 
 class JavaStepForwardJob(steps : List[JavaStep], jes : JavaEditorState)
-    extends ContainerJobBase("Stepping forward", jes) {
-  override def runner = new JavaStepForwardRunner(jes, steps)
-}
+    extends ContainerJobBase(
+        "Stepping forward", new JavaStepForwardRunner(jes, steps), jes)
 class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
     extends StepForwardRunner(jes, steps) {
   override protected def onGood(
@@ -154,9 +152,8 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
 }
 
 class JavaStepBackJob(jes : JavaEditorState, stepCount : Int)
-    extends ContainerJobBase("Stepping forward", jes) {
-  override def runner = new JavaStepBackRunner(jes, stepCount)
-}
+    extends ContainerJobBase(
+        "Stepping forward", new JavaStepBackRunner(jes, stepCount), jes)
 class JavaStepBackRunner(jes : JavaEditorState, stepCount : Int)
     extends StepRunner[String](jes) {
   override protected def doOperation(

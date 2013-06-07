@@ -36,10 +36,8 @@ import org.eclipse.core.resources.IFile
 import org.eclipse.core.runtime.jobs.Job
 import org.eclipse.core.runtime.{SubMonitor, IProgressMonitor}
 
-class CoqCompileJob(source : IFile)
-    extends JobBase("Compiling Coq file " + source.getName) {
-  override protected def runner = new CoqCompileRunner(source)
-}
+class CoqCompileJob(source : IFile) extends JobBase(
+    "Compiling Coq file " + source.getName, new CoqCompileRunner(source))
 class CoqCompileRunner(source : IFile) extends JobRunner[Unit] {
   import org.eclipse.core.runtime.{IStatus, Status}
   import java.io.File
