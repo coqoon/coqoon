@@ -157,7 +157,7 @@ abstract class StepForwardRunner[A <: CoqCommand](
     
   override def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
-    monitor.beginTask("Step forward", steps.length)
+    monitor.beginTask("Stepping forward", steps.length)
     initialise
     for (step <- steps) {
       if (monitor.isCanceled)

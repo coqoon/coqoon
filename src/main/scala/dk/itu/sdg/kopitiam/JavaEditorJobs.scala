@@ -153,12 +153,12 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
 
 class JavaStepBackJob(jes : JavaEditorState, stepCount : Int)
     extends ContainerJobBase(
-        "Stepping forward", new JavaStepBackRunner(jes, stepCount), jes)
+        "Stepping back", new JavaStepBackRunner(jes, stepCount), jes)
 class JavaStepBackRunner(jes : JavaEditorState, stepCount : Int)
     extends StepRunner[String](jes) {
   override protected def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
-    monitor.beginTask("Java step back", 2)
+    monitor.beginTask("Stepping back", 2)
     
     val steps = jes.steps.synchronized { jes.steps.take(stepCount) }
     val rewindCount = steps.size /* XXX: synthetic steps? */

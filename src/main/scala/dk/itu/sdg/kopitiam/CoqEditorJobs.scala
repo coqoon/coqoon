@@ -70,12 +70,12 @@ class RestartCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
 }
 
 class CoqStepBackJob(editor : CoqEditor, stepCount : Int) extends CoqEditorJob(
-    "Step back", new CoqStepBackRunner(editor, stepCount), editor)
+    "Stepping back", new CoqStepBackRunner(editor, stepCount), editor)
 class CoqStepBackRunner(editor : CoqEditor, stepCount : Int)
     extends StepRunner[String](editor) {
   override protected def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
-    monitor.beginTask("Step back", 2)
+    monitor.beginTask("Stepping back", 2)
     
     val steps = editor.steps.synchronized { editor.steps.take(stepCount) }
     val rewindCount = steps.count(_.synthetic == false)
