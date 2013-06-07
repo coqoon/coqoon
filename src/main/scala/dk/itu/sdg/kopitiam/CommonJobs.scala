@@ -36,15 +36,8 @@ abstract class ResourceJob(name : String, resource : IResource,
   
   protected def doOperation(monitor : IProgressMonitor)
   
-  override def runInWorkspace(monitor : IProgressMonitor) : IStatus = {
-    try {
-      doOperation(monitor)
-      Status.OK_STATUS
-    } catch {
-      case e : CoreException => new Status(e.getStatus.getSeverity,
-          "dk.itu.sdg.kopitiam", "Resource job execution failed.", e)
-    }
-  }
+  override def runInWorkspace(monitor : IProgressMonitor) =
+    CEWrapper.wrap { doOperation(monitor) }
 }
 
 abstract class MarkerJob(resource : IResource) extends ResourceJob(
@@ -93,16 +86,21 @@ object CreateErrorMarkerJob {
 import org.eclipse.core.runtime.jobs.Job
 import org.eclipse.core.runtime.SubMonitor
 
-abstract class JobBase(name : String) extends Job(name) {
-  protected def runner : JobRunner[_]
-  
-  override def run(monitor_ : IProgressMonitor) : IStatus = try {
-    runner.run(monitor_)
+private object CEWrapper {
+  def wrap(f : => Any) : IStatus = try {
+    f
     Status.OK_STATUS
   } catch {
     case e : CoreException => new Status(e.getStatus.getSeverity,
-          "dk.itu.sdg.kopitiam", "Job runner execution failed.", e)
+          "dk.itu.sdg.kopitiam", "Execution failed.", e)
   }
+}
+
+abstract class JobBase(name : String) extends Job(name) {
+  protected def runner : JobRunner[_]
+  
+  override def run(monitor_ : IProgressMonitor) : IStatus =
+    CEWrapper.wrap { runner.run(monitor_) }
 }
 
 abstract class ContainerJobBase(
