@@ -116,16 +116,10 @@ class SaveProofCertificateHandler extends JavaEditorHandler {
           import org.eclipse.core.runtime.{
             Status, CoreException, IProgressMonitor}
           import org.eclipse.core.resources.{IResource, WorkspaceJob}
-          new WorkspaceJob("Saving proof certificate") {
-            setRule(ws.getWorkspace.getRuleFactory.modifyRule(file))
-            override def runInWorkspace(monitor : IProgressMonitor) = {
-              try {
-                file.setContents(contents, IResource.KEEP_HISTORY, monitor)
-                Status.OK_STATUS
-              } catch {
-                case e : CoreException => e.getStatus
-              }
-            }
+          new ResourceJob("Saving proof certificate", file,
+              ws.getWorkspace.getRuleFactory.modifyRule) {
+            override def doOperation(monitor : IProgressMonitor) =
+              file.setContents(contents, IResource.KEEP_HISTORY, monitor)
           }.schedule
         }
       }
