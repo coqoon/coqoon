@@ -318,6 +318,29 @@
                   style="push"
                   tooltip="Compile">
             </command>
+            <separator
+                  name="Kopitiam.coqMenu.separator1"
+                  visible="true">
+            </separator>
+            <menu
+                  id="Kopitiam.coqMenu.javaMenu"
+                  label="Java">
+               <command
+                     commandId="Kopitiam.verify_method"
+                     icon="icons/icon_lego.gif"
+                     id="dk.itu.sdg.kopitiam.popupContribution"
+                     label="Verify method"
+                     style="push"
+                     tooltip="Verify method">
+               </command>
+               <command
+                     commandId="Kopitiam.save_proof_certificate"
+                     icon="icons/checkmark.gif"
+                     label="Save proof certificate"
+                     style="push"
+                     tooltip="Save proof certificate">
+               </command>
+            </menu>
             <visibleWhen
                   checkEnabled="false">
                <with
