@@ -7,7 +7,8 @@
 
 package dk.itu.sdg.kopitiam
 
-import org.eclipse.core.runtime.{Status, IStatus, IProgressMonitor}
+import org.eclipse.core.runtime.{
+  Status, IStatus, CoreException, IProgressMonitor}
 import org.eclipse.core.resources.{IMarker, IResource}
 import org.eclipse.core.runtime.jobs.ISchedulingRule
 
@@ -89,7 +90,8 @@ abstract class JobBase(name : String) extends Job(name) {
     runner.run(monitor_)
     Status.OK_STATUS
   } catch {
-    case StatusWrapper(status) => status
+    case e : CoreException => new Status(e.getStatus.getSeverity,
+          "dk.itu.sdg.kopitiam", "Job runner execution failed.", e)
   }
 }
 
@@ -117,11 +119,9 @@ trait JobRunner[A] {
     }
   }
   
-  protected def fail(status : IStatus) = throw StatusWrapper(status)
+  protected def fail(status : IStatus) = throw new CoreException(status)
   protected def cancel = fail(Status.CANCEL_STATUS)
 }
-
-case class StatusWrapper(status : IStatus) extends Exception
 
 abstract class StepRunner[A](container : CoqTopContainer)
     extends JobRunner[CoqTypes.value[A]] {
