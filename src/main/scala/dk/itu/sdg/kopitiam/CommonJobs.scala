@@ -29,36 +29,46 @@ object JobUtilities {
 
 import org.eclipse.core.resources.WorkspaceJob
 
-abstract class MarkerJob(
-    resource : IResource) extends WorkspaceJob("Update markers") {
-  setRule(JobUtilities.getRuleFactory.markerRule(resource))
+abstract class ResourceJob(name : String, resource : IResource,
+    ruleProvider : IResource => ISchedulingRule) extends WorkspaceJob(name) {
+  setRule(ruleProvider(resource))
   setSystem(true) /* Don't show this job in the UI */
+  
+  protected def doOperation(monitor : IProgressMonitor)
+  
+  override def runInWorkspace(monitor : IProgressMonitor) : IStatus = {
+    try {
+      doOperation(monitor)
+      Status.OK_STATUS
+    } catch {
+      case e : CoreException => new Status(e.getStatus.getSeverity,
+          "dk.itu.sdg.kopitiam", "Resource job execution failed.", e)
+    }
+  }
 }
+
+abstract class MarkerJob(resource : IResource) extends ResourceJob(
+    "Update markers", resource, JobUtilities.getRuleFactory.markerRule)
 
 class DeleteMarkersJob(
     resource : IResource, type_ : String,
     includeSubtypes : Boolean, depth : Int) extends MarkerJob(resource) {
-  override def runInWorkspace(monitor : IProgressMonitor) : IStatus = {
+  override protected def doOperation(monitor : IProgressMonitor) = 
     resource.deleteMarkers(type_, includeSubtypes, depth)
-    Status.OK_STATUS
-  }
 }
 
 class CreateMarkerJob(
     resource : IResource, region : (Int, Int), message : String,
     type_ : String, severity : Int) extends MarkerJob(resource) {
-  override def runInWorkspace(monitor : IProgressMonitor) : IStatus = {
-    val m = resource.createMarker(type_)
-    import scala.collection.JavaConversions._
-    m.setAttributes(Map(
+  import scala.collection.JavaConversions._
+  override protected def doOperation(monitor : IProgressMonitor) =
+    resource.createMarker(type_).setAttributes(Map(
         (IMarker.MESSAGE, message),
         (IMarker.LOCATION, resource.toString),
         (IMarker.SEVERITY, severity),
         (IMarker.CHAR_START, region._1),
         (IMarker.CHAR_END, region._2),
         (IMarker.TRANSIENT, true)))
-    Status.OK_STATUS
-  }
 }
 
 class CreateErrorMarkerJob(
