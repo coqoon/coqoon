@@ -2,7 +2,7 @@
 
 package dk.itu.sdg.kopitiam
 
-trait VisitingAST {
+object VisitingAST {
   import org.eclipse.jdt.core.IJavaElement
   import org.eclipse.jdt.core.dom.SimpleName
   def isField (y : SimpleName) : Boolean = {
@@ -19,12 +19,21 @@ trait VisitingAST {
     res
   }
 
-  import org.eclipse.core.resources.IMarker
-  import org.eclipse.jdt.core.dom.ASTNode
-  def reportError (txt : String, s : ASTNode) : Unit = {
-    JavaPosition.mark(txt, s.getStartPosition, s.getLength, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+  class ReportingVisitor(jes : JavaEditorState) extends Visitor {
+    private var success = true
+    
+    def getSuccess = success
+    
+    import org.eclipse.jdt.core.dom.ASTNode
+    def reportError (txt : String, s : ASTNode) : Unit = {
+      import org.eclipse.ui.IFileEditorInput
+      success = false
+      CreateErrorMarkerJob(
+          jes.editor.getEditorInput.asInstanceOf[IFileEditorInput].getFile,
+          (s.getStartPosition, s.getStartPosition + s.getLength), txt).schedule
+    }
   }
-
+  
   //beware of the boilerplate. nothing interesting to see below.
   import org.eclipse.jdt.core.dom.ASTVisitor
 

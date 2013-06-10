@@ -1,0 +1,509 @@
+/* CoqTopIdeSlave.scala
+ * Communicate with coqtop using the new -ideslave protocol
+ * Copyright © 2013 Alexander Faithfull
+ * 
+ * You may use, copy, modify and/or redistribute this code subject to the terms
+ * of either the license of Kopitiam or the Apache License, version 2.0 */
+
+package dk.itu.sdg.kopitiam
+import scala.collection.mutable.ArrayBuilder
+
+trait CoqTopIdeSlave {
+  def version : String
+  
+  def kill
+  def interrupt
+}
+
+object CoqTopIdeSlave {
+  import java.io.File
+  def checkProgramPath() : Boolean = new File(getProgramPath).exists()
+  
+  def getProgramPath : String = getProgramPath("coqtop")
+  
+  def getProgramPath(program : String) : String = {
+    val ac = Activator.getDefault
+    getProgramPath(program,
+      if (ac != null) ac.getPreferenceStore.getString("coqpath") else "")
+  }
+  
+  def getProgramPath(program : String, dir : String) : String = {
+    val programName = (if (PlatformUtilities.isWindows) {
+      program + ".exe"
+    } else program)
+    if (dir == null || dir.length == 0) {
+      programName
+    } else dir + File.separator + programName
+  }
+}
+
+private object PlatformUtilities {
+  def getOSName = System.getProperty("os.name").toLowerCase
+  def isWindows = getOSName.contains("windows")
+}
+
+trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
+  import CoqTypes._
+  
+  override def version = "20120710"
+  
+  /* All of these methods perform synchronised and blocking I/O */
+  def interp(raw : raw, verbose : verbose, string : String) : value[String]
+  def rewind(steps : Int) : value[Int]
+  def goals : value[Option[goals]]
+  def hints : value[Option[Pair[List[hint], hint]]]
+  def status : value[status]
+  def inloadpath(dir : String) : value[Boolean]
+  def mkcases(inductive : String) : value[List[List[String]]]
+  def evars : value[Option[List[evar]]]
+  def search(sf : search_flags) : value[List[coq_object[String]]]
+  def get_options : value[List[Pair[option_name, option_state]]]
+  def set_options(
+      options : List[Pair[option_name, option_value]]) : value[Unit]
+  def quit : value[Unit]
+  /* ? */ def about : value[coq_info]
+  
+  def transaction[A](f : CoqTopIdeSlave_v20120710 => A) : value[A] = {
+    val status = this.status match {
+      case Good(s) => Some(s.status_statenum)
+      case _ => None
+    }
+    try {
+      CoqTypes.Good(f(new ExceptionalCoqTopIdeSlave_v20120710(this)))
+    } catch {
+      case CoqFail(ep) =>
+        interp(true, false, "BackTo " + status.getOrElse(1) + ".")
+        CoqTypes.Fail[A](ep)
+    }
+  }
+}
+object CoqTopIdeSlave_v20120710 {
+  def apply() : Option[CoqTopIdeSlave_v20120710] =
+    if (PlatformUtilities.isWindows) {
+      Some(new CoqTopIdeSlaveImplWindows())
+    } else Some(new CoqTopIdeSlaveImplPOSIX())
+}
+
+import java.io.{Reader, Writer}
+import scala.sys.process.Process
+
+private abstract class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
+  private var in : Writer = null
+  private var out : Reader = null
+  
+  private var pr : Process = null
+  
+  override def kill = {
+    if (in != null)
+      in.close()
+    if (out != null)
+      out.close()
+    if (pr != null)
+      pr.destroy
+    pr = null
+    in = null
+    out = null
+  }
+  
+  protected def start : (Writer, Reader, Process)
+  
+  import scala.xml.{Attribute, Elem, Node, Null, Text, XML}
+  private def sendRaw(n : Elem) : Elem = synchronized {
+    if (in == null || out == null || pr == null)
+      start match {
+        case (in, out, pr) =>
+          this.in = in
+          this.out = out
+          this.pr = pr
+      }
+    in.write(n.toString())
+    in.flush()
+    println("TO   " + n.toString())
+    var t = new String()
+    @scala.annotation.tailrec def _util : Elem = {
+      val c = out.read()
+      if (c == -1)
+        return null
+      val ch = c.asInstanceOf[Char]
+      t += ch
+      if (ch == '>' && t.endsWith("</value>")) {
+        XML.loadString(t)
+      } else _util
+    }
+    val x = _util
+    println("FROM " + x.toString())
+    x
+  }
+  
+  private def send[A](n : Elem, f : Elem => A) = {
+    unwrapValue(sendRaw(n), f)
+  }
+  
+  private def childElements(e : Elem) : Seq[Elem] = {
+    (e \ "_").collect({case el : Elem => el})
+  }
+  
+  import scala.xml.UnprefixedAttribute
+  
+  implicit def pairToAttribute(a : Pair[String, String]) : UnprefixedAttribute =
+    new UnprefixedAttribute(a._1, a._2, Null)
+  
+  private def wrapString(a : String) : Elem = <string>{a}</string>
+  private def unwrapString(e : Elem) = e.text.trim()
+  
+  private def wrapInt(a : Int) : Elem = <int>{a}</int>
+  private def unwrapInt(e : Elem) = unwrapString(e).toInt
+  
+  private def wrapBoolean(a : Boolean) : Elem =
+    Elem(null, "bool", ("val", a.toString), scala.xml.TopScope)
+    
+  private def unwrapBoolean(e : Elem) = e.attribute("val") match {
+  	case Some(Seq(Text(a))) => a.trim.toBoolean
+  	case _ => false
+  }
+  
+  private def unwrapValue[A](e : Elem, f : Elem => A) : CoqTypes.value[A] = {
+    e.attribute("val") match {
+      case Some(Seq(Text("fail"))) => {
+        CoqTypes.Fail(Pair(
+            Pair(e.attribute("loc_s"), e.attribute("loc_e")) match {
+              case Pair(Some(Seq(Text(a))), Some(Seq(Text(b)))) =>
+                Some(a.toInt, b.toInt)
+              case _ => None
+            }, e.text))
+      }
+      case Some(Seq(Text("good"))) => CoqTypes.Good(f(e))
+      case Some(Seq(Text("unsafe"))) => CoqTypes.Unsafe(f(e))
+      case _ => null
+    }
+  }
+  
+  private def wrapOption[A](a : Option[A], f : A => Elem) : Elem = {
+    val wr = a match {
+      case Some(b) => ("some", f(b))
+      case None => ("none", null)
+    }
+    Elem(null, "option", ("val", wr._1), scala.xml.TopScope, wr._2)
+  }
+  
+  private def unwrapOption[A](e : Elem, f : Elem => A) = {
+    e.attribute("val") match {
+      case Some(Seq(Text("some"))) => Some(f(childElements(e).head))
+      case _ => None
+    }
+  }
+  
+  private def wrapList[A](sf : List[A], f : A => Elem) : Elem = {
+    val children = sf.map(f)
+    Elem(null, "list", Null, scala.xml.TopScope, children : _*)
+  }
+  
+  private def unwrapList[A](e : Elem, f : Elem => A) = {
+    childElements(e).map(f).toList
+  }
+  
+  private def wrapPair[A, B](a : Pair[A, B], f : A => Elem, g : B => Elem) = {
+    val children = List(f(a._1), g(a._2))
+    Elem(null, "pair", Null, scala.xml.TopScope, children : _*)
+  }
+  
+  private def unwrapPair[A, B](e : Elem, f : Elem => A, g : Elem => B) = {
+    val ce = childElements(e)
+    Pair(f(ce(0)), g(ce(1)))
+  }
+  
+  private def unwrapHint(a : Elem) = {
+    CoqTypes.hint(
+        unwrapList(a,
+            unwrapPair(_, unwrapString, unwrapString)))
+  }
+  
+  private def unwrapStatus(a : Elem) = {
+    val ce = childElements(a)
+    CoqTypes.status(
+        unwrapList(ce(0), unwrapString),
+        unwrapOption(ce(1), unwrapString),
+        unwrapList(ce(2), unwrapString),
+        unwrapInt(ce(3)), unwrapInt(ce(4)))
+  }
+  
+  private def unwrapGoal(a : Elem) = {
+    val ce = childElements(a)
+    CoqTypes.goal(
+        unwrapString(ce(0)),
+        unwrapList(ce(1), unwrapString),
+        unwrapString(ce(2)))
+  }
+  
+  private def unwrapGoals(a : Elem) = {
+    val ce = childElements(a)
+    CoqTypes.goals(
+        unwrapList(ce(0), unwrapGoal),
+        unwrapList(ce(1), unwrapPair(_,
+            unwrapList(_, unwrapGoal),
+            unwrapList(_, unwrapGoal))))
+  }
+  
+  private def unwrapCoqObjectString(a : Elem) = {
+    val ce = childElements(a)
+    CoqTypes.coq_object[String](
+        unwrapList(ce(0), unwrapString),
+        unwrapList(ce(1), unwrapString),
+        unwrapString(ce(2)))
+  }
+  
+  private def wrapOptionName(a : List[String]) = wrapList(a, wrapString)
+  
+  private def unwrapOptionName(a : Elem) = unwrapList(a, unwrapString)
+  
+  private def unwrapOptionState(a : Elem) = {
+    val ce = childElements(a)
+    CoqTypes.option_state(
+        unwrapBoolean(ce(0)),
+        unwrapBoolean(ce(1)),
+        unwrapString(ce(2)),
+        unwrapOptionValue(ce(3)))
+  }
+  
+  private def wrapOptionValue(st : CoqTypes.option_value) : Elem = {
+    val wr = st match {
+      case b : CoqTypes.BoolValue =>
+        ("boolvalue", wrapBoolean(b.value))
+      case i : CoqTypes.IntValue =>
+        ("intvalue", wrapOption(i.value, wrapInt))
+      case s : CoqTypes.StringValue =>
+        ("stringvalue", wrapString(s.value))
+    }
+    Elem(null, "option_value", ("val", wr._1), scala.xml.TopScope, wr._2)
+  }
+  
+  private def unwrapOptionValue(a : Elem) = {
+    val ch = childElements(a).head
+    a.attribute("val") match {
+      case Some(Seq(Text("intvalue"))) =>
+        CoqTypes.IntValue(unwrapOption(ch, unwrapInt))
+      case Some(Seq(Text("boolvalue"))) =>
+        CoqTypes.BoolValue(unwrapBoolean(ch))
+      case Some(Seq(Text("stringvalue"))) =>
+        CoqTypes.StringValue(unwrapString(ch))
+      case _ => null
+    }
+  }
+  
+  override def interp(r : CoqTypes.raw, v : CoqTypes.verbose, s : String) =
+    send(
+      (<call val="interp">{s}</call> %
+        ("raw", if (r) "true" else null) %
+        ("verbose", if (v) "true" else null)),
+      unwrapString)
+  
+  override def rewind(steps : Int) =
+    send(
+      (<call val="rewind" /> % ("steps", steps.toString)),
+      a => unwrapInt(childElements(a).head))
+
+  override def goals =
+    send(
+      (<call val="goal" />),
+      a => unwrapOption(
+          childElements(a).head, unwrapGoals))
+  
+  override def hints =
+    send(
+      (<call val="hints" />),
+      a => unwrapOption(
+          childElements(a).head,
+          unwrapPair(_,
+              unwrapList(_, unwrapHint(_)),
+              unwrapHint(_))))
+      
+  override def status =
+    send(
+      (<call val="status" />),
+      a => unwrapStatus(childElements(a).head))
+
+  override def inloadpath(dir : String) =
+    send(
+      (<call val="inloadpath">{dir}</call>),
+      a => unwrapBoolean(childElements(a).head))
+
+  override def mkcases(inductive : String) =
+    send(
+      (<call val="mkcases">{inductive}</call>),
+      a => unwrapList(childElements(a).head, unwrapList(_, { _.text })))
+      
+  override def evars =
+    send(
+      (<call val="evars" />),
+      a => unwrapOption(
+          childElements(a).head,
+          unwrapList(_, b => { CoqTypes.evar(b.text)})))
+  
+  private def wrapSearchFlags(sf : CoqTypes.search_flags) : List[Elem] =
+    sf.map(_ match {
+      case (c : CoqTypes.search_constraint, b) =>
+        Elem(null, "pair", Null, scala.xml.TopScope, c match {
+          case p : CoqTypes.Name_Pattern =>
+            Elem(null, "search_constraint",
+                ("val", "name_pattern"), scala.xml.TopScope,
+                wrapString(p.value))
+          case p : CoqTypes.Type_Pattern =>
+            Elem(null, "search_constraint",
+                ("val", "type_pattern"), scala.xml.TopScope,
+                wrapString(p.value))
+          case p : CoqTypes.SubType_Pattern =>
+            Elem(null, "search_constraint",
+                ("val", "subtype_pattern"), scala.xml.TopScope,
+                wrapString(p.value))
+          case p : CoqTypes.In_Module =>
+            Elem(null, "search_constraint",
+                ("val", "in_module"), scala.xml.TopScope,
+                wrapList(p.value, wrapString))
+          case p : CoqTypes.Include_Blacklist =>
+            Elem(null, "search_constraint",
+                ("val", "include_blacklist"), scala.xml.TopScope)
+        }, wrapBoolean(b))
+    })
+  
+  private def wrapSearch(sf : CoqTypes.search_flags) : Elem = {
+    val children = wrapSearchFlags(sf)
+    Elem(null, "call", ("val", "search"), scala.xml.TopScope, children : _*)
+  }
+  
+  override def search(sf : CoqTypes.search_flags) =
+    send(
+      wrapSearch(sf),
+      a => unwrapList(
+          childElements(a).head,
+          unwrapCoqObjectString))
+  
+  override def get_options =
+    send(
+      (<call val="getoptions" />),
+      a => unwrapList(
+          childElements(a).head,
+          unwrapPair(_,
+              unwrapOptionName,
+              unwrapOptionState)))
+  
+  private def wrapOptions(
+      options : List[Pair[CoqTypes.option_name, CoqTypes.option_value]]) :
+          List[Elem] = {
+    options.map(wrapPair(_, wrapOptionName, wrapOptionValue))
+  }
+  
+  private def wrapSetOptions(
+      options : List[Pair[CoqTypes.option_name, CoqTypes.option_value]]) :
+          Elem = {
+    val children = wrapOptions(options)
+    Elem(null,
+        "call", ("val", "setoptions"), scala.xml.TopScope, children : _*)
+  }
+              
+  override def set_options(
+      options : List[Pair[CoqTypes.option_name, CoqTypes.option_value]]) = {
+    send(
+      wrapSetOptions(options),
+      _ => ())
+  }
+
+  override def quit =
+    send(
+      (<call val="quit" />),
+      _ => ())
+  
+  override def about =
+    send(
+      (<call val="about" />),
+      a => {
+        val cif = (a \ "coq_info").head.child
+        CoqTypes.coq_info(
+          cif(0).text, cif(1).text, cif(2).text, cif(3).text)
+      })
+}
+
+import java.io.{InputStreamReader, OutputStreamWriter}
+import scala.sys.process.ProcessIO
+
+private class CoqTopIdeSlaveImplWindows extends CoqTopIdeSlaveImpl {
+  override protected def start : (Writer, Reader, Process) = {
+    var in : Writer = null
+    var out : Reader = null
+    var pr = Process(Seq(CoqTopIdeSlave.getProgramPath, "-ideslave")).run(
+      new ProcessIO(
+        a => in = new OutputStreamWriter(a),
+        a => out = new InputStreamReader(a),
+        _ => ()))
+    (in, out, pr)
+  }
+  
+  override def interrupt = Unit // TODO
+}
+
+private class CoqTopIdeSlaveImplPOSIX extends CoqTopIdeSlaveImpl {
+  private var pid : String = null
+  
+  override def kill = {
+    pid = null
+    super.kill
+  }
+  
+  override protected def start : (Writer, Reader, Process) = {
+    var in : Writer = null
+    var out : Reader = null
+    var pr = Process(Seq(
+        "/bin/sh", "-c", "echo $$; exec \"$@\"", "coqtop-wrapper",
+        CoqTopIdeSlave.getProgramPath, "-ideslave")).run(
+      new ProcessIO(
+        a => in = new OutputStreamWriter(a),
+        a => out = new InputStreamReader(a),
+        _ => ()))
+    
+    val sb = new StringBuilder
+    var a : Int = out.read
+    while (a != -1 && a != '\n') {
+      sb += a.asInstanceOf[Char]
+      a = out.read
+    }
+    pid = sb.toString
+    
+    (in, out, pr)
+  }
+  
+  override def interrupt = {
+    if (pid != null) 
+      Process(Seq("kill", "-INT", pid)).run
+  }
+}
+
+private class ExceptionalCoqTopIdeSlave_v20120710(
+    base : CoqTopIdeSlave_v20120710) extends CoqTopIdeSlave_v20120710 {
+  import CoqTypes._
+  
+  private def check[A](result : value[A]) : value[A] = result match {
+    case Good(a) => result
+    case Unsafe(a) => result
+    case Fail(ep) => throw new CoqFail(ep)
+  }
+  
+  override def kill = base.kill
+  override def interrupt = base.interrupt
+  
+  override def interp(raw : raw, verbose : verbose, string : String) =
+    check(base.interp(raw, verbose, string))
+  override def rewind(steps : Int) = check(base.rewind(steps))
+  override def goals = check(base.goals)
+  override def hints = check(base.hints)
+  override def status = check(base.status)
+  override def inloadpath(dir : String) = check(base.inloadpath(dir))
+  override def mkcases(inductive : String) = check(base.mkcases(inductive))
+  override def evars = check(base.evars)
+  override def search(sf : search_flags) = check(base.search(sf))
+  override def get_options = check(base.get_options)
+  override def set_options(options : List[Pair[option_name, option_value]]) =
+    check(base.set_options(options))
+  override def quit = check(base.quit)
+  override def about = check(base.about)
+}
+private case class CoqFail(
+    ep : Pair[CoqTypes.location, String]) extends Exception

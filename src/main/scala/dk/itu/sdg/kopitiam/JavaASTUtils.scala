@@ -2,29 +2,31 @@
 
 package dk.itu.sdg.kopitiam
 
-trait JavaASTUtils {
+object JavaASTUtils {
 
   import org.eclipse.jdt.core.dom.{EmptyStatement, Statement}
-  import org.eclipse.jface.text.IDocument
-  def printProofScript (document : IDocument, statement : Statement) : Option[String] =
+  def printProofScript (statement : Statement) : Option[String] =
     statement match {
       case x : EmptyStatement =>
-        val script = document.get(x.getStartPosition, x.getLength)
-        val con =
-          if (script.contains("invariant:")) {
-            val i1 = script.indexOf(":")
-            val i2 = script.indexOf("frame:")
-            val i3 = if (i2 == -1) script.length - 3 else i2
-            val i = script.substring(i1 + 1, i3).trim
-            val f =
-              if (i2 == -1)
-                "<true>"
-              else
-                script.substring(i3 + 6, script.length - 3).trim
-            "forward (" + i + ") (" + f + ")."
-          } else
-            script.drop(2).dropRight(2).trim
-        Some(con)
+        statement.getProperty("dk.itu.sdg.kopitiam.contentExpr") match {
+          case script : String if script.length > 0 =>
+            val con =
+              if (script.contains("invariant:")) {
+                val i1 = script.indexOf(":")
+                val i2 = script.indexOf("frame:")
+                val i3 = if (i2 == -1) script.length - 3 else i2
+                val i = script.substring(i1 + 1, i3).trim
+                val f =
+                  if (i2 == -1)
+                    "<true>"
+                  else
+                    script.substring(i3 + 6, script.length - 3).trim
+                "forward (" + i + ") (" + f + ")."
+              } else script
+            Some(con)
+          case _ =>
+            None
+        }
       case x : Statement =>
         val fwd = Activator.getDefault.getPreferenceStore.getBoolean("implicit")
         if (fwd)
@@ -45,7 +47,7 @@ trait JavaASTUtils {
       todo = todo.pop
       st match {
         case x : Block =>
-          val body = scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement])
+          val body = scala.collection.JavaConversions.asScalaBuffer(x.statements).map(_.asInstanceOf[Statement])
           if (forward)
             todo = todo.pushAll(body.reverse)
           else
@@ -77,7 +79,7 @@ trait JavaASTUtils {
   def traverseCU [A](c : CompilationUnit, callback : MethodDeclaration => A) : List[A] = {
     var res : List[A] = List[A]()
     var todo : Stack[AbstractTypeDeclaration] = Stack[AbstractTypeDeclaration]()
-    todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(c.types).map(_.asInstanceOf[AbstractTypeDeclaration]))
+    todo = todo.pushAll(scala.collection.JavaConversions.asScalaBuffer(c.types).map(_.asInstanceOf[AbstractTypeDeclaration]))
     while (!todo.isEmpty) {
       val t = todo.top
       todo = todo.pop
@@ -92,9 +94,5 @@ trait JavaASTUtils {
     res.reverse
   }
 
-  def countMethods (c : CompilationUnit) : Int = {
-    val ctr : MethodDeclaration => Int = x => 1
-    traverseCU(c, ctr).size
-  }
+  def countMethods (c : CompilationUnit) : Int = traverseCU(c, _ => 1).size
 }
-

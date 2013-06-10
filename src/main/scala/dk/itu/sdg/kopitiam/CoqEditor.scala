@@ -2,9 +2,58 @@
 
 package dk.itu.sdg.kopitiam
 
+import org.eclipse.ui.IEditorInput
 import org.eclipse.ui.editors.text.TextEditor
 
-class CoqEditor extends TextEditor with EclipseUtils {
+class CoqEditor extends TextEditor with CoqTopEditorContainer {
+  override def editor = this
+  
+  import scala.collection.mutable.Stack
+  private var stepsV : Stack[CoqStep] = Stack[CoqStep]()
+  def steps = stepsV
+  
+  private var underwayV : Int = 0
+  def underway = underwayV
+  def setUnderway(offset : Int) = {
+    if (offset < completedV)
+      completedV = offset
+    underwayV = offset
+    addAnnotations_(completed, underway)
+  }
+  
+  private var completedV : Int = 0
+  def completed = completedV
+  def setCompleted(offset : Int) = {
+    completedV = offset
+    addAnnotations_(completed, underway)
+  }
+  
+  private var coqTopV : CoqTopIdeSlave_v20120710 = null
+  override def coqTop = {
+    if (coqTopV == null)
+      coqTopV = CoqTopIdeSlave_v20120710().orNull
+    coqTopV
+  }
+  
+  import org.eclipse.jface.text.reconciler.MonoReconciler
+  private val reconciler =
+    new MonoReconciler(new CoqProofReconcilingStrategy(this), true)
+  reconciler.setDelay(1)
+  
+  import org.eclipse.ui.IEditorSite
+  override def init(site : IEditorSite, input : IEditorInput) = {
+    super.init(site, input)
+  }
+  
+  override def dispose = {
+    if (coqTopV != null) {
+      coqTopV.kill
+      coqTopV = null
+    }
+    reconciler.uninstall
+    super.dispose
+  }
+    
   import dk.itu.sdg.coqparser.VernacularRegion
   import org.eclipse.jface.text.source.{Annotation, IAnnotationModel, ISourceViewer, IVerticalRuler}
   import org.eclipse.jface.text.{IDocument, Position}
@@ -52,60 +101,39 @@ class CoqEditor extends TextEditor with EclipseUtils {
   //Create the source viewer as one that supports folding
   override def createSourceViewer (parent : Composite, ruler : IVerticalRuler, styles : Int) : ISourceViewer = {
     import org.eclipse.jface.text.source.projection.ProjectionViewer
-    val viewer : ISourceViewer = new ProjectionViewer(parent, ruler, getOverviewRuler(), isOverviewRulerVisible(), styles)
+    val viewer : ISourceViewer = new ProjectionViewer(
+        parent, ruler, getOverviewRuler(), isOverviewRulerVisible(), styles)
     getSourceViewerDecorationSupport(viewer)
+    reconciler.install(viewer)
     viewer
   }
 
-  import org.eclipse.jface.text.source.{Annotation, IAnnotationModelExtension}
-  private var processed : Option[Annotation] = None
-  private var processing : Option[Annotation] = None
-
-  import org.eclipse.jface.text.Position
-  import org.eclipse.swt.widgets.Display
+  import org.eclipse.jface.text.source.Annotation
+  private var annotationPair : (Option[Annotation], Option[Annotation]) =
+      (None, None)
+  
   def addAnnotations (first : Int, second : Int) : Unit = {
+    // second is underway, which must always be >= first
+    underwayV = if (second < first) first else second
+    setCompleted(first)
+  }
+  
+  private def addAnnotations_ (first : Int, second : Int) : Unit = {
     val provider = getDocumentProvider
     val doc = provider.getDocument(getEditorInput)
-    //I get IAnnotationModel here, but need IAnnotationModelExtension
-    //(for modifyAnnotationPosition) - disjoint from IAnnotationModel
-    val annmodel = provider.getAnnotationModel(getEditorInput)
-    annmodel.connect(doc)
-    val p = new Position(0, first)
-    processed match {
-      case None =>
-        val ann = new Annotation("dk.itu.sdg.kopitiam.processed", false, "Processed Proof")
-        annmodel.addAnnotation(ann, p)
-        processed = Some(ann)
-      case Some(x) =>
-        val op = annmodel.getPosition(x)
-        val tst = ((op.getLength > p.getLength) || (op.getOffset != p.getOffset))
-        annmodel.asInstanceOf[IAnnotationModelExtension].modifyAnnotationPosition(x, p)
-        if (tst)
-          invalidate
-    }
-    val p2 = if (second > 0) new Position(first, second) else null
-    processing match {
-      case None =>
-        if (second > 0) {
-          val ann2 = new Annotation("dk.itu.sdg.kopitiam.processing", false, "Processing Proof")
-          annmodel.addAnnotation(ann2, p2)
-          processing = Some(ann2)
-        }
-      case Some(x) =>
-        if (second > 0)
-          annmodel.asInstanceOf[IAnnotationModelExtension].modifyAnnotationPosition(x, p2)
-        else {
-          annmodel.removeAnnotation(x)
-          processing = None
-        }
-    }
-    annmodel.disconnect(doc)
+    val model = provider.getAnnotationModel(getEditorInput)
+    model.connect(doc)
+    try {
+      annotationPair = JavaEditorState.doSplitAnnotations(
+          JavaEditorState.getSplitAnnotationRanges(
+              Some(0), Some(first), Some(second)),
+          annotationPair, model)
+    } finally model.disconnect(doc)
+    invalidate()
   }
 
-  def invalidate () : Unit = {
-    Display.getDefault.asyncExec(
-      new Runnable() {
-        def run() = { getSourceViewer.invalidateTextPresentation }})
+  def invalidate () : Unit = UIUtils.asyncExec {
+    getSourceViewer.invalidateTextPresentation
   }
 
   def getSource () : ISourceViewer = {
@@ -120,7 +148,7 @@ class CoqEditor extends TextEditor with EclipseUtils {
   var outlinePage : Option[CoqContentOutlinePage] = None
   override def getAdapter (required : java.lang.Class[_]) : AnyRef = {
     //Console.println("Getting adapter for " + required + " on CoqEditor")
-    if (required.isInterface && required.getName.endsWith("IContentOutlinePage")) {
+    if (required == classOf[IContentOutlinePage]) {
       outlinePage = outlinePage match {
         case p@Some(page) => p
         case None => {
@@ -165,6 +193,13 @@ class CoqEditor extends TextEditor with EclipseUtils {
     Console.println("Updated folding " + annotations.toList)
   }
 
+  import dk.itu.sdg.parsing.{NoLengthPosition, LengthPosition, RegionPosition}
+
+  private def pos2eclipsePos (pos : LengthPosition) : Position = pos match {
+    case NoLengthPosition => new Position(0)
+    case RegionPosition(off, len) => new Position(off, len)
+  }
+  
   private def foldingAnnotations(region : VernacularRegion, document : IDocument) : Stream[(Position, ProjectionAnnotation)] = {
     //println("Collapsable " + region.outlineName + region.outlineNameExtra)
     if (region.pos.hasPosition && document.get(region.pos.offset, region.pos.length).count(_=='\n') >= 2)
@@ -172,6 +207,46 @@ class CoqEditor extends TextEditor with EclipseUtils {
     else
      region.getOutline.flatMap(foldingAnnotations(_, document))
   }
+}
+object CoqEditor {
+  final val FLAG_INITIALISED = "CoqEditor.initialised"
+}
+
+import org.eclipse.jface.text.reconciler.IReconcilingStrategy
+private class CoqProofReconcilingStrategy(
+    editor : CoqEditor) extends IReconcilingStrategy {
+  import org.eclipse.jface.text.{IRegion, Region, IDocument}
+  import org.eclipse.jface.text.reconciler.DirtyRegion
+  
+  import org.eclipse.ui.IFileEditorInput
+  import org.eclipse.core.resources.{IMarker,IResource}
+  
+  override def reconcile(r : IRegion) : Unit = {
+    val input = editor.getEditorInput
+    
+    if (input != null && input.isInstanceOf[IFileEditorInput]) {
+      val file = input.asInstanceOf[IFileEditorInput].getFile()
+      if (file.findMarkers(
+          IMarker.PROBLEM, true, IResource.DEPTH_ZERO).length > 0)
+        new DeleteMarkersJob(
+            file, IMarker.PROBLEM, true, IResource.DEPTH_ZERO).schedule
+    }
+
+    val off = r.getOffset
+    if (off < editor.underway) {
+      if (editor.busy)
+        editor.coqTop.interrupt
+      if (off < editor.completed)
+        UIUtils.asyncExec {
+          CoqEditorHandler.doStepBack(editor,
+              _.prefixLength(a => (off < (a.offset + a.text.length))))
+        }
+    }
+  }
+  
+  override def reconcile(dr : DirtyRegion, r : IRegion) = reconcile(r)
+  
+  override def setDocument(newDocument : IDocument) = ()
 }
 
 import org.eclipse.jface.viewers.ITreeContentProvider
@@ -267,20 +342,20 @@ object CoqWordDetector extends IWordDetector {
 import org.eclipse.jface.text.rules.RuleBasedScanner
 import dk.itu.sdg.coqparser.VernacularReserved
 
-object CoqTokenScanner extends RuleBasedScanner with VernacularReserved with EclipseUtils {
+object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
   import org.eclipse.jface.text.rules.{IToken, MultiLineRule, SingleLineRule, Token, WordRule}
   import org.eclipse.jface.text.{IDocument, TextAttribute}
   import org.eclipse.swt.SWT.{BOLD, ITALIC}
 
   //Console.println("Initializing CoqTokenScanner")
 
-  private val black = color(0, 0, 0)
-  private val white = color(255, 255, 255)
+  private val black = UIUtils.Color(0, 0, 0)
+  private val white = UIUtils.Color(255, 255, 255)
 
-  private val keywordToken : IToken = new Token(new TextAttribute(getPrefColor("coqKeywordFg"), white, 0))
-  private val definerToken : IToken = new Token(new TextAttribute(getPrefColor("coqKeywordFg"), white, 0))
-  private val opToken : IToken = new Token(new TextAttribute((0, 0, 30), white, 0))
-  private val commentToken : IToken = new Token(new TextAttribute((30, 30, 0), white, ITALIC))
+  private val keywordToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, 0))
+  private val definerToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, 0))
+  private val opToken : IToken = new Token(new TextAttribute(UIUtils.Color(0, 0, 30), white, 0))
+  private val commentToken : IToken = new Token(new TextAttribute(UIUtils.Color(30, 30, 0), white, ITALIC))
   private val otherToken : IToken = new Token(new TextAttribute(black, white, 0))
 
   private val rules = Seq(
@@ -298,10 +373,9 @@ object CoqTokenScanner extends RuleBasedScanner with VernacularReserved with Ecl
 
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
 import org.eclipse.jface.text.IDocument
-class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor) extends IReconcilingStrategy with EclipseUtils {
+class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor) extends IReconcilingStrategy {
   import dk.itu.sdg.coqparser.VernacularRegion
   import org.eclipse.jface.text.{IDocument, IRegion, Position}
-  import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.text.reconciler._
   import org.eclipse.ui.views.contentoutline.IContentOutlinePage
 
@@ -312,11 +386,9 @@ class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor
     val outline = CoqDocumentProvider.getOutline(document) // updates model as side effect
     if (editor != null) {
       val outlinePage = editor.getAdapter(classOf[IContentOutlinePage]).asInstanceOf[CoqContentOutlinePage]
-      Display.getDefault.asyncExec(new java.lang.Runnable {
-        def run() : Unit = {
-          outlinePage.update() //Update GUI outline
-        }
-      })
+      UIUtils.asyncExec {
+        outlinePage.update() //Update GUI outline
+      }
     } else
       println(" null editor")
 
@@ -340,14 +412,12 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
   import org.eclipse.jface.text.{TextAttribute,IDocument}
   import org.eclipse.jface.text.reconciler.{IReconciler, MonoReconciler}
   import org.eclipse.swt.graphics.{Color,RGB}
-  import org.eclipse.swt.widgets.Display
   import org.eclipse.jface.text.source.ISourceViewer
   import org.eclipse.jface.text.contentassist.{IContentAssistant,ContentAssistant}
 
   override def getContentAssistant(v : ISourceViewer) : IContentAssistant = {
     val assistant= new ContentAssistant
-    val assistantProcessor = new CoqContentAssistantProcessor()
-    PrintActor.register(assistantProcessor)
+    val assistantProcessor = new CoqContentAssistantProcessor(editor)
     assistant.setContentAssistProcessor(assistantProcessor, IDocument.DEFAULT_CONTENT_TYPE)
     assistant
   }
@@ -371,14 +441,14 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
 
 import org.eclipse.jface.text.contentassist.IContentAssistProcessor
 
-class CoqContentAssistantProcessor extends IContentAssistProcessor with CoqCallback {
+class CoqContentAssistantProcessor(
+    val editor : CoqEditor) extends IContentAssistProcessor {
   import org.eclipse.jface.text.contentassist.{IContextInformationValidator,IContextInformation,ICompletionProposal,CompletionProposal,ContextInformation}
   import org.eclipse.jface.text.ITextViewer
   import java.text.MessageFormat
   import scala.collection.mutable.HashMap
 
-  private val dynamicCompletions = new HashMap[String, String]()
-  private val staticCompletions = Array("apply","assumption","compute","destruct","induction","intros","inversion","reflexivity","rewrite","simpl","unfold")
+  private val staticCompletions = Array("Admitted","apply","assumption","compute","Defined","destruct","Fixpoint","induction","intros","inversion","Lemma","reflexivity","rewrite","simpl","Theorem","unfold")
 
   def getPrefix (doc : IDocument, offset : Int) : String = {
     val prefix = new StringBuffer
@@ -401,20 +471,30 @@ class CoqContentAssistantProcessor extends IContentAssistProcessor with CoqCallb
   def computeCompletionProposals (viewer : ITextViewer, documentOffset : Int) : Array[ICompletionProposal] = {
     val prefix = getPrefix(viewer.getDocument, documentOffset)
 
-    //Get definitions etc. from CoqTop
-    if (prefix.length > 1)
-    	CoqTop.writeToCoq("SearchAbout [ \""+ prefix +"\" ].")
+    import dk.itu.sdg.kopitiam.CoqTypes._
+    
+    val results =
+      if (prefix.length > 1) {
+    	editor.coqTop.search(List(
+    	    (Name_Pattern("^" + prefix), true))) match {
+    	  case Good(results) =>
+    	    results.map(a => {
+    	      (a.coq_object_qualid.mkString("."),
+    	          a.coq_object_object.replaceAll("\\s+", " "))
+    	    })
+    	  case _ => List()
+    	}
+      } else List()
 
     val tst : String => Boolean = prefix.length == 0 || _.startsWith(prefix)
-
-    val filteredCompletions = dynamicCompletions.keys.toArray.filter(tst)
+    
     val filteredStatic = staticCompletions.filter(tst)
-    val proposals = new Array[ICompletionProposal](filteredStatic.size + filteredCompletions.size)
+    val proposals = new Array[ICompletionProposal](filteredStatic.size + results.size)
     val mid = filteredStatic.length
     Range(0, mid).map(x => proposals(x) = getCompletionProposal(filteredStatic(x), null, prefix, documentOffset))
     Range(mid, proposals.length).map(x => {
-      val pr = filteredCompletions(x - mid)
-      proposals(x) = getCompletionProposal(pr, dynamicCompletions(pr), prefix, documentOffset)
+      val pr = results(x - mid)
+      proposals(x) = getCompletionProposal(pr._1, pr._2, prefix, documentOffset)
     })
     proposals
   }
@@ -424,23 +504,6 @@ class CoqContentAssistantProcessor extends IContentAssistProcessor with CoqCallb
   def getContextInformationAutoActivationCharacters () : Array[Char] = null
   def getContextInformationValidator () : IContextInformationValidator = null
   def getErrorMessage () : String = "not yet implemented"
-
-  override def dispatch (x : CoqResponse) : Unit = {
-    x match {
-      case CoqTheoremDefined(t) =>
-        dynamicCompletions += (t -> null)
-      case CoqSearchResult(x, v) =>
-        if (!dynamicCompletions.contains(x))
-          dynamicCompletions += (x -> v)
-        else
-          if (dynamicCompletions(x) == null || dynamicCompletions(x).equals(x))
-            dynamicCompletions += (x -> v)
-      case CoqShellReady(m, token) =>
-        if (token.globalStep == 1)
-          dynamicCompletions.clear
-      case _ =>
-    }
-  }
 }
 
 

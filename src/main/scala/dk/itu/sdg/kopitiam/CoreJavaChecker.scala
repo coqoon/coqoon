@@ -2,17 +2,17 @@
 
 package dk.itu.sdg.kopitiam
 
-trait CoreJavaChecker extends VisitingAST {
+object CoreJavaChecker {
   import org.eclipse.jface.text.IDocument
   import org.eclipse.jdt.core.dom.ASTNode
-  def checkAST (root : ASTNode, doc : IDocument) : Unit = {
-    val co = new CheckCoreJava(doc)
+  def checkAST (jes : JavaEditorState, root : ASTNode, doc : IDocument) : Boolean = {
+    val co = new CheckCoreJava(jes, doc)
     root.accept(co)
     Console.println("checked...")
+    co.getSuccess
   }
 
-  class CheckCoreJava (doc : IDocument) extends Visitor {
-
+  private class CheckCoreJava (jes : JavaEditorState, doc : IDocument) extends VisitingAST.ReportingVisitor(jes) {
     import org.eclipse.jdt.core.dom.{ArrayAccess, ArrayCreation, ArrayInitializer, Assignment, CastExpression, ClassInstanceCreation, ConditionalExpression, Expression, FieldAccess, InfixExpression, InstanceofExpression, MethodInvocation, PostfixExpression, PrefixExpression, QualifiedName, SimpleName, SuperFieldAccess, SuperMethodInvocation, ThisExpression}
     def checkExpression (node : Expression) : Unit =
       node match {
@@ -144,9 +144,9 @@ trait CoreJavaChecker extends VisitingAST {
 
     //currently we only support empty constructors
     def isClassInstanceCreationGood (node : ClassInstanceCreation) : Boolean =
-      scala.collection.JavaConversions.asBuffer(node.arguments).map(_.asInstanceOf[Expression]).toList.length == 0
+      scala.collection.JavaConversions.asScalaBuffer(node.arguments).map(_.asInstanceOf[Expression]).toList.length == 0
     def isMethodInvocationGood (node : MethodInvocation) : Boolean =
-      areArgumentsGood(scala.collection.JavaConversions.asBuffer(node.arguments).map(_.asInstanceOf[Expression]).toList)
+      areArgumentsGood(scala.collection.JavaConversions.asScalaBuffer(node.arguments).map(_.asInstanceOf[Expression]).toList)
 
     def areArgumentsGood (args : List[Expression]) : Boolean =
       args.filterNot(containsRealExpressions).length == 0
@@ -160,7 +160,7 @@ trait CoreJavaChecker extends VisitingAST {
         case x : QualifiedName => false
         case x : ClassInstanceCreation => false
         case x : MethodInvocation => false
-        case x : SimpleName => ! isField(x)
+        case x : SimpleName => ! VisitingAST.isField(x)
         case x : ParenthesizedExpression => containsRealExpressions(x.getExpression)
         case x : InfixExpression =>
           //both must be good
@@ -197,7 +197,7 @@ trait CoreJavaChecker extends VisitingAST {
             reportError("The test of a while loop may only contain a simple expression which accesses variables on the stack in Kopitiam. Also, only a limited set of operators is supported.", tst)
         case x : FieldDeclaration =>
           //no initialzers!
-          val frag = scala.collection.JavaConversions.asBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList
+          val frag = scala.collection.JavaConversions.asScalaBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList
           if (frag.filter(_.getInitializer != null).length > 0)
             reportError("A Field declaration with an initialization expression is not yet supported by Kopitiam", x)
         case x : BreakStatement =>
@@ -236,4 +236,3 @@ trait CoreJavaChecker extends VisitingAST {
     }
   }
 }
-

@@ -3,12 +3,37 @@
 package dk.itu.sdg.kopitiam
 
 object EclipseJavaASTProperties {
-  val coqDefinition : String = "dk.itu.sdg.kopitiam.coqDefinition"
-  val coqSpecification : String = "dk.itu.sdg.kopitiam.coqSpecification"
-  val coqProof : String = "dk.itu.sdg.kopitiam.coqProof"
-  val coqEnd : String = "dk.itu.sdg.kopitiam.coqEnd"
-  val coqShell : String = "dk.itu.sdg.kopitiam.coqShell"
-  val method : String = "dk.itu.sdg.kopitiam.method"
+  import org.eclipse.jdt.core.dom._
+  private val coqDefinition : String = "dk.itu.sdg.kopitiam.coqDefinition"
+  def getDefinition(a : ASTNode) : Option[List[String]] = 
+    Option(a.getProperty(coqDefinition)).map { _.asInstanceOf[List[String]] }
+  def setDefinition(a : ASTNode, p : Option[List[String]]) =
+    a.setProperty(coqDefinition, p.orNull)
+    
+  private val coqSpecification : String = "dk.itu.sdg.kopitiam.coqSpecification"
+  def getSpecification(a : ASTNode) : Option[List[String]] =
+    Option(a.getProperty(coqSpecification)).map { _.asInstanceOf[List[String]] }
+  def setSpecification(a : ASTNode, p : Option[List[String]]) =
+    a.setProperty(coqSpecification, p.orNull)
+  
+  private val coqProof : String = "dk.itu.sdg.kopitiam.coqProof"
+  def getProof(a : ASTNode) : Option[List[String]] =
+    Option(a.getProperty(coqProof)).map { _.asInstanceOf[List[String]] }
+  def setProof(a : ASTNode, p : Option[List[String]]) =
+    a.setProperty(coqProof, p.orNull)
+  
+  private val coqEnd : String = "dk.itu.sdg.kopitiam.coqEnd"
+  def getEnd(a : ASTNode) : Option[String] =
+    Option(a.getProperty(coqEnd)).map { _.asInstanceOf[String] }
+  def setEnd(a : ASTNode, p : Option[String]) =
+    a.setProperty(coqEnd, p.orNull)
+  
+  private val method : String = "dk.itu.sdg.kopitiam.method"
+  def getMethod(a : ASTNode) : Option[MethodDeclaration] =
+    Option(a.getProperty(method)).map { _.asInstanceOf[MethodDeclaration] }
+  def setMethod(a : ASTNode, p : Option[MethodDeclaration]) =
+    a.setProperty(method, p.orNull)
+  
   val precondition : String = "dk.itu.sdg.kopitiam.precondition"
   val postcondition : String = "dk.itu.sdg.kopitiam.postcondition"
   val quantification : String = "dk.itu.sdg.kopitiam.quantification"
@@ -16,7 +41,7 @@ object EclipseJavaASTProperties {
   val specOffset : String = "dk.itu.sdg.kopitiam.specOffset"
 }
 
-trait EclipseJavaHelper extends VisitingAST {
+object EclipseJavaHelper {
   import org.eclipse.jdt.core.ITypeRoot
   import org.eclipse.jdt.ui.JavaUI
   import org.eclipse.ui.IEditorInput
@@ -59,9 +84,7 @@ trait EclipseJavaHelper extends VisitingAST {
     else {
       x match {
         case y : MethodDeclaration => Some(y)
-        case y : Initializer =>
-          val m = y.getProperty(EclipseJavaASTProperties.method)
-          if (m != null) Some(m.asInstanceOf[MethodDeclaration]) else None
+        case y : Initializer => EclipseJavaASTProperties.getMethod(y)
         case y => findMethod(y.getParent)
       }
     }
@@ -82,7 +105,7 @@ trait EclipseJavaHelper extends VisitingAST {
     }
   }
 
-  class NodeFinder (off : Int, len : Int) extends Visitor {
+  class NodeFinder (off : Int, len : Int) extends VisitingAST.Visitor {
     import org.eclipse.jdt.core.dom.Statement
     var coveringNode : Option[ASTNode] = None
     var coveredNode : Option[ASTNode] = None
@@ -95,7 +118,7 @@ trait EclipseJavaHelper extends VisitingAST {
         else if (ns <= off && off + len <= ne)
           coveringNode = Some(node)
         if (off <= ns && ne <= off + len) {
-          if (coveringNode == node) {
+          if (coveringNode == Some(node)) {
             coveredNode = Some(node)
             true
           } else if (coveredNode == None)
@@ -116,12 +139,13 @@ trait EclipseJavaHelper extends VisitingAST {
   }
 
   import org.eclipse.jface.text.IDocument
-  def walkAST (root : ASTNode, doc : IDocument) : Unit = {
-    val co = new CoqOutput(doc)
+  def walkAST (jes : JavaEditorState, root : ASTNode, doc : IDocument) : Boolean = {
+    val co = new CoqOutput(jes, doc)
     root.accept(co)
+    co.getSuccess
   }
 
-  class CoqOutput (doc : IDocument) extends Visitor {
+  class CoqOutput (jes : JavaEditorState, doc : IDocument) extends VisitingAST.ReportingVisitor(jes) {
     import scala.collection.immutable.Stack
     var offset : Int = 0;
     var specs : List[Initializer] = List[Initializer]()
@@ -150,7 +174,7 @@ trait EclipseJavaHelper extends VisitingAST {
           val body = x.getBody
           val name = x.getName.getIdentifier
           val st = (x.getModifiers & Modifier.STATIC) == Modifier.STATIC
-          val arguments = scala.collection.JavaConversions.asBuffer(x.parameters).map(_.asInstanceOf[SingleVariableDeclaration]).toList.map(_.getName)
+          val arguments = scala.collection.JavaConversions.asScalaBuffer(x.parameters).map(_.asInstanceOf[SingleVariableDeclaration]).toList.map(_.getName)
           val argli = arguments.map(printE(_))
           val arglis = if (st) argli else "\"this\"" :: argli
           val arglist = arglis.mkString("[", ";", "]")
@@ -159,9 +183,11 @@ trait EclipseJavaHelper extends VisitingAST {
             bd match {
               case Some(y) =>
                 val id = name + "M"
-                val defs = "Definition " + name + "_body := " + y + """.
-Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + ret + "."
-                x.setProperty(EclipseJavaASTProperties.coqDefinition, defs)
+                val defs = List(
+                    "Definition " + name + "_body := " + y + ".",
+                    "Definition " + id + " := Build_Method " + arglist +
+                        " " + name + "_body " + ret + ".")
+                EclipseJavaASTProperties.setDefinition(x, Some(defs))
               case _ =>
             }
           }
@@ -172,7 +198,7 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
 
           for (s <- specs) {
             //adjust pointers!
-            s.setProperty(EclipseJavaASTProperties.method, x)
+            EclipseJavaASTProperties.setMethod(s, Some(x))
             val spectxt = doc.get(s.getStartPosition, s.getLength)
             val lvaridx = spectxt.indexOf("lvars:")
             if (lvaridx > -1) {
@@ -244,7 +270,7 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
           //set offsets for quant._1, pre._1, post._1
 
           //Console.println("spec: " + spec)
-          x.setProperty(EclipseJavaASTProperties.coqSpecification, spec)
+          EclipseJavaASTProperties.setSpecification(x, Some(List(spec)))
           specs = List[Initializer]()
 
 
@@ -255,12 +281,11 @@ Definition """ + id + " := Build_Method " + arglist + " " + name + "_body " + re
             else
               "|> " + rdep.mkString("(", "[/\\]", ")")
           val suff = if (deps.contains(name)) " at 2 " else ""
-          val prfhead = "Lemma valid_" + name + "_" + clazz.drop(1).dropRight(1) + ": " + rdeps + " |= " + name + """_spec.
-Proof.
-  unfold """ + name + "_spec" + suff + "; unfold_spec.\n"
+          val prfhead = List("Lemma valid_" + name + "_" + clazz.drop(1).dropRight(1) + ": " + rdeps + " |= " + name + "_spec.",
+        		  		     "Proof.",
+        		  		     "unfold " + name + "_spec" + suff + "; unfold_spec.")
           //Console.println("proof is " + prfhead)
-          x.setProperty(EclipseJavaASTProperties.coqProof, prfhead)
-
+          EclipseJavaASTProperties.setProof(x, Some(prfhead))
         case x => //Console.println("found here: " + x.getClass.toString)
       }
       true
@@ -279,20 +304,22 @@ Proof.
           }
           //class def (Build_Class) - fields + methods
           val nam = x.getName.getIdentifier
-          val fieldnames = x.getFields.map(x => scala.collection.JavaConversions.asBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList.map(_.getName.getIdentifier)).flatten
+          val fieldnames = x.getFields.map(x => scala.collection.JavaConversions.asScalaBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList.map(_.getName.getIdentifier)).flatten
           val fields = fieldnames.foldRight("(SS.empty)")("(SS.add \"" + _ + "\" " + _ + ")")
           val metstring = methods.foldRight("(SM.empty _)")("(SM.add " + _ + " " + _ + ")")
-          val cd = "Definition " + nam + " := Build_Class " + fields + " " + metstring + "."
+          val cd = List(
+              "Definition " + nam + " := Build_Class " + fields +
+                  " " + metstring + ".")
 
           //Console.println(cd)
-          x.setProperty(EclipseJavaASTProperties.coqDefinition, cd)
+          EclipseJavaASTProperties.setDefinition(x, Some(cd))
         case x : CompilationUnit =>
           var spec : List[String] = List[String]()
           var prog : List[String] = List[String]()
           var classes : Set[String] = Set[String]()
           var pname : Option[String] = None
           var todo : Stack[AbstractTypeDeclaration] = Stack[AbstractTypeDeclaration]()
-          todo = todo.pushAll(scala.collection.JavaConversions.asBuffer(x.types).map(_.asInstanceOf[AbstractTypeDeclaration]))
+          todo = todo.pushAll(scala.collection.JavaConversions.asScalaBuffer(x.types).map(_.asInstanceOf[AbstractTypeDeclaration]))
           while (!todo.isEmpty) {
             val t = todo.top
             todo = todo.pop
@@ -302,57 +329,43 @@ Proof.
                 if (pname == None) pname = Some(x.getName.getIdentifier)
                 classes += x.getName.getIdentifier
                 todo = todo.pushAll(x.getTypes)
-                val p = x.getProperty(EclipseJavaASTProperties.coqDefinition)
-                if (p != null)
-                  prog ::= p.asInstanceOf[String]
                 for (x <- x.getMethods) {
                   //Console.println("setting offset for method [" + x.getName.getIdentifier + "]: " + spec.mkString("\n").length)
                   x.setProperty(EclipseJavaASTProperties.coqOffset, spec.mkString("\n").length)
-                  val sp = x.getProperty(EclipseJavaASTProperties.coqSpecification)
-                  if (sp != null)
-                    spec ::= sp.asInstanceOf[String]
-                  val p = x.getProperty(EclipseJavaASTProperties.coqDefinition)
-                  if (p != null)
-                    prog ::= p.asInstanceOf[String]
+                  EclipseJavaASTProperties.getSpecification(x) map { spec ++= _ }
+                  EclipseJavaASTProperties.getDefinition(x) map { prog ++= _ }
                   //Console.println("  got m " + x.getName.getIdentifier)
                 }
+                EclipseJavaASTProperties.getDefinition(x) map { prog ++= _ }
               case y =>
             }
           }
 
           val n = pname.get
           val clazz = classes.foldRight("(SM.empty _)")((x, y) => "(SM.add \"" + x + "\" " + x + " " + y + ")")
-          val pr = "Definition Prog := Build_Program " + clazz + "."
-          val umn = """
-Definition unique_method_names := option_proof (search_unique_names Prog).
-Opaque unique_method_names."""
-          prog = List("""
-Require Import AbstractAsn.
-Require Import Tactics.
+          prog = List(
+              "Require Import AbstractAsn.",
+              "Require Import Tactics.",
+              "Open Scope string_scope.",
+              "Open Scope hasn_scope.",
+              "Module " + n + " <: PROGRAM.") ++ prog ++
+				List("Definition Prog := Build_Program " + clazz + ".",
+					 "Definition unique_method_names := option_proof (search_unique_names Prog).",
+					 "Opaque unique_method_names.",
+					 "End " + n + ".")
 
-Open Scope string_scope.
-Open Scope hasn_scope.
+          spec = List("Module " + n + "_spec.",
+        		  	  "Import " + n + ".",
+        		  	  "Require Import " + n + "_model.",
+        		  	  "Module Import SC := Tac " + n + ".",
+        		  	  "Open Scope cmd_scope.",
+        		  	  "Open Scope spec_scope.",
+        		  	  "Open Scope asn_scope.") ++ spec.reverse
 
-Module """ + n + " <: PROGRAM.") ++ prog ++ List(pr, umn, "End " + n + ".")
-
-          val specpre = """
-Module """ + n + """_spec.
-Import """ + n + """.
-Require Import """ + n + """_model.
-Module Import SC := Tac """ + n + """.
-
-Open Scope cmd_scope.
-Open Scope spec_scope.
-Open Scope asn_scope.
-"""
-          spec = List(specpre) ++ spec.reverse
-          val p = prog.mkString("\n") + "\n"
-          val s = spec.mkString("\n") + "\n"
-
-          x.setProperty(EclipseJavaASTProperties.specOffset, p.length + specpre.length + 1)
-          x.setProperty(EclipseJavaASTProperties.coqDefinition, p)
-          x.setProperty(EclipseJavaASTProperties.coqSpecification, s)
-          x.setProperty(EclipseJavaASTProperties.coqEnd, "End " + n + "_spec.")
+          //x.setProperty(EclipseJavaASTProperties.specOffset, p.length + specpre.length + 1)
+          EclipseJavaASTProperties.setDefinition(x, Some(prog))
+          EclipseJavaASTProperties.setSpecification(x, Some(spec))
+          EclipseJavaASTProperties.setEnd(x, Some("End " + n + "_spec."))
         case _ =>
       }
 
@@ -360,7 +373,7 @@ Open Scope asn_scope.
     private def getBodyString (b : Statement) : Option[String] =
       b match {
         case x : Block =>
-          val bod = scala.collection.JavaConversions.asBuffer(x.statements).map(_.asInstanceOf[Statement]).toList
+          val bod = scala.collection.JavaConversions.asScalaBuffer(x.statements).map(_.asInstanceOf[Statement]).toList
           val bs = bod.map(getBodyString(_))
           Some(printB(bs.flatMap(x => x)))
         case x : ExpressionStatement =>
@@ -377,7 +390,7 @@ Open Scope asn_scope.
                   case y : QualifiedName =>
                     "(cwrite " + printE(y) + " " + printE(r) + ")"
                   case y =>
-                    if (y.isInstanceOf[SimpleName] && isField(y.asInstanceOf[SimpleName]))
+                    if (y.isInstanceOf[SimpleName] && VisitingAST.isField(y.asInstanceOf[SimpleName]))
                       "(cwrite \"this\" " + printE(y) + " " + printE(r) + ")"
                     else
                       r match {
@@ -393,7 +406,7 @@ Open Scope asn_scope.
                         case y : QualifiedName =>
                           "(cread " + printE(l) + " " + printE(y) + ")"
                         case y : SimpleName =>
-                          if (isField(y))
+                          if (VisitingAST.isField(y))
                             "(cread " + printE(l) + " \"this\" " + printE(y) + ")"
                           else
                             "(cassign " + printE(l) + " " + printE(y) + ")"
@@ -464,7 +477,7 @@ Open Scope asn_scope.
                   case y : FieldAccess =>
                     "(cread " + nam + " " + inite + ")"
                   case y : SimpleName =>
-                    if (isField(y))
+                    if (VisitingAST.isField(y))
                       "(cread " + nam + " \"this\" " + inite + ")"
                     else
                       "(cassign " + nam + " " + inite + ")"
@@ -536,7 +549,7 @@ Open Scope asn_scope.
             "`false"
         case x : ClassInstanceCreation =>
           val n = x.getType.toString
-          val a = scala.collection.JavaConversions.asBuffer(x.arguments)
+          val a = scala.collection.JavaConversions.asScalaBuffer(x.arguments)
           if (a.size != 0) //for now!
             reportError("for now only constructors without arguments are supported", x)
           //val as = a.map(printE(_)).mkString("[", "; ", "]")
@@ -558,7 +571,7 @@ Open Scope asn_scope.
         case x : MethodInvocation =>
           val n = x.getName
           val e = x.getExpression
-          val a = scala.collection.JavaConversions.asBuffer(x.arguments).map(_.asInstanceOf[Expression])
+          val a = scala.collection.JavaConversions.asScalaBuffer(x.arguments).map(_.asInstanceOf[Expression])
           val as = a.map(printE(_)).mkString("[", "; ", "]")
           val st = (x.resolveMethodBinding.getModifiers & Modifier.STATIC) == Modifier.STATIC
           val expr =
@@ -593,6 +606,4 @@ Open Scope asn_scope.
       r
     }
   }
-
-
 }

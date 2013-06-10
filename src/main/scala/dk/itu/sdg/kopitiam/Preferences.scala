@@ -23,21 +23,11 @@ class KopitiamPreferencePage extends FieldEditorPreferencePage with IWorkbenchPr
   import java.io.File
   override def performOk () : Boolean = {
     super.performOk()
-    val coqp = Activator.getDefault.getPreferenceStore.getString("coqpath")
-    val coq =
-      if (CoqTop.isWin)
-        CoqTop.coqtopbinary + ".exe"
-      else
-        CoqTop.coqtopbinary
-    if (new File(coqp + System.getProperty("file.separator") + coq).exists)
-      CoqTop.coqpath = coqp + System.getProperty("file.separator")
-    else
+    if (!CoqTopIdeSlave.checkProgramPath)
       setErrorMessage("couldn't find coqtop in the specified path")
     true
   }
 }
-
-object KopitiamPreferencePage extends KopitiamPreferencePage { }
 
 class KopitiamColorPreferencePage extends FieldEditorPreferencePage with IWorkbenchPreferencePage {
   import org.eclipse.ui.IWorkbench
@@ -57,5 +47,3 @@ class KopitiamColorPreferencePage extends FieldEditorPreferencePage with IWorkbe
       addField(new ColorFieldEditor(pref, label, getFieldEditorParent))
  }
 }
-
-object KopitiamColorPreferencePage extends KopitiamColorPreferencePage
