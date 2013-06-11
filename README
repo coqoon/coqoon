@@ -5,9 +5,9 @@ Information about this project can be found:
 * NFM2011 paper http://www.itu.dk/~hame/nfm2011.pdf
 
 Source Installation:
-* Eclipse SDK (from http://download.eclipse.org/eclipse/downloads/) tested is 3.7, but 4 works as well
+* Eclipse SDK (from http://download.eclipse.org/eclipse/downloads/) tested is 3.7 and also 4
 * Scala IDE (from http://www.scala-ide.org/) tested is Scala IDE 2.1.0 with Scala 2.9.2 (http://scala-ide.org/download/milestone.html) and also Scala 2.10
-* runtime: Coq (from http://coq.inria.fr/download); supported are both 8.3 and 8.4
+* runtime: Coq (from http://coq.inria.fr/download); supported is 8.4
 
 Setup:
 1) checkout git repository
