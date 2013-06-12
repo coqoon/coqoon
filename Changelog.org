@@ -1,3 +1,8 @@
+* Kopitiam 0.3.0 [10 June 2013]
+** Use the ideslave protocol to communicate with coqtop
+** Drop support for versions of Coq before 8.4
+** Don't use actors for concurrency any more
+** Add support for alternative goal presentation strategies
 * Kopitiam 0.2.[21-24] [02 June 2013]
 ** more debug output
 ** fix problem on windows where it tried to execute C:\program, instead of C:\program files\coq\bin\coqtop.exe -emacs
