@@ -103,61 +103,51 @@
       </category>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.CoqStepForwardHandler"
             id="Kopitiam.step_forward"
             name="Step forward command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.CoqStepBackHandler"
             id="Kopitiam.step_backward"
             name="Step backward command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.CoqStepToCursorHandler"
             id="Kopitiam.step_cursor"
             name="Step to cursor command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.CoqStepAllHandler"
             id="Kopitiam.step_all"
             name="Step all command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.CoqRetractAllHandler"
             id="Kopitiam.retract"
             name="Retract all command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.RestartCoqHandler"
             id="Kopitiam.restart_coq"
             name="Restart Coq command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.CompileCoqHandler"
             id="Kopitiam.compile_coq"
             name="Compile Coq">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.InterruptCoqHandler"
             id="Kopitiam.interrupt"
             name="Interrupt Coq command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.VerifyMethodHandler"
             id="Kopitiam.verify_method"
             name="Verify Java method command">
       </command>
       <command
             categoryId="Kopitiam.category"
-            defaultHandler="dk.itu.sdg.kopitiam.SaveProofCertificateHandler"
             id="Kopitiam.save_proof_certificate"
             name="Save Java proof certificate command">
       </command>
@@ -490,6 +480,126 @@
                type="dk.itu.sdg.kopitiam.CoqTopContainer">
          </adapter>
       </factory>
+   </extension>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="dk.itu.sdg.kopitiam.CoqStepForwardHandler"
+            commandId="Kopitiam.step_forward">
+         <activeWhen>
+            <reference
+                  definitionId="Kopitiam.activeEditorIsCoq">
+            </reference>
+         </activeWhen>
+      </handler>
+      <handler
+            class="dk.itu.sdg.kopitiam.CoqStepBackHandler"
+            commandId="Kopitiam.step_backward">
+         <activeWhen>
+            <reference
+                  definitionId="Kopitiam.activeEditorIsCoq">
+            </reference>
+         </activeWhen>
+      </handler>
+      <handler
+            class="dk.itu.sdg.kopitiam.CoqStepToCursorHandler"
+            commandId="Kopitiam.step_cursor">
+         <activeWhen>
+            <reference
+                  definitionId="Kopitiam.activeEditorIsCoq">
+            </reference>
+         </activeWhen>
+      </handler>
+      <handler
+            class="dk.itu.sdg.kopitiam.CoqStepAllHandler"
+            commandId="Kopitiam.step_all">
+         <activeWhen>
+            <reference
+                  definitionId="Kopitiam.activeEditorIsCoq">
+            </reference>
+         </activeWhen>
+      </handler>
+      <handler
+            class="dk.itu.sdg.kopitiam.CoqRetractAllHandler"
+            commandId="Kopitiam.retract">
+         <activeWhen>
+            <reference
+                  definitionId="Kopitiam.activeEditorIsCoq">
+            </reference>
+         </activeWhen>
+      </handler>
+      <handler
+            class="dk.itu.sdg.kopitiam.RestartCoqHandler"
+            commandId="Kopitiam.restart_coq">
+         <activeWhen>
+            <reference
+                  definitionId="Kopitiam.activeEditorIsCoq">
+            </reference>
+         </activeWhen>
+      </handler>
+      <handler
+            class="dk.itu.sdg.kopitiam.CompileCoqHandler"
+            commandId="Kopitiam.compile_coq">
+         <activeWhen>
+            <reference
+                  definitionId="Kopitiam.activeEditorIsCoq">
+            </reference>
+         </activeWhen>
+      </handler>
+      <handler
+            class="dk.itu.sdg.kopitiam.InterruptCoqHandler"
+            commandId="Kopitiam.interrupt">
+         <activeWhen>
+            <reference
+                  definitionId="Kopitiam.activeEditorIsCoq">
+            </reference>
+         </activeWhen>
+      </handler>
+      <handler
+            class="dk.itu.sdg.kopitiam.VerifyMethodHandler"
+            commandId="Kopitiam.verify_method">
+         <activeWhen>
+            <reference
+                  definitionId="Kopitiam.activeEditorIsJava">
+            </reference>
+         </activeWhen>
+      </handler>
+      <handler
+            class="dk.itu.sdg.kopitiam.SaveProofCertificateHandler"
+            commandId="Kopitiam.save_proof_certificate">
+         <activeWhen>
+            <reference
+                  definitionId="Kopitiam.activeEditorIsJava">
+            </reference>
+         </activeWhen>
+      </handler>
+   </extension>
+   <extension
+         point="org.eclipse.core.expressions.definitions">
+      <definition
+            id="Kopitiam.activeEditorIsCoq">
+         <with
+               variable="activeEditor">
+            <adapt
+                  type="dk.itu.sdg.kopitiam.CoqTopContainer">
+               <instanceof
+                     value="dk.itu.sdg.kopitiam.CoqEditor">
+               </instanceof>
+            </adapt>
+         </with>
+      </definition>
+      <definition
+            id="Kopitiam.activeEditorIsJava">
+         <with
+               variable="activeEditor">
+            <adapt
+                  type="dk.itu.sdg.kopitiam.CoqTopContainer">
+               <instanceof
+                     value="dk.itu.sdg.kopitiam.JavaEditorState">
+               </instanceof>
+            </adapt>
+         </with>
+      </definition>
    </extension>
 
 </plugin>
