@@ -43,9 +43,11 @@ class JavaProofInitialisationRunner(
       val basename = fei.getFile.getName().dropRight(5)
       val model = proj.getFile(new Path(basename + "_model.v"))
       if (!model.exists) {
-        UIUtils.openWarning("Model file missing",
-          "Please write a model file for this Java file named '" +
-            basename + "_model'.")
+        UIUtils.syncExec {
+          UIUtils.Dialog.warning("Model file missing",
+              "Please write a model file for this Java file named '" +
+              basename + "_model'.")
+        }
         return
       } else new CoqCompileRunner(model).run(monitor.newChild(1))
       monitor.setWorkRemaining(2)

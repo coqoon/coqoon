@@ -23,9 +23,18 @@ object UIUtils {
     override def run = r
   })
   
-  def openWarning(title : String, message : String) = syncExec {
-    org.eclipse.jface.dialogs.MessageDialog.openWarning(
-        getDisplay.getActiveShell, title, message)
+  object Dialog {
+    import org.eclipse.swt.widgets.Shell
+    protected def bindStockDialog[A](
+        f : (Shell, String, String) => A) : (String, String) => A =
+      f(getDisplay.getActiveShell, _ : String, _ : String)
+    
+    import org.eclipse.jface.dialogs.MessageDialog
+    def confirm = bindStockDialog(MessageDialog.openConfirm)
+    def error = bindStockDialog(MessageDialog.openError)
+    def information = bindStockDialog(MessageDialog.openInformation)
+    def question = bindStockDialog(MessageDialog.openQuestion)
+    def warning = bindStockDialog(MessageDialog.openWarning)
   }
   
   import org.eclipse.ui.IEditorPart

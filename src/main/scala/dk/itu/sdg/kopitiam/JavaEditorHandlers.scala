@@ -67,12 +67,12 @@ class VerifyMethodHandler extends JavaEditorHandler {
           val node = findASTNode(cu, off, 0)
           val md = findMethod(node)
           md match {
-            case None => UIUtils.openWarning(
+            case None => UIUtils.Dialog.warning(
                 "Cursor not inside of method",
                 "Please put the cursor inside of the method to verify")
             case Some(x) =>
               if (jes.completedMethods.contains(x))
-                UIUtils.openWarning("Already proven",
+                UIUtils.Dialog.warning("Already proven",
                     "Sorry, this method was already proven")
               else {
                 jes.setMethod(Some(x))
