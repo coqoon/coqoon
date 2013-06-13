@@ -121,7 +121,11 @@ trait JobRunner[A] {
     try {
       doOperation(monitor)
     } finally {
-      finish
+      try {
+        finish
+      } catch {
+        case t : Throwable => /* do nothing */
+      }
       monitor.done
     }
   }
