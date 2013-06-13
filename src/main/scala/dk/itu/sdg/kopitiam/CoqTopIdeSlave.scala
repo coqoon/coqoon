@@ -78,10 +78,14 @@ trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
   }
 }
 object CoqTopIdeSlave_v20120710 {
-  def apply() : Option[CoqTopIdeSlave_v20120710] =
-    if (PlatformUtilities.isWindows) {
-      Some(new CoqTopIdeSlaveImplWindows())
-    } else Some(new CoqTopIdeSlaveImplPOSIX())
+  def apply() : Option[CoqTopIdeSlave_v20120710] = {
+    val ct : Option[CoqTopIdeSlave_v20120710] =
+      if (PlatformUtilities.isWindows) {
+        Some(new CoqTopIdeSlaveImplWindows())
+      } else Some(new CoqTopIdeSlaveImplPOSIX())
+    ct.map(_.about)
+    ct
+  }
 }
 
 import java.io.{Reader, Writer}
