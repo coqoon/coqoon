@@ -133,7 +133,27 @@ class CoqStepForwardRunner(
         step, result.value).schedule
   }
   
-  override protected def initialise =
+  override protected def initialise = {
     if (!editor.testFlag(CoqEditor.FLAG_INITIALISED))
-      new InitialiseCoqRunner(editor).run(null)
+      try {
+        new InitialiseCoqRunner(editor).run(null)
+      } catch {
+        case ex : org.eclipse.core.runtime.CoreException =>
+          UIUtils.asyncExec {
+            UIUtils.Dialog.question("Initialisation failed",
+                "Coq initialisation failed " +
+                "(\"" + ex.getMessage.trim + "\").\n\n" +
+                "Open the Coq preferences dialog now?") match {
+              case true =>
+                import org.eclipse.ui.dialogs.PreferencesUtil
+                PreferencesUtil.createPreferenceDialogOn(
+                    UIUtils.getActiveShell,
+                    "Kopitiam.settings", null, null).open
+              case false =>
+            }
+            ()
+          }
+          fail(Status.OK_STATUS)
+      }
+  }
 }
