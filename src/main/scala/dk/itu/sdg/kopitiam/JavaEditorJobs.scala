@@ -145,6 +145,19 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
             UIUtils.asyncExec {
               jes.setMethod(None)
               jes.markCompletedMethods
+
+              val c = jes.compilationUnit.get
+              if (jes.completedMethods.size == JavaASTUtils.countMethods(c)) {
+                if (UIUtils.Dialog.question("Proof completed",
+                    "All method proofs have been completed.\n\n" +
+                    "Save the proof certificate now?")) {
+                  import org.eclipse.ui.handlers.IHandlerService
+                  UIUtils.getWorkbench.getService(classOf[IHandlerService]).
+                      asInstanceOf[IHandlerService].executeCommand(
+                          "Kopitiam.save_proof_certificate", null)
+                }
+              }
+              ()
             }
           case _ =>
         }

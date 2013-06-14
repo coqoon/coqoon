@@ -67,7 +67,7 @@ class VerifyMethodHandler extends JavaEditorHandler {
           val node = findASTNode(cu, off, 0)
           val md = findMethod(node)
           md match {
-            case None => UIUtils.Dialog.warning(
+            case None => UIUtils.Dialog.information(
                 "Cursor not inside of method",
                 "Please put the cursor inside of the method to verify")
             case Some(x) =>
