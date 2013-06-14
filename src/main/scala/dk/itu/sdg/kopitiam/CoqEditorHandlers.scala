@@ -9,7 +9,7 @@ package dk.itu.sdg.kopitiam
 
 abstract class CoqCommand(val text : String) {
   def run(coqTop : CoqTopIdeSlave_v20120710) : CoqTypes.value[String] =
-    coqTop.interp(false, false, text)
+    coqTop.interp(false, true, text)
 }
 
 case class CoqStep(

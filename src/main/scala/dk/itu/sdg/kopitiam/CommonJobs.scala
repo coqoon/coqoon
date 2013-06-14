@@ -157,8 +157,18 @@ abstract class StepForwardRunner[A <: CoqCommand](
   protected def onGood(step : A, result : CoqTypes.Good[String])
   protected def onUnsafe(step : A, result : CoqTypes.Unsafe[String]) =
     onGood(step, CoqTypes.Good[String](result.value))
-  protected def initialise = ()
-    
+  protected def initialise =
+    if (EclipseConsole.out == null)
+      EclipseConsole.initConsole()
+  
+  private def perhapsPrint(msg_ : String) = {
+    if (msg_ != null) {
+      val msg = msg_.trim
+      if (msg.length != 0)
+        EclipseConsole.out.println(msg)
+    }
+  }
+      
   override def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
     monitor.beginTask("Stepping forward", steps.length)
@@ -168,8 +178,12 @@ abstract class StepForwardRunner[A <: CoqCommand](
         cancel
       monitor.subTask(step.text.trim)
       step.run(container.coqTop) match {
-        case r : CoqTypes.Good[String] => onGood(step, r)
-        case r : CoqTypes.Unsafe[String] => onUnsafe(step, r)
+        case r @ CoqTypes.Good(msg) =>
+          perhapsPrint(msg)
+          onGood(step, r)
+        case r @ CoqTypes.Unsafe(msg) =>
+          perhapsPrint(msg)
+          onUnsafe(step, r)
         case r : CoqTypes.Fail[String] =>
           onFail(step, r)
           return CoqTypes.Fail(r.value)

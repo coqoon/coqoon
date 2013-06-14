@@ -134,6 +134,7 @@ class CoqStepForwardRunner(
   }
   
   override protected def initialise = {
+    super.initialise
     if (!editor.testFlag(CoqEditor.FLAG_INITIALISED))
       try {
         new InitialiseCoqRunner(editor).run(null)
