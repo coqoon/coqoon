@@ -431,6 +431,9 @@ import scala.sys.process.ProcessIO
 
 private class CoqTopIdeSlaveImplWindows extends CoqTopIdeSlaveImpl {
   override protected def start : (Writer, Reader, Process) = {
+    if (!CoqTopIdeSlave.checkProgramPath)
+      throw new java.io.IOException("Couldn't find the coqtop program")
+    
     var in : Writer = null
     var out : Reader = null
     var pr = Process(Seq(CoqTopIdeSlave.getProgramPath, "-ideslave")).run(
@@ -453,6 +456,9 @@ private class CoqTopIdeSlaveImplPOSIX extends CoqTopIdeSlaveImpl {
   }
   
   override protected def start : (Writer, Reader, Process) = {
+    if (!CoqTopIdeSlave.checkProgramPath)
+      throw new java.io.IOException("Couldn't find the coqtop program")
+    
     var in : Writer = null
     var out : Reader = null
     var pr = Process(Seq(
