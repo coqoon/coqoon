@@ -15,26 +15,27 @@ trait CoqTopIdeSlave {
   def interrupt
 }
 
-object CoqTopIdeSlave {
-  import java.io.File
-  def checkProgramPath() : Boolean = new File(getProgramPath).exists()
-  
-  def getProgramPath : String = getProgramPath("coqtop")
-  
-  def getProgramPath(program : String) : String = {
-    val ac = Activator.getDefault
-    getProgramPath(program,
-      if (ac != null) ac.getPreferenceStore.getString("coqpath") else "")
+trait CoqProgram {
+  def path : String
+  def check : Boolean = new java.io.File(path).exists
+}
+
+object CoqProgram {
+  protected def getCoqPath = Option(Activator.getDefault).map(
+      _.getPreferenceStore.getString("coqpath"))
+  private class ProgramImpl(name : String) extends CoqProgram {
+    override def path : String = {
+      val programName =
+        if (!PlatformUtilities.isWindows) name else name + ".exe"
+      getCoqPath.map(_.trim) match {
+        case Some(path) if path.length > 0 =>
+          path + java.io.File.separator + programName
+        case _ => programName
+      }
+    }
   }
   
-  def getProgramPath(program : String, dir : String) : String = {
-    val programName = (if (PlatformUtilities.isWindows) {
-      program + ".exe"
-    } else program)
-    if (dir == null || dir.length == 0) {
-      programName
-    } else dir + File.separator + programName
-  }
+  def apply(name : String) : CoqProgram = new ProgramImpl(name)
 }
 
 private object PlatformUtilities {
@@ -431,12 +432,12 @@ import scala.sys.process.ProcessIO
 
 private class CoqTopIdeSlaveImplWindows extends CoqTopIdeSlaveImpl {
   override protected def start : (Writer, Reader, Process) = {
-    if (!CoqTopIdeSlave.checkProgramPath)
+    if (!CoqProgram("coqtop").check)
       throw new java.io.IOException("Couldn't find the coqtop program")
     
     var in : Writer = null
     var out : Reader = null
-    var pr = Process(Seq(CoqTopIdeSlave.getProgramPath, "-ideslave")).run(
+    var pr = Process(Seq(CoqProgram("coqtop").path, "-ideslave")).run(
       new ProcessIO(
         a => in = new OutputStreamWriter(a),
         a => out = new InputStreamReader(a),
@@ -456,14 +457,14 @@ private class CoqTopIdeSlaveImplPOSIX extends CoqTopIdeSlaveImpl {
   }
   
   override protected def start : (Writer, Reader, Process) = {
-    if (!CoqTopIdeSlave.checkProgramPath)
+    if (!CoqProgram("coqtop").check)
       throw new java.io.IOException("Couldn't find the coqtop program")
     
     var in : Writer = null
     var out : Reader = null
     var pr = Process(Seq(
         "/bin/sh", "-c", "echo $$; exec \"$@\"", "coqtop-wrapper",
-        CoqTopIdeSlave.getProgramPath, "-ideslave")).run(
+        CoqProgram("coqtop").path, "-ideslave")).run(
       new ProcessIO(
         a => in = new OutputStreamWriter(a),
         a => out = new InputStreamReader(a),

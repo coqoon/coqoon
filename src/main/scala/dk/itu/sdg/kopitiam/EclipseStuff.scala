@@ -55,7 +55,7 @@ class CoqCompileRunner(source : IFile) extends JobRunner[Unit] {
     
     if (EclipseConsole.out == null)
       EclipseConsole.initConsole
-    val coqc = CoqTopIdeSlave.getProgramPath("coqc")
+    val coqc = CoqProgram("coqc").path
     //what about dependencies?? <- need Add LoadPath explicitly in .v!
     if (new File(coqc).exists) {
       val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
