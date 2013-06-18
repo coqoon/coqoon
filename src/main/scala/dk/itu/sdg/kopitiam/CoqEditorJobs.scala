@@ -55,10 +55,8 @@ class RestartCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
     
     monitor.subTask("Clearing state")
     editor.steps.synchronized { editor.steps.clear }
-    UIUtils.asyncExec {
-      editor.setGoals(None)
-      editor.setUnderway(0)
-    }
+    editor.setUnderway(0)
+    UIUtils.asyncExec { editor.setGoals(None) }
     monitor.worked(1)
 
     monitor.subTask("Stopping Coq")
@@ -103,7 +101,7 @@ class CoqStepBackRunner(editor : CoqEditor, stepCount : Int)
             case Some(step) => step.offset + step.text.length
           }
         }
-        UIUtils.asyncExec { editor.setUnderway(completed) }
+        editor.setUnderway(completed)
         CoqTypes.Fail(ep)
     }
   }
@@ -116,14 +114,14 @@ class CoqStepForwardRunner(
     editor : CoqEditor,
     steps : List[CoqStep]) extends StepForwardRunner(editor, steps) {
   override protected def finish = {
-    UIUtils.asyncExec { editor.setUnderway(editor.completed) }
+    editor.setUnderway(editor.completed)
     super.finish
   }
   
   override protected def onGood(
       step : CoqStep, result : CoqTypes.Good[String]) = {
     editor.steps.synchronized { editor.steps.push(step) }
-    UIUtils.asyncExec { editor.setCompleted(step.offset + step.text.length) }
+    editor.setCompleted(step.offset + step.text.length)
   }
   
   override protected def onFail(

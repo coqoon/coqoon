@@ -6,26 +6,50 @@ import org.eclipse.ui.IEditorInput
 import org.eclipse.ui.editors.text.TextEditor
 
 class CoqEditor extends TextEditor with CoqTopEditorContainer {
+  private val lock = new Object
+  
   override def editor = this
   
   import scala.collection.mutable.Stack
   private var stepsV : Stack[CoqStep] = Stack[CoqStep]()
   def steps = stepsV
   
+  private object Perhaps {
+    private val lock = new Object
+    
+    import java.util.{Timer, TimerTask}
+    private val timer = new Timer()
+    
+    var last : Option[TimerTask] = None
+    
+    val t = new Timer()
+    def schedule(delay : Long)(f : => Unit) : Unit = lock synchronized {
+      last.map(_.cancel)
+      last = Some(new TimerTask() {
+        override def run = { f; timer.purge }
+      })
+      last.map(timer.schedule(_, delay))
+    }
+  }
+  
   private var underwayV : Int = 0
-  def underway = underwayV
-  def setUnderway(offset : Int) = {
+  def underway = lock synchronized { underwayV }
+  def setUnderway(offset : Int) = lock synchronized {
     if (offset < completedV)
       completedV = offset
     underwayV = offset
-    addAnnotations_(completed, underway)
+    Perhaps.schedule(50) {
+      UIUtils.asyncExec { addAnnotations_(completed, underway) }
+    }
   }
   
   private var completedV : Int = 0
-  def completed = completedV
-  def setCompleted(offset : Int) = {
+  def completed = lock synchronized { completedV }
+  def setCompleted(offset : Int) = lock synchronized {
     completedV = offset
-    addAnnotations_(completed, underway)
+    Perhaps.schedule(50) {
+      UIUtils.asyncExec { addAnnotations_(completed, underway) }
+    }
   }
   
   private var coqTopV : CoqTopIdeSlave_v20120710 = null
