@@ -9,7 +9,8 @@ class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
     editor.coqTop.transaction[Unit](ct => {
       monitor.subTask("Adding global loadpath entries")
       val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-      ct.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
+      if (loadp != null && loadp.length > 0)
+        ct.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
       monitor.worked(1)
 
       monitor.subTask("Adding project loadpath entries")
