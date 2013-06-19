@@ -50,7 +50,7 @@
             id="kopitiam.CoqEditor"
             name="Coq Editor">
          <contentTypeBinding
-               contentTypeId="kopitiam.CoqFile">
+               contentTypeId="dk.itu.sdg.kopitiam.CoqFile">
          </contentTypeBinding>
       </editor>
    </extension>
@@ -358,11 +358,26 @@
    <extension
          point="org.eclipse.ui.newWizards">
       <wizard
+            category="Kopitiam.coq"
             class="dk.itu.sdg.kopitiam.NewCoqFileWizard"
             icon="icons/coqide.gif"
             id="Kopitiam.newCoqFileWizard"
             name="Coq File">
       </wizard>
+      <wizard
+            category="Kopitiam.coq"
+            class="dk.itu.sdg.kopitiam.NewCoqProjectWizard"
+            finalPerspective="dk.itu.sdg.kopitiam.CoqPerspective"
+            icon="icons/coqide.gif"
+            id="Kopitiam.newCoqProjectWizard"
+            name="Coq Project"
+            preferredPerspectives="dk.itu.sdg.kopitiam.CoqPerspective"
+            project="true">
+      </wizard>
+      <category
+            id="Kopitiam.coq"
+            name="Coq">
+      </category>
    </extension>
 
    <extension
@@ -457,8 +472,14 @@
             base-type="org.eclipse.core.runtime.text"
             default-charset="UTF-8"
             file-extensions="v"
-            id="kopitiam.CoqFile"
+            id="dk.itu.sdg.kopitiam.CoqFile"
             name="Coq file"
+            priority="normal">
+      </content-type>
+      <content-type
+            file-extensions="vo"
+            id="dk.itu.sdg.kopitiam.CoqObjectFile"
+            name="Coq object file"
             priority="normal">
       </content-type>
    </extension>
@@ -470,6 +491,48 @@
             id="dk.itu.sdg.kopitiam.CoqPerspective"
             name="Coq">
       </perspective>
+   </extension>
+   <extension
+         id="dk.itu.sdg.kopitiam.CoqBuilder"
+         name="Coq Builder"
+         point="org.eclipse.core.resources.builders">
+      <builder
+            hasNature="true">
+         <run
+               class="dk.itu.sdg.kopitiam.CoqBuilder">
+         </run>
+      </builder>
+   </extension>
+   <extension
+         id="dk.itu.sdg.kopitiam.CoqProject"
+         name="Coq Project Nature"
+         point="org.eclipse.core.resources.natures">
+      <runtime>
+         <run
+               class="dk.itu.sdg.kopitiam.CoqProject">
+         </run>
+      </runtime>
+      <builder
+            id="dk.itu.sdg.kopitiam.CoqBuilder">
+      </builder>
+   </extension>
+   <extension
+         point="org.eclipse.ui.propertyPages">
+      <page
+            class="dk.itu.sdg.kopitiam.LoadPathConfigurationPage"
+            icon="icons/coqide.gif"
+            id="dk.itu.sdg.kopitiam.propertyPages.CoqLoadPath"
+            name="Coq Load Path">
+         <enabledWhen>
+            <adapt
+                  type="org.eclipse.core.resources.IProject">
+               <test
+                     property="org.eclipse.core.resources.projectNature"
+                     value="dk.itu.sdg.kopitiam.CoqProject">
+               </test>
+            </adapt>
+         </enabledWhen>
+      </page>
    </extension>
    <extension
          point="org.eclipse.core.runtime.adapters">
