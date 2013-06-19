@@ -14,23 +14,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
   private var stepsV : Stack[CoqStep] = Stack[CoqStep]()
   def steps = stepsV
   
-  private object Perhaps {
-    private val lock = new Object
-    
-    import java.util.{Timer, TimerTask}
-    private val timer = new Timer()
-    
-    var last : Option[TimerTask] = None
-    
-    val t = new Timer()
-    def schedule(delay : Long)(f : => Unit) : Unit = lock synchronized {
-      last.map(_.cancel)
-      last = Some(new TimerTask() {
-        override def run = { f; timer.purge }
-      })
-      last.map(timer.schedule(_, delay))
-    }
-  }
+  private val annotateTask = new SupersedableTask(50)
   
   private var underwayV : Int = 0
   def underway = lock synchronized { underwayV }
@@ -38,7 +22,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     if (offset < completedV)
       completedV = offset
     underwayV = offset
-    Perhaps.schedule(50) {
+    annotateTask.schedule {
       UIUtils.asyncExec { addAnnotations_(completed, underway) }
     }
   }
@@ -47,7 +31,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
   def completed = lock synchronized { completedV }
   def setCompleted(offset : Int) = lock synchronized {
     completedV = offset
-    Perhaps.schedule(50) {
+    annotateTask.schedule {
       UIUtils.asyncExec { addAnnotations_(completed, underway) }
     }
   }

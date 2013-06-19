@@ -57,3 +57,27 @@ object UIUtils {
           Activator.getDefault.getPreferenceStore, key))
   }
 }
+
+class SupersedableTask(delay : Long) {
+  private val lock = new Object
+  
+  import java.util.TimerTask
+  
+  var last : Option[TimerTask] = None
+  
+  def schedule(f : => Unit) : Unit = lock synchronized {
+    last.map(_.cancel)
+    last = Some(new TimerTask() {
+      override def run = { f }
+    })
+    last.map(SupersedableTask.timer.schedule(_, delay))
+  }
+}
+object SupersedableTask {
+  private val lock = new Object
+  
+  import java.util.Timer
+  private val timer = new Timer()
+  
+  def purge() : Unit = timer.purge()
+}
