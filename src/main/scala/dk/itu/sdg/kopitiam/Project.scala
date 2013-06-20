@@ -126,7 +126,7 @@ private class LoadPathContentProvider extends ITreeContentProvider {
   }
   
   override def getChildren(parent : Any) = parent match {
-    case a : ICoqLoadPath => Array(a._tmp_makecmd)
+    case a : ICoqLoadPath => Array((a.coqdir, a.path))
     case _ => Array()
   }
   

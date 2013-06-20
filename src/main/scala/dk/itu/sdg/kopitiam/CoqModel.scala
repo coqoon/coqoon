@@ -79,6 +79,13 @@ trait ICoqModel extends ICoqElement with IParent {
 }
 object ICoqModel {
   def create(root : IWorkspaceRoot) : ICoqModel = new CoqModelImpl(root)
+  
+  private val instance = new CoqModelImpl(
+      org.eclipse.core.resources.ResourcesPlugin.getWorkspace.getRoot)
+  def getInstance : ICoqModel = instance
+  
+  def forProject(project : IProject) : ICoqProject =
+    getInstance.getProject(project.getName)
 }
 
 private class CoqModelImpl(
@@ -102,14 +109,14 @@ trait ICoqLoadPath {
   def path : String
   def coqdir : Option[String]
   
-  def _tmp_makecmd = "Add Rec LoadPath \"" + path + "\"" + (coqdir match {
-      case Some(dir) => " as " + dir
-      case None => ""
-    }) + "."
-  
-  /* def install(coqtop : CoqTopIdeSlave_v20120703) = {
-    coqtop.interp(true, false, _tmp_makecmd)
-  } */
+  def run(ct : CoqTopIdeSlave_v20120710) : Unit = {
+    val cmd =
+      "Add Rec LoadPath \"" + path + "\"" + (coqdir match {
+        case Some(dir) => " as " + dir
+        case None => ""
+      }) + "."
+    ct.interp(false, false, cmd)
+  }
 }
 
 case class ProjectSourceLoadPath(

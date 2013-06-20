@@ -18,19 +18,11 @@ class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
       import org.eclipse.ui.IFileEditorInput
       import org.eclipse.core.resources.IResource
 
-      val input = editor.getEditorInput
-      val res: Option[IResource] =
-        if (input.isInstanceOf[IFileEditorInput]) {
-          Some(input.asInstanceOf[IFileEditorInput].getFile)
-        } else None
-
-      res match {
-        case Some(r) =>
-          ct.interp(false, false, "Add Rec LoadPath \"" +
-              r.getProject.getFolder("src").getLocation.toOSString + "\".")
-        case None =>
-          Console.println("shouldn't happen - trying to get ProjectDir from " +
-            input + ", which is not an IFileEditorInput")
+      if (editor.isInstanceOf[IFileEditorInput]) {
+        val file = editor.asInstanceOf[IFileEditorInput].getFile
+        val cp = ICoqModel.forProject(file.getProject)
+        for (p <- cp.getLoadPath)
+          p.run(ct)
       }
 
       monitor.worked(1)
