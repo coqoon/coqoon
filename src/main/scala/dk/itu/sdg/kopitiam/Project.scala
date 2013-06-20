@@ -205,5 +205,5 @@ class CoqNature extends IProjectNature {
   }
 }
 object CoqNature {
-  final val NATURE_ID = "dk.itu.sdg.kopitiam.CoqProject"
+  final val NATURE_ID = "dk.itu.sdg.kopitiam.CoqNature"
 }

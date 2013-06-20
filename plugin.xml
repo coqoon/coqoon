@@ -504,12 +504,12 @@
       </builder>
    </extension>
    <extension
-         id="dk.itu.sdg.kopitiam.CoqProject"
+         id="dk.itu.sdg.kopitiam.CoqNature"
          name="Coq Project Nature"
          point="org.eclipse.core.resources.natures">
       <runtime>
          <run
-               class="dk.itu.sdg.kopitiam.CoqProject">
+               class="dk.itu.sdg.kopitiam.CoqNature">
          </run>
       </runtime>
       <builder
@@ -528,7 +528,7 @@
                   type="org.eclipse.core.resources.IProject">
                <test
                      property="org.eclipse.core.resources.projectNature"
-                     value="dk.itu.sdg.kopitiam.CoqProject">
+                     value="dk.itu.sdg.kopitiam.CoqNature">
                </test>
             </adapt>
          </enabledWhen>
