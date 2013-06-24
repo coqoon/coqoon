@@ -435,14 +435,7 @@ private class CoqTopIdeSlaveImplWindows extends CoqTopIdeSlaveImpl {
     if (!CoqProgram("coqtop").check)
       throw new java.io.IOException("Couldn't find the coqtop program")
     
-    var in : Writer = null
-    var out : Reader = null
-    var pr = Process(Seq(CoqProgram("coqtop").path, "-ideslave")).run(
-      new ProcessIO(
-        a => in = new OutputStreamWriter(a),
-        a => out = new InputStreamReader(a),
-        _ => ()))
-    (in, out, pr)
+    ProcessUtils.create(Seq(CoqProgram("coqtop").path, "-ideslave"))
   }
   
   override def interrupt = Unit // TODO
@@ -460,16 +453,11 @@ private class CoqTopIdeSlaveImplPOSIX extends CoqTopIdeSlaveImpl {
     if (!CoqProgram("coqtop").check)
       throw new java.io.IOException("Couldn't find the coqtop program")
     
-    var in : Writer = null
-    var out : Reader = null
-    var pr = Process(Seq(
+    val proc = ProcessUtils.create(Seq(
         "/bin/sh", "-c", "echo $$; exec \"$@\"", "coqtop-wrapper",
-        CoqProgram("coqtop").path, "-ideslave")).run(
-      new ProcessIO(
-        a => in = new OutputStreamWriter(a),
-        a => out = new InputStreamReader(a),
-        _ => ()))
-    
+        CoqProgram("coqtop").path, "-ideslave"))
+    val out = proc._2
+        
     val sb = new StringBuilder
     var a : Int = out.read
     while (a != -1 && a != '\n') {
@@ -478,12 +466,35 @@ private class CoqTopIdeSlaveImplPOSIX extends CoqTopIdeSlaveImpl {
     }
     pid = sb.toString
     
-    (in, out, pr)
+    proc
   }
   
   override def interrupt = {
     if (pid != null) 
       Process(Seq("kill", "-INT", pid)).run
+  }
+}
+
+private object ProcessUtils {
+  import scala.sys.process.{Process, ProcessIO}
+  
+  def create(args : Seq[String]) = {
+    var in : OutputStreamWriter = null
+    var out : InputStreamReader = null
+    var pr : Process = null
+    
+    val lock = new Object
+    lock synchronized {
+      pr = Process.apply(args).run(new ProcessIO(
+          (a : java.io.OutputStream) => lock synchronized {
+              in = new OutputStreamWriter(a); lock.notify },
+          (a : java.io.InputStream) => lock synchronized {
+              out = new InputStreamReader(a); lock.notify },
+          _ => (/* do nothing */)))
+      while (in == null || out == null)
+        lock.wait
+    }
+    (in, out, pr)
   }
 }
 
