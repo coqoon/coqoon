@@ -10,18 +10,63 @@ package dk.itu.sdg.kopitiam
 import org.eclipse.core.resources.IncrementalProjectBuilder
 import org.eclipse.core.resources.IResourceDelta
 import org.eclipse.core.runtime.IProgressMonitor
-import org.eclipse.core.resources.{IProject, IResource, IProjectDescription}
+import org.eclipse.core.resources.{
+  IFile, IProject, IResource, IContainer, IProjectDescription}
 import org.eclipse.jface.operation.IRunnableWithProgress
 import org.eclipse.core.resources.IProjectNature
 
 class CoqBuilder extends IncrementalProjectBuilder {
   type BuildArgs = java.util.Map[java.lang.String, java.lang.String]
   
+  private class DependencyGraph
+  private var deps : Option[DependencyGraph] = None
+  
+  private def partBuild(
+      args : BuildArgs, monitor : IProgressMonitor) : Array[IProject] = {
+    println("Part build for " + getProject)
+    if (deps == None)
+      return fullBuild(args, monitor)
+    val delta = getDelta(getProject())
+    Array()
+  }
+  
+  private def recurse[A <: IResource](folder : IContainer,
+      filter : IResource => Option[A], f : A => Unit) : Unit = {
+    for (i <- folder.members) {
+      filter(i).map(f)
+      i match {
+        case i : IContainer => recurse(i, filter, f)
+        case _ =>
+      }
+    }
+  }
+  
+  private def vFileFilter(r : IResource) : Option[IFile] = 
+    if (r.isInstanceOf[IFile]) {
+      Some(r.asInstanceOf[IFile]).filter(_.getFileExtension == "v")
+    } else None
+  
+  private def fullBuild(
+      args : BuildArgs, monitor : IProgressMonitor) : Array[IProject] = {
+    println("Full build for " + getProject)
+    val dg = new DependencyGraph
+    recurse[IFile](getProject, vFileFilter, a => println(a))
+    deps = Some(dg)
+    Array()
+  }
+  
   override def build(kind : Int,
       args : BuildArgs, monitor : IProgressMonitor) : Array[IProject] = {
     println(this + ".build(" + kind + ", " + args + ", " + monitor + ")")
-    println("\tdelta is " + getDelta(getProject()))
-    null
+    val delta = getDelta(getProject())
+    kind match {
+      case IncrementalProjectBuilder.AUTO_BUILD if delta != null =>
+        partBuild(args, monitor)
+      case IncrementalProjectBuilder.INCREMENTAL_BUILD if delta != null =>
+        partBuild(args, monitor)
+      case _ =>
+        fullBuild(args, monitor)
+    }
   }
   
   override def toString = "(CoqBuilder for " + getProject + ")"
