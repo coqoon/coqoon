@@ -18,8 +18,7 @@ import org.eclipse.core.resources.IProjectNature
 class CoqBuilder extends IncrementalProjectBuilder {
   type BuildArgs = java.util.Map[java.lang.String, java.lang.String]
   
-  def loadPath : Seq[ICoqLoadPath] = Seq(
-        ExternalLoadPath(new Path("/usr/lib/coq/theories"), "Coq")) ++
+  def loadPath : Seq[ICoqLoadPath] =
         ICoqModel.forProject(getProject).getLoadPath
         
   private class DependencyGraph {
