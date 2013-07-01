@@ -204,9 +204,12 @@ class CoqBuilder extends IncrementalProjectBuilder {
           if (a.exists)
             a.delete(IWorkspace.AVOID_UPDATE, null)
           for (i <- dg.dependencySet) i match {
+            case (a, Left(_)) =>
+              /* a has unresolved dependencies, perhaps because i wasn't
+               * built */
+              todo :+= a
             case (a, Right(p_)) if p == p_ =>
               /* a depended on this object */
-              println("while rec-deps for " + i + ": must also rec-deps for " + a)
               todo :+= a
             case _ =>
           }
