@@ -37,7 +37,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     def dependencySet = deps
   }
   private object DependencyGraph {
-    type DepCallback = Unit => Option[IPath]
+    type DepCallback = (String, String => Option[IPath])
     type Dep = Either[DepCallback, IPath]
     
     private val ct = CoqTopIdeSlave_v20120710()
@@ -121,24 +121,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
       for (i <- sentences(content)) {
         i.text.trim match {
           case t @ Load(what) =>
-            result += Left(new Function1[Unit, Option[IPath]] {
-              override def apply(a : Unit) =
-                DependencyGraph.resolveLoad(what)
-              override def toString =
-                "DependencyGraph.resolveLoad(" + what + ")"
-            })
+            result += Left((what, DependencyGraph.resolveLoad))
           case t @ Require(how, what) =>
             if (what(0) == '"') {
               
             } else {
-              for (j <- what.split(" ")) {
-                result += Left(new Function1[Unit, Option[IPath]] {
-                  override def apply(a : Unit) =
-                    DependencyGraph.resolveRequire(j)
-                  override def toString =
-                    "DependencyGraph.resolveRequire(" + j + ")"
-                })
-              }
+              for (j <- what.split(" "))
+                result += Left((j, DependencyGraph.resolveRequire))
             }
           case _ =>
         }
@@ -245,13 +234,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
           /* All dependencies are resolved and compiled */
           println("All dependencies are satisfied for " + i + ", compiling")
           try {
-            new CoqCompileRunner(i).run(monitor.newChild(1))
-            failureCount = 0
+            new CoqCompileRunner(i).run(
+                monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
           } catch {
             case e : org.eclipse.core.runtime.CoreException =>
               e.printStackTrace
           }
-          monitor.worked(1)
+          failureCount = 0
           done = done + i
         } else {
           println("Deps are BROKEN for " + i + ", attempting resolution")
@@ -259,28 +248,27 @@ class CoqBuilder extends IncrementalProjectBuilder {
            * reschedule this for later */
           dg.setDependencies(i, deps.map(a => {
             a match {
-              case l @ Left(cb) => cb() match {
+              case l @ Left((arg, cb)) => cb(arg) match {
                 case Some(p) =>
                   println("\t" + l + " -> " + p)
                   failureCount = 0
                   Right(p)
                 case None =>
                   println("\t" + l + " failed")
-                  Left(cb)
+                  l
               }
               case r @ Right(p) => /* already fine */ Right(p)
             }
           }))
-          if (failureCount > todo.size) {
-            println("Aieee, everything's failed, giving up")
-            todo = List()
-          } else {
-            failureCount += 1
-            todo :+= i
-          }
+          failureCount += 1
+          todo :+= i
         }
       } else {
         /* flag the cycle? */
+      }
+      if (failureCount == todo.size) {
+        println("Aieee, everything's failed, giving up")
+        todo = List()
       }
     }
     
@@ -329,16 +317,21 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   override protected def build(kind : Int,
       args : BuildArgs, monitor_ : IProgressMonitor) : Array[IProject] = {
-    val monitor = SubMonitor.convert(monitor_, "Building " + getProject.getName, 100)
-    println(this + ".build(" + kind + ", " + args + ", " + monitor + ")")
-    val delta = getDelta(getProject())
-    kind match {
-      case IncrementalProjectBuilder.AUTO_BUILD if delta != null =>
-        partBuild(args, monitor)
-      case IncrementalProjectBuilder.INCREMENTAL_BUILD if delta != null =>
-        partBuild(args, monitor)
-      case _ =>
-        fullBuild(args, monitor)
+    val monitor = SubMonitor.convert(
+        monitor_, "Building " + getProject.getName, 1)
+    try {
+      println(this + ".build(" + kind + ", " + args + ", " + monitor + ")")
+      val delta = getDelta(getProject())
+      kind match {
+        case IncrementalProjectBuilder.AUTO_BUILD if delta != null =>
+          partBuild(args, monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
+        case IncrementalProjectBuilder.INCREMENTAL_BUILD if delta != null =>
+          partBuild(args, monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
+        case _ =>
+          fullBuild(args, monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
+      }
+    } finally {
+      monitor.done
     }
   }
   

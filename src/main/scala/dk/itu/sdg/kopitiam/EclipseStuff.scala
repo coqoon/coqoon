@@ -43,7 +43,7 @@ class CoqCompileRunner(source : IFile) extends JobRunner[Unit] {
   import java.io.File
   
   override protected def doOperation(monitor : SubMonitor) : Unit = {
-    println("CoqCompileJob(" + source + ") is running")
+    monitor.beginTask("Compiling " + source, 1)
     
     val name = source.getProjectRelativePath.toOSString
     val output = source.getLocation.removeFileExtension.
