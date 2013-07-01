@@ -123,7 +123,7 @@ private abstract class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
       }
     in.write(n.toString())
     in.flush()
-    println("TO   " + n.toString())
+    /* println("TO   " + n.toString()) */
     var t = new String()
     @scala.annotation.tailrec def _util : Elem = {
       val c = out.read()
@@ -136,7 +136,7 @@ private abstract class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
       } else _util
     }
     val x = _util
-    println("FROM " + x.toString())
+    /* println("FROM " + x.toString()) */
     x
   }
   
