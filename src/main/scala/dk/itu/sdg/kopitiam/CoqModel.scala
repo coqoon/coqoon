@@ -106,12 +106,12 @@ private object CoqModelImpl {
 }
 
 trait ICoqLoadPath {
-  def path : String
+  def path : IPath
   def coqdir : Option[String]
   
   def run(ct : CoqTopIdeSlave_v20120710) : Unit = {
     val cmd =
-      "Add Rec LoadPath \"" + path + "\"" + (coqdir match {
+      "Add Rec LoadPath \"" + path.toOSString + "\"" + (coqdir match {
         case Some(dir) => " as " + dir
         case None => ""
       }) + "."
@@ -122,18 +122,18 @@ trait ICoqLoadPath {
 case class ProjectSourceLoadPath(
     val folder : IFolder, val output : Option[ProjectBinaryLoadPath] = None)
     extends ICoqLoadPath {
-  def path = folder.getLocation.toOSString
+  def path = folder.getLocation
   def coqdir = None
 }
 
 case class ProjectBinaryLoadPath(val folder : IFolder) extends ICoqLoadPath {
-  def path = folder.getLocation.toOSString
+  def path = folder.getLocation
   def coqdir = None
 }
 
 case class ExternalLoadPath(val fsPath : IPath, val dir : String)
     extends ICoqLoadPath {
-  def path = fsPath.toOSString
+  def path = fsPath
   def coqdir = Option(dir)
 }
 
