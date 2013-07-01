@@ -37,7 +37,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   }
   private object DependencyGraph {
     type DepCallback = (String, String => Option[IPath])
-    type Dep = Either[DepCallback, IPath]
+    type Dep = (DepCallback, Option[IPath])
     
     private val ct = CoqTopIdeSlave_v20120710()
     ct match {
@@ -119,14 +119,14 @@ class CoqBuilder extends IncrementalProjectBuilder {
       var result : Set[Dep] = Set()
       for (i <- sentences(content)) {
         i.text.trim match {
-          case t @ Load(what) =>
-            result += Left((what, DependencyGraph.resolveLoad))
-          case t @ Require(how, what) =>
+          case Load(what) =>
+            result += (((what, DependencyGraph.resolveLoad), None))
+          case Require(how, what) =>
             if (what(0) == '"') {
               
             } else {
               for (j <- what.split(" "))
-                result += Left((j, DependencyGraph.resolveRequire))
+                result += (((j, DependencyGraph.resolveRequire), None))
             }
           case _ =>
         }
@@ -199,30 +199,41 @@ class CoqBuilder extends IncrementalProjectBuilder {
       todo = todo.tail
       if (!done.contains(i)) {
         done += i
-        getCorrespondingObject(i).map(a => {
+        getCorrespondingObject(i).foreach(a => {
           val p = i.getFullPath
           if (a.exists)
             a.delete(IWorkspace.AVOID_UPDATE, null)
-          for (i <- dg.dependencySet) i match {
-            case (a, Left(_)) =>
-              /* a has unresolved dependencies, perhaps because i wasn't
-               * built */
-              todo :+= a
-            case (a, Right(p_)) if p == p_ =>
+          dg.dependencySet.foreach(_ match {
+            case (_, (_, Some(p_))) if p == p_ =>
               /* a depended on this object */
               todo :+= a
             case _ =>
-          }
+          })
         })
       }
     }
     
+    /* Treat files with broken dependencies as affected files */
+    dg.dependencySet.foreach(_ match {
+      case dep @ (file, (_, None)) =>
+        done += file
+      case _ =>
+    })
+    
     monitor.beginTask("Working", done.size * 2)
     
-    for (i <- done)
+    for (i <- done) {
+      /* Clear all of the problem markers for affected files */
       i.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
+      
+      /* Forget all the resolved dependencies for affected files */
+      dg.setDependencies(i, dg.getDependencies(i).map(_ match {
+        case (f, _) => (f, None)
+      }))
+    }
     
-    for (i <- done)
+    /* Recalculate the dependencies for changed files */
+    for (i <- files)
       dg.setDependencies(i, DependencyGraph.generateDeps(i,
           monitor.newChild(1, SubMonitor.SUPPRESS_NONE)))
     
@@ -235,10 +246,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
       todo = todo.tail
       if (!done.contains(i)) {
         val deps = dg.getDependencies(i)
-        if (!deps.exists(a => a.isLeft)) {
+        if (!deps.exists(a => a._2 == None)) {
           println("Deps are OK     for " + i + ", compiling")
-          /* All dependencies are resolved and compiled */
-          println("All dependencies are satisfied for " + i + ", compiling")
           try {
             new CoqCompileRunner(i).run(
                 monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
@@ -250,29 +259,20 @@ class CoqBuilder extends IncrementalProjectBuilder {
           done = done + i
         } else {
           println("Deps are BROKEN for " + i + ", attempting resolution")
-          /* Contains (possibly) broken dependencies: resolve them and try to
-           * reschedule this for later */
           var resolution = false
-          dg.setDependencies(i, deps.map(a => {
-            a match {
-              case l @ Left((arg, cb)) => cb(arg) match {
-                case Some(p) =>
-                  println("\t" + l + " -> " + p)
-                  resolution = true
-                  Right(p)
-                case None =>
-                  println("\t" + l + " failed")
-                  l
-              }
-              case r @ Right(p) => /* already fine */ Right(p)
+          dg.setDependencies(i, deps.map(_ match {
+            case dep @ (f @ (arg, cb), None) => cb(arg) match {
+              case sp @ Some(p) =>
+                println("\t" + f + " -> " + p)
+                resolution = true
+                (f, sp)
+              case None =>
+                println("\t" + f + " failed")
+                dep
             }
+            case dep @ (_, Some(_)) => /* already fine */ dep
           }))
-          resolution match {
-            case true =>
-              failureCount = 0
-            case false =>
-              failureCount += 1
-          }
+          failureCount = if (resolution) 0 else (failureCount + 1)
           todo :+= i
         }
       } else {
@@ -285,13 +285,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
       }
     }
     
-    failed.map(a => a.map(b => {
+    for (a <- failed; b <- a) {
       val dps = dg.getDependencies(b).collect(_ match {
-        case Left((arg, cb)) => arg
+        case ((arg, _), None) => arg
       })
       createFileErrorMarker(b,
           "Broken dependencies: " + dps.mkString(" ") + ".")
-    }))
+    }
     
     Array()
   }
