@@ -10,7 +10,7 @@ package dk.itu.sdg.kopitiam
 import org.eclipse.core.resources.IncrementalProjectBuilder
 import org.eclipse.core.resources.{IResourceDelta, IResourceDeltaVisitor}
 import org.eclipse.core.runtime.{IPath, Path, SubMonitor, IProgressMonitor}
-import org.eclipse.core.resources.{IFile, IProject,
+import org.eclipse.core.resources.{IFile, IMarker, IProject,
   IResource, IContainer, IWorkspace, IWorkspaceRunnable, IProjectDescription}
 import org.eclipse.jface.operation.IRunnableWithProgress
 import org.eclipse.core.resources.IProjectNature
@@ -220,10 +220,14 @@ class CoqBuilder extends IncrementalProjectBuilder {
     monitor.beginTask("Working", done.size * 2)
     
     for (i <- done)
+      i.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
+    
+    for (i <- done)
       dg.setDependencies(i, DependencyGraph.generateDeps(i,
           monitor.newChild(1, SubMonitor.SUPPRESS_NONE)))
     
     var failureCount = 0
+    var failed : Option[List[IFile]] = None
     todo = done.toList
     done = Set()
     while (todo.headOption != None) {
@@ -240,7 +244,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
                 monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
           } catch {
             case e : org.eclipse.core.runtime.CoreException =>
-              e.printStackTrace
+              createFileErrorMarker(i, e.getStatus.getMessage)
           }
           failureCount = 0
           done = done + i
@@ -276,11 +280,29 @@ class CoqBuilder extends IncrementalProjectBuilder {
       }
       if (todo.size > 0 && failureCount == todo.size) {
         println("Aieee, everything's failed, giving up")
+        failed = Some(todo)
         todo = List()
       }
     }
     
+    failed.map(a => a.map(b => {
+      val dps = dg.getDependencies(b).collect(_ match {
+        case Left((arg, cb)) => arg
+      })
+      createFileErrorMarker(b,
+          "Broken dependencies: " + dps.mkString(" ") + ".")
+    }))
+    
     Array()
+  }
+  
+  private def createFileErrorMarker(f : IFile, s : String) = {
+    import scala.collection.JavaConversions._
+    f.createMarker(IMarker.PROBLEM).setAttributes(Map(
+        (IMarker.MESSAGE, s),
+        (IMarker.LOCATION, f.toString),
+        (IMarker.SEVERITY, IMarker.SEVERITY_ERROR),
+        (IMarker.TRANSIENT, true)))
   }
   
   private def traverse[A <: IResource](folder : IContainer,
