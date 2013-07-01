@@ -140,8 +140,8 @@ case class ExternalLoadPath(val fsPath : IPath, val dir : String)
 trait ICoqProject extends ICoqElement with IParent {
   override def getElementType = classOf[ICoqProject]
   
-  override def getParent : Option[ICoqModel]
-  override def getCorrespondingResource : Option[IProject]
+  override def getParent : Option[_ <: ICoqModel]
+  override def getCorrespondingResource : Option[_ <: IProject]
   
   def getLoadPath : Seq[_ <: ICoqLoadPath]
   def setLoadPath(lp : Seq[_ <: ICoqLoadPath], monitor : IProgressMonitor)
@@ -154,6 +154,8 @@ trait ICoqProject extends ICoqElement with IParent {
   
   def getCreateOperation : IUndoableOperation
   def getDeleteOperation(deleteContent : Boolean) : IUndoableOperation
+  
+  override def getChildren : Seq[_ <: ICoqPackageFragmentRoot]
 }
 object ICoqProject {
   def isCoqNature(a : String) = (CoqNature.NATURE_ID == a)
@@ -231,6 +233,9 @@ private class CoqProjectImpl(
 }
 
 trait ICoqPackageFragmentRoot extends ICoqElement with IParent {
+  override def getCorrespondingResource : Option[_ <: IFolder]
+  override def getParent : Option[_ <: ICoqProject]
+  
   override def getElementType = classOf[ICoqPackageFragmentRoot]
   
   def getPackageFragment(folder : IPath) : ICoqPackageFragment
@@ -239,6 +244,8 @@ trait ICoqPackageFragmentRoot extends ICoqElement with IParent {
   
   def getCreateOperation : IUndoableOperation
   def getDeleteOperation : IUndoableOperation
+  
+  override def getChildren : Seq[_ <: ICoqPackageFragment]
 }
 
 private class CoqPackageFragmentRootImpl(
@@ -280,6 +287,9 @@ private object CoqPackageFragmentRootImpl {
 }
 
 trait ICoqPackageFragment extends ICoqElement with IParent {
+  override def getCorrespondingResource : Option[_ <: IFolder]
+  override def getParent : Option[_ <: ICoqPackageFragmentRoot]
+  
   override def getElementType = classOf[ICoqPackageFragment]
   
   def getVernacFile(file : IPath) : ICoqVernacFile
@@ -297,6 +307,8 @@ trait ICoqPackageFragment extends ICoqElement with IParent {
   
   def getCreateOperation : IUndoableOperation
   def getDeleteOperation : IUndoableOperation
+  
+  override def getChildren : Seq[_ <: ICoqFile]
 }
 
 private class CoqPackageFragmentImpl(
@@ -350,7 +362,10 @@ private object CoqPackageFragmentImpl {
   }
 }
 
-trait ICoqFile extends ICoqElement
+trait ICoqFile extends ICoqElement {
+  override def getCorrespondingResource : Option[_ <: IFile]
+  override def getParent : Option[_ <: ICoqPackageFragment]
+}
 
 import java.io.InputStream
 
