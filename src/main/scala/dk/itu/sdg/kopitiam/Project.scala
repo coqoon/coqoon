@@ -245,12 +245,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
           println("Deps are BROKEN for " + i + ", attempting resolution")
           /* Contains (possibly) broken dependencies: resolve them and try to
            * reschedule this for later */
+          var resolution = false
           dg.setDependencies(i, deps.map(a => {
             a match {
               case l @ Left((arg, cb)) => cb(arg) match {
                 case Some(p) =>
                   println("\t" + l + " -> " + p)
-                  failureCount = 0
+                  resolution = true
                   Right(p)
                 case None =>
                   println("\t" + l + " failed")
@@ -259,13 +260,18 @@ class CoqBuilder extends IncrementalProjectBuilder {
               case r @ Right(p) => /* already fine */ Right(p)
             }
           }))
-          failureCount += 1
+          resolution match {
+            case true =>
+              failureCount = 0
+            case false =>
+              failureCount += 1
+          }
           todo :+= i
         }
       } else {
         /* flag the cycle? */
       }
-      if (failureCount == todo.size) {
+      if (todo.size > 0 && failureCount == todo.size) {
         println("Aieee, everything's failed, giving up")
         todo = List()
       }
