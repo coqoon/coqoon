@@ -40,36 +40,34 @@ class CoqCompileJob(source : IFile) extends JobBase(
     "Compiling Coq file " + source.getName, new CoqCompileRunner(source))
 class CoqCompileRunner(source : IFile) extends JobRunner[Unit] {
   import org.eclipse.core.runtime.{IStatus, Status}
-  import java.io.File
+  import java.io.{File, BufferedReader, InputStreamReader}
   
   override protected def doOperation(monitor : SubMonitor) : Unit = {
     monitor.beginTask("Compiling " + source, 1)
     
-    val name = source.getProjectRelativePath.toOSString
-    val output = source.getLocation.removeFileExtension.
-        addFileExtension("vo").toFile
-    val path = source.getProject.getLocation.toFile
+    val location = source.getLocation
+    val output = location.removeFileExtension.addFileExtension("vo").toFile
     
     if (output.lastModified > source.getLocation.toFile.lastModified)
       return
     
     if (EclipseConsole.out == null)
       EclipseConsole.initConsole
-    val coqc = CoqProgram("coqc").path
+    val coqc = CoqProgram("coqc")
     //what about dependencies?? <- need Add LoadPath explicitly in .v!
-    if (new File(coqc).exists) {
+    if (coqc.check) {
       val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-      val lp = new File(loadp).exists
+      
+      var flp = ICoqModel.forProject(source.getProject).getLoadPath.flatMap(
+          a => List("-R", a.path.toOSString, a.coqdir.getOrElse("")))
+      if (new File(loadp).exists)
+        flp ++= List("-R", loadp, "")
+          
       val cmdarr =
-        if (lp)
-          List(coqc, "-noglob", "-R", "src/", "", "-R", loadp, "", name)
-        else
-          List(coqc, "-noglob", "-R", "src/", "", name)
-      val coqcp = new ProcessBuilder(cmdarr : _*)
-            .directory(path)
-            .redirectErrorStream(true)
-            .start();
-      import java.io._
+        List(coqc.path, "-noglob") ++ flp ++ List(location.toOSString)
+      val coqcp =
+        new ProcessBuilder(cmdarr : _*).redirectErrorStream(true).start()
+      
       val ou = new BufferedReader(new InputStreamReader(coqcp.getInputStream()))
       var output = List[String]()
       var line : String = ou.readLine()
