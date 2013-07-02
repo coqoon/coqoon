@@ -20,6 +20,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   def loadPath : Seq[ICoqLoadPath] =
         ICoqModel.forProject(getProject).getLoadPath
+  
+  private val coqTop = CoqTopIdeSlave_v20120710()
         
   private class DependencyGraph {
     import DependencyGraph._
@@ -39,14 +41,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
     type DepCallback = (String, String => Option[IPath])
     type Dep = (DepCallback, Option[IPath])
     
-    private val ct = CoqTopIdeSlave_v20120710()
-    ct match {
-      case Some(ct) =>
-        for (i <- loadPath)
-          i.run(ct)
-      case None =>
-    }
-    
     private val Load = "^Load (.*)\\.$".r
     private val Require = "^Require (Import |Export |)(.*)\\.$".r
     
@@ -55,18 +49,16 @@ class CoqBuilder extends IncrementalProjectBuilder {
           ") (in project " + getProject + ")")
       None
     }
-    def resolveRequire(t : String) : Option[IPath] = {
-      ct match {
-        case Some(ct) =>
-          ct.interp(true, false, "Locate File \"" +
-              t.reverse.split("\\.")(0).reverse + ".vo\".") match {
-            case CoqTypes.Good(msg) =>
-              Some(new Path(msg))
-            case CoqTypes.Fail(_) => None
-          }
-        case None => None
+    def resolveRequire(t : String) : Option[IPath] = coqTop.flatMap(ct => {
+      for (i <- loadPath)
+        i.run(ct)
+      ct.interp(true, false, "Locate File \"" +
+        t.reverse.split("\\.")(0).reverse + ".vo\".") match {
+        case CoqTypes.Good(msg) =>
+          Some(new Path(msg))
+        case CoqTypes.Fail(_) => None
       }
-    }
+    })
     
     def stripComments(doc : String) : String = {
       var regions : List[String] = List()
@@ -123,7 +115,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
             result += (((what, DependencyGraph.resolveLoad), None))
           case Require(how, what) =>
             if (what(0) == '"') {
-              
+              val filename = what.substring(1).split("\"", 2)(0)
+              result += (((filename, DependencyGraph.resolveRequire), None))
             } else {
               for (j <- what.split(" "))
                 result += (((j, DependencyGraph.resolveRequire), None))
@@ -338,6 +331,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   }
   
   override protected def clean(monitor : IProgressMonitor) = {
+    coqTop.map(_.kill)
     deps = None
     traverse[IFile](getProject,
         a => Option(a).flatMap(fileFilter).flatMap(
