@@ -49,7 +49,7 @@ class JavaProofInitialisationRunner(
               basename + "_model'.")
         }
         return
-      } else new CoqCompileRunner(model).run(monitor.newChild(1))
+      } else new CoqCompileRunner(model, None).run(monitor.newChild(1))
       monitor.setWorkRemaining(2)
 
       monitor.subTask("Setting up definitions and specification")

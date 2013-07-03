@@ -221,7 +221,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
         if (!deps.exists(a => a._2 == None)) {
           println("Deps are OK     for " + i + ", compiling")
           try {
-            new CoqCompileRunner(i).run(
+            new CoqCompileRunner(i, getCorrespondingObject(i)).run(
                 monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
           } catch {
             case e : org.eclipse.core.runtime.CoreException =>

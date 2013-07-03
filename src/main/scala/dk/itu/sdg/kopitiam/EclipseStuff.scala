@@ -32,23 +32,24 @@ object EclipseConsole {
 //   view.display(myConsole);
 }
 
-import org.eclipse.core.resources.IFile
+import org.eclipse.core.resources.{IFile, IResource}
 import org.eclipse.core.runtime.jobs.Job
 import org.eclipse.core.runtime.{SubMonitor, IProgressMonitor}
 
 class CoqCompileJob(source : IFile) extends JobBase(
-    "Compiling Coq file " + source.getName, new CoqCompileRunner(source))
-class CoqCompileRunner(source : IFile) extends JobRunner[Unit] {
+    "Compiling Coq file " + source.getName, new CoqCompileRunner(source, None))
+class CoqCompileRunner(
+    source : IFile, output : Option[IFile]) extends JobRunner[Unit] {
   import org.eclipse.core.runtime.{Path, Status, IStatus}
-  import java.io.File
+  import java.io.{File, FileInputStream}
   
   override protected def doOperation(monitor : SubMonitor) : Unit = {
-    monitor.beginTask("Compiling " + source, 1)
+    monitor.beginTask("Compiling " + source, 2)
     
     val location = source.getLocation
-    val output = location.removeFileExtension.addFileExtension("vo").toFile
+    val outputFile = location.removeFileExtension.addFileExtension("vo").toFile
     
-    if (output.lastModified > source.getLocation.toFile.lastModified)
+    if (outputFile.lastModified > source.getLocation.toFile.lastModified)
       return
     
     if (EclipseConsole.out == null)
@@ -68,13 +69,21 @@ class CoqCompileRunner(source : IFile) extends JobRunner[Unit] {
       val coqcp =
         new ProcessBuilder(cmdarr : _*).redirectErrorStream(true).start()
       
-      var output = FunctionIterator.lines(coqcp.getInputStream).mkString("\n")
+      var msgs = FunctionIterator.lines(coqcp.getInputStream).mkString("\n")
       coqcp.waitFor
       if (coqcp.exitValue != 0)
-        fail(new Status(
-            IStatus.ERROR, "dk.itu.sdg.kopitiam", output))
+        fail(new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", msgs))
       
       monitor.worked(1)
+        
+      output.foreach(output => {
+        println("Moving file " + outputFile + " to workspace file " + output)
+        val is = new FileInputStream(outputFile)
+        if (output.exists) {
+          output.setContents(is, IResource.NONE, monitor.newChild(1))
+        } else output.create(is, IResource.DERIVED, monitor.newChild(1))
+        outputFile.delete
+      })
     }
   }
 }
