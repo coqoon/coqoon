@@ -98,18 +98,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
       CoqEditorHandler.makeSteps(stripComments(content), 0, content.length)
     def generateDeps(file : IFile, monitor : SubMonitor) : Set[Dep] = {
       monitor.beginTask("Calculating dependencies for " + file, 1)
-      import java.io.{BufferedReader, InputStreamReader}
-      val r = new BufferedReader(new InputStreamReader(file.getContents))
-      var content = ""
-      var c = r.readLine
-      while (c != null) {
-        if (monitor.isCanceled)
-          return Set()
-        content += c + "\n"
-        c = r.readLine
-      }
       var result : Set[Dep] = Set()
-      for (i <- sentences(content)) {
+      for (i <- sentences(
+          FunctionIterator.lines(file.getContents).mkString("\n"))) {
         i.text.trim match {
           case Load(what) =>
             result += (((what, DependencyGraph.resolveLoad), None))
@@ -360,6 +351,19 @@ class CoqBuilder extends IncrementalProjectBuilder {
   }
   
   override def toString = "(CoqBuilder for " + getProject + ")"
+}
+
+class FunctionIterator[A](f : () => A) extends Iterator[A] {
+  private var cache : Option[A] = None
+  private def prepare() : Unit = cache = cache.orElse { Option(f()) }
+  override def next() = { prepare(); try cache.get finally cache = None }
+  override def hasNext() = { prepare(); (cache != None) }
+}
+object FunctionIterator {
+  def apply[A](f : () => A) = new FunctionIterator(f)
+  import java.io.{InputStream, BufferedReader, InputStreamReader}
+  def lines(i : InputStream) =
+    apply(new BufferedReader(new InputStreamReader(i)).readLine)
 }
 
 object CoqBuilder {

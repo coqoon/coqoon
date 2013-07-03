@@ -40,7 +40,7 @@ class CoqCompileJob(source : IFile) extends JobBase(
     "Compiling Coq file " + source.getName, new CoqCompileRunner(source))
 class CoqCompileRunner(source : IFile) extends JobRunner[Unit] {
   import org.eclipse.core.runtime.{IStatus, Status}
-  import java.io.{File, BufferedReader, InputStreamReader}
+  import java.io.File
   
   override protected def doOperation(monitor : SubMonitor) : Unit = {
     monitor.beginTask("Compiling " + source, 1)
@@ -68,18 +68,11 @@ class CoqCompileRunner(source : IFile) extends JobRunner[Unit] {
       val coqcp =
         new ProcessBuilder(cmdarr : _*).redirectErrorStream(true).start()
       
-      val ou = new BufferedReader(new InputStreamReader(coqcp.getInputStream()))
-      var output = List[String]()
-      var line : String = ou.readLine()
-      while (line != null) {
-        EclipseConsole.out.println(line)
-        output :+= line
-        line = ou.readLine()
-      }
+      var output = FunctionIterator.lines(coqcp.getInputStream).mkString("\n")
       coqcp.waitFor
       if (coqcp.exitValue != 0)
         fail(new Status(
-            IStatus.ERROR, "dk.itu.sdg.kopitiam", output.mkString("\n")))
+            IStatus.ERROR, "dk.itu.sdg.kopitiam", output))
       
       monitor.worked(1)
     }
