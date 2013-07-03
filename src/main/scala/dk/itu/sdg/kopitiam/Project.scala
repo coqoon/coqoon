@@ -20,7 +20,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   def loadPath : Seq[ICoqLoadPath] =
         ICoqModel.forProject(getProject).getLoadPath
-  
+        
   private val coqTop = CoqTopIdeSlave_v20120710()
         
   private class DependencyGraph {
@@ -51,7 +51,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
     def resolveRequire(t : String) : Option[IPath] = coqTop.flatMap(ct => {
       for (i <- loadPath)
-        i.run(ct)
+        ct.interp(true, false, i.asCommand)
       ct.interp(true, false, "Locate File \"" +
         t.reverse.split("\\.")(0).reverse + ".vo\".") match {
         case CoqTypes.Good(msg) =>

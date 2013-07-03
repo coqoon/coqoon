@@ -39,7 +39,7 @@ import org.eclipse.core.runtime.{SubMonitor, IProgressMonitor}
 class CoqCompileJob(source : IFile) extends JobBase(
     "Compiling Coq file " + source.getName, new CoqCompileRunner(source))
 class CoqCompileRunner(source : IFile) extends JobRunner[Unit] {
-  import org.eclipse.core.runtime.{IStatus, Status}
+  import org.eclipse.core.runtime.{Path, Status, IStatus}
   import java.io.File
   
   override protected def doOperation(monitor : SubMonitor) : Unit = {
@@ -58,10 +58,10 @@ class CoqCompileRunner(source : IFile) extends JobRunner[Unit] {
     if (coqc.check) {
       val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
       
-      var flp = ICoqModel.forProject(source.getProject).getLoadPath.flatMap(
-          a => List("-R", a.path.toOSString, a.coqdir.getOrElse("")))
+      var flp = ICoqModel.forProject(
+          source.getProject).getLoadPath.flatMap(_.asArguments)
       if (new File(loadp).exists)
-        flp ++= List("-R", loadp, "")
+        flp ++= ExternalLoadPath(new Path(loadp), null).asArguments
           
       val cmdarr =
         List(coqc.path, "-noglob") ++ flp ++ List(location.toOSString)

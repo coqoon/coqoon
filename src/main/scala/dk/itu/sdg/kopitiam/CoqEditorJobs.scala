@@ -22,7 +22,7 @@ class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
         val file = editor.asInstanceOf[IFileEditorInput].getFile
         val cp = ICoqModel.forProject(file.getProject)
         for (p <- cp.getLoadPath)
-          p.run(ct)
+          ct.interp(false, false, p.asCommand)
       }
 
       monitor.worked(1)
