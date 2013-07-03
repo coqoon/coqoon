@@ -145,18 +145,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   private def getCorrespondingObject(s : IFile) : Option[IFile] = {
     for (i <- loadPath) i match {
-      case lp @ ProjectSourceLoadPath(src, bin)
-          if src.contains(s) =>
+      case ProjectSourceLoadPath(src, bin) if src.contains(s) =>
         val p = s.getProjectRelativePath.removeFirstSegments(
             src.getProjectRelativePath.segmentCount).
             removeFileExtension.addFileExtension("vo")
-        val outputDestination = bin match {
-          case Some(dir) =>
-            dir.folder
-          case None =>
-            getProject.getFolder("bin")
-        }
-        return Some(outputDestination.getFile(p))
+        val outputFolder = bin.map(_.folder).getOrElse(
+            ICoqModel.forProject(getProject).getDefaultOutputLocation)
+        return Some(outputFolder.getFile(p))
       case _ =>
     }
     None
