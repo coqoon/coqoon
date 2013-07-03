@@ -314,8 +314,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
     deps = None
     traverse[IFile](getProject,
         a => Option(a).flatMap(fileFilter).flatMap(
-            extensionFilter("v")).flatMap(derivedFilter(true)),
-        a => println(a + ".delete(IResource.KEEP_HISTORY, monitor)"))
+            extensionFilter("vo")).flatMap(derivedFilter(true)),
+        a => a.delete(IResource.NONE, monitor))
   }
   
   override protected def build(kind : Int,
