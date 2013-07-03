@@ -143,17 +143,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
     buildFiles(changedFiles, args, monitor)
   }
   
-  private def contains(s : IFile, c : IContainer) : Boolean = {
-    var d : IContainer = s.getParent
-    while (d != null && c != d)
-      d = d.getParent
-    (c == d)
-  }
-  
   private def getCorrespondingObject(s : IFile) : Option[IFile] = {
     for (i <- loadPath) i match {
       case lp @ ProjectSourceLoadPath(src, bin)
-          if contains(s, src) =>
+          if src.contains(s) =>
         val p = s.getProjectRelativePath.removeFirstSegments(
             src.getProjectRelativePath.segmentCount).
             removeFileExtension.addFileExtension("vo")
@@ -352,6 +345,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   override def toString = "(CoqBuilder for " + getProject + ")"
 }
+object CoqBuilder {
+  final val BUILDER_ID = "dk.itu.sdg.kopitiam.CoqBuilder"
+}
 
 class FunctionIterator[A](f : () => A) extends Iterator[A] {
   private var cache : Option[A] = None
@@ -364,10 +360,6 @@ object FunctionIterator {
   import java.io.{InputStream, BufferedReader, InputStreamReader}
   def lines(i : InputStream) =
     apply(new BufferedReader(new InputStreamReader(i)).readLine)
-}
-
-object CoqBuilder {
-  final val BUILDER_ID = "dk.itu.sdg.kopitiam.CoqBuilder"
 }
 
 import org.eclipse.ui.INewWizard
