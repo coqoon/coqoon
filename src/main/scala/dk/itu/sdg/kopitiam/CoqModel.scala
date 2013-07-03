@@ -33,8 +33,8 @@ trait ICoqElement {
   }
   def getParent : Option[ICoqElement with IParent]
   def getElementType : Class[_ <: ICoqElement]
-  def getCorrespondingResource : Option[_ <: IResource]
-  def getContainingResource : Option[_ <: IResource] = {
+  def getCorrespondingResource : Option[IResource]
+  def getContainingResource : Option[IResource] = {
     getCorrespondingResource match {
       case Some(a) => Some(a)
       case None => getParent match {
@@ -49,7 +49,7 @@ trait ICoqElement {
 object PathUtilities {
   object Implicits {
     implicit def stringToPath(s : String) : IPath = new Path(s)
-    implicit def stringSeqToPath(s : Seq[_ <: String]) : IPath =
+    implicit def stringSeqToPath(s : Seq[String]) : IPath =
       new Path(s.mkString("/"))
   }
 }
@@ -74,7 +74,7 @@ trait ICoqModel extends ICoqElement with IParent {
   override def getCorrespondingResource : Option[IWorkspaceRoot]
   
   def getProject(name : String) : ICoqProject
-  def getProjects : Seq[_ <: ICoqProject] = List()
+  def getProjects : Seq[ICoqProject]
   def hasProjects : Boolean = (!getProjects.isEmpty)
 }
 object ICoqModel {
@@ -140,22 +140,22 @@ case class ExternalLoadPath(val fsPath : IPath, val dir : String)
 trait ICoqProject extends ICoqElement with IParent {
   override def getElementType = classOf[ICoqProject]
   
-  override def getParent : Option[_ <: ICoqModel]
-  override def getCorrespondingResource : Option[_ <: IProject]
+  override def getParent : Option[ICoqModel]
+  override def getCorrespondingResource : Option[IProject]
   
-  def getLoadPath : Seq[_ <: ICoqLoadPath]
-  def setLoadPath(lp : Seq[_ <: ICoqLoadPath], monitor : IProgressMonitor)
+  def getLoadPath : Seq[ICoqLoadPath]
+  def setLoadPath(lp : Seq[ICoqLoadPath], monitor : IProgressMonitor)
   
   def getDefaultOutputLocation : IPath
   
   def getPackageFragmentRoot(folder : IPath) : ICoqPackageFragmentRoot
-  def getPackageFragmentRoots : Seq[_ <: ICoqPackageFragmentRoot]
+  def getPackageFragmentRoots : Seq[ICoqPackageFragmentRoot]
   def hasPackageFragmentRoots : Boolean = (!getPackageFragmentRoots.isEmpty)
   
   def getCreateOperation : IUndoableOperation
   def getDeleteOperation(deleteContent : Boolean) : IUndoableOperation
   
-  override def getChildren : Seq[_ <: ICoqPackageFragmentRoot]
+  override def getChildren : Seq[ICoqPackageFragmentRoot]
 }
 object ICoqProject {
   def isCoqNature(a : String) = (CoqNature.NATURE_ID == a)
@@ -210,11 +210,11 @@ private class CoqProjectImpl(
         Array(res), "Delete Coq project", deleteContent)
   }
   
-  override def getLoadPath : Seq[_ <: ICoqLoadPath] = List(
+  override def getLoadPath : Seq[ICoqLoadPath] = List(
       new ProjectSourceLoadPath(res.getFolder("src")),
       new ProjectBinaryLoadPath(res.getFolder("bin")))
   override def setLoadPath(
-      lp : Seq[_ <: ICoqLoadPath], monitor : IProgressMonitor) = ()
+      lp : Seq[ICoqLoadPath], monitor : IProgressMonitor) = ()
   
   override def getDefaultOutputLocation = res.getFolder("bin").getFullPath
   
@@ -233,19 +233,19 @@ private class CoqProjectImpl(
 }
 
 trait ICoqPackageFragmentRoot extends ICoqElement with IParent {
-  override def getCorrespondingResource : Option[_ <: IFolder]
-  override def getParent : Option[_ <: ICoqProject]
+  override def getCorrespondingResource : Option[IFolder]
+  override def getParent : Option[ICoqProject]
   
   override def getElementType = classOf[ICoqPackageFragmentRoot]
   
   def getPackageFragment(folder : IPath) : ICoqPackageFragment
-  def getPackageFragments : Seq[_ <: ICoqPackageFragment]
+  def getPackageFragments : Seq[ICoqPackageFragment]
   def hasPackageFragments : Boolean = (!getPackageFragments.isEmpty)
   
   def getCreateOperation : IUndoableOperation
   def getDeleteOperation : IUndoableOperation
   
-  override def getChildren : Seq[_ <: ICoqPackageFragment]
+  override def getChildren : Seq[ICoqPackageFragment]
 }
 
 private class CoqPackageFragmentRootImpl(
@@ -287,28 +287,28 @@ private object CoqPackageFragmentRootImpl {
 }
 
 trait ICoqPackageFragment extends ICoqElement with IParent {
-  override def getCorrespondingResource : Option[_ <: IFolder]
-  override def getParent : Option[_ <: ICoqPackageFragmentRoot]
+  override def getCorrespondingResource : Option[IFolder]
+  override def getParent : Option[ICoqPackageFragmentRoot]
   
   override def getElementType = classOf[ICoqPackageFragment]
   
   def getVernacFile(file : IPath) : ICoqVernacFile
-  def getVernacFiles : Seq[_ <: ICoqVernacFile]
+  def getVernacFiles : Seq[ICoqVernacFile]
   def hasVernacFiles : Boolean = (!getVernacFiles.isEmpty)
   
   def getObjectFile(file : IPath) : ICoqObjectFile
-  def getObjectFiles : Seq[_ <: ICoqObjectFile]
+  def getObjectFiles : Seq[ICoqObjectFile]
   def hasObjectFiles : Boolean = (!getObjectFiles.isEmpty)
   
   def hasCoqFiles : Boolean = (hasVernacFiles || hasObjectFiles)
   
-  def getNonCoqFiles : Seq[_ <: IFile]
+  def getNonCoqFiles : Seq[IFile]
   def hasNonCoqFiles : Boolean = (!getNonCoqFiles.isEmpty)
   
   def getCreateOperation : IUndoableOperation
   def getDeleteOperation : IUndoableOperation
   
-  override def getChildren : Seq[_ <: ICoqFile]
+  override def getChildren : Seq[ICoqFile]
 }
 
 private class CoqPackageFragmentImpl(
@@ -363,8 +363,8 @@ private object CoqPackageFragmentImpl {
 }
 
 trait ICoqFile extends ICoqElement {
-  override def getCorrespondingResource : Option[_ <: IFile]
-  override def getParent : Option[_ <: ICoqPackageFragment]
+  override def getCorrespondingResource : Option[IFile]
+  override def getParent : Option[ICoqPackageFragment]
 }
 
 import java.io.InputStream
