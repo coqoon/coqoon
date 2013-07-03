@@ -145,7 +145,7 @@ trait ICoqProject extends ICoqElement with IParent {
   def getLoadPath : Seq[ICoqLoadPath]
   def setLoadPath(lp : Seq[ICoqLoadPath], monitor : IProgressMonitor)
   
-  def getDefaultOutputLocation : IPath
+  def getDefaultOutputLocation : IFolder
   
   def getPackageFragmentRoot(folder : IPath) : ICoqPackageFragmentRoot
   def getPackageFragmentRoots : Seq[ICoqPackageFragmentRoot]
@@ -215,7 +215,7 @@ private class CoqProjectImpl(
   override def setLoadPath(
       lp : Seq[ICoqLoadPath], monitor : IProgressMonitor) = ()
   
-  override def getDefaultOutputLocation = res.getFolder("bin").getFullPath
+  override def getDefaultOutputLocation = res.getFolder("bin")
   
   override def getPackageFragmentRoot(folder : IPath) =
     new CoqPackageFragmentRootImpl(res.getFolder(folder), this)
