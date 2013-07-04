@@ -160,6 +160,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
     None
   }
   
+  private val CompilationError =
+    """(?s)File "(.*)", line (\d+), characters (\d+)-(\d+):(.*)$""".
+        r.unanchored
+  
   private def buildFiles(files : Set[IFile],
       args : BuildArgs, monitor : SubMonitor) : Array[IProject] = {
     println(this + ".buildFiles(" + files + ", " + args + ", " + monitor + ")")
@@ -230,7 +234,12 @@ class CoqBuilder extends IncrementalProjectBuilder {
                 monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
           } catch {
             case e : org.eclipse.core.runtime.CoreException =>
-              createFileErrorMarker(i, e.getStatus.getMessage)
+              e.getStatus.getMessage.trim match {
+                case CompilationError(_, line, _, _, message) =>
+                  createLineErrorMarker(
+                      i, line.toInt, message.replaceAll("\\s+", " ").trim)
+                case msg => createFileErrorMarker(i, msg)
+              }
           }
           failureCount = 0
           done = done + i
@@ -277,7 +286,17 @@ class CoqBuilder extends IncrementalProjectBuilder {
     import scala.collection.JavaConversions._
     f.createMarker(IMarker.PROBLEM).setAttributes(Map(
         (IMarker.MESSAGE, s),
-        (IMarker.LOCATION, f.toString),
+        (IMarker.SEVERITY, IMarker.SEVERITY_ERROR),
+        (IMarker.TRANSIENT, true)))
+  }
+  
+  private def createLineErrorMarker(
+      f : IFile, line : Int, s : String) = {
+    import scala.collection.JavaConversions._
+    f.createMarker(IMarker.PROBLEM).setAttributes(Map(
+        (IMarker.MESSAGE, s),
+        (IMarker.LOCATION, "line " + line),
+        (IMarker.LINE_NUMBER, line),
         (IMarker.SEVERITY, IMarker.SEVERITY_ERROR),
         (IMarker.TRANSIENT, true)))
   }

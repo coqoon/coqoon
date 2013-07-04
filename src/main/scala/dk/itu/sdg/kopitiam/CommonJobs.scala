@@ -57,7 +57,6 @@ class CreateMarkerJob(
   override protected def doOperation(monitor : IProgressMonitor) =
     resource.createMarker(type_).setAttributes(Map(
         (IMarker.MESSAGE, message),
-        (IMarker.LOCATION, resource.toString),
         (IMarker.SEVERITY, severity),
         (IMarker.CHAR_START, region._1),
         (IMarker.CHAR_END, region._2),
