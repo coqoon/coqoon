@@ -324,13 +324,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
   private def fullBuild(
       args : BuildArgs, monitor : SubMonitor) : Array[IProject] = {
     println("Full build for " + getProject)
-    deps = Some(new DependencyGraph)
+    val dg = new DependencyGraph
+    deps = Some(dg)
     
-    var files = Set[IFile]()
     traverse[IFile](getProject,
         a => Option(a).flatMap(fileFilter).flatMap(extensionFilter("v")),
-        a => files += a)
-    buildFiles(files, args, monitor)
+        a => dg.setDependencies(a, DependencyGraph.generateDeps(a)))
+    buildFiles(Set(), args, monitor)
   }
   
   override protected def clean(monitor : IProgressMonitor) = {
