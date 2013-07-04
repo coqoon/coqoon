@@ -64,7 +64,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
       var regions : List[String] = List()
       var i = 0
       var regionStart = 0
-      var result = ""
       var inString = false
       var commentDepth = 0
       while (i < doc.length) {
@@ -87,7 +86,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
         } else if (commentDepth == 0) { 
           if (doc(i) == '"')
             inString = !inString
-          result += doc(i)
           i += 1
         } else i += 1
       }
