@@ -200,7 +200,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
       getCorrespondingObject(i).foreach(
           a => new FolderCreationRunner(a).run(null))
       
-      /* Clear all of the problem markers file */
+      /* Clear all of the problem markers */
       i.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
       
       /* Forget all the resolved dependencies */

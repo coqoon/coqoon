@@ -49,8 +49,12 @@ class CoqCompileRunner(
     val location = source.getLocation
     val outputFile = location.removeFileExtension.addFileExtension("vo").toFile
     
-    if (outputFile.lastModified > source.getLocation.toFile.lastModified)
-      return
+    output match {
+      case Some(file)
+          if file.getLocalTimeStamp > source.getLocalTimeStamp =>
+        return
+      case _ =>
+    }
     
     if (EclipseConsole.out == null)
       EclipseConsole.initConsole
