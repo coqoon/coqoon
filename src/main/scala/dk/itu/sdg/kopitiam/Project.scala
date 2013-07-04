@@ -99,8 +99,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     
     def sentences(content : String) : Seq[CoqStep] =
       CoqEditorHandler.makeSteps(stripComments(content), 0, content.length)
-    def generateDeps(file : IFile, monitor : SubMonitor) : Set[Dep] = {
-      monitor.beginTask("Calculating dependencies for " + file, 1)
+    def generateDeps(file : IFile) : Set[Dep] = {
       var result : Set[Dep] = Set()
       for (i <- sentences(
           FunctionIterator.lines(file.getContents).mkString("\n"))) {
@@ -197,8 +196,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
       case _ =>
     })
     
-    monitor.beginTask("Working", done.size * 2)
-    
     for (i <- done) {
       /* Create the output directory for affected files */
       getCorrespondingObject(i).foreach(
@@ -215,9 +212,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
     
     /* Recalculate the dependencies for changed files */
     for (i <- files)
-      dg.setDependencies(i, DependencyGraph.generateDeps(i,
-          monitor.newChild(1, SubMonitor.SUPPRESS_NONE)))
+      dg.setDependencies(i, DependencyGraph.generateDeps(i))
     
+    monitor.beginTask("Working", done.size)
+      
     var failureCount = 0
     var failed : Option[List[IFile]] = None
     todo = done.toList
