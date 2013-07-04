@@ -10,7 +10,7 @@ package dk.itu.sdg.kopitiam
 import org.eclipse.core.resources.IncrementalProjectBuilder
 import org.eclipse.core.resources.{IResourceDelta, IResourceDeltaVisitor}
 import org.eclipse.core.runtime.{IPath, Path, SubMonitor, IProgressMonitor}
-import org.eclipse.core.resources.{IFile, IMarker, IProject,
+import org.eclipse.core.resources.{IFile, IFolder, IMarker, IProject,
   IResource, IContainer, IWorkspace, IWorkspaceRunnable, IProjectDescription}
 import org.eclipse.jface.operation.IRunnableWithProgress
 import org.eclipse.core.resources.IProjectNature
@@ -162,8 +162,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
     println(this + ".buildFiles(" + files + ", " + args + ", " + monitor + ")")
     val dg = deps.get
     
-    import DependencyGraph.Dep
-    
     var done = Set[IFile]()
     var todo = List[IFile]() ++ files
     while (todo.headOption != None) {
@@ -195,10 +193,14 @@ class CoqBuilder extends IncrementalProjectBuilder {
     monitor.beginTask("Working", done.size * 2)
     
     for (i <- done) {
-      /* Clear all of the problem markers for affected files */
+      /* Create the output directory */
+      getCorrespondingObject(i).foreach(
+          a => new FolderCreationRunner(a).run(null))
+      
+      /* Clear all of the problem markers file */
       i.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
       
-      /* Forget all the resolved dependencies for affected files */
+      /* Forget all the resolved dependencies */
       dg.setDependencies(i, dg.getDependencies(i).map(_ match {
         case (f, _) => (f, None)
       }))
@@ -355,6 +357,25 @@ object FunctionIterator {
   import java.io.{InputStream, BufferedReader, InputStreamReader}
   def lines(i : InputStream) =
     apply(new BufferedReader(new InputStreamReader(i)).readLine)
+}
+
+class FolderCreationRunner(a : IResource) extends JobRunner[Unit] {
+  private def create(a : IFolder) : Unit = {
+    if (a.exists)
+      return
+    a.getParent match {
+      case f : IFolder => create(f)
+      case _ =>
+    }
+    a.create(IResource.NONE, true, null)
+  }
+  
+  override def doOperation(monitor : SubMonitor) : Unit = {
+    a.getParent match {
+      case f : IFolder => create(f)
+      case _ =>
+    }
+  }
 }
 
 import org.eclipse.ui.INewWizard
