@@ -177,13 +177,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
       if (!done.contains(i)) {
         done += i
         getCorrespondingObject(i).foreach(a => {
-          val p = i.getFullPath
+          val p = a.getLocation
           if (a.exists)
             a.delete(IWorkspace.AVOID_UPDATE, null)
           dg.dependencySet.foreach(_ match {
-            case (_, (_, Some(p_))) if p == p_ =>
-              /* a depended on this object */
-              todo :+= a
+            case (f, ((_, _), Some(p_))) if p == p_ =>
+              /* f depended on this object */
+              todo :+= f
             case _ =>
           })
         })
@@ -200,14 +200,14 @@ class CoqBuilder extends IncrementalProjectBuilder {
     monitor.beginTask("Working", done.size * 2)
     
     for (i <- done) {
-      /* Create the output directory */
+      /* Create the output directory for affected files */
       getCorrespondingObject(i).foreach(
           a => new FolderCreationRunner(a).run(null))
       
-      /* Clear all of the problem markers */
+      /* Clear all of the problem markers for affected files */
       i.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
       
-      /* Forget all the resolved dependencies */
+      /* Forget all the resolved dependencies for affected files */
       dg.setDependencies(i, dg.getDependencies(i).map(_ match {
         case (f, _) => (f, None)
       }))
