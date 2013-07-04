@@ -271,6 +271,12 @@ class CoqBuilder extends IncrementalProjectBuilder {
       }
     }
     
+    if (monitor.isCanceled)
+      for (i <- todo)
+        dg.setDependencies(i, dg.getDependencies(i).map(_ match {
+          case (f, _) => (f, None)
+        }))
+    
     for (a <- failed; b <- a) {
       val dps = dg.getDependencies(b).collect(_ match {
         case ((arg, _), None) => arg
