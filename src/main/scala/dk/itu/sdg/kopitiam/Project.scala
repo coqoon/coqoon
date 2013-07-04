@@ -290,8 +290,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     import scala.collection.JavaConversions._
     f.createMarker(IMarker.PROBLEM).setAttributes(Map(
         (IMarker.MESSAGE, s),
-        (IMarker.SEVERITY, IMarker.SEVERITY_ERROR),
-        (IMarker.TRANSIENT, true)))
+        (IMarker.SEVERITY, IMarker.SEVERITY_ERROR)))
   }
   
   private def createLineErrorMarker(
@@ -301,8 +300,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
         (IMarker.MESSAGE, s),
         (IMarker.LOCATION, "line " + line),
         (IMarker.LINE_NUMBER, line),
-        (IMarker.SEVERITY, IMarker.SEVERITY_ERROR),
-        (IMarker.TRANSIENT, true)))
+        (IMarker.SEVERITY, IMarker.SEVERITY_ERROR)))
   }
   
   private def traverse[A <: IResource](folder : IContainer,
