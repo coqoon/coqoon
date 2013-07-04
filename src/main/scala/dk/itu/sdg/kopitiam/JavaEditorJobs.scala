@@ -21,12 +21,7 @@ class JavaProofInitialisationRunner(
       import org.eclipse.core.resources.IResource
 
       val input = jes.editor.getEditorInput
-      val res: Option[IResource] =
-        if (input.isInstanceOf[IFileEditorInput]) {
-          Some(input.asInstanceOf[IFileEditorInput].getFile)
-        } else None
-
-      res match {
+      TryCast[IFileEditorInput](input).map(_.getFile) match {
         case Some(r) =>
           ct.interp(false, false,
             "Add Rec LoadPath \"" +

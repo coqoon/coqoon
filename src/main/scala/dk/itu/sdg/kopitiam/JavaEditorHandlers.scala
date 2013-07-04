@@ -12,11 +12,7 @@ case class JavaStep(
     override val text : String) extends CoqCommand(text)
 
 abstract class JavaEditorHandler extends EditorHandler {
-  override def editor : ITextEditor = {
-    if (super.editor.isInstanceOf[ITextEditor]) {
-      super.editor.asInstanceOf[ITextEditor]
-    } else null
-  }
+  override def editor : ITextEditor = TryCast[ITextEditor](super.editor).orNull
   
   override def calculateEnabled : Boolean = {
     if (editor == null)

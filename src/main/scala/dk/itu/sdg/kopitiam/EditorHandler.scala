@@ -77,13 +77,8 @@ object CoqTopContainer {
   final val PROPERTY_GOALS = 1979
   
   import org.eclipse.core.runtime.IAdaptable
-  def adapt(a : IAdaptable) : Option[CoqTopContainer] =
-    if (a != null) {
-      val ad = a.getAdapter(classOf[CoqTopContainer])
-      if (ad != null && ad.isInstanceOf[CoqTopContainer]) {
-        Some(ad.asInstanceOf[CoqTopContainer])
-      } else None
-    } else None
+  def adapt(a : IAdaptable) : Option[CoqTopContainer] = Option(a).flatMap(
+      ad => TryCast[CoqTopContainer](ad.getAdapter(classOf[CoqTopContainer])))
 }
 
 trait CoqTopEditorContainer extends CoqTopContainer {

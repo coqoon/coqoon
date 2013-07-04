@@ -25,11 +25,7 @@ import scala.collection.mutable.Stack
 
 abstract class CoqEditorHandler extends EditorHandler {
   override def calculateEnabled = (editor != null && !editor.busy)
-  override def editor : CoqEditor = {
-    if (super.editor.isInstanceOf[CoqEditor]) {
-      super.editor.asInstanceOf[CoqEditor]
-    } else null
-  }
+  override def editor : CoqEditor = TryCast[CoqEditor](super.editor).orNull
 }
 object CoqEditorHandler {
   def getNextCommand(doc : String, offset : Int = 0) : Option[String] = {

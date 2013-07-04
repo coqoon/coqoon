@@ -286,15 +286,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
       filter : IResource => Option[A], f : A => Unit) : Unit = {
     for (i <- folder.members) {
       filter(i).map(f)
-      i match {
-        case i : IContainer => traverse(i, filter, f)
-        case _ =>
-      }
+      TryCast[IContainer](i).foreach(traverse(_, filter, f))
     }
   }
   
-  private def fileFilter(r : IResource) : Option[IFile] = 
-    if (r.isInstanceOf[IFile]) Some(r.asInstanceOf[IFile]) else None
+  private def fileFilter(r : IResource) : Option[IFile] = TryCast[IFile](r)
   
   private def extensionFilter[A <: IResource](ext : String)(r : A) : Option[A] =
     Option(r).filter(_.getFileExtension == ext)
@@ -366,19 +362,16 @@ class FolderCreationRunner(a : IResource) extends JobRunner[Unit] {
   private def create(a : IFolder) : Unit = {
     if (a.exists)
       return
-    a.getParent match {
-      case f : IFolder => create(f)
-      case _ =>
-    }
+    TryCast[IFolder](a.getParent).foreach(create)
     a.create(IResource.NONE, true, null)
   }
   
-  override def doOperation(monitor : SubMonitor) : Unit = {
-    a.getParent match {
-      case f : IFolder => create(f)
-      case _ =>
-    }
-  }
+  override def doOperation(monitor : SubMonitor) : Unit =
+    TryCast[IFolder](a.getParent).foreach(create)
+}
+
+object TryCast {
+  def apply[A](a : Any)(implicit a0 : Manifest[A]) = a0.unapply(a)
 }
 
 import org.eclipse.ui.INewWizard
@@ -495,7 +488,7 @@ import org.eclipse.jface.viewers.TreeViewer
 class LoadPathConfigurationPage
     extends PreferencePage with IWorkbenchPropertyPage {
   private var element : IAdaptable = null
-  override def getElement : IProject = element.asInstanceOf[IProject]
+  override def getElement : IProject = TryCast[IProject](element).get
   override def setElement(element : IAdaptable) = (this.element = element)
   override def createContents(c : Composite) = {
     val tf = new TabFolder(c, SWT.NONE)

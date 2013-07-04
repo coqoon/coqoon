@@ -70,8 +70,7 @@ class CoqCompileRunner(
         new ProcessBuilder(cmdarr : _*).redirectErrorStream(true).start()
       
       var msgs = FunctionIterator.lines(coqcp.getInputStream).mkString("\n")
-      coqcp.waitFor
-      if (coqcp.exitValue != 0)
+      if (coqcp.waitFor != 0)
         fail(new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", msgs))
       
       monitor.worked(1)
