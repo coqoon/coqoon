@@ -222,7 +222,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     var failed : Option[List[IFile]] = None
     todo = done.toList
     done = Set()
-    while (todo.headOption != None) {
+    while (todo.headOption != None && !monitor.isCanceled) {
       val i = todo.head
       todo = todo.tail
       if (!done.contains(i)) {
