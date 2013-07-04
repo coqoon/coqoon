@@ -89,6 +89,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
           i += 1
         } else i += 1
       }
+      if (commentDepth == 0) {
+        val s = doc.substring(regionStart, i).trim
+        if (s.length > 0)
+          regions :+= s
+      }
       regions.mkString(" ").replaceAll("\\s+", " ").trim
     }
     
