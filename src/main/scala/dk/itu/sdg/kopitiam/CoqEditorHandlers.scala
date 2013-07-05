@@ -44,8 +44,7 @@ object CoqEditorHandler {
         inString = !inString
         i += 1
       } else if (doc(i) == '.' && commentDepth == 0 && !inString &&
-          (i + 1 == doc.length || doc(i + 1).isWhitespace) &&
-          (i == 0 || doc(i - 1) != '.')) {
+          (i + 1 == doc.length || doc(i + 1).isWhitespace)) {
         return Some(doc.substring(offset, i + 1))
       } else i += 1
     }
