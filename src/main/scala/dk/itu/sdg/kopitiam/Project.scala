@@ -168,6 +168,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
     println(this + ".buildFiles(" + files + ", " + args + ", " + monitor + ")")
     val dg = deps.get
     
+    /* files contains only those files which are known to have changed. Their
+     * object files, and all their dependencies, must be deleted */
     var done = Set[IFile]()
     var todo = List[IFile]() ++ files
     while (todo.headOption != None) {
@@ -181,36 +183,45 @@ class CoqBuilder extends IncrementalProjectBuilder {
             a.delete(IWorkspace.AVOID_UPDATE, null)
           dg.dependencySet.foreach(_ match {
             case (f, ((_, _), Some(p_))) if p == p_ =>
-              /* f depended on this object */
+              /* f depended on this object; schedule its object for deletion */
               todo :+= f
             case _ =>
           })
         })
       }
     }
+    /* done now contains those files which must be built -- that is, which have
+     * changed (or which have a dependency on something which changed) */
     
-    /* Treat files with broken dependencies as affected files */
+    /* Schedule all files with broken dependencies to be built, too (because
+     * those dependencies might become satisfiable) */
     dg.dependencySet.foreach(_ match {
       case dep @ (file, (_, None)) =>
         done += file
       case _ =>
     })
     
+    /* Prepare all of the files that are going to be built: */
     for (i <- done) {
-      /* Create the output directory for affected files */
-      getCorrespondingObject(i).foreach(
-          a => new FolderCreationRunner(a).run(null))
+      /* create the output directories and remove stale objects... */
+      getCorrespondingObject(i).foreach(a => {
+        if (a.exists) {
+          if (a.getLocalTimeStamp < i.getLocalTimeStamp)
+            a.delete(IWorkspace.AVOID_UPDATE, null)
+        } else new FolderCreationRunner(a).run(null)
+      })
       
-      /* Clear all of the problem markers for affected files */
+      /* ... clear all of the problem markers... */
       i.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
       
-      /* Forget all the resolved dependencies for affected files */
+      /* ... and forget all of the resolved dependencies */
       dg.setDependencies(i, dg.getDependencies(i).map(_ match {
         case (f, _) => (f, None)
       }))
     }
     
-    /* Recalculate the dependencies for changed files */
+    /* Recalculate the dependencies for the files which have actually
+     * changed */
     for (i <- files)
       dg.setDependencies(i, DependencyGraph.generateDeps(i))
     
@@ -226,7 +237,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
       if (!done.contains(i)) {
         val deps = dg.getDependencies(i)
         if (!deps.exists(a => a._2 == None)) {
-          println("Deps are OK     for " + i + ", compiling")
+          /* Attempt to compile files whose dependencies are all satisfied */
+          println("Deps are OK     for " + i + ", attempting compilation")
           try {
             new CoqCompileRunner(i, getCorrespondingObject(i)).run(
                 monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
@@ -242,6 +254,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
           failureCount = 0
           done = done + i
         } else {
+          /* Prepare files for compilation by trying to resolve their broken
+           * dependencies */
           println("Deps are BROKEN for " + i + ", attempting resolution")
           var resolution = false
           dg.setDependencies(i, deps.map(_ match {
@@ -259,9 +273,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
           failureCount = if (resolution) 0 else (failureCount + 1)
           todo :+= i
         }
-      } else {
-        /* flag the cycle? */
       }
+      /* If we've been through the entire build queue without being able to
+       * resolve any more dependencies, then give up */
       if (todo.size > 0 && failureCount == todo.size) {
         println("Aieee, everything's failed, giving up")
         failed = Some(todo)
@@ -270,11 +284,15 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
     
     if (monitor.isCanceled)
+      /* Intentionally unresolve the dependencies of all the files that were
+       * awaiting compilation, thereby forcing them to be added to the next
+       * compilation run */
       for (i <- todo)
         dg.setDependencies(i, dg.getDependencies(i).map(_ match {
           case (f, _) => (f, None)
         }))
     
+    /* Create error markers for files with broken dependencies */
     for (a <- failed; b <- a) {
       val dps = dg.getDependencies(b).collect(_ match {
         case ((arg, _), None) => arg
