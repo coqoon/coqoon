@@ -28,25 +28,32 @@ abstract class CoqEditorHandler extends EditorHandler {
   override def editor : CoqEditor = TryCast[CoqEditor](super.editor).orNull
 }
 object CoqEditorHandler {
+  private val CommentStart = """^\(\*""".r.unanchored
+  private val CommentEnd = """^\*\)""".r.unanchored
+  private val QuotationMark = "^\"".r.unanchored
+  private val FullStop = """^\.(\s|$)""".r.unanchored
+  private val Ellipsis = """^\.\.\.(\s|$)""".r.unanchored
+  
   def getNextCommand(doc : String, offset : Int = 0) : Option[String] = {
     var i = offset
     var commentDepth = 0
     var inString = false
-    while (i < doc.length) {
-      if ((i < doc.length - 2) && doc.substring(i, i + 2) == "(*") {
+    while (i < doc.length) doc.substring(i) match {
+      case CommentStart() if !inString =>
         commentDepth += 1
         i += 2
-      } else if ((i < doc.length - 2) && doc.substring(i, i + 2) == "*)" &&
-          commentDepth > 0) {
+      case CommentEnd() if !inString && commentDepth > 0 =>
         commentDepth -= 1
         i += 2
-      } else if (doc(i) == '"') {
+      case QuotationMark() =>
         inString = !inString
         i += 1
-      } else if (doc(i) == '.' && commentDepth == 0 && !inString &&
-          (i + 1 == doc.length || doc(i + 1).isWhitespace)) {
+      case FullStop(_) if !inString && commentDepth == 0 =>
         return Some(doc.substring(offset, i + 1))
-      } else i += 1
+      case Ellipsis(_) if !inString && commentDepth == 0 =>
+        return Some(doc.substring(offset, i + 3))
+      case _ =>
+        i += 1
     }
     None
   }
