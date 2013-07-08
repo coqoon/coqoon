@@ -324,7 +324,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   private def traverse[A <: IResource](folder : IContainer,
       filter : IResource => Option[A], f : A => Unit) : Unit = {
-    for (i <- folder.members) {
+    for (i <- folder.members(IContainer.INCLUDE_HIDDEN)) {
       filter(i).map(f)
       TryCast[IContainer](i).foreach(traverse(_, filter, f))
     }
