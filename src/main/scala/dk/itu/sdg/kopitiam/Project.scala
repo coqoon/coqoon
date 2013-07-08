@@ -32,6 +32,19 @@ class CoqBuilder extends IncrementalProjectBuilder {
     def setDependencies(file : IFile, to : Set[Dep]) =
       deps = deps.filterNot(_._1 == file) ++ to.map(a => file -> a)
     
+    def resolveDependencies(file : IFile) : Boolean = {
+      var resolution = false
+      deps = deps.map(_ match {
+        case (file_, ((identifier, resolver), None)) if file == file_ =>
+          val r = resolver(identifier)
+          if (r != None)
+            resolution = true
+          (file_, ((identifier, resolver), r))
+        case d => d
+      })
+      resolution
+    }
+      
     def getDependencies(from : IFile) : Set[Dep] =
       deps.filter(_._1 == from).map(_._2)
     
@@ -258,20 +271,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
           /* Prepare files for compilation by trying to resolve their broken
            * dependencies */
           println("Deps are BROKEN for " + i + ", attempting resolution")
-          var resolution = false
-          dg.setDependencies(i, deps.map(_ match {
-            case dep @ (f @ (arg, cb), None) => cb(arg) match {
-              case sp @ Some(p) =>
-                println("\t" + f + " -> " + p)
-                resolution = true
-                (f, sp)
-              case None =>
-                println("\t" + f + " failed")
-                dep
-            }
-            case dep @ (_, Some(_)) => /* already fine */ dep
-          }))
-          failureCount = if (resolution) 0 else (failureCount + 1)
+          if (dg.resolveDependencies(i)) {
+            failureCount = 0
+          } else failureCount = failureCount + 1
           todo :+= i
         }
       }
