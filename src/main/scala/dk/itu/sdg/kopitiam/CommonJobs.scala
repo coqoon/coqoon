@@ -56,7 +56,7 @@ class CreateMarkerJob(
   import scala.collection.JavaConversions._
   override protected def doOperation(monitor : IProgressMonitor) =
     resource.createMarker(type_).setAttributes(Map(
-        (IMarker.MESSAGE, message),
+        (IMarker.MESSAGE, message.replaceAll("\\s+", " ").trim),
         (IMarker.SEVERITY, severity),
         (IMarker.CHAR_START, region._1),
         (IMarker.CHAR_END, region._2),
@@ -74,7 +74,7 @@ object CreateErrorMarkerJob {
       case Some((begin, end)) => (step.offset + begin, step.offset + end)
       case None => (step.offset, step.offset + step.text.length)
     }
-    CreateErrorMarkerJob(resource, offsets, ep._2.trim)
+    CreateErrorMarkerJob(resource, offsets, ep._2)
   }
   
   def apply(
