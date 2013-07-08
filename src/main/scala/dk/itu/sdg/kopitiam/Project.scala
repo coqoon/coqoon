@@ -196,34 +196,42 @@ class CoqBuilder extends IncrementalProjectBuilder {
     /* Schedule all files with broken dependencies to be built, too (because
      * those dependencies might become satisfiable) */
     dg.dependencySet.foreach(_ match {
-      case dep @ (file, (_, None)) =>
+      case (file, (_, None)) =>
         done += file
       case _ =>
     })
     
-    /* Prepare all of the files that are going to be built: */
-    for (i <- done) {
-      /* create the output directories and remove stale objects... */
-      getCorrespondingObject(i).foreach(a => {
-        if (a.exists) {
-          if (a.getLocalTimeStamp < i.getLocalTimeStamp)
-            a.delete(IWorkspace.AVOID_UPDATE, null)
-        } else new FolderCreationRunner(a).run(null)
-      })
-      
-      /* ... clear all of the problem markers... */
-      i.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
-      
-      /* ... and forget all of the resolved dependencies */
-      dg.setDependencies(i, dg.getDependencies(i).map(_ match {
-        case (f, _) => (f, None)
-      }))
-    }
+    done = done.flatMap(i => {
+      if (i.exists) {
+        /* This file's going to be built; create the output directory (and
+         * remove any stale objects)... */
+        getCorrespondingObject(i).foreach(a => {
+          if (a.exists) {
+            if (a.getLocalTimeStamp < i.getLocalTimeStamp)
+              a.delete(IWorkspace.AVOID_UPDATE, null)
+          } else new FolderCreationRunner(a).run(null)
+        })
+
+        /* ... clear all of the problem markers... */
+        i.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
+
+        /* ... and forget all of the resolved dependencies */
+        dg.setDependencies(i, dg.getDependencies(i).map(_ match {
+          case (f, _) => (f, None)
+        }))
+        Some(i)
+      } else {
+        /* This file has been deleted; discard its dependencies and remove it
+         * from the build queue */
+        dg.setDependencies(i, Set.empty)
+        None
+      }
+    })
     
     /* Recalculate the dependencies for the files which have actually
      * changed */
-    for (i <- files)
-      dg.setDependencies(i, DependencyGraph.generateDeps(i))
+    files.filter(_.exists).foreach(
+        i => dg.setDependencies(i, DependencyGraph.generateDeps(i)))
     
     monitor.beginTask("Working", done.size)
       
