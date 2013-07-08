@@ -19,117 +19,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
   import CoqBuilder._
   
   def loadPath : Seq[ICoqLoadPath] =
-        ICoqModel.forProject(getProject).getLoadPath
+      ICoqModel.forProject(getProject).getLoadPath
         
   private val coqTop = CoqTopIdeSlave_v20120710()
-        
-  private class DependencyGraph {
-    import DependencyGraph._
-    
-    private var deps = Set[(IFile, Dep)]()
-    
-    def addDependency(from : IFile, to : Dep) : Unit = (deps += from -> to)
-    def setDependencies(file : IFile, to : Set[Dep]) =
-      deps = deps.filterNot(_._1 == file) ++ to.map(a => file -> a)
-    
-    def resolveDependencies(file : IFile) : Boolean = {
-      var resolution = false
-      deps = deps.map(_ match {
-        case (file_, ((identifier, resolver), None)) if file == file_ =>
-          val r = resolver(identifier)
-          if (r != None)
-            resolution = true
-          (file_, ((identifier, resolver), r))
-        case d => d
-      })
-      resolution
-    }
-      
-    def getDependencies(from : IFile) : Set[Dep] =
-      deps.filter(_._1 == from).map(_._2)
-    
-    def dependencySet = deps
-  }
-  private object DependencyGraph {
-    type DepCallback = (String, String => Option[IPath])
-    type Dep = (DepCallback, Option[IPath])
-    
-    def resolveLoad(t : String) : Option[IPath] = {
-      println("DependencyGraph.resolveLoad(" + t +
-          ") (in project " + getProject + ")")
-      None
-    }
-    def resolveRequire(t : String) : Option[IPath] = coqTop.flatMap(ct => {
-      for (i <- loadPath)
-        ct.interp(true, false, i.asCommand)
-      ct.interp(true, false, "Locate File \"" +
-        t.reverse.split("\\.")(0).reverse + ".vo\".") match {
-        case CoqTypes.Good(msg) =>
-          Some(new Path(msg))
-        case CoqTypes.Fail(_) => None
-      }
-    })
-    
-    def stripComments(doc : String) : String = {
-      var regions : List[String] = List()
-      var i = 0
-      var regionStart = 0
-      var inString = false
-      var commentDepth = 0
-      while (i < doc.length) {
-        if (!inString &&
-            (i < doc.length - 2) && doc.substring(i, i + 2) == "(*") {
-          if (commentDepth == 0) {
-            val s = doc.substring(regionStart, i).trim
-            if (s.length > 0)
-              regions :+= s
-          }
-          commentDepth += 1
-          i += 2
-        } else if (!inString &&
-            (i < doc.length - 2) && doc.substring(i, i + 2) == "*)" &&
-          commentDepth > 0) {
-          commentDepth -= 1
-          if (commentDepth == 0)
-            regionStart = i + 2
-          i += 2
-        } else if (commentDepth == 0) { 
-          if (doc(i) == '"')
-            inString = !inString
-          i += 1
-        } else i += 1
-      }
-      if (commentDepth == 0) {
-        val s = doc.substring(regionStart, i).trim
-        if (s.length > 0)
-          regions :+= s
-      }
-      regions.mkString(" ").replaceAll("\\s+", " ").trim
-    }
-    
-    def sentences(content : String) : Seq[CoqStep] =
-      CoqEditorHandler.makeSteps(stripComments(content), 0, content.length)
-    def generateDeps(file : IFile) : Set[Dep] = {
-      var result : Set[Dep] = Set()
-      for (i <- sentences(
-          FunctionIterator.lines(file.getContents).mkString("\n"))) {
-        i.text.trim match {
-          case Load(what) =>
-            result += (((what, DependencyGraph.resolveLoad), None))
-          case Require(how, what) =>
-            if (what(0) == '"') {
-              val filename = what.substring(1).split("\"", 2)(0)
-              result += (((filename, DependencyGraph.resolveRequire), None))
-            } else {
-              for (j <- what.split(" "))
-                result += (((j, DependencyGraph.resolveRequire), None))
-            }
-          case _ =>
-        }
-      }
-      result
-    }
-  }
+  
   private var deps : Option[DependencyGraph] = None
   
   private def partBuild(
@@ -237,7 +130,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     /* Recalculate the dependencies for the files which have actually
      * changed */
     files.filter(_.exists).foreach(
-        i => dg.setDependencies(i, DependencyGraph.generateDeps(i)))
+        i => dg.setDependencies(i, generateDeps(i)))
     
     monitor.beginTask("Working", done.size)
       
@@ -348,7 +241,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     
     traverse[IFile](getProject,
         a => Option(a).flatMap(fileFilter).flatMap(extensionFilter("v")),
-        a => dg.setDependencies(a, DependencyGraph.generateDeps(a)))
+        a => dg.setDependencies(a, generateDeps(a)))
     buildFiles(Set(), args, monitor)
   }
   
@@ -383,6 +276,46 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
   }
   
+  private def resolveLoad(t : String) : Option[IPath] = {
+    println("DependencyGraph.resolveLoad(" + t +
+      ") (in project " + getProject + ")")
+    None
+  }
+  private def resolveRequire(
+      t : String) : Option[IPath] = coqTop.flatMap(ct => {
+    for (i <- loadPath)
+      ct.interp(true, false, i.asCommand)
+    ct.interp(true, false, "Locate File \"" +
+      t.reverse.split("\\.")(0).reverse + ".vo\".") match {
+      case CoqTypes.Good(msg) =>
+        Some(new Path(msg))
+      case CoqTypes.Fail(_) => None
+    }
+  })
+
+  private def generateDeps(file : IFile) : Set[DependencyGraph.Dep] = {
+    var result : Set[DependencyGraph.Dep] = Set()
+    for (
+      i <- sentences(
+        FunctionIterator.lines(file.getContents).mkString("\n"))
+    ) {
+      i.text.trim match {
+        case Load(what) =>
+          result += (((what, resolveLoad), None))
+        case Require(how, what) =>
+          if (what(0) == '"') {
+            val filename = what.substring(1).split("\"", 2)(0)
+            result += (((filename, resolveRequire), None))
+          } else {
+            for (j <- what.split(" "))
+              result += (((j, resolveRequire), None))
+          }
+        case _ =>
+      }
+    }
+    result
+  }
+  
   override def toString = "(CoqBuilder for " + getProject + ")"
 }
 object CoqBuilder {
@@ -393,6 +326,77 @@ object CoqBuilder {
   private val CompilationError =
     """(?s)File "(.*)", line (\d+), characters (\d+)-(\d+):(.*)$""".
         r.unanchored
+        
+  private def sentences(content : String) : Seq[CoqStep] =
+    CoqEditorHandler.makeSteps(stripComments(content), 0, content.length)
+  private def stripComments(doc : String) : String = {
+    var regions : List[String] = List()
+    var i = 0
+    var regionStart = 0
+    var inString = false
+    var commentDepth = 0
+    while (i < doc.length) {
+      if (!inString &&
+        (i < doc.length - 2) && doc.substring(i, i + 2) == "(*") {
+        if (commentDepth == 0) {
+          val s = doc.substring(regionStart, i).trim
+          if (s.length > 0)
+            regions :+= s
+        }
+        commentDepth += 1
+        i += 2
+      } else if (!inString &&
+        (i < doc.length - 2) && doc.substring(i, i + 2) == "*)" &&
+        commentDepth > 0) {
+        commentDepth -= 1
+        if (commentDepth == 0)
+          regionStart = i + 2
+        i += 2
+      } else if (commentDepth == 0) {
+        if (doc(i) == '"')
+          inString = !inString
+        i += 1
+      } else i += 1
+    }
+    if (commentDepth == 0) {
+      val s = doc.substring(regionStart, i).trim
+      if (s.length > 0)
+        regions :+= s
+    }
+    regions.mkString(" ").replaceAll("\\s+", " ").trim
+  }
+}
+
+class DependencyGraph {
+  import DependencyGraph._
+
+  private var deps = Set[(IFile, Dep)]()
+
+  def addDependency(from : IFile, to : Dep) : Unit = (deps += from -> to)
+  def setDependencies(file : IFile, to : Set[Dep]) =
+    deps = deps.filterNot(_._1 == file) ++ to.map(a => file -> a)
+
+  def resolveDependencies(file : IFile) : Boolean = {
+    var resolution = false
+    deps = deps.map(_ match {
+      case (file_, ((identifier, resolver), None)) if file == file_ =>
+        val r = resolver(identifier)
+        if (r != None)
+          resolution = true
+        (file_, ((identifier, resolver), r))
+      case d => d
+    })
+    resolution
+  }
+
+  def getDependencies(from : IFile) : Set[Dep] =
+    deps.filter(_._1 == from).map(_._2)
+
+  def dependencySet = deps
+}
+object DependencyGraph {
+  type DepCallback = (String, String => Option[IPath])
+  type Dep = (DepCallback, Option[IPath])
 }
 
 class FunctionIterator[A](f : () => A) extends Iterator[A] {
