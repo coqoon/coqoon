@@ -16,7 +16,7 @@ import org.eclipse.jface.operation.IRunnableWithProgress
 import org.eclipse.core.resources.IProjectNature
 
 class CoqBuilder extends IncrementalProjectBuilder {
-  type BuildArgs = java.util.Map[java.lang.String, java.lang.String]
+  import CoqBuilder._
   
   def loadPath : Seq[ICoqLoadPath] =
         ICoqModel.forProject(getProject).getLoadPath
@@ -40,9 +40,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
   private object DependencyGraph {
     type DepCallback = (String, String => Option[IPath])
     type Dep = (DepCallback, Option[IPath])
-    
-    private val Load = "^Load (.*)\\.$".r
-    private val Require = "^Require (Import |Export |)(.*)\\.$".r
     
     def resolveLoad(t : String) : Option[IPath] = {
       println("DependencyGraph.resolveLoad(" + t +
@@ -123,7 +120,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   private var deps : Option[DependencyGraph] = None
   
   private def partBuild(
-      args : BuildArgs, monitor : SubMonitor) : Array[IProject] = {
+      args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
     println("Part build for " + getProject)
     if (deps == None)
       return fullBuild(args, monitor)
@@ -159,12 +156,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
     None
   }
   
-  private val CompilationError =
-    """(?s)File "(.*)", line (\d+), characters (\d+)-(\d+):(.*)$""".
-        r.unanchored
-  
   private def buildFiles(files : Set[IFile],
-      args : BuildArgs, monitor : SubMonitor) : Array[IProject] = {
+      args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
     println(this + ".buildFiles(" + files + ", " + args + ", " + monitor + ")")
     val dg = deps.get
     
@@ -346,7 +339,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     Option(r).filter(_.isDerived == der)
     
   private def fullBuild(
-      args : BuildArgs, monitor : SubMonitor) : Array[IProject] = {
+      args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
     println("Full build for " + getProject)
     val dg = new DependencyGraph
     deps = Some(dg)
@@ -367,9 +360,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
   }
   
   override protected def build(kind : Int,
-      args : BuildArgs, monitor_ : IProgressMonitor) : Array[IProject] = {
+      args_ : java.util.Map[String, String],
+      monitor_ : IProgressMonitor) : Array[IProject] = {
     val monitor = SubMonitor.convert(
         monitor_, "Building " + getProject.getName, 1)
+    val args = scala.collection.JavaConversions.asScalaMap(args_).toMap
     try {
       println(this + ".build(" + kind + ", " + args + ", " + monitor + ")")
       val delta = getDelta(getProject())
@@ -390,6 +385,12 @@ class CoqBuilder extends IncrementalProjectBuilder {
 }
 object CoqBuilder {
   final val BUILDER_ID = "dk.itu.sdg.kopitiam.CoqBuilder"
+    
+  private val Load = "^Load (.*)\\.$".r
+  private val Require = "^Require (Import |Export |)(.*)\\.$".r
+  private val CompilationError =
+    """(?s)File "(.*)", line (\d+), characters (\d+)-(\d+):(.*)$""".
+        r.unanchored
 }
 
 class FunctionIterator[A](f : () => A) extends Iterator[A] {
