@@ -15,21 +15,16 @@ class JavaProofInitialisationRunner(
     
     jes.coqTop.transaction[Unit](ct => {
       monitor.subTask("Performing custom Coq initialisation")
-      val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-      ct.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
+      Activator.getDefault.getChargeLoadPath.foreach(
+          p => ct.interp(false, false, p.asCommand))
 
       import org.eclipse.core.resources.IResource
 
       val input = jes.editor.getEditorInput
-      TryCast[IFileEditorInput](input).map(_.getFile) match {
-        case Some(r) =>
-          ct.interp(false, false,
-            "Add Rec LoadPath \"" +
-              r.getProject.getFolder("src").getLocation.toOSString + "\".")
-        case None =>
-          Console.println("shouldn't happen - trying to get ProjectDir from " +
-            input + ", which is not an IFileEditorInput")
-      }
+      TryCast[IFileEditorInput](input).map(_.getFile).foreach(f => {
+        val cp = ICoqModel.forProject(f.getProject)
+        cp.getLoadPath.foreach(lpe => ct.interp(false, false, lpe.asCommand))
+      })
       monitor.worked(1)
 
       monitor.subTask("Preparing model")

@@ -28,6 +28,13 @@ class Activator extends AbstractUIPlugin {
     PreferenceConverter.setDefault(store, "coqKeywordFg", new RGB(127, 6, 101))
     store.setDefault("implicit", true)
   }
+  
+  import org.eclipse.core.runtime.Path
+  def getChargeLoadPath : Option[ICoqLoadPath] =
+      getPreferenceStore.getString("loadpath") match {
+    case p if p.length > 0 => Some(ExternalLoadPath(new Path(p), null))
+    case p => None
+  }
 }
 object Activator {
   final val PLUGIN_ID = "Kopitiam"

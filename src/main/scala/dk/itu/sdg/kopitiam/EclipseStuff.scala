@@ -61,13 +61,9 @@ class CoqCompileRunner(
     val coqc = CoqProgram("coqc")
     //what about dependencies?? <- need Add LoadPath explicitly in .v!
     if (coqc.check) {
-      val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-      
-      var flp = ICoqModel.forProject(
-          source.getProject).getLoadPath.flatMap(_.asArguments)
-      if (new File(loadp).exists)
-        flp ++= ExternalLoadPath(new Path(loadp), null).asArguments
-          
+      val flp =
+        (ICoqModel.forProject(source.getProject).getLoadPath ++
+            Activator.getDefault.getChargeLoadPath).flatMap(_.asArguments)
       val cmdarr =
         List(coqc.path, "-noglob") ++ flp ++ List(location.toOSString)
       val coqcp =

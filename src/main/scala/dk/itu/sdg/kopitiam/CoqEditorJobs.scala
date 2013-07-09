@@ -8,9 +8,8 @@ class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
     
     editor.coqTop.transaction[Unit](ct => {
       monitor.subTask("Adding global loadpath entries")
-      val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-      if (loadp != null && loadp.length > 0)
-        ct.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
+      Activator.getDefault.getChargeLoadPath.foreach(
+          p => ct.interp(false, false, p.asCommand))
       monitor.worked(1)
 
       monitor.subTask("Adding project loadpath entries")
@@ -20,8 +19,7 @@ class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
       val input = editor.getEditorInput
       TryCast[IFileEditorInput](input).map(_.getFile).foreach(file => {
         val cp = ICoqModel.forProject(file.getProject)
-        for (p <- cp.getLoadPath)
-          ct.interp(false, false, p.asCommand)
+        cp.getLoadPath.foreach(lpe => ct.interp(false, false, lpe.asCommand))
       })
 
       monitor.worked(1)
