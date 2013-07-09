@@ -1,4 +1,5 @@
-/* (c) 2010-2011 Hannes Mehnert and David Christiansen */
+/* (c) 2010-2011 Hannes Mehnert and David Christiansen
+ * Copyright © 2013 Alexander Faithfull */
 
 package dk.itu.sdg.kopitiam
 

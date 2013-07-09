@@ -1,4 +1,5 @@
-/* (c) 2010-2011 Hannes Mehnert */
+/* (c) 2010-2011 Hannes Mehnert
+ * Copyright © 2013 Alexander Faithfull */
 
 package dk.itu.sdg.kopitiam
 
