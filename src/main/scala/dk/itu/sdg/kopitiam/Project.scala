@@ -16,7 +16,11 @@ import org.eclipse.jface.operation.IRunnableWithProgress
 import org.eclipse.core.resources.IProjectNature
 
 class CoqBuilder extends IncrementalProjectBuilder {
+  import java.util.{Map => JMap}
   import CoqBuilder._
+  
+  override protected def getRule(
+      type_ : Int, args : JMap[String, String]) = getProject
   
   def loadPath : Seq[ICoqLoadPath] =
       ICoqModel.forProject(getProject).getLoadPath
@@ -254,8 +258,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
         a => a.delete(IResource.NONE, monitor))
   }
   
-  override protected def build(kind : Int,
-      args_ : java.util.Map[String, String],
+  override protected def build(kind : Int, args_ : JMap[String, String],
       monitor_ : IProgressMonitor) : Array[IProject] = {
     val monitor = SubMonitor.convert(
         monitor_, "Building " + getProject.getName, 1)
