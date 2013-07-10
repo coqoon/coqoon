@@ -31,7 +31,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   private def partBuild(
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
-    println("Part build for " + getProject)
     if (deps == None)
       return fullBuild(args, monitor)
     
@@ -68,7 +67,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   private def buildFiles(files : Set[IFile],
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
-    println(this + ".buildFiles(" + files + ", " + args + ", " + monitor + ")")
     val dg = deps.get
     
     /* files contains only those files which are known to have changed. Their
@@ -149,7 +147,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
         val deps = dg.getDependencies(i)
         if (!deps.exists(a => a._2 == None)) {
           /* Attempt to compile files whose dependencies are all satisfied */
-          println("Deps are OK     for " + i + ", attempting compilation")
           try {
             new CoqCompileRunner(i, getCorrespondingObject(i)).run(
                 monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
@@ -167,7 +164,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
         } else {
           /* Prepare files for compilation by trying to resolve their broken
            * dependencies */
-          println("Deps are BROKEN for " + i + ", attempting resolution")
           if (dg.resolveDependencies(i)) {
             failureCount = 0
           } else failureCount = failureCount + 1
@@ -177,7 +173,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
       /* If we've been through the entire build queue without being able to
        * resolve any more dependencies, then give up */
       if (todo.size > 0 && failureCount == todo.size) {
-        println("Aieee, everything's failed, giving up")
         failed = Some(todo)
         todo = List()
       }
@@ -239,7 +234,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
     
   private def fullBuild(
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
-    println("Full build for " + getProject)
     val dg = new DependencyGraph
     deps = Some(dg)
     
@@ -264,7 +258,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
         monitor_, "Building " + getProject.getName, 1)
     val args = scala.collection.JavaConversions.asScalaMap(args_).toMap
     try {
-      println(this + ".build(" + kind + ", " + args + ", " + monitor + ")")
       val delta = getDelta(getProject())
       kind match {
         case IncrementalProjectBuilder.AUTO_BUILD if delta != null =>
@@ -300,10 +293,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
 
   private def generateDeps(file : IFile) : Set[DependencyGraph.Dep] = {
     var result : Set[DependencyGraph.Dep] = Set()
-    for (
-      i <- sentences(
-        FunctionIterator.lines(file.getContents).mkString("\n"))
-    ) {
+    for (i <- sentences(
+        FunctionIterator.lines(file.getContents).mkString("\n"))) {
       i.text.trim match {
         case Load(what) =>
           result += (((what, resolveLoad), None))
