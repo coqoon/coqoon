@@ -285,6 +285,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
       t : String) : Option[IPath] = coqTop.flatMap(ct => {
     for (i <- loadPath)
       ct.interp(true, false, i.asCommand)
+    Activator.getDefault.getChargeLoadPath.foreach(
+        a => ct.interp(true, false, a.asCommand))
     ct.interp(true, false, "Locate File \"" +
       t.reverse.split("\\.")(0).reverse + ".vo\".") match {
       case CoqTypes.Good(msg) =>
