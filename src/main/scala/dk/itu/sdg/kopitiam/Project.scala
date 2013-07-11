@@ -333,35 +333,27 @@ object CoqBuilder {
     var regionStart = 0
     var inString = false
     var commentDepth = 0
-    while (i < doc.length) {
-      if (!inString &&
-        (i < doc.length - 2) && doc.substring(i, i + 2) == "(*") {
-        if (commentDepth == 0) {
-          val s = doc.substring(regionStart, i).trim
-          if (s.length > 0)
-            regions :+= s
-        }
+    import CoqEditorHandler._
+    while (i < doc.length) doc.substring(i) match {
+      case CommentStart() if !inString =>
+        if (commentDepth == 0)
+          regions ++=
+            Option(doc.substring(regionStart, i).trim).filter(!_.isEmpty)
         commentDepth += 1
         i += 2
-      } else if (!inString &&
-        (i < doc.length - 2) && doc.substring(i, i + 2) == "*)" &&
-        commentDepth > 0) {
+      case CommentEnd() if !inString && commentDepth > 0 =>
         commentDepth -= 1
         if (commentDepth == 0)
           regionStart = i + 2
         i += 2
-      } else if (commentDepth == 0) {
-        if (doc(i) == '"')
-          inString = !inString
+      case QuotationMark() =>
+        inString = !inString
         i += 1
-      } else i += 1
+      case _ =>
+        i += 1
     }
-    if (commentDepth == 0) {
-      val s = doc.substring(regionStart, i).trim
-      if (s.length > 0)
-        regions :+= s
-    }
-    regions.mkString(" ").replaceAll("\\s+", " ").trim
+    (regions ++ Option(doc.substring(regionStart, i).trim).filter(!_.isEmpty)).
+        mkString(" ").replaceAll("\\s+", " ").trim
   }
 }
 

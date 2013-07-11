@@ -28,11 +28,11 @@ abstract class CoqEditorHandler extends EditorHandler {
   override def editor : CoqEditor = TryCast[CoqEditor](super.editor).orNull
 }
 object CoqEditorHandler {
-  private val CommentStart = """^\(\*""".r.unanchored
-  private val CommentEnd = """^\*\)""".r.unanchored
-  private val QuotationMark = "^\"".r.unanchored
-  private val FullStop = """^\.(\s|$)""".r.unanchored
-  private val Ellipsis = """^\.\.\.(\s|$)""".r.unanchored
+  final val CommentStart = """^\(\*""".r.unanchored
+  final val CommentEnd = """^\*\)""".r.unanchored
+  final val QuotationMark = "^\"".r.unanchored
+  final val FullStop = """^\.(\s|$)""".r.unanchored
+  final val Ellipsis = """^\.\.\.(\s|$)""".r.unanchored
   
   def getNextCommand(doc : String, offset : Int = 0) : Option[String] = {
     var i = offset
