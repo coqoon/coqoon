@@ -40,6 +40,12 @@ abstract class ResourceJob(name : String, resource : IResource,
     JobBase.wrap { doOperation(monitor) }
 }
 
+object KopitiamMarkers {
+  object Problem {
+    final val ID = "dk.itu.sdg.kopitiam.problemmarker"
+  }
+}
+
 abstract class MarkerJob(resource : IResource) extends ResourceJob(
     "Update markers", resource, JobUtilities.getRuleFactory.markerRule)
 
@@ -65,8 +71,8 @@ class CreateMarkerJob(
 
 class CreateErrorMarkerJob(
     resource : IResource, region : (Int, Int), message : String)
-    extends CreateMarkerJob(
-        resource, region, message, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+    extends CreateMarkerJob(resource, region,
+        message, KopitiamMarkers.Problem.ID, IMarker.SEVERITY_ERROR)
 object CreateErrorMarkerJob {
   def apply(
       resource : IResource, step : CoqStep, ep : (CoqTypes.location, String)) : CreateErrorMarkerJob = {

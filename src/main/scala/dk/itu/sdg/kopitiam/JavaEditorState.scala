@@ -265,9 +265,9 @@ private class JavaEditorReconcilingStrategy(
     if (input != null && input.isInstanceOf[IFileEditorInput]) {
       val file = input.asInstanceOf[IFileEditorInput].getFile()
       if (file.findMarkers(
-          IMarker.PROBLEM, true, IResource.DEPTH_ZERO).length > 0)
-        new DeleteMarkersJob(
-            file, IMarker.PROBLEM, true, IResource.DEPTH_ZERO).schedule
+          KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO).length > 0)
+        new DeleteMarkersJob(file,
+            KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO).schedule
     }
 
     val off = r.getOffset

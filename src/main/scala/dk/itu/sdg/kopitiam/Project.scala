@@ -114,7 +114,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
         })
 
         /* ... clear all of the problem markers... */
-        i.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_ZERO)
+        i.deleteMarkers(KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO)
 
         /* ... and forget all of the resolved dependencies */
         dg.setDependencies(i, dg.getDependencies(i).map(_ match {
@@ -201,7 +201,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   private def createFileErrorMarker(f : IFile, s : String) = {
     import scala.collection.JavaConversions._
-    f.createMarker(IMarker.PROBLEM).setAttributes(Map(
+    f.createMarker(KopitiamMarkers.Problem.ID).setAttributes(Map(
         (IMarker.MESSAGE, s),
         (IMarker.SEVERITY, IMarker.SEVERITY_ERROR)))
   }
@@ -209,7 +209,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   private def createLineErrorMarker(
       f : IFile, line : Int, s : String) = {
     import scala.collection.JavaConversions._
-    f.createMarker(IMarker.PROBLEM).setAttributes(Map(
+    f.createMarker(KopitiamMarkers.Problem.ID).setAttributes(Map(
         (IMarker.MESSAGE, s),
         (IMarker.LOCATION, "line " + line),
         (IMarker.LINE_NUMBER, line),
@@ -246,7 +246,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
   override protected def clean(monitor : IProgressMonitor) = {
     coqTop.map(_.kill)
     deps = None
-    getProject.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_INFINITE)
+    getProject.deleteMarkers(
+        KopitiamMarkers.Problem.ID, true, IResource.DEPTH_INFINITE)
     traverse[IFile](getProject,
         a => Option(a).flatMap(fileFilter).flatMap(
             extensionFilter("vo")).flatMap(derivedFilter(true)),
