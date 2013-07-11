@@ -246,6 +246,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   override protected def clean(monitor : IProgressMonitor) = {
     coqTop.map(_.kill)
     deps = None
+    getProject.deleteMarkers(IMarker.PROBLEM, true, IResource.DEPTH_INFINITE)
     traverse[IFile](getProject,
         a => Option(a).flatMap(fileFilter).flatMap(
             extensionFilter("vo")).flatMap(derivedFilter(true)),
