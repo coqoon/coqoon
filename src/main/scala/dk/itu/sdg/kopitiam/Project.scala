@@ -397,9 +397,11 @@ class FunctionIterator[A](f : () => A) extends Iterator[A] {
 }
 object FunctionIterator {
   def apply[A](f : () => A) = new FunctionIterator(f)
-  import java.io.{InputStream, BufferedReader, InputStreamReader}
-  def lines(i : InputStream) =
-    apply(new BufferedReader(new InputStreamReader(i)).readLine)
+  import java.io.{Reader, InputStream, BufferedReader, InputStreamReader}
+  def lines(i : InputStream) : FunctionIterator[String] =
+    lines(new InputStreamReader(i))
+  def lines(i : Reader) : FunctionIterator[String] =
+    apply(new BufferedReader(i).readLine)
 }
 
 class FolderCreationRunner(a : IResource) extends JobRunner[Unit] {

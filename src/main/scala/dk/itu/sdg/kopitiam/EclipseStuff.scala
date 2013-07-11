@@ -65,12 +65,9 @@ class CoqCompileRunner(
       val flp =
         (ICoqModel.forProject(source.getProject).getLoadPath ++
             Activator.getDefault.getChargeLoadPath).flatMap(_.asArguments)
-      val cmdarr =
-        List(coqc.path, "-noglob") ++ flp ++ List(location.toOSString)
-      val coqcp =
-        new ProcessBuilder(cmdarr : _*).redirectErrorStream(true).start()
+      val coqcp = coqc.run("-noglob" +: (flp ++ List(location.toOSString)))
       
-      var msgs = FunctionIterator.lines(coqcp.getInputStream).mkString("\n")
+      var msgs = FunctionIterator.lines(coqcp.stdout).mkString("\n")
       if (coqcp.waitFor != 0)
         fail(new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", msgs))
       
