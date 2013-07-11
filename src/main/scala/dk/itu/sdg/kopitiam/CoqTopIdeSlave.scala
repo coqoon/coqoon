@@ -6,41 +6,100 @@
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
 package dk.itu.sdg.kopitiam
-import scala.collection.mutable.ArrayBuilder
+
+trait CoqProgram {
+  def path : String
+  def check : Boolean = new java.io.File(path).exists
+  def run(args : Seq[String]) : CoqProgramInstance
+}
+object CoqProgram {
+  protected def getCoqPath = Option(Activator.getDefault).map(
+      _.getPreferenceStore.getString("coqpath"))
+  
+  private class ProgramImpl(name : String) extends CoqProgram {
+    override def path : String = getCoqPath.map(_.trim) match {
+      case Some(path) if path.length > 0 =>
+        path + java.io.File.separator + name
+      case _ => name
+    }
+    override def run(args : Seq[String]) : CoqProgramInstance =
+      new CoqProgramInstanceImplPOSIX(path +: args)
+  }
+  
+  private class ProgramImplWindows(
+      name : String) extends ProgramImpl(name + ".exe") {
+    override def run(args : Seq[String]) : CoqProgramInstance =
+      new CoqProgramInstanceImpl(path +: args)
+  }
+  
+  def apply(name : String) : CoqProgram =
+    if (PlatformUtilities.isWindows) {
+      new ProgramImplWindows(name)
+    } else new ProgramImpl(name)
+}
+
+trait CoqProgramInstance {
+  import java.io.{Reader, Writer}
+  
+  def stdin : Writer
+  def stdout : Reader
+  
+  def kill
+  def waitFor : Int
+  def interrupt
+}
+
+private class CoqProgramInstanceImpl(argv : Seq[String])
+    extends CoqProgramInstance {
+  private val (in, out, pr) = {
+    import java.io.{InputStreamReader, OutputStreamWriter}
+    import java.lang.{Process, ProcessBuilder}
+    
+    val pr = new ProcessBuilder(argv : _*).redirectErrorStream(true).start()
+    val in = new OutputStreamWriter(pr.getOutputStream)
+    val out = new InputStreamReader(pr.getInputStream)
+    (in, out, pr)
+  }
+  
+  override def stdin = in
+  override def stdout = out
+  
+  override def kill = {
+    in.close
+    out.close
+    pr.destroy
+  }
+  override def waitFor = pr.waitFor
+  override def interrupt = ()
+}
+
+private class CoqProgramInstanceImplPOSIX(argv : Seq[String])
+    extends CoqProgramInstanceImpl(Seq(
+        "/bin/sh", "-c", "echo $$; exec \"$@\"", "coqtop-wrapper") ++ argv) {
+  private var pid : String = {
+    var pid = ""
+    var a : Int = stdout.read
+    while (a != -1 && a != '\n') {
+      pid += a.asInstanceOf[Char]
+      a = stdout.read
+    }
+    pid
+  }
+  
+  import scala.sys.process.Process
+  override def interrupt() = Process(Seq("kill", "-INT", pid)).run
+}
+
+private object PlatformUtilities {
+  def getOSName = System.getProperty("os.name").toLowerCase
+  def isWindows = getOSName.contains("windows")
+}
 
 trait CoqTopIdeSlave {
   def version : String
   
   def kill
   def interrupt
-}
-
-trait CoqProgram {
-  def path : String
-  def check : Boolean = new java.io.File(path).exists
-}
-
-object CoqProgram {
-  protected def getCoqPath = Option(Activator.getDefault).map(
-      _.getPreferenceStore.getString("coqpath"))
-  private class ProgramImpl(name : String) extends CoqProgram {
-    override def path : String = {
-      val programName =
-        if (!PlatformUtilities.isWindows) name else name + ".exe"
-      getCoqPath.map(_.trim) match {
-        case Some(path) if path.length > 0 =>
-          path + java.io.File.separator + programName
-        case _ => programName
-      }
-    }
-  }
-  
-  def apply(name : String) : CoqProgram = new ProgramImpl(name)
-}
-
-private object PlatformUtilities {
-  def getOSName = System.getProperty("os.name").toLowerCase
-  def isWindows = getOSName.contains("windows")
 }
 
 trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
@@ -80,10 +139,7 @@ trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
 }
 object CoqTopIdeSlave_v20120710 {
   def apply() : Option[CoqTopIdeSlave_v20120710] = {
-    val ct : Option[CoqTopIdeSlave_v20120710] =
-      if (PlatformUtilities.isWindows) {
-        Some(new CoqTopIdeSlaveImplWindows())
-      } else Some(new CoqTopIdeSlaveImplPOSIX())
+    val ct : Option[CoqTopIdeSlave_v20120710] = Some(new CoqTopIdeSlaveImpl)
     ct.map(_.about)
     ct
   }
@@ -92,41 +148,30 @@ object CoqTopIdeSlave_v20120710 {
 import java.io.{Reader, Writer}
 import scala.sys.process.Process
 
-private abstract class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
-  private var in : Writer = null
-  private var out : Reader = null
-  
-  private var pr : Process = null
+private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
+  private var pr : Option[CoqProgramInstance] = None
   
   override def kill = {
-    if (in != null)
-      in.close()
-    if (out != null)
-      out.close()
-    if (pr != null)
-      pr.destroy
-    pr = null
-    in = null
-    out = null
+    pr.foreach(_.kill)
+    pr = None
   }
   
-  protected def start : (Writer, Reader, Process)
+  override def interrupt = { pr.foreach(_.interrupt) }
   
   import scala.xml.{Attribute, Elem, Node, Null, Text, XML}
   private def sendRaw(n : Elem) : Elem = synchronized {
-    if (in == null || out == null || pr == null)
-      start match {
-        case (in, out, pr) =>
-          this.in = in
-          this.out = out
-          this.pr = pr
-      }
-    in.write(n.toString())
-    in.flush()
+    if (pr == None) {
+      val ct = CoqProgram("coqtop")
+      if (!ct.check)
+        throw new java.io.IOException("Couldn't find the coqtop program")
+      pr = Option(ct.run(Seq("-ideslave")))
+    }
+    pr.get.stdin.write(n.toString())
+    pr.get.stdin.flush()
     /* println("TO   " + n.toString()) */
     var t = new String()
     @scala.annotation.tailrec def _util : Elem = {
-      val c = out.read()
+      val c = pr.get.stdout.read()
       if (c == -1)
         return null
       val ch = c.asInstanceOf[Char]
@@ -425,77 +470,6 @@ private abstract class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
         CoqTypes.coq_info(
           cif(0).text, cif(1).text, cif(2).text, cif(3).text)
       })
-}
-
-import java.io.{InputStreamReader, OutputStreamWriter}
-import scala.sys.process.ProcessIO
-
-private class CoqTopIdeSlaveImplWindows extends CoqTopIdeSlaveImpl {
-  override protected def start : (Writer, Reader, Process) = {
-    if (!CoqProgram("coqtop").check)
-      throw new java.io.IOException("Couldn't find the coqtop program")
-    
-    ProcessUtils.create(Seq(CoqProgram("coqtop").path, "-ideslave"))
-  }
-  
-  override def interrupt = Unit // TODO
-}
-
-private class CoqTopIdeSlaveImplPOSIX extends CoqTopIdeSlaveImpl {
-  private var pid : String = null
-  
-  override def kill = {
-    pid = null
-    super.kill
-  }
-  
-  override protected def start : (Writer, Reader, Process) = {
-    if (!CoqProgram("coqtop").check)
-      throw new java.io.IOException("Couldn't find the coqtop program")
-    
-    val proc = ProcessUtils.create(Seq(
-        "/bin/sh", "-c", "echo $$; exec \"$@\"", "coqtop-wrapper",
-        CoqProgram("coqtop").path, "-ideslave"))
-    val out = proc._2
-        
-    val sb = new StringBuilder
-    var a : Int = out.read
-    while (a != -1 && a != '\n') {
-      sb += a.asInstanceOf[Char]
-      a = out.read
-    }
-    pid = sb.toString
-    
-    proc
-  }
-  
-  override def interrupt = {
-    if (pid != null) 
-      Process(Seq("kill", "-INT", pid)).run
-  }
-}
-
-private object ProcessUtils {
-  import scala.sys.process.{Process, ProcessIO}
-  
-  def create(args : Seq[String]) = {
-    var in : OutputStreamWriter = null
-    var out : InputStreamReader = null
-    var pr : Process = null
-    
-    val lock = new Object
-    lock synchronized {
-      pr = Process.apply(args).run(new ProcessIO(
-          (a : java.io.OutputStream) => lock synchronized {
-              in = new OutputStreamWriter(a); lock.notify },
-          (a : java.io.InputStream) => lock synchronized {
-              out = new InputStreamReader(a); lock.notify },
-          _ => (/* do nothing */)))
-      while (in == null || out == null)
-        lock.wait
-    }
-    (in, out, pr)
-  }
 }
 
 private class ExceptionalCoqTopIdeSlave_v20120710(
