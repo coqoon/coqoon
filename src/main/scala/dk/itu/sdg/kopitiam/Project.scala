@@ -389,14 +389,14 @@ object DependencyGraph {
   type Dep = (DepCallback, Option[IPath])
 }
 
-class FunctionIterator[A](f : () => A) extends Iterator[A] {
+class FunctionIterator[A](f : () => Option[A]) extends Iterator[A] {
   private var cache : Option[A] = None
-  private def prepare() : Unit = cache = cache.orElse { Option(f()) }
+  private def prepare() : Unit = cache = cache.orElse { f() }
   override def next() = { prepare(); try cache.get finally cache = None }
   override def hasNext() = { prepare(); (cache != None) }
 }
 object FunctionIterator {
-  def apply[A](f : () => A) = new FunctionIterator(f)
+  def apply[A](f : () => A) = new FunctionIterator(() => Option(f()))
   import java.io.{Reader, InputStream, BufferedReader, InputStreamReader}
   def lines(i : InputStream) : FunctionIterator[String] =
     lines(new InputStreamReader(i))
