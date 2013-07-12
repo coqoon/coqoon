@@ -43,6 +43,10 @@ trait CoqProgramInstance {
   
   def stdin : Writer
   def stdout : Reader
+  def readAll : (Int, String) = {
+    val r = FunctionIterator.lines(stdout).mkString("\n")
+    (waitFor, r)
+  }
   
   def kill
   def waitFor : Int

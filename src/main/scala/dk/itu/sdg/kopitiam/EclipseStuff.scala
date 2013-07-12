@@ -67,9 +67,11 @@ class CoqCompileRunner(
             Activator.getDefault.getChargeLoadPath).flatMap(_.asArguments)
       val coqcp = coqc.run("-noglob" +: (flp ++ List(location.toOSString)))
       
-      var msgs = FunctionIterator.lines(coqcp.stdout).mkString("\n")
-      if (coqcp.waitFor != 0)
-        fail(new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", msgs))
+      coqcp.readAll match {
+        case (i, msgs) if i != 0 =>
+          fail(new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", msgs))
+        case _ =>
+      }
       
       monitor.worked(1)
         
