@@ -34,11 +34,11 @@ object CoqEditorHandler {
   final val FullStop = """^\.(\s|$)""".r.unanchored
   final val Ellipsis = """^\.\.\.(\s|$)""".r.unanchored
   
-  def getNextCommand(doc : String, offset : Int = 0) : Option[String] = {
+  def getNextCommand(doc : String, offset : Int = 0) : Option[Substring] = {
     var i = offset
     var commentDepth = 0
     var inString = false
-    while (i < doc.length) doc.substring(i) match {
+    while (i < doc.length) Substring(doc, i) match {
       case CommentStart() if !inString =>
         commentDepth += 1
         i += 2
@@ -49,9 +49,9 @@ object CoqEditorHandler {
         inString = !inString
         i += 1
       case FullStop(_) if !inString && commentDepth == 0 =>
-        return Some(doc.substring(offset, i + 1))
+        return Some(Substring(doc, offset, i + 1))
       case Ellipsis(_) if !inString && commentDepth == 0 =>
-        return Some(doc.substring(offset, i + 3))
+        return Some(Substring(doc, offset, i + 3))
       case _ =>
         i += 1
     }
@@ -60,7 +60,7 @@ object CoqEditorHandler {
   
   def makeStep(doc : String, offset : Int) : Option[CoqStep] =
     getNextCommand(doc, offset) match {
-      case Some(text) => Some(CoqStep(offset, text, false))
+      case Some(text) => Some(CoqStep(offset, text.toString, false))
       case _ => None
     }
   

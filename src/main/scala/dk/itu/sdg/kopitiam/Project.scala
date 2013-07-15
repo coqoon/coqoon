@@ -328,17 +328,16 @@ object CoqBuilder {
   private def sentences(content : String) : Seq[CoqStep] =
     CoqEditorHandler.makeSteps(stripComments(content), 0, content.length)
   private def stripComments(doc : String) : String = {
-    var regions : List[String] = List()
+    var regions : List[Substring] = List()
     var i = 0
     var regionStart = 0
     var inString = false
     var commentDepth = 0
     import CoqEditorHandler._
-    while (i < doc.length) doc.substring(i) match {
+    while (i < doc.length) Substring(doc, i) match {
       case CommentStart() if !inString =>
         if (commentDepth == 0)
-          regions ++=
-            Option(doc.substring(regionStart, i).trim).filter(!_.isEmpty)
+          regions :+= Substring(doc, regionStart, i)
         commentDepth += 1
         i += 2
       case CommentEnd() if !inString && commentDepth > 0 =>
@@ -352,9 +351,36 @@ object CoqBuilder {
       case _ =>
         i += 1
     }
-    (regions ++ Option(doc.substring(regionStart, i).trim).filter(!_.isEmpty)).
+    (regions :+ Substring(doc, regionStart, i)).
         mkString(" ").replaceAll("\\s+", " ").trim
   }
+}
+
+class Substring(base : CharSequence, start : Int, end : Int)
+    extends CharSequence with Seq[Char] {
+  private class SubstringIterator extends Iterator[Char] {
+    private var position = 0
+    override def hasNext = (position < Substring.this.length)
+    override def next = try charAt(position) finally position = position + 1
+  }
+  
+  override def apply(offset : Int) = charAt(offset)
+  override def charAt(offset : Int) = base.charAt(start + offset)
+  override def length = end - start
+  override def subSequence(start : Int, end : Int) =
+    new Substring(this, start, end)
+  
+  override def iterator : Iterator[Char] = new SubstringIterator
+  
+  override def toString = mkString
+}
+object Substring {
+  def apply(base : CharSequence) : Substring =
+    apply(base, 0, base.length)
+  def apply(base : CharSequence, start : Int) : Substring =
+    apply(base, start, base.length)
+  def apply(base : CharSequence, start : Int, end : Int) : Substring =
+    new Substring(base, start, end)
 }
 
 class DependencyGraph {
