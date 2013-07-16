@@ -114,7 +114,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
   
   private def addAnnotations (first : Int, second : Int) : Unit =
     doConnectedToAnnotationModel(model => 
-        doSplitAnnotations(JavaEditorState.getSplitAnnotationRanges(
+        doSplitAnnotations(CoqTopEditorContainer.getSplitAnnotationRanges(
             Some(0), Some(first), Some(second)), model))
 
   def invalidate () : Unit = UIUtils.asyncExec {

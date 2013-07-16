@@ -128,6 +128,23 @@ trait CoqTopEditorContainer extends CoqTopContainer {
         "dk.itu.sdg.kopitiam.processing", "Processing Proof")
   }
 }
+object CoqTopEditorContainer {
+  import org.eclipse.jface.text.Position
+  def getSplitAnnotationRanges(
+      start_ : Option[Int], first_ : Option[Int], second_ : Option[Int]) = {
+    val firstRange = start_.flatMap(start => first_.flatMap(first =>
+        Some(new Position(start, first - start))))
+    val secondRange = start_.flatMap(start => second_.flatMap(second =>
+      first_ match {
+        case None =>
+          Some(new Position(start, second - start))
+        case Some(first) if first != second =>
+          Some(new Position(first, second - first))
+        case _ => None
+      }))
+    (firstRange, secondRange)
+  }
+}
 
 import org.eclipse.core.commands.ExecutionEvent
 

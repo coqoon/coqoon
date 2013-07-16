@@ -72,11 +72,10 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
   private def addAnnotations(
       complete : Option[ASTNode], underway : Option[ASTNode],
       model : IAnnotationModel) : Unit =
-    doSplitAnnotations(
-        JavaEditorState.getSplitAnnotationRanges(
-            method.map(a => a.getStartPosition),
-            complete.map(a => a.getStartPosition + a.getLength),
-            underway.map(a => a.getStartPosition + a.getLength)), model)
+    doSplitAnnotations(CoqTopEditorContainer.getSplitAnnotationRanges(
+        method.map(a => a.getStartPosition),
+        complete.map(a => a.getStartPosition + a.getLength),
+        underway.map(a => a.getStartPosition + a.getLength)), model)
   
   import org.eclipse.core.resources.IMarker
   
@@ -160,24 +159,7 @@ object JavaEditorState {
   def requireStateFor(part : ITextEditor) =
     states.getOrElseUpdate(part, { new JavaEditorState(part) })
   
-  import org.eclipse.jface.text.Position
-  def getSplitAnnotationRanges(
-      start_ : Option[Int], first_ : Option[Int], second_ : Option[Int]) = {
-    val firstRange = start_.flatMap(start => first_.flatMap(first =>
-        Some(new Position(start, first - start))))
-    val secondRange = start_.flatMap(start => second_.flatMap(second =>
-      first_ match {
-        case None =>
-          Some(new Position(start, second - start))
-        case Some(first) if first != second =>
-          Some(new Position(first, second - first))
-        case _ => None
-      }))
-    (firstRange, secondRange)
-  }
-  
   import org.eclipse.jdt.core.dom.CompilationUnit
-  
   def createCertificate(cu : CompilationUnit) = {
     import EclipseJavaASTProperties._
     (getDefinition(cu).get ++ getSpecification(cu).get ++
@@ -186,7 +168,6 @@ object JavaEditorState {
   }
   
   import org.eclipse.jdt.core.dom.MethodDeclaration
-  
   def getProofScript(m : MethodDeclaration) =
     EclipseJavaASTProperties.getProof(m).get ++ JavaASTUtils.traverseAST(
         m, true, false, JavaASTUtils.printProofScript) :+ "Qed."
