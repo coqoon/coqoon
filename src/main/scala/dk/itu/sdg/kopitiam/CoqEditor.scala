@@ -394,9 +394,9 @@ class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor
     //println("Reconciling " + partition + " with editor = " + editor + " and doc = " + document)
     val outline = CoqDocumentProvider.getOutline(document) // updates model as side effect
     if (editor != null) {
-      val outlinePage = editor.getAdapter(classOf[IContentOutlinePage]).asInstanceOf[CoqContentOutlinePage]
+      val outlinePage = TryAdapt[IContentOutlinePage](editor).flatMap(TryCast[CoqContentOutlinePage])
       UIUtils.asyncExec {
-        outlinePage.update() //Update GUI outline
+        outlinePage.foreach(_.update()) //Update GUI outline
       }
     } else
       println(" null editor")

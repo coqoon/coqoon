@@ -58,6 +58,12 @@ object UIUtils {
   }
 }
 
+object TryAdapt {
+  import org.eclipse.core.runtime.IAdaptable
+  def apply[A](ad : IAdaptable)(implicit a0 : Manifest[A]) : Option[A] =
+    Option(ad).flatMap(ad => a0.unapply(ad.getAdapter(a0.runtimeClass)))
+}
+
 class SupersedableTask(delay : Long) {
   private val lock = new Object
   

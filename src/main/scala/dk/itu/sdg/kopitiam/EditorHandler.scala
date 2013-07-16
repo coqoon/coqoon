@@ -29,7 +29,7 @@ abstract class EditorHandler extends AbstractHandler {
     } else setBaseEnabled(false)
   }
   
-  protected def getCoqTopContainer = CoqTopContainer.adapt(editor).orNull
+  protected def getCoqTopContainer = TryAdapt[CoqTopContainer](editor).orNull
   
   import org.eclipse.core.runtime.jobs.Job
   protected def scheduleJob(j : Job) = {
@@ -75,10 +75,6 @@ trait CoqTopContainer {
 object CoqTopContainer {
   final val PROPERTY_BUSY = 979
   final val PROPERTY_GOALS = 1979
-  
-  import org.eclipse.core.runtime.IAdaptable
-  def adapt(a : IAdaptable) : Option[CoqTopContainer] = Option(a).flatMap(
-      ad => TryCast[CoqTopContainer](ad.getAdapter(classOf[CoqTopContainer])))
 }
 
 trait CoqTopEditorContainer extends CoqTopContainer {
