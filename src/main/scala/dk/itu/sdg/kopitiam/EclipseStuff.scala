@@ -65,7 +65,8 @@ class CoqCompileRunner(
       val flp =
         (ICoqModel.forProject(source.getProject).getLoadPath ++
             Activator.getDefault.getChargeLoadPath).flatMap(_.asArguments)
-      val coqcp = coqc.run("-noglob" +: (flp ++ List(location.toOSString)))
+      val coqcp =
+        coqc.run("-noglob" +: (flp ++ List(location.toOSString)), true)
       
       coqcp.readAll match {
         case (i, msgs) if i != 0 =>
