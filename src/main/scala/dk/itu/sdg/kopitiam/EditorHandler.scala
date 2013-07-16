@@ -89,6 +89,20 @@ trait CoqTopEditorContainer extends CoqTopContainer {
   def cursorPosition : Int = editor.getSelectionProvider.
       getSelection.asInstanceOf[ITextSelection].getOffset
 
+  import org.eclipse.jface.text.source.IAnnotationModel
+  protected def doConnectedToAnnotationModel(f : IAnnotationModel => Unit) = {
+    val doc = document
+    val model =
+      editor.getDocumentProvider.getAnnotationModel(editor.getEditorInput)
+    model.connect(doc)
+    try {
+      f(model)
+    } finally model.disconnect(doc)
+    invalidate()
+  }
+  
+  protected def invalidate()
+  
   var underwayA : Option[Annotation] = None
   var completeA : Option[Annotation] = None
 

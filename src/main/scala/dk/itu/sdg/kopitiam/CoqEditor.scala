@@ -3,7 +3,7 @@
 
 package dk.itu.sdg.kopitiam
 
-import org.eclipse.ui.IEditorInput
+import org.eclipse.ui.IFileEditorInput
 import org.eclipse.ui.editors.text.TextEditor
 
 class CoqEditor extends TextEditor with CoqTopEditorContainer {
@@ -24,7 +24,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
       completedV = offset
     underwayV = offset
     annotateTask.schedule {
-      UIUtils.asyncExec { addAnnotations_(completed, underway) }
+      UIUtils.asyncExec { addAnnotations(completed, underway) }
     }
   }
   
@@ -33,7 +33,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
   def setCompleted(offset : Int) = lock synchronized {
     completedV = offset
     annotateTask.schedule {
-      UIUtils.asyncExec { addAnnotations_(completed, underway) }
+      UIUtils.asyncExec { addAnnotations(completed, underway) }
     }
   }
   
@@ -48,11 +48,6 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
   private val reconciler =
     new MonoReconciler(new CoqProofReconcilingStrategy(this), true)
   reconciler.setDelay(1)
-  
-  import org.eclipse.ui.IEditorSite
-  override def init(site : IEditorSite, input : IEditorInput) = {
-    super.init(site, input)
-  }
   
   override def dispose = {
     if (coqTopV != null) {
@@ -116,31 +111,14 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     reconciler.install(viewer)
     viewer
   }
-
-  def addAnnotations (first : Int, second : Int) : Unit = {
-    // second is underway, which must always be >= first
-    underwayV = if (second < first) first else second
-    setCompleted(first)
-  }
   
-  private def addAnnotations_ (first : Int, second : Int) : Unit = {
-    val provider = getDocumentProvider
-    val doc = provider.getDocument(getEditorInput)
-    val model = provider.getAnnotationModel(getEditorInput)
-    model.connect(doc)
-    try {
-      doSplitAnnotations(JavaEditorState.getSplitAnnotationRanges(
-          Some(0), Some(first), Some(second)), model)
-    } finally model.disconnect(doc)
-    invalidate()
-  }
+  private def addAnnotations (first : Int, second : Int) : Unit =
+    doConnectedToAnnotationModel(model => 
+        doSplitAnnotations(JavaEditorState.getSplitAnnotationRanges(
+            Some(0), Some(first), Some(second)), model))
 
   def invalidate () : Unit = UIUtils.asyncExec {
     getSourceViewer.invalidateTextPresentation
-  }
-
-  def getSource () : ISourceViewer = {
-    getSourceViewer()
   }
 
   override def initializeKeyBindingScopes () : Unit = {
@@ -221,7 +199,6 @@ private class CoqProofReconcilingStrategy(
   import org.eclipse.jface.text.{IRegion, Region, IDocument}
   import org.eclipse.jface.text.reconciler.DirtyRegion
   
-  import org.eclipse.ui.IFileEditorInput
   import org.eclipse.core.resources.{IMarker,IResource}
   
   override def reconcile(r : IRegion) : Unit = {
@@ -259,7 +236,6 @@ protected class CoqContentProvider extends ITreeContentProvider {
   import dk.itu.sdg.coqparser.OutlineBuilder
   import org.eclipse.jface.text.IDocument
   import org.eclipse.jface.viewers.Viewer
-  import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.ui.texteditor.IDocumentProvider
 
   var documentProvider : Option[IDocumentProvider] = None
@@ -292,7 +268,7 @@ protected class CoqContentProvider extends ITreeContentProvider {
     //Console.println("getChildren" + obj)
     obj match {
       case something : VernacularRegion => something.getOutline.toArray
-      case something : FileEditorInput => if (root == null) Array[AnyRef]() else root.getOutline.toArray
+      case something : IFileEditorInput => if (root == null) Array[AnyRef]() else root.getOutline.toArray
       case _ => Array[AnyRef]()
     }
   }
@@ -517,7 +493,6 @@ class CoqContentOutlinePage extends ContentOutlinePage {
   import org.eclipse.jface.text.{IDocument, DocumentEvent}
   import org.eclipse.jface.viewers.{ITreeContentProvider, LabelProvider, TreeViewer, Viewer, SelectionChangedEvent, StructuredSelection}
   import org.eclipse.swt.widgets.{Composite, Control}
-  import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.ui.texteditor.{IDocumentProvider, ITextEditor}
 
   var documentProvider : Option[IDocumentProvider] = None

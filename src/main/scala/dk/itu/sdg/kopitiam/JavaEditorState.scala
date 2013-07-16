@@ -59,24 +59,16 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
     }
     addAnnotations(complete, underway)
   }
-    
-  import org.eclipse.jface.text.source.IAnnotationModel
-  private def doConnectedToAnnotationModel(f : IAnnotationModel => Unit) = {
-    val doc = document
-    val model =
-      editor.getDocumentProvider.getAnnotationModel(editor.getEditorInput)
-    model.connect(doc)
-    try {
-      f(model)
-    } finally model.disconnect(doc)
-    editor.asInstanceOf[ForbiddenJavaEditor].
-        getViewer.invalidateTextPresentation /* XXX */
-  }
+  
+  override protected def invalidate() =
+    TryCast[ForbiddenJavaEditor](editor).foreach(
+        _.getViewer.invalidateTextPresentation) /* XXX */
   
   private def addAnnotations(
       complete : Option[ASTNode], underway : Option[ASTNode]) : Unit =
     doConnectedToAnnotationModel { addAnnotations(complete, underway, _) }
   
+  import org.eclipse.jface.text.source.IAnnotationModel
   private def addAnnotations(
       complete : Option[ASTNode], underway : Option[ASTNode],
       model : IAnnotationModel) : Unit =
@@ -200,7 +192,6 @@ object JavaEditorState {
         m, true, false, JavaASTUtils.printProofScript) :+ "Qed."
 }
 
-import org.eclipse.ui.texteditor.ITextEditor
 import org.eclipse.core.runtime.IAdapterFactory
 class JavaEditorStateFactory extends IAdapterFactory {
   override def getAdapterList = Array(classOf[CoqTopContainer])
