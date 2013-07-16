@@ -64,7 +64,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
   }
     
   import dk.itu.sdg.coqparser.VernacularRegion
-  import org.eclipse.jface.text.source.{Annotation, IAnnotationModel, ISourceViewer, IVerticalRuler}
+  import org.eclipse.jface.text.source.{Annotation, ISourceViewer, IVerticalRuler}
   import org.eclipse.jface.text.{IDocument, Position}
   import org.eclipse.swt.widgets.Composite
   import org.eclipse.ui.IEditorInput
@@ -117,10 +117,6 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     viewer
   }
 
-  import org.eclipse.jface.text.source.Annotation
-  private var annotationPair : (Option[Annotation], Option[Annotation]) =
-      (None, None)
-  
   def addAnnotations (first : Int, second : Int) : Unit = {
     // second is underway, which must always be >= first
     underwayV = if (second < first) first else second
@@ -133,10 +129,8 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     val model = provider.getAnnotationModel(getEditorInput)
     model.connect(doc)
     try {
-      annotationPair = JavaEditorState.doSplitAnnotations(
-          JavaEditorState.getSplitAnnotationRanges(
-              Some(0), Some(first), Some(second)),
-          annotationPair, model)
+      doSplitAnnotations(JavaEditorState.getSplitAnnotationRanges(
+          Some(0), Some(first), Some(second)), model)
     } finally model.disconnect(doc)
     invalidate()
   }

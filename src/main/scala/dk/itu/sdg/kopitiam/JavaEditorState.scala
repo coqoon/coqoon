@@ -73,25 +73,18 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
         getViewer.invalidateTextPresentation /* XXX */
   }
   
-  import org.eclipse.jface.text.Position
-  import org.eclipse.jface.text.source.Annotation
   private def addAnnotations(
       complete : Option[ASTNode], underway : Option[ASTNode]) : Unit =
     doConnectedToAnnotationModel { addAnnotations(complete, underway, _) }
   
-  private var annotationPair : (Option[Annotation], Option[Annotation]) =
-      (None, None)
-  
   private def addAnnotations(
       complete : Option[ASTNode], underway : Option[ASTNode],
-      model : IAnnotationModel) : Unit = {
-    annotationPair = JavaEditorState.doSplitAnnotations(
+      model : IAnnotationModel) : Unit =
+    doSplitAnnotations(
         JavaEditorState.getSplitAnnotationRanges(
             method.map(a => a.getStartPosition),
             complete.map(a => a.getStartPosition + a.getLength),
-            underway.map(a => a.getStartPosition + a.getLength)),
-        annotationPair, model)
-  }
+            underway.map(a => a.getStartPosition + a.getLength)), model)
   
   import org.eclipse.core.resources.IMarker
   
@@ -175,10 +168,7 @@ object JavaEditorState {
   def requireStateFor(part : ITextEditor) =
     states.getOrElseUpdate(part, { new JavaEditorState(part) })
   
-  import org.eclipse.jdt.core.dom.Statement
   import org.eclipse.jface.text.Position
-  import org.eclipse.jface.text.source.{
-    Annotation, IAnnotationModel, IAnnotationModelExtension}
   def getSplitAnnotationRanges(
       start_ : Option[Int], first_ : Option[Int], second_ : Option[Int]) = {
     val firstRange = start_.flatMap(start => first_.flatMap(first =>
@@ -192,32 +182,6 @@ object JavaEditorState {
         case _ => None
       }))
     (firstRange, secondRange)
-  }
-  
-  def doSplitAnnotations(
-      r : (Option[Position], Option[Position]),
-      e : (Option[Annotation], Option[Annotation]),
-      model : IAnnotationModel) :
-      (Option[Annotation], Option[Annotation]) = {
-    val modelEx = model.asInstanceOf[IAnnotationModelExtension]
-    def _do(
-        p : Option[Position], a : Option[Annotation],
-        aType : String, aText : String) : Option[Annotation] = p match {
-      case Some(r) => a match {
-        case None =>
-          val an = new Annotation(aType, false, aText)
-          model.addAnnotation(an, r)
-          Some(an)
-        case Some(an) =>
-          modelEx.modifyAnnotationPosition(an, r)
-          Some(an)
-      }
-      case None =>
-        a.map(model.removeAnnotation)
-        None
-    }
-    (_do(r._1, e._1, "dk.itu.sdg.kopitiam.processed", "Processed Proof"),
-     _do(r._2, e._2, "dk.itu.sdg.kopitiam.processing", "Processing Proof"))
   }
   
   import org.eclipse.jdt.core.dom.CompilationUnit

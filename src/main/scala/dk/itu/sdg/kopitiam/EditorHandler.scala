@@ -78,7 +78,9 @@ object CoqTopContainer {
 }
 
 trait CoqTopEditorContainer extends CoqTopContainer {
-  import org.eclipse.jface.text.{IDocument, ITextSelection}
+  import org.eclipse.jface.text.{Position, IDocument, ITextSelection}
+  import org.eclipse.jface.text.source.{
+    Annotation, IAnnotationModel, IAnnotationModelExtension}
   import org.eclipse.ui.texteditor.ITextEditor
   
   def editor : ITextEditor
@@ -86,6 +88,31 @@ trait CoqTopEditorContainer extends CoqTopContainer {
     editor.getDocumentProvider.getDocument(editor.getEditorInput)
   def cursorPosition : Int = editor.getSelectionProvider.
       getSelection.asInstanceOf[ITextSelection].getOffset
+
+  var underwayA : Option[Annotation] = None
+  var completeA : Option[Annotation] = None
+
+  protected def doSplitAnnotations(r : (Option[Position], Option[Position]),
+      model : IAnnotationModel) = {
+    val modelEx = TryCast[IAnnotationModelExtension](model)
+    def _do(p : Option[Position], a : Option[Annotation],
+        aType : String, aText : String) : Option[Annotation] = (p, a) match {
+      case (Some(r), None) =>
+        val an = new Annotation(aType, false, aText)
+        model.addAnnotation(an, r)
+        Some(an)
+      case (Some(r), Some(an)) =>
+        modelEx.foreach(_.modifyAnnotationPosition(an, r))
+        Some(an)
+      case (None, _) =>
+        a.map(model.removeAnnotation)
+        None
+    }
+    completeA = _do(r._1, completeA,
+        "dk.itu.sdg.kopitiam.processed", "Processed Proof")
+    underwayA = _do(r._2, underwayA,
+        "dk.itu.sdg.kopitiam.processing", "Processing Proof")
+  }
 }
 
 import org.eclipse.core.commands.ExecutionEvent
