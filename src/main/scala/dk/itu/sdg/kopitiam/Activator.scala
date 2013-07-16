@@ -10,7 +10,6 @@ class Activator extends AbstractUIPlugin {
   
   override def start(context : BundleContext) = {
     super.start(context)
-    println("starting Kopitiam!")
     Activator.single = this
   }
 

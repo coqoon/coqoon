@@ -76,7 +76,6 @@ class CoqCompileRunner(
       monitor.worked(1)
         
       output.foreach(output => {
-        println("Moving file " + outputFile + " to workspace file " + output)
         val is = new FileInputStream(outputFile)
         if (output.exists) {
           output.setContents(is, IResource.NONE, monitor.newChild(1))

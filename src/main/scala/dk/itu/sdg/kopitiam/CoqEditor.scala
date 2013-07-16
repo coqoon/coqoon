@@ -199,7 +199,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     for ((pos, annot) <- annotations) newAnnotations.put(annot, pos)
     annotationModel.modifyAnnotations(oldAnnotations, newAnnotations, null)
     oldAnnotations = annotations.map(_._2).toArray
-    Console.println("Updated folding " + annotations.toList)
+    //Console.println("Updated folding " + annotations.toList)
   }
 
   import dk.itu.sdg.parsing.{NoLengthPosition, LengthPosition, RegionPosition}
