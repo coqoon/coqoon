@@ -47,8 +47,8 @@ class CoqCompileRunner(
   override protected def doOperation(monitor : SubMonitor) : Unit = {
     monitor.beginTask("Compiling " + source, 2)
     
-    val location = source.getLocation
-    val outputFile = location.removeFileExtension.addFileExtension("vo").toFile
+    val location = source.getLocation.removeFileExtension
+    val outputFile = location.addFileExtension("vo").toFile
     
     output match {
       case Some(file)
@@ -59,14 +59,14 @@ class CoqCompileRunner(
     
     if (EclipseConsole.out == null)
       EclipseConsole.initConsole
-    val coqc = CoqProgram("coqc")
+    val coqc = CoqProgram("coqtop")
     //what about dependencies?? <- need Add LoadPath explicitly in .v!
     if (coqc.check) {
       val flp =
         (ICoqModel.forProject(source.getProject).getLoadPath ++
             Activator.getDefault.getChargeLoadPath).flatMap(_.asArguments)
       val coqcp =
-        coqc.run("-noglob" +: (flp ++ List(location.toOSString)), true)
+        coqc.run(flp ++ Seq("-noglob", "-compile", location.toOSString), true)
       
       coqcp.readAll match {
         case (i, msgs) if i != 0 =>
