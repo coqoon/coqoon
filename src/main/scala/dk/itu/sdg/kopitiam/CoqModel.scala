@@ -115,7 +115,8 @@ trait ICoqLoadPath {
       case None => ""
     }) + "."
   def asArguments : Seq[String] =
-    Seq("-R", path.toOSString, coqdir.getOrElse(""))
+    Seq("-R", path.toOSString, coqdir.getOrElse(
+        if (!PlatformUtilities.isWindows) "" else "\"\""))
 }
 
 case class ProjectSourceLoadPath(

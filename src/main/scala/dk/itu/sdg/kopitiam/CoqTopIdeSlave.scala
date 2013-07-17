@@ -98,7 +98,7 @@ private class CoqProgramInstanceImplPOSIX(
   override def interrupt() = Process(Seq("kill", "-INT", pid)).run
 }
 
-private object PlatformUtilities {
+object PlatformUtilities {
   def getOSName = System.getProperty("os.name").toLowerCase
   def isWindows = getOSName.contains("windows")
 }
