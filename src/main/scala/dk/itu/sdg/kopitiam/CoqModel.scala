@@ -130,10 +130,10 @@ case class ProjectBinaryLoadPath(val folder : IFolder) extends ICoqLoadPath {
   override def coqdir = None
 }
 
-case class ExternalLoadPath(val fsPath : IPath, val dir : String)
+case class ExternalLoadPath(val fsPath : IPath, val dir : Option[String])
     extends ICoqLoadPath {
   override def path = fsPath
-  override def coqdir = Option(dir)
+  override def coqdir = dir
 }
 
 trait ICoqProject extends ICoqElement with IParent {

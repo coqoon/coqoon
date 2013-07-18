@@ -31,7 +31,7 @@ class Activator extends AbstractUIPlugin {
   import org.eclipse.core.runtime.Path
   def getChargeLoadPath : Option[ICoqLoadPath] =
       getPreferenceStore.getString("loadpath") match {
-    case p if p.length > 0 => Some(ExternalLoadPath(new Path(p), null))
+    case p if p.length > 0 => Some(ExternalLoadPath(new Path(p), None))
     case p => None
   }
 }
