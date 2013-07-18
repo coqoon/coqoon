@@ -150,17 +150,20 @@ trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
   }
 }
 object CoqTopIdeSlave_v20120710 {
-  def apply() : Option[CoqTopIdeSlave_v20120710] = {
-    val ct : Option[CoqTopIdeSlave_v20120710] = Some(new CoqTopIdeSlaveImpl)
-    ct.map(_.about)
-    ct
+  def apply() : Option[CoqTopIdeSlave_v20120710] = apply(Seq.empty)
+  
+  def apply(args : Seq[String]) : Option[CoqTopIdeSlave_v20120710] = {
+    val ct = new CoqTopIdeSlaveImpl(args)
+    ct.about
+    Some(ct)
   }
 }
 
 import java.io.{Reader, Writer}
 import scala.sys.process.Process
 
-private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
+private class CoqTopIdeSlaveImpl(
+    args : Seq[String]) extends CoqTopIdeSlave_v20120710 {
   private var pr : Option[CoqProgramInstance] = None
   
   override def kill = {
@@ -176,7 +179,7 @@ private class CoqTopIdeSlaveImpl extends CoqTopIdeSlave_v20120710 {
       val ct = CoqProgram("coqtop")
       if (!ct.check)
         throw new java.io.IOException("Couldn't find the coqtop program")
-      pr = Option(ct.run(Seq("-ideslave"), false))
+      pr = Option(ct.run(args ++ Seq("-ideslave"), false))
     }
     pr.get.stdin.write(n.toString())
     pr.get.stdin.flush()
