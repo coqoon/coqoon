@@ -19,14 +19,17 @@ class CoqBuilder extends IncrementalProjectBuilder {
   import java.util.{Map => JMap}
   import CoqBuilder._
   
+  private def getLibraryLocation = new Path(
+    CoqProgram("coqtop").run(Seq("-where"), false).readAll._2)
+  
   override protected def getRule(
       type_ : Int, args : JMap[String, String]) = getProject
   
   def loadPath : Seq[ICoqLoadPath] =
-      ICoqModel.forProject(getProject).getLoadPath
-        
-  private val coqTop = CoqTopIdeSlave_v20120710()
-  
+      ICoqModel.forProject(getProject).getLoadPath :+
+      ExternalLoadPath(getLibraryLocation.append("theories"), Some("Coq")) :+
+      ExternalLoadPath(getLibraryLocation.append("plugins"), Some("Coq"))
+      
   private var deps : Option[DependencyGraph] = None
   
   private def partBuild(
@@ -64,6 +67,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
     None
   }
+  
+  import java.io.File
+  private case class LPEntry(coqdir : Seq[String], location : File)
+  private var completeLoadPath : Seq[LPEntry] = Seq()
   
   private def buildFiles(files : Set[IFile],
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
@@ -135,7 +142,21 @@ class CoqBuilder extends IncrementalProjectBuilder {
         i => dg.setDependencies(i, generateDeps(i)))
     
     monitor.beginTask("Working", done.size)
-      
+    
+    /* Expand the load path */
+    def recurse(lp : ICoqLoadPath) : Seq[LPEntry] = {
+      def _recurse(coqdir : Seq[String], f : File) : Seq[LPEntry] = {
+        val l = f.listFiles
+        (if (l != null) {
+          l.toSeq.filter(_.isDirectory).flatMap(
+            f => _recurse(coqdir :+ f.getName, f))
+        } else Seq.empty) :+ LPEntry(coqdir, f)
+      }
+      _recurse(
+        lp.coqdir.map(_.split('.').toSeq).getOrElse(Seq()), lp.path.toFile)
+    }
+    completeLoadPath = loadPath.flatMap(recurse)
+    
     var failureCount = 0
     var failed : Option[List[IFile]] = None
     todo = done.toList
@@ -244,7 +265,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
   }
   
   override protected def clean(monitor : IProgressMonitor) = {
-    coqTop.map(_.kill)
     deps = None
     getProject.deleteMarkers(
         KopitiamMarkers.Problem.ID, true, IResource.DEPTH_INFINITE)
@@ -279,19 +299,19 @@ class CoqBuilder extends IncrementalProjectBuilder {
       ") (in project " + getProject + ")")
     None
   }
-  private def resolveRequire(
-      t : String) : Option[IPath] = coqTop.flatMap(ct => {
-    for (i <- loadPath)
-      ct.interp(true, false, i.asCommand)
-    Activator.getDefault.getChargeLoadPath.foreach(
-        a => ct.interp(true, false, a.asCommand))
-    ct.interp(true, false, "Locate File \"" +
-      t.reverse.split("\\.")(0).reverse + ".vo\".") match {
-      case CoqTypes.Good(msg) =>
-        Some(new Path(msg))
-      case CoqTypes.Fail(_) => None
+  private def resolveRequire(t : String) : Option[IPath] = {
+    val (coqdir, libname) = {
+      val i = t.split('.').toSeq
+      (i.init, i.last)
     }
-  })
+    
+    for (lp <- completeLoadPath) {
+      val p = new File(lp.location, libname + ".vo")
+      if (p.exists && lp.coqdir.endsWith(coqdir))
+        return Some(new Path(p.getAbsolutePath))
+    }
+    None
+  }
 
   private def generateDeps(file : IFile) : Set[DependencyGraph.Dep] = {
     var result : Set[DependencyGraph.Dep] = Set()
