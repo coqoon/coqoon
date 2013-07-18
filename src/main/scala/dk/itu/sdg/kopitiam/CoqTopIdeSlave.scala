@@ -31,7 +31,7 @@ object CoqProgram {
       name : String) extends ProgramImpl(name + ".exe") {
     override def run(
         args : Seq[String], redirect : Boolean) : CoqProgramInstance =
-      new CoqProgramInstanceImpl(path +: args, redirect)
+      new CoqProgramInstanceImplWindows(path +: args, redirect)
   }
   
   def apply(name : String) : CoqProgram =
@@ -80,6 +80,10 @@ private class CoqProgramInstanceImpl(argv : Seq[String], redirect : Boolean)
   override def interrupt = ()
 }
 
+private class CoqProgramInstanceImplWindows(
+    argv : Seq[String], redirect : Boolean)
+        extends CoqProgramInstanceImpl(argv.map(a => '"' + a + '"'), redirect)
+
 private class CoqProgramInstanceImplPOSIX(
     argv : Seq[String], redirect : Boolean) extends CoqProgramInstanceImpl(Seq(
         "/bin/sh", "-c", "echo $$; exec \"$@\"", "wrapper") ++ argv,
@@ -98,7 +102,7 @@ private class CoqProgramInstanceImplPOSIX(
   override def interrupt() = Process(Seq("kill", "-INT", pid)).run
 }
 
-object PlatformUtilities {
+private object PlatformUtilities {
   def getOSName = System.getProperty("os.name").toLowerCase
   def isWindows = getOSName.contains("windows")
 }
