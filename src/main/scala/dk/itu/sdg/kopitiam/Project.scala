@@ -71,6 +71,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   import java.io.File
   private case class LPEntry(coqdir : Seq[String], location : File)
   private var completeLoadPath : Seq[LPEntry] = Seq()
+  private var possibleObjects : Set[IPath] = Set()
   
   private def buildFiles(files : Set[IFile],
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
@@ -156,6 +157,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
         lp.coqdir.map(_.split('.').toSeq).getOrElse(Seq()), lp.path.toFile)
     }
     completeLoadPath = loadPath.flatMap(recurse)
+    
+    possibleObjects = done.flatMap(getCorrespondingObject).map(_.getLocation)
     
     var failureCount = 0
     var failed : Option[List[IFile]] = None
@@ -306,9 +309,17 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
     
     for (lp <- completeLoadPath) {
-      val p = new File(lp.location, libname + ".vo")
-      if (p.exists && lp.coqdir.endsWith(coqdir))
-        return Some(new Path(p.getAbsolutePath))
+      val p = new Path(
+          lp.location.getAbsolutePath).append(libname).addFileExtension("vo")
+      val f = p.toFile
+      if (lp.coqdir.endsWith(coqdir)) {
+        if (!f.exists) {
+          if (possibleObjects.contains(p))
+            /* This object is the best candidate, but it doesn't exist yet,
+             * so we should try again later */
+            return None
+        } else return Some(p)
+      }
     }
     None
   }
