@@ -1,4 +1,5 @@
-/* (c) 2010-2012 Hannes Mehnert and David Christiansen */
+/* (c) 2010-2012 Hannes Mehnert and David Christiansen
+ * Copyright © 2013 Alexander Faithfull */
 
 package dk.itu.sdg.kopitiam
 
@@ -32,58 +33,56 @@ object EclipseConsole {
 //   view.display(myConsole);
 }
 
-import org.eclipse.core.resources.IFile
+import org.eclipse.core.resources.{IFile, IResource}
 import org.eclipse.core.runtime.jobs.Job
 import org.eclipse.core.runtime.{SubMonitor, IProgressMonitor}
 
 class CoqCompileJob(source : IFile) extends JobBase(
-    "Compiling Coq file " + source.getName, new CoqCompileRunner(source))
-class CoqCompileRunner(source : IFile) extends JobRunner[Unit] {
-  import org.eclipse.core.runtime.{IStatus, Status}
-  import java.io.File
+    "Compiling Coq file " + source.getName, new CoqCompileRunner(source, None))
+class CoqCompileRunner(
+    source : IFile, output : Option[IFile]) extends JobRunner[Unit] {
+  import org.eclipse.core.runtime.{Path, Status, IStatus}
+  import java.io.{File, FileInputStream}
   
   override protected def doOperation(monitor : SubMonitor) : Unit = {
-    println("CoqCompileJob(" + source + ") is running")
+    monitor.beginTask("Compiling " + source, 2)
     
-    val name = source.getProjectRelativePath.toOSString
-    val output = source.getLocation.removeFileExtension.
-        addFileExtension("vo").toFile
-    val path = source.getProject.getLocation.toFile
+    val location = source.getLocation.removeFileExtension
+    val outputFile = location.addFileExtension("vo").toFile
     
-    if (output.lastModified > source.getLocation.toFile.lastModified)
-      return
+    output match {
+      case Some(file)
+          if file.getLocalTimeStamp > source.getLocalTimeStamp =>
+        return
+      case _ =>
+    }
     
     if (EclipseConsole.out == null)
       EclipseConsole.initConsole
-    val coqc = CoqTopIdeSlave.getProgramPath("coqc")
+    val coqc = CoqProgram("coqtop")
     //what about dependencies?? <- need Add LoadPath explicitly in .v!
-    if (new File(coqc).exists) {
-      val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-      val lp = new File(loadp).exists
-      val cmdarr =
-        if (lp)
-          List(coqc, "-noglob", "-R", "src/", "", "-R", loadp, "", name)
-        else
-          List(coqc, "-noglob", "-R", "src/", "", name)
-      val coqcp = new ProcessBuilder(cmdarr : _*)
-            .directory(path)
-            .redirectErrorStream(true)
-            .start();
-      import java.io._
-      val ou = new BufferedReader(new InputStreamReader(coqcp.getInputStream()))
-      var output = List[String]()
-      var line : String = ou.readLine()
-      while (line != null) {
-        EclipseConsole.out.println(line)
-        output :+= line
-        line = ou.readLine()
+    if (coqc.check) {
+      val flp =
+        (ICoqModel.forProject(source.getProject).getLoadPath ++
+            Activator.getDefault.getChargeLoadPath).flatMap(_.asArguments)
+      val coqcp =
+        coqc.run(flp ++ Seq("-noglob", "-compile", location.toOSString), true)
+      
+      coqcp.readAll match {
+        case (i, msgs) if i != 0 =>
+          fail(new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", msgs))
+        case _ =>
       }
-      coqcp.waitFor
-      if (coqcp.exitValue != 0)
-        fail(new Status(
-            IStatus.ERROR, "dk.itu.sdg.kopitiam", output.mkString("\n")))
       
       monitor.worked(1)
+        
+      output.foreach(output => {
+        val is = new FileInputStream(outputFile)
+        if (output.exists) {
+          output.setContents(is, IResource.NONE, monitor.newChild(1))
+        } else output.create(is, IResource.DERIVED, monitor.newChild(1))
+        outputFile.delete
+      })
     }
   }
 }

@@ -15,26 +15,16 @@ class JavaProofInitialisationRunner(
     
     jes.coqTop.transaction[Unit](ct => {
       monitor.subTask("Performing custom Coq initialisation")
-      val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-      ct.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
+      Activator.getDefault.getChargeLoadPath.foreach(
+          p => ct.interp(false, false, p.asCommand))
 
       import org.eclipse.core.resources.IResource
 
       val input = jes.editor.getEditorInput
-      val res: Option[IResource] =
-        if (input.isInstanceOf[IFileEditorInput]) {
-          Some(input.asInstanceOf[IFileEditorInput].getFile)
-        } else None
-
-      res match {
-        case Some(r) =>
-          ct.interp(false, false,
-            "Add Rec LoadPath \"" +
-              r.getProject.getFolder("src").getLocation.toOSString + "\".")
-        case None =>
-          Console.println("shouldn't happen - trying to get ProjectDir from " +
-            input + ", which is not an IFileEditorInput")
-      }
+      TryCast[IFileEditorInput](input).map(_.getFile).foreach(f => {
+        val cp = ICoqModel.forProject(f.getProject)
+        cp.getLoadPath.foreach(lpe => ct.interp(false, false, lpe.asCommand))
+      })
       monitor.worked(1)
 
       monitor.subTask("Preparing model")
@@ -43,11 +33,13 @@ class JavaProofInitialisationRunner(
       val basename = fei.getFile.getName().dropRight(5)
       val model = proj.getFile(new Path(basename + "_model.v"))
       if (!model.exists) {
-        UIUtils.openWarning("Model file missing",
-          "Please write a model file for this Java file named '" +
-            basename + "_model'.")
+        UIUtils.syncExec {
+          UIUtils.Dialog.warning("Model file missing",
+              "Please write a model file for this Java file named '" +
+              basename + "_model'.")
+        }
         return
-      } else new CoqCompileRunner(model).run(monitor.newChild(1))
+      } else new CoqCompileRunner(model, None).run(monitor.newChild(1))
       monitor.setWorkRemaining(2)
 
       monitor.subTask("Setting up definitions and specification")
@@ -143,6 +135,19 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
             UIUtils.asyncExec {
               jes.setMethod(None)
               jes.markCompletedMethods
+
+              val c = jes.compilationUnit.get
+              if (jes.completedMethods.size == JavaASTUtils.countMethods(c)) {
+                if (UIUtils.Dialog.question("Proof completed",
+                    "All method proofs have been completed.\n\n" +
+                    "Save the proof certificate now?")) {
+                  import org.eclipse.ui.handlers.IHandlerService
+                  UIUtils.getWorkbench.getService(classOf[IHandlerService]).
+                      asInstanceOf[IHandlerService].executeCommand(
+                          "Kopitiam.save_proof_certificate", null)
+                }
+              }
+              ()
             }
           case _ =>
         }

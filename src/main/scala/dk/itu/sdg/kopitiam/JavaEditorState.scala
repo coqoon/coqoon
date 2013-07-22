@@ -14,7 +14,7 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
   def steps = stepsV
   
   import org.eclipse.ui.handlers.IHandlerService
-  def getHandlerService = editor.getSite.
+  def getHandlerService = UIUtils.getWorkbench.
       getService(classOf[IHandlerService]).asInstanceOf[IHandlerService]
     
   private var coqTopV : CoqTopIdeSlave_v20120710 = null
@@ -59,39 +59,23 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
     }
     addAnnotations(complete, underway)
   }
-    
-  import org.eclipse.jface.text.source.IAnnotationModel
-  private def doConnectedToAnnotationModel(f : IAnnotationModel => Unit) = {
-    val doc = document
-    val model =
-      editor.getDocumentProvider.getAnnotationModel(editor.getEditorInput)
-    model.connect(doc)
-    try {
-      f(model)
-    } finally model.disconnect(doc)
-    editor.asInstanceOf[ForbiddenJavaEditor].
-        getViewer.invalidateTextPresentation /* XXX */
-  }
   
-  import org.eclipse.jface.text.Position
-  import org.eclipse.jface.text.source.Annotation
+  override protected def invalidate() =
+    TryCast[ForbiddenJavaEditor](editor).foreach(
+        _.getViewer.invalidateTextPresentation) /* XXX */
+  
   private def addAnnotations(
       complete : Option[ASTNode], underway : Option[ASTNode]) : Unit =
     doConnectedToAnnotationModel { addAnnotations(complete, underway, _) }
   
-  private var annotationPair : (Option[Annotation], Option[Annotation]) =
-      (None, None)
-  
+  import org.eclipse.jface.text.source.IAnnotationModel
   private def addAnnotations(
       complete : Option[ASTNode], underway : Option[ASTNode],
-      model : IAnnotationModel) : Unit = {
-    annotationPair = JavaEditorState.doSplitAnnotations(
-        JavaEditorState.getSplitAnnotationRanges(
-            method.map(a => a.getStartPosition),
-            complete.map(a => a.getStartPosition + a.getLength),
-            underway.map(a => a.getStartPosition + a.getLength)),
-        annotationPair, model)
-  }
+      model : IAnnotationModel) : Unit =
+    doSplitAnnotations(CoqTopEditorContainer.getSplitAnnotationRanges(
+        method.map(a => a.getStartPosition),
+        complete.map(a => a.getStartPosition + a.getLength),
+        underway.map(a => a.getStartPosition + a.getLength)), model)
   
   import org.eclipse.core.resources.IMarker
   
@@ -175,53 +159,7 @@ object JavaEditorState {
   def requireStateFor(part : ITextEditor) =
     states.getOrElseUpdate(part, { new JavaEditorState(part) })
   
-  import org.eclipse.jdt.core.dom.Statement
-  import org.eclipse.jface.text.Position
-  import org.eclipse.jface.text.source.{
-    Annotation, IAnnotationModel, IAnnotationModelExtension}
-  def getSplitAnnotationRanges(
-      start_ : Option[Int], first_ : Option[Int], second_ : Option[Int]) = {
-    val firstRange = start_.flatMap(start => first_.flatMap(first =>
-        Some(new Position(start, first - start))))
-    val secondRange = start_.flatMap(start => second_.flatMap(second =>
-      first_ match {
-        case None =>
-          Some(new Position(start, second - start))
-        case Some(first) if first != second =>
-          Some(new Position(first, second - first))
-        case _ => None
-      }))
-    (firstRange, secondRange)
-  }
-  
-  def doSplitAnnotations(
-      r : (Option[Position], Option[Position]),
-      e : (Option[Annotation], Option[Annotation]),
-      model : IAnnotationModel) :
-      (Option[Annotation], Option[Annotation]) = {
-    val modelEx = model.asInstanceOf[IAnnotationModelExtension]
-    def _do(
-        p : Option[Position], a : Option[Annotation],
-        aType : String, aText : String) : Option[Annotation] = p match {
-      case Some(r) => a match {
-        case None =>
-          val an = new Annotation(aType, false, aText)
-          model.addAnnotation(an, r)
-          Some(an)
-        case Some(an) =>
-          modelEx.modifyAnnotationPosition(an, r)
-          Some(an)
-      }
-      case None =>
-        a.map(model.removeAnnotation)
-        None
-    }
-    (_do(r._1, e._1, "dk.itu.sdg.kopitiam.processed", "Processed Proof"),
-     _do(r._2, e._2, "dk.itu.sdg.kopitiam.processing", "Processing Proof"))
-  }
-  
   import org.eclipse.jdt.core.dom.CompilationUnit
-  
   def createCertificate(cu : CompilationUnit) = {
     import EclipseJavaASTProperties._
     (getDefinition(cu).get ++ getSpecification(cu).get ++
@@ -230,13 +168,11 @@ object JavaEditorState {
   }
   
   import org.eclipse.jdt.core.dom.MethodDeclaration
-  
   def getProofScript(m : MethodDeclaration) =
     EclipseJavaASTProperties.getProof(m).get ++ JavaASTUtils.traverseAST(
         m, true, false, JavaASTUtils.printProofScript) :+ "Qed."
 }
 
-import org.eclipse.ui.texteditor.ITextEditor
 import org.eclipse.core.runtime.IAdapterFactory
 class JavaEditorStateFactory extends IAdapterFactory {
   override def getAdapterList = Array(classOf[CoqTopContainer])
@@ -265,9 +201,9 @@ private class JavaEditorReconcilingStrategy(
     if (input != null && input.isInstanceOf[IFileEditorInput]) {
       val file = input.asInstanceOf[IFileEditorInput].getFile()
       if (file.findMarkers(
-          IMarker.PROBLEM, true, IResource.DEPTH_ZERO).length > 0)
-        new DeleteMarkersJob(
-            file, IMarker.PROBLEM, true, IResource.DEPTH_ZERO).schedule
+          KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO).length > 0)
+        new DeleteMarkersJob(file,
+            KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO).schedule
     }
 
     val off = r.getOffset

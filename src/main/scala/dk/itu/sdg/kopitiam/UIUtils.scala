@@ -23,9 +23,18 @@ object UIUtils {
     override def run = r
   })
   
-  def openWarning(title : String, message : String) = syncExec {
-    org.eclipse.jface.dialogs.MessageDialog.openWarning(
-        getDisplay.getActiveShell, title, message)
+  object Dialog {
+    import org.eclipse.swt.widgets.Shell
+    protected def bindStockDialog[A](
+        f : (Shell, String, String) => A) : (String, String) => A =
+      f(getDisplay.getActiveShell, _ : String, _ : String)
+    
+    import org.eclipse.jface.dialogs.MessageDialog
+    def confirm = bindStockDialog(MessageDialog.openConfirm)
+    def error = bindStockDialog(MessageDialog.openError)
+    def information = bindStockDialog(MessageDialog.openInformation)
+    def question = bindStockDialog(MessageDialog.openQuestion)
+    def warning = bindStockDialog(MessageDialog.openWarning)
   }
   
   import org.eclipse.ui.IEditorPart
@@ -47,4 +56,34 @@ object UIUtils {
       apply(org.eclipse.jface.preference.PreferenceConverter.getColor(
           Activator.getDefault.getPreferenceStore, key))
   }
+}
+
+object TryAdapt {
+  import org.eclipse.core.runtime.IAdaptable
+  def apply[A](ad : IAdaptable)(implicit a0 : Manifest[A]) : Option[A] =
+    Option(ad).flatMap(ad => a0.unapply(ad.getAdapter(a0.runtimeClass)))
+}
+
+class SupersedableTask(delay : Long) {
+  private val lock = new Object
+  
+  import java.util.TimerTask
+  
+  var last : Option[TimerTask] = None
+  
+  def schedule(f : => Unit) : Unit = lock synchronized {
+    last.map(_.cancel)
+    last = Some(new TimerTask() {
+      override def run = { f }
+    })
+    last.map(SupersedableTask.timer.schedule(_, delay))
+  }
+}
+object SupersedableTask {
+  private val lock = new Object
+  
+  import java.util.Timer
+  private val timer = new Timer()
+  
+  def purge() : Unit = timer.purge()
 }

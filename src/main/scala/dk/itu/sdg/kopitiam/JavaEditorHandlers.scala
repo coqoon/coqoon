@@ -1,4 +1,5 @@
-/* (c) 2010-2011 Hannes Mehnert */
+/* (c) 2010-2011 Hannes Mehnert
+ * Copyright © 2013 Alexander Faithfull */
 
 package dk.itu.sdg.kopitiam
 
@@ -12,11 +13,7 @@ case class JavaStep(
     override val text : String) extends CoqCommand(text)
 
 abstract class JavaEditorHandler extends EditorHandler {
-  override def editor : ITextEditor = {
-    if (super.editor.isInstanceOf[ITextEditor]) {
-      super.editor.asInstanceOf[ITextEditor]
-    } else null
-  }
+  override def editor : ITextEditor = TryCast[ITextEditor](super.editor).orNull
   
   override def calculateEnabled : Boolean = {
     if (editor == null)
@@ -67,12 +64,12 @@ class VerifyMethodHandler extends JavaEditorHandler {
           val node = findASTNode(cu, off, 0)
           val md = findMethod(node)
           md match {
-            case None => UIUtils.openWarning(
+            case None => UIUtils.Dialog.information(
                 "Cursor not inside of method",
                 "Please put the cursor inside of the method to verify")
             case Some(x) =>
               if (jes.completedMethods.contains(x))
-                UIUtils.openWarning("Already proven",
+                UIUtils.Dialog.warning("Already proven",
                     "Sorry, this method was already proven")
               else {
                 jes.setMethod(Some(x))

@@ -9,7 +9,7 @@ package dk.itu.sdg.kopitiam
 
 abstract class CoqCommand(val text : String) {
   def run(coqTop : CoqTopIdeSlave_v20120710) : CoqTypes.value[String] =
-    coqTop.interp(false, false, text)
+    coqTop.interp(false, true, text)
 }
 
 case class CoqStep(
@@ -25,40 +25,42 @@ import scala.collection.mutable.Stack
 
 abstract class CoqEditorHandler extends EditorHandler {
   override def calculateEnabled = (editor != null && !editor.busy)
-  override def editor : CoqEditor = {
-    if (super.editor.isInstanceOf[CoqEditor]) {
-      super.editor.asInstanceOf[CoqEditor]
-    } else null
-  }
+  override def editor : CoqEditor = TryCast[CoqEditor](super.editor).orNull
 }
 object CoqEditorHandler {
-  def getNextCommand(doc : String, offset : Int = 0) : Option[String] = {
+  final val CommentStart = """^\(\*""".r.unanchored
+  final val CommentEnd = """^\*\)""".r.unanchored
+  final val QuotationMark = "^\"".r.unanchored
+  final val FullStop = """^\.(\s|$)""".r.unanchored
+  final val Ellipsis = """^\.\.\.(\s|$)""".r.unanchored
+  
+  def getNextCommand(doc : String, offset : Int = 0) : Option[Substring] = {
     var i = offset
     var commentDepth = 0
     var inString = false
-    while (i < doc.length) {
-      if ((i < doc.length - 2) && doc.substring(i, i + 2) == "(*") {
+    while (i < doc.length) Substring(doc, i) match {
+      case CommentStart() if !inString =>
         commentDepth += 1
         i += 2
-      } else if ((i < doc.length - 2) && doc.substring(i, i + 2) == "*)" &&
-          commentDepth > 0) {
+      case CommentEnd() if !inString && commentDepth > 0 =>
         commentDepth -= 1
         i += 2
-      } else if (doc(i) == '"') {
+      case QuotationMark() =>
         inString = !inString
         i += 1
-      } else if (doc(i) == '.' && commentDepth == 0 && !inString &&
-          (i + 1 == doc.length || doc(i + 1).isWhitespace) &&
-          (i == 0 || doc(i - 1) != '.')) {
-        return Some(doc.substring(offset, i + 1))
-      } else i += 1
+      case FullStop(_) if !inString && commentDepth == 0 =>
+        return Some(Substring(doc, offset, i + 1))
+      case Ellipsis(_) if !inString && commentDepth == 0 =>
+        return Some(Substring(doc, offset, i + 3))
+      case _ =>
+        i += 1
     }
     None
   }
   
   def makeStep(doc : String, offset : Int) : Option[CoqStep] =
     getNextCommand(doc, offset) match {
-      case Some(text) => Some(CoqStep(offset, text, false))
+      case Some(text) => Some(CoqStep(offset, text.toString, false))
       case _ => None
     }
   

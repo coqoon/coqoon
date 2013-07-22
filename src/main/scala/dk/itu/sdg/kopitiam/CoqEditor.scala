@@ -1,31 +1,40 @@
-/* (c) 2010-2011 Hannes Mehnert and David Christiansen */
+/* (c) 2010-2011 Hannes Mehnert and David Christiansen
+ * Copyright © 2013 Alexander Faithfull */
 
 package dk.itu.sdg.kopitiam
 
-import org.eclipse.ui.IEditorInput
+import org.eclipse.ui.IFileEditorInput
 import org.eclipse.ui.editors.text.TextEditor
 
 class CoqEditor extends TextEditor with CoqTopEditorContainer {
+  private val lock = new Object
+  
   override def editor = this
   
   import scala.collection.mutable.Stack
   private var stepsV : Stack[CoqStep] = Stack[CoqStep]()
   def steps = stepsV
   
+  private val annotateTask = new SupersedableTask(50)
+  
   private var underwayV : Int = 0
-  def underway = underwayV
-  def setUnderway(offset : Int) = {
+  def underway = lock synchronized { underwayV }
+  def setUnderway(offset : Int) = lock synchronized {
     if (offset < completedV)
       completedV = offset
     underwayV = offset
-    addAnnotations_(completed, underway)
+    annotateTask.schedule {
+      UIUtils.asyncExec { addAnnotations(completed, underway) }
+    }
   }
   
   private var completedV : Int = 0
-  def completed = completedV
-  def setCompleted(offset : Int) = {
+  def completed = lock synchronized { completedV }
+  def setCompleted(offset : Int) = lock synchronized {
     completedV = offset
-    addAnnotations_(completed, underway)
+    annotateTask.schedule {
+      UIUtils.asyncExec { addAnnotations(completed, underway) }
+    }
   }
   
   private var coqTopV : CoqTopIdeSlave_v20120710 = null
@@ -40,11 +49,6 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     new MonoReconciler(new CoqProofReconcilingStrategy(this), true)
   reconciler.setDelay(1)
   
-  import org.eclipse.ui.IEditorSite
-  override def init(site : IEditorSite, input : IEditorInput) = {
-    super.init(site, input)
-  }
-  
   override def dispose = {
     if (coqTopV != null) {
       coqTopV.kill
@@ -55,7 +59,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
   }
     
   import dk.itu.sdg.coqparser.VernacularRegion
-  import org.eclipse.jface.text.source.{Annotation, IAnnotationModel, ISourceViewer, IVerticalRuler}
+  import org.eclipse.jface.text.source.{Annotation, ISourceViewer, IVerticalRuler}
   import org.eclipse.jface.text.{IDocument, Position}
   import org.eclipse.swt.widgets.Composite
   import org.eclipse.ui.IEditorInput
@@ -107,37 +111,14 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     reconciler.install(viewer)
     viewer
   }
-
-  import org.eclipse.jface.text.source.Annotation
-  private var annotationPair : (Option[Annotation], Option[Annotation]) =
-      (None, None)
   
-  def addAnnotations (first : Int, second : Int) : Unit = {
-    // second is underway, which must always be >= first
-    underwayV = if (second < first) first else second
-    setCompleted(first)
-  }
-  
-  private def addAnnotations_ (first : Int, second : Int) : Unit = {
-    val provider = getDocumentProvider
-    val doc = provider.getDocument(getEditorInput)
-    val model = provider.getAnnotationModel(getEditorInput)
-    model.connect(doc)
-    try {
-      annotationPair = JavaEditorState.doSplitAnnotations(
-          JavaEditorState.getSplitAnnotationRanges(
-              Some(0), Some(first), Some(second)),
-          annotationPair, model)
-    } finally model.disconnect(doc)
-    invalidate()
-  }
+  private def addAnnotations (first : Int, second : Int) : Unit =
+    doConnectedToAnnotationModel(model => 
+        doSplitAnnotations(CoqTopEditorContainer.getSplitAnnotationRanges(
+            Some(0), Some(first), Some(second)), model))
 
   def invalidate () : Unit = UIUtils.asyncExec {
     getSourceViewer.invalidateTextPresentation
-  }
-
-  def getSource () : ISourceViewer = {
-    getSourceViewer()
   }
 
   override def initializeKeyBindingScopes () : Unit = {
@@ -190,7 +171,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     for ((pos, annot) <- annotations) newAnnotations.put(annot, pos)
     annotationModel.modifyAnnotations(oldAnnotations, newAnnotations, null)
     oldAnnotations = annotations.map(_._2).toArray
-    Console.println("Updated folding " + annotations.toList)
+    //Console.println("Updated folding " + annotations.toList)
   }
 
   import dk.itu.sdg.parsing.{NoLengthPosition, LengthPosition, RegionPosition}
@@ -218,7 +199,6 @@ private class CoqProofReconcilingStrategy(
   import org.eclipse.jface.text.{IRegion, Region, IDocument}
   import org.eclipse.jface.text.reconciler.DirtyRegion
   
-  import org.eclipse.ui.IFileEditorInput
   import org.eclipse.core.resources.{IMarker,IResource}
   
   override def reconcile(r : IRegion) : Unit = {
@@ -227,9 +207,9 @@ private class CoqProofReconcilingStrategy(
     if (input != null && input.isInstanceOf[IFileEditorInput]) {
       val file = input.asInstanceOf[IFileEditorInput].getFile()
       if (file.findMarkers(
-          IMarker.PROBLEM, true, IResource.DEPTH_ZERO).length > 0)
-        new DeleteMarkersJob(
-            file, IMarker.PROBLEM, true, IResource.DEPTH_ZERO).schedule
+          KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO).length > 0)
+        new DeleteMarkersJob(file,
+            KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO).schedule
     }
 
     val off = r.getOffset
@@ -256,7 +236,6 @@ protected class CoqContentProvider extends ITreeContentProvider {
   import dk.itu.sdg.coqparser.OutlineBuilder
   import org.eclipse.jface.text.IDocument
   import org.eclipse.jface.viewers.Viewer
-  import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.ui.texteditor.IDocumentProvider
 
   var documentProvider : Option[IDocumentProvider] = None
@@ -289,7 +268,7 @@ protected class CoqContentProvider extends ITreeContentProvider {
     //Console.println("getChildren" + obj)
     obj match {
       case something : VernacularRegion => something.getOutline.toArray
-      case something : FileEditorInput => if (root == null) Array[AnyRef]() else root.getOutline.toArray
+      case something : IFileEditorInput => if (root == null) Array[AnyRef]() else root.getOutline.toArray
       case _ => Array[AnyRef]()
     }
   }
@@ -385,9 +364,9 @@ class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor
     //println("Reconciling " + partition + " with editor = " + editor + " and doc = " + document)
     val outline = CoqDocumentProvider.getOutline(document) // updates model as side effect
     if (editor != null) {
-      val outlinePage = editor.getAdapter(classOf[IContentOutlinePage]).asInstanceOf[CoqContentOutlinePage]
+      val outlinePage = TryAdapt[IContentOutlinePage](editor).flatMap(TryCast[CoqContentOutlinePage])
       UIUtils.asyncExec {
-        outlinePage.update() //Update GUI outline
+        outlinePage.foreach(_.update()) //Update GUI outline
       }
     } else
       println(" null editor")
@@ -514,7 +493,6 @@ class CoqContentOutlinePage extends ContentOutlinePage {
   import org.eclipse.jface.text.{IDocument, DocumentEvent}
   import org.eclipse.jface.viewers.{ITreeContentProvider, LabelProvider, TreeViewer, Viewer, SelectionChangedEvent, StructuredSelection}
   import org.eclipse.swt.widgets.{Composite, Control}
-  import org.eclipse.ui.part.FileEditorInput
   import org.eclipse.ui.texteditor.{IDocumentProvider, ITextEditor}
 
   var documentProvider : Option[IDocumentProvider] = None

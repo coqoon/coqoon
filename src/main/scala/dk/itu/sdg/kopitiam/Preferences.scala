@@ -23,7 +23,7 @@ class KopitiamPreferencePage extends FieldEditorPreferencePage with IWorkbenchPr
   import java.io.File
   override def performOk () : Boolean = {
     super.performOk()
-    if (!CoqTopIdeSlave.checkProgramPath)
+    if (!CoqProgram("coqtop").check)
       setErrorMessage("couldn't find coqtop in the specified path")
     true
   }
