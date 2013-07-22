@@ -29,7 +29,7 @@ abstract class EditorHandler extends AbstractHandler {
     } else setBaseEnabled(false)
   }
   
-  protected def getCoqTopContainer = CoqTopContainer.adapt(editor).orNull
+  protected def getCoqTopContainer = TryAdapt[CoqTopContainer](editor).orNull
   
   import org.eclipse.core.runtime.jobs.Job
   protected def scheduleJob(j : Job) = {
@@ -75,19 +75,12 @@ trait CoqTopContainer {
 object CoqTopContainer {
   final val PROPERTY_BUSY = 979
   final val PROPERTY_GOALS = 1979
-  
-  import org.eclipse.core.runtime.IAdaptable
-  def adapt(a : IAdaptable) : Option[CoqTopContainer] =
-    if (a != null) {
-      val ad = a.getAdapter(classOf[CoqTopContainer])
-      if (ad != null && ad.isInstanceOf[CoqTopContainer]) {
-        Some(ad.asInstanceOf[CoqTopContainer])
-      } else None
-    } else None
 }
 
 trait CoqTopEditorContainer extends CoqTopContainer {
-  import org.eclipse.jface.text.{IDocument, ITextSelection}
+  import org.eclipse.jface.text.{Position, IDocument, ITextSelection}
+  import org.eclipse.jface.text.source.{
+    Annotation, IAnnotationModel, IAnnotationModelExtension}
   import org.eclipse.ui.texteditor.ITextEditor
   
   def editor : ITextEditor
@@ -95,6 +88,62 @@ trait CoqTopEditorContainer extends CoqTopContainer {
     editor.getDocumentProvider.getDocument(editor.getEditorInput)
   def cursorPosition : Int = editor.getSelectionProvider.
       getSelection.asInstanceOf[ITextSelection].getOffset
+
+  import org.eclipse.jface.text.source.IAnnotationModel
+  protected def doConnectedToAnnotationModel(f : IAnnotationModel => Unit) = {
+    val doc = document
+    val model =
+      editor.getDocumentProvider.getAnnotationModel(editor.getEditorInput)
+    model.connect(doc)
+    try {
+      f(model)
+    } finally model.disconnect(doc)
+    invalidate()
+  }
+  
+  protected def invalidate()
+  
+  var underwayA : Option[Annotation] = None
+  var completeA : Option[Annotation] = None
+
+  protected def doSplitAnnotations(r : (Option[Position], Option[Position]),
+      model : IAnnotationModel) = {
+    val modelEx = TryCast[IAnnotationModelExtension](model)
+    def _do(p : Option[Position], a : Option[Annotation],
+        aType : String, aText : String) : Option[Annotation] = (p, a) match {
+      case (Some(r), None) =>
+        val an = new Annotation(aType, false, aText)
+        model.addAnnotation(an, r)
+        Some(an)
+      case (Some(r), Some(an)) =>
+        modelEx.foreach(_.modifyAnnotationPosition(an, r))
+        Some(an)
+      case (None, _) =>
+        a.map(model.removeAnnotation)
+        None
+    }
+    completeA = _do(r._1, completeA,
+        "dk.itu.sdg.kopitiam.processed", "Processed Proof")
+    underwayA = _do(r._2, underwayA,
+        "dk.itu.sdg.kopitiam.processing", "Processing Proof")
+  }
+}
+object CoqTopEditorContainer {
+  import org.eclipse.jface.text.Position
+  def getSplitAnnotationRanges(
+      start_ : Option[Int], first_ : Option[Int], second_ : Option[Int]) = {
+    val firstRange = start_.flatMap(start => first_.flatMap(first =>
+        Some(new Position(start, first - start))))
+    val secondRange = start_.flatMap(start => second_.flatMap(second =>
+      first_ match {
+        case None =>
+          Some(new Position(start, second - start))
+        case Some(first) if first != second =>
+          Some(new Position(first, second - first))
+        case _ => None
+      }))
+    (firstRange, secondRange)
+  }
 }
 
 import org.eclipse.core.commands.ExecutionEvent

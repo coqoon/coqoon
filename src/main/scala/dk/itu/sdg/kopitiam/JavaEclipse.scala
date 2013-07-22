@@ -6,31 +6,31 @@ object EclipseJavaASTProperties {
   import org.eclipse.jdt.core.dom._
   private val coqDefinition : String = "dk.itu.sdg.kopitiam.coqDefinition"
   def getDefinition(a : ASTNode) : Option[List[String]] = 
-    Option(a.getProperty(coqDefinition)).map { _.asInstanceOf[List[String]] }
+    TryCast[List[String]](a.getProperty(coqDefinition))
   def setDefinition(a : ASTNode, p : Option[List[String]]) =
     a.setProperty(coqDefinition, p.orNull)
     
   private val coqSpecification : String = "dk.itu.sdg.kopitiam.coqSpecification"
   def getSpecification(a : ASTNode) : Option[List[String]] =
-    Option(a.getProperty(coqSpecification)).map { _.asInstanceOf[List[String]] }
+    TryCast[List[String]](a.getProperty(coqSpecification))
   def setSpecification(a : ASTNode, p : Option[List[String]]) =
     a.setProperty(coqSpecification, p.orNull)
   
   private val coqProof : String = "dk.itu.sdg.kopitiam.coqProof"
   def getProof(a : ASTNode) : Option[List[String]] =
-    Option(a.getProperty(coqProof)).map { _.asInstanceOf[List[String]] }
+    TryCast[List[String]](a.getProperty(coqProof))
   def setProof(a : ASTNode, p : Option[List[String]]) =
     a.setProperty(coqProof, p.orNull)
   
   private val coqEnd : String = "dk.itu.sdg.kopitiam.coqEnd"
   def getEnd(a : ASTNode) : Option[String] =
-    Option(a.getProperty(coqEnd)).map { _.asInstanceOf[String] }
+    TryCast[String](a.getProperty(coqEnd))
   def setEnd(a : ASTNode, p : Option[String]) =
     a.setProperty(coqEnd, p.orNull)
   
   private val method : String = "dk.itu.sdg.kopitiam.method"
   def getMethod(a : ASTNode) : Option[MethodDeclaration] =
-    Option(a.getProperty(method)).map { _.asInstanceOf[MethodDeclaration] }
+    TryCast[MethodDeclaration](a.getProperty(method))
   def setMethod(a : ASTNode, p : Option[MethodDeclaration]) =
     a.setProperty(method, p.orNull)
   

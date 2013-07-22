@@ -37,7 +37,13 @@ abstract class ResourceJob(name : String, resource : IResource,
   protected def doOperation(monitor : IProgressMonitor)
   
   override def runInWorkspace(monitor : IProgressMonitor) =
-    CEWrapper.wrap { doOperation(monitor) }
+    JobBase.wrap { doOperation(monitor) }
+}
+
+object KopitiamMarkers {
+  object Problem {
+    final val ID = "dk.itu.sdg.kopitiam.problemmarker"
+  }
 }
 
 abstract class MarkerJob(resource : IResource) extends ResourceJob(
@@ -56,8 +62,7 @@ class CreateMarkerJob(
   import scala.collection.JavaConversions._
   override protected def doOperation(monitor : IProgressMonitor) =
     resource.createMarker(type_).setAttributes(Map(
-        (IMarker.MESSAGE, message),
-        (IMarker.LOCATION, resource.toString),
+        (IMarker.MESSAGE, message.replaceAll("\\s+", " ").trim),
         (IMarker.SEVERITY, severity),
         (IMarker.CHAR_START, region._1),
         (IMarker.CHAR_END, region._2),
@@ -66,8 +71,8 @@ class CreateMarkerJob(
 
 class CreateErrorMarkerJob(
     resource : IResource, region : (Int, Int), message : String)
-    extends CreateMarkerJob(
-        resource, region, message, IMarker.PROBLEM, IMarker.SEVERITY_ERROR)
+    extends CreateMarkerJob(resource, region,
+        message, KopitiamMarkers.Problem.ID, IMarker.SEVERITY_ERROR)
 object CreateErrorMarkerJob {
   def apply(
       resource : IResource, step : CoqStep, ep : (CoqTypes.location, String)) : CreateErrorMarkerJob = {
@@ -75,7 +80,7 @@ object CreateErrorMarkerJob {
       case Some((begin, end)) => (step.offset + begin, step.offset + end)
       case None => (step.offset, step.offset + step.text.length)
     }
-    CreateErrorMarkerJob(resource, offsets, ep._2.trim)
+    CreateErrorMarkerJob(resource, offsets, ep._2)
   }
   
   def apply(
@@ -86,7 +91,12 @@ object CreateErrorMarkerJob {
 import org.eclipse.core.runtime.jobs.Job
 import org.eclipse.core.runtime.SubMonitor
 
-private object CEWrapper {
+abstract class JobBase(
+    name : String, runner : JobRunner[_]) extends Job(name) {
+  override def run(monitor_ : IProgressMonitor) : IStatus =
+    JobBase.wrap { runner.run(monitor_) }
+}
+object JobBase {
   def wrap(f : => Any) : IStatus = try {
     f
     Status.OK_STATUS
@@ -94,12 +104,6 @@ private object CEWrapper {
     case e : CoreException => new Status(e.getStatus.getSeverity,
           "dk.itu.sdg.kopitiam", "Execution failed.", e)
   }
-}
-
-abstract class JobBase(
-    name : String, runner : JobRunner[_]) extends Job(name) {
-  override def run(monitor_ : IProgressMonitor) : IStatus =
-    CEWrapper.wrap { runner.run(monitor_) }
 }
 
 abstract class ContainerJobBase(name : String, runner : JobRunner[_],
@@ -121,7 +125,11 @@ trait JobRunner[A] {
     try {
       doOperation(monitor)
     } finally {
-      finish
+      try {
+        finish
+      } catch {
+        case t : Throwable => /* do nothing */
+      }
       monitor.done
     }
   }
@@ -153,8 +161,18 @@ abstract class StepForwardRunner[A <: CoqCommand](
   protected def onGood(step : A, result : CoqTypes.Good[String])
   protected def onUnsafe(step : A, result : CoqTypes.Unsafe[String]) =
     onGood(step, CoqTypes.Good[String](result.value))
-  protected def initialise = ()
-    
+  protected def initialise =
+    if (EclipseConsole.out == null)
+      EclipseConsole.initConsole()
+  
+  private def perhapsPrint(msg_ : String) = {
+    if (msg_ != null) {
+      val msg = msg_.trim
+      if (msg.length != 0)
+        EclipseConsole.out.println(msg)
+    }
+  }
+      
   override def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
     monitor.beginTask("Stepping forward", steps.length)
@@ -164,8 +182,12 @@ abstract class StepForwardRunner[A <: CoqCommand](
         cancel
       monitor.subTask(step.text.trim)
       step.run(container.coqTop) match {
-        case r : CoqTypes.Good[String] => onGood(step, r)
-        case r : CoqTypes.Unsafe[String] => onUnsafe(step, r)
+        case r @ CoqTypes.Good(msg) =>
+          perhapsPrint(msg)
+          onGood(step, r)
+        case r @ CoqTypes.Unsafe(msg) =>
+          perhapsPrint(msg)
+          onUnsafe(step, r)
         case r : CoqTypes.Fail[String] =>
           onFail(step, r)
           return CoqTypes.Fail(r.value)

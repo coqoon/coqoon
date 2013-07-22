@@ -10,7 +10,6 @@ class Activator extends AbstractUIPlugin {
   
   override def start(context : BundleContext) = {
     super.start(context)
-    println("starting Kopitiam!")
     Activator.single = this
   }
 
@@ -27,6 +26,13 @@ class Activator extends AbstractUIPlugin {
     PreferenceConverter.setDefault(store, "coqSentProcessBg", new RGB(244, 255, 200))
     PreferenceConverter.setDefault(store, "coqKeywordFg", new RGB(127, 6, 101))
     store.setDefault("implicit", true)
+  }
+  
+  import org.eclipse.core.runtime.Path
+  def getChargeLoadPath : Option[ICoqLoadPath] =
+      getPreferenceStore.getString("loadpath") match {
+    case p if p.length > 0 => Some(ExternalLoadPath(new Path(p), None))
+    case p => None
   }
 }
 object Activator {

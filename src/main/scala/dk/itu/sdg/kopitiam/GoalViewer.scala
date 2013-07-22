@@ -145,7 +145,7 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
       case Some(ed) => ed.removeListener(this)
       case None =>
     }
-    activeContainer = CoqTopContainer.adapt(e)
+    activeContainer = TryAdapt[CoqTopContainer](e)
     activeContainer match {
       case Some(c) =>
         c.addListener(this)
@@ -165,14 +165,14 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
   
   override def partClosed (ref : IWorkbenchPartReference) = {
     val p = ref.getPart(false)
-    if (this == p || CoqTopContainer.adapt(p) == activeContainer)
+    if (this == p || TryAdapt[CoqTopContainer](p) == activeContainer)
       setActiveContainer(null)
   }
   
   override def partActivated (ref : IWorkbenchPartReference) = {
     val p = ref.getPart(false)
     if (p.isInstanceOf[IEditorPart] &&
-        CoqTopContainer.adapt(p) != activeContainer)
+        TryAdapt[CoqTopContainer](p) != activeContainer)
       setActiveContainer(p)
   }
 

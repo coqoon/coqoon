@@ -8,29 +8,19 @@ class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
     
     editor.coqTop.transaction[Unit](ct => {
       monitor.subTask("Adding global loadpath entries")
-      val loadp = Activator.getDefault.getPreferenceStore.getString("loadpath")
-      ct.interp(false, false, "Add Rec LoadPath \"" + loadp + "\".")
+      Activator.getDefault.getChargeLoadPath.foreach(
+          p => ct.interp(false, false, p.asCommand))
       monitor.worked(1)
 
       monitor.subTask("Adding project loadpath entries")
 
       import org.eclipse.ui.IFileEditorInput
-      import org.eclipse.core.resources.IResource
-
+      
       val input = editor.getEditorInput
-      val res: Option[IResource] =
-        if (input.isInstanceOf[IFileEditorInput]) {
-          Some(input.asInstanceOf[IFileEditorInput].getFile)
-        } else None
-
-      res match {
-        case Some(r) =>
-          ct.interp(false, false, "Add Rec LoadPath \"" +
-              r.getProject.getFolder("src").getLocation.toOSString + "\".")
-        case None =>
-          Console.println("shouldn't happen - trying to get ProjectDir from " +
-            input + ", which is not an IFileEditorInput")
-      }
+      TryCast[IFileEditorInput](input).map(_.getFile).foreach(file => {
+        val cp = ICoqModel.forProject(file.getProject)
+        cp.getLoadPath.foreach(lpe => ct.interp(false, false, lpe.asCommand))
+      })
 
       monitor.worked(1)
     }) match {
@@ -54,10 +44,8 @@ class RestartCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
     
     monitor.subTask("Clearing state")
     editor.steps.synchronized { editor.steps.clear }
-    UIUtils.asyncExec {
-      editor.setGoals(None)
-      editor.setUnderway(0)
-    }
+    editor.setUnderway(0)
+    UIUtils.asyncExec { editor.setGoals(None) }
     monitor.worked(1)
 
     monitor.subTask("Stopping Coq")
@@ -102,7 +90,7 @@ class CoqStepBackRunner(editor : CoqEditor, stepCount : Int)
             case Some(step) => step.offset + step.text.length
           }
         }
-        UIUtils.asyncExec { editor.setUnderway(completed) }
+        editor.setUnderway(completed)
         CoqTypes.Fail(ep)
     }
   }
@@ -115,14 +103,14 @@ class CoqStepForwardRunner(
     editor : CoqEditor,
     steps : List[CoqStep]) extends StepForwardRunner(editor, steps) {
   override protected def finish = {
-    UIUtils.asyncExec { editor.setUnderway(editor.completed) }
+    editor.setUnderway(editor.completed)
     super.finish
   }
   
   override protected def onGood(
       step : CoqStep, result : CoqTypes.Good[String]) = {
     editor.steps.synchronized { editor.steps.push(step) }
-    UIUtils.asyncExec { editor.setCompleted(step.offset + step.text.length) }
+    editor.setCompleted(step.offset + step.text.length)
   }
   
   override protected def onFail(
@@ -133,7 +121,28 @@ class CoqStepForwardRunner(
         step, result.value).schedule
   }
   
-  override protected def initialise =
+  override protected def initialise = {
+    super.initialise
     if (!editor.testFlag(CoqEditor.FLAG_INITIALISED))
-      new InitialiseCoqRunner(editor).run(null)
+      try {
+        new InitialiseCoqRunner(editor).run(null)
+      } catch {
+        case t : Throwable =>
+          UIUtils.asyncExec {
+            UIUtils.Dialog.question("Initialisation failed",
+                "Coq initialisation failed " +
+                "(\"" + t.getMessage.trim + "\").\n\n" +
+                "Open the Coq preferences dialog now?") match {
+              case true =>
+                import org.eclipse.ui.dialogs.PreferencesUtil
+                PreferencesUtil.createPreferenceDialogOn(
+                    UIUtils.getActiveShell,
+                    "Kopitiam.settings", null, null).open
+              case false =>
+            }
+            ()
+          }
+          fail(Status.OK_STATUS)
+      }
+  }
 }
