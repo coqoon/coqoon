@@ -26,10 +26,12 @@ class CoqBuilder extends IncrementalProjectBuilder {
   override protected def getRule(
       type_ : Int, args : JMap[String, String]) = getProject
   
-  def loadPath : Seq[ICoqLoadPath] =
-      ICoqModel.forProject(getProject).getLoadPath :+
-      ExternalLoadPath(getLibraryLocation.append("theories"), Some("Coq")) :+
-      ExternalLoadPath(getLibraryLocation.append("plugins"), Some("Coq"))
+  def loadPath : Seq[ICoqLoadPath] = {
+    val libraryLocation = getLibraryLocation
+    ICoqModel.forProject(getProject).getLoadPath :+
+      ExternalLoadPath(libraryLocation.append("theories"), Some("Coq")) :+
+      ExternalLoadPath(libraryLocation.append("plugins"), Some("Coq"))
+  }
       
   private var deps : Option[DependencyGraph] = None
   
