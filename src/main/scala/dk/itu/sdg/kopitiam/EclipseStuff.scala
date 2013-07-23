@@ -4,33 +4,23 @@
 package dk.itu.sdg.kopitiam
 
 object EclipseConsole {
-  import org.eclipse.ui.console.{MessageConsole,MessageConsoleStream,IConsole,IConsoleManager,ConsolePlugin}
-  var out : MessageConsoleStream = null
-
-  def initConsole () : Unit = {
-    val conman : IConsoleManager = ConsolePlugin.getDefault.getConsoleManager
-    val existing = conman.getConsoles
-    var outputconsole : MessageConsole = null
-    if (existing.length > 0) {
-      Console.println("have existing console(s) : " + existing.length)
-      outputconsole = existing(0).asInstanceOf[MessageConsole]
-    } else {
-      Console.println("needed to create new console")
-      val mycon = new MessageConsole("Coq", null)
-      val cons = new Array[IConsole](1)
-      cons(0) = mycon
-      conman.addConsoles(cons)
-      outputconsole = mycon
+  private val lock = new Object
+  import org.eclipse.ui.console.{
+    MessageConsole,MessageConsoleStream,ConsolePlugin}
+  
+  private var out_ : Option[MessageConsoleStream] = None
+  
+  def out : MessageConsoleStream = lock synchronized {
+    out_ match {
+      case Some(a) => a
+      case None =>
+        val console = Some(new MessageConsole("Coq", null))
+        ConsolePlugin.getDefault.getConsoleManager.addConsoles(console.toArray)
+        out_ = Some(console.get.newMessageStream)
+        out_.foreach(_.setEncoding("UTF-8"))
+        out_.get
     }
-    out = outputconsole.newMessageStream
-    out.setEncoding("UTF-8")
   }
-
-//   display console in workbench!
-//   IWorkbenchPage page = ...; obtain the active page
-//   String id = IConsoleConstants.ID_CONSOLE_VIEW;
-//   IConsoleView view = (IConsoleView) page.showView(id);
-//   view.display(myConsole);
 }
 
 import org.eclipse.core.resources.{IFile, IResource}
@@ -57,8 +47,6 @@ class CoqCompileRunner(
       case _ =>
     }
     
-    if (EclipseConsole.out == null)
-      EclipseConsole.initConsole
     val coqc = CoqProgram("coqtop")
     //what about dependencies?? <- need Add LoadPath explicitly in .v!
     if (coqc.check) {

@@ -161,9 +161,7 @@ abstract class StepForwardRunner[A <: CoqCommand](
   protected def onGood(step : A, result : CoqTypes.Good[String])
   protected def onUnsafe(step : A, result : CoqTypes.Unsafe[String]) =
     onGood(step, CoqTypes.Good[String](result.value))
-  protected def initialise =
-    if (EclipseConsole.out == null)
-      EclipseConsole.initConsole()
+  protected def initialise = ()
   
   private def perhapsPrint(msg_ : String) = {
     if (msg_ != null) {
