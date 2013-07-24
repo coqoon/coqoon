@@ -46,7 +46,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     delta.accept(new IResourceDeltaVisitor {
       override def visit(d : IResourceDelta) : Boolean = {
         Option(d.getResource).flatMap(
-            fileFilter).flatMap(extensionFilter("v")) match {
+            TryCast[IFile]).flatMap(extensionFilter("v")) match {
           case Some(f) => changedFiles += f
           case _ =>
         }
@@ -94,8 +94,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
           if (a.exists)
             a.delete(IWorkspace.AVOID_UPDATE, null)
           dg.dependencySet.foreach(_ match {
-            case (f, ((_, _), Resolved(p_))) if p == p_ =>
-              /* f depended on this object; schedule its object for deletion */
+            /* If f depended on this object, then schedule its object for
+             * deletion */
+            case (f, (_, Resolved(p_))) if p == p_ =>
+              todo :+= f
+            case (f, (_, Resolvable(p_))) if p == p_ =>
               todo :+= f
             case _ =>
           })
@@ -261,8 +264,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
   }
   
-  private def fileFilter(r : IResource) : Option[IFile] = TryCast[IFile](r)
-  
   private def extensionFilter[A <: IResource](ext : String)(r : A) : Option[A] =
     Option(r).filter(_.getFileExtension == ext)
     
@@ -275,7 +276,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     deps = Some(dg)
     
     traverse[IFile](getProject,
-        a => Option(a).flatMap(fileFilter).flatMap(extensionFilter("v")),
+        a => Option(a).flatMap(TryCast[IFile]).flatMap(extensionFilter("v")),
         a => dg.setDependencies(a, generateDeps(a)))
     buildFiles(Set(), args, monitor)
   }
@@ -285,7 +286,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     getProject.deleteMarkers(
         KopitiamMarkers.Problem.ID, true, IResource.DEPTH_INFINITE)
     traverse[IFile](getProject,
-        a => Option(a).flatMap(fileFilter).flatMap(
+        a => Option(a).flatMap(TryCast[IFile]).flatMap(
             extensionFilter("vo")).flatMap(derivedFilter(true)),
         a => a.delete(IResource.NONE, monitor))
   }
@@ -334,24 +335,28 @@ class CoqBuilder extends IncrementalProjectBuilder {
   }
 
   private def generateDeps(file : IFile) : Set[DependencyGraph.Dep] = {
-    var result : Set[DependencyGraph.Dep] = Set()
+    /* In order to force files whose dependencies have been recalculated to be
+     * considered for compilation, every file starts with a synthetic,
+     * trivially-satisfiable dependency on itself */
+    var result : Set[DependencyGraph.DepCallback] = Set(
+        ("!Dummy", _ => Resolvable(file.getLocation)))
     for (i <- sentences(
         FunctionIterator.lines(file.getContents).mkString("\n"))) {
       i.text.trim match {
         case Load(what) =>
-          result += (((what, resolveLoad), Unresolved))
+          result += ((what, resolveLoad))
         case Require(how, what) =>
           if (what(0) == '"') {
             val filename = what.substring(1).split("\"", 2)(0)
-            result += (((filename, resolveRequire), Unresolved))
+            result += ((filename, resolveRequire))
           } else {
             for (j <- what.split(" "))
-              result += (((j, resolveRequire), Unresolved))
+              result += ((j, resolveRequire))
           }
         case _ =>
       }
     }
-    result
+    result.map(a => (a, Unresolved))
   }
   
   override def toString = "(CoqBuilder for " + getProject + ")"
@@ -435,11 +440,11 @@ class DependencyGraph {
   def resolveDependencies(file : IFile) : Boolean = {
     var resolution = false
     setDependencies(file, getDependencies(file).map(_ match {
-      case d @ ((identifier, resolver), Resolved(_)) => /* do nothing */ d
+      case d @ (_, Resolved(_)) => /* do nothing */ d
       case (p @ (identifier, resolver), q) =>
         val r = q match {
           case Unresolved => resolver(identifier)
-          case r @ Resolvable(_) => r.tryResolve
+          case r : Resolvable => r.tryResolve
         }
         if (r != q)
           resolution = true
