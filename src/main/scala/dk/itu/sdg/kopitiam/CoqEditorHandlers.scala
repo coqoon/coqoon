@@ -33,6 +33,7 @@ object CoqEditorHandler {
   final val QuotationMark = "^\"".r.unanchored
   final val FullStop = """^\.(\s|$)""".r.unanchored
   final val Ellipsis = """^\.\.\.(\s|$)""".r.unanchored
+  final val DotRun = """^(\.+)(\s|$)""".r.unanchored
   
   def getNextCommand(doc : String, offset : Int = 0) : Option[Substring] = {
     var i = offset
@@ -52,6 +53,8 @@ object CoqEditorHandler {
         return Some(Substring(doc, offset, i + 1))
       case Ellipsis(_) if !inString && commentDepth == 0 =>
         return Some(Substring(doc, offset, i + 3))
+      case DotRun(dots, end) if !inString && commentDepth == 0 =>
+        i += dots.length + end.length
       case _ =>
         i += 1
     }
