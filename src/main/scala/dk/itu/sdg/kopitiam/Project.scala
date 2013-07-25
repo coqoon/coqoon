@@ -78,6 +78,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   private def buildFiles(files : Set[IFile],
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
+    if (!CoqProgram("coqtop").check) {
+      createResourceErrorMarker(getProject, "Can't find the Coq compiler")
+      return Array()
+    }
     val dg = deps.get
     
     /* files contains only those files which are known to have changed. Their
@@ -186,7 +190,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
                 case CompilationError(_, line, _, _, message) =>
                   createLineErrorMarker(
                       i, line.toInt, message.replaceAll("\\s+", " ").trim)
-                case msg => createFileErrorMarker(i, msg)
+                case msg => createResourceErrorMarker(i, msg)
               }
           }
           failureCount = 0
@@ -229,19 +233,19 @@ class CoqBuilder extends IncrementalProjectBuilder {
         case _ =>
       })
       if (!missing.isEmpty)
-        createFileErrorMarker(b,
+        createResourceErrorMarker(b,
             "Missing dependencies: " + missing.mkString(", ") + ".")
       if (!broken.isEmpty)
-        createFileErrorMarker(b,
+        createResourceErrorMarker(b,
             "Broken dependencies: " + broken.mkString(", ") + ".")
     }
     
     Array()
   }
   
-  private def createFileErrorMarker(f : IFile, s : String) = {
+  private def createResourceErrorMarker(r : IResource, s : String) = {
     import scala.collection.JavaConversions._
-    f.createMarker(KopitiamMarkers.Problem.ID).setAttributes(Map(
+    r.createMarker(KopitiamMarkers.Problem.ID).setAttributes(Map(
         (IMarker.MESSAGE, s),
         (IMarker.SEVERITY, IMarker.SEVERITY_ERROR)))
   }
@@ -293,6 +297,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   override protected def build(kind : Int, args_ : JMap[String, String],
       monitor_ : IProgressMonitor) : Array[IProject] = {
+    getProject.deleteMarkers(
+        KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO)
     val monitor = SubMonitor.convert(
         monitor_, "Building " + getProject.getName, 1)
     val args = scala.collection.JavaConversions.asScalaMap(args_).toMap
