@@ -675,5 +675,12 @@
             type="org.eclipse.core.resources.problemmarker">
       </super>
    </extension>
+   <extension
+         point="org.eclipse.ui.ide.markerResolution">
+      <markerResolutionGenerator
+            class="dk.itu.sdg.kopitiam.ResolutionGenerator"
+            markerType="dk.itu.sdg.kopitiam.problemmarker">
+      </markerResolutionGenerator>
+   </extension>
 
 </plugin>

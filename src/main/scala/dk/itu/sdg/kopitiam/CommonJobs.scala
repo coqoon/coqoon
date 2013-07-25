@@ -41,9 +41,28 @@ abstract class ResourceJob(name : String, resource : IResource,
 }
 
 object KopitiamMarkers {
+  import org.eclipse.ui.IMarkerResolution
+  
   object Problem {
     final val ID = "dk.itu.sdg.kopitiam.problemmarker"
+      
+    object ConfigureCoqPathResolution extends IMarkerResolution {
+      override def getLabel = "Configure the path to Coq"
+
+      override def run(r : IMarker) = {
+        import org.eclipse.ui.dialogs.PreferencesUtil
+        PreferencesUtil.createPreferenceDialogOn(UIUtils.getActiveShell,
+          "Kopitiam.settings", null, null).open
+      }
+    }
   }
+}
+
+import org.eclipse.ui.{IMarkerResolutionGenerator}
+class ResolutionGenerator extends IMarkerResolutionGenerator {
+  import org.eclipse.ui.IMarkerResolution
+  override def getResolutions(m : IMarker) =
+    Array(KopitiamMarkers.Problem.ConfigureCoqPathResolution)
 }
 
 abstract class MarkerJob(resource : IResource) extends ResourceJob(
