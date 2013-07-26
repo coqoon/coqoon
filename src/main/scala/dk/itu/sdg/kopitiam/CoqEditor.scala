@@ -416,13 +416,22 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
     pr.setRepairer(ddr, IDocument.DEFAULT_CONTENT_TYPE)
     pr
   }
+  
+  import org.eclipse.jface.text.quickassist.QuickAssistAssistant
+  
+  override def getQuickAssistAssistant(v : ISourceViewer) = {
+    val qa = new QuickAssistAssistant
+    qa.setQuickAssistProcessor(new CoqQuickAssistProcessor)
+    qa
+  }
 }
 
-import org.eclipse.jface.text.contentassist.IContentAssistProcessor
+import org.eclipse.jface.text.contentassist.{
+  ICompletionProposal, IContentAssistProcessor}
 
 class CoqContentAssistantProcessor(
     val editor : CoqEditor) extends IContentAssistProcessor {
-  import org.eclipse.jface.text.contentassist.{IContextInformationValidator,IContextInformation,ICompletionProposal,CompletionProposal,ContextInformation}
+  import org.eclipse.jface.text.contentassist.{IContextInformationValidator,IContextInformation,CompletionProposal,ContextInformation}
   import org.eclipse.jface.text.ITextViewer
   import java.text.MessageFormat
   import scala.collection.mutable.HashMap
@@ -485,6 +494,20 @@ class CoqContentAssistantProcessor(
   def getErrorMessage () : String = "not yet implemented"
 }
 
+import org.eclipse.jface.text.quickassist.IQuickAssistProcessor
+
+class CoqQuickAssistProcessor extends IQuickAssistProcessor {
+  import org.eclipse.jface.text.source.Annotation
+  import org.eclipse.jface.text.quickassist.IQuickAssistInvocationContext
+  
+  override def canAssist(context : IQuickAssistInvocationContext) = false
+  override def canFix(i : Annotation) = false
+  override def computeQuickAssistProposals(
+      context : IQuickAssistInvocationContext) : Array[ICompletionProposal] = {
+    Array()
+  }
+  override def getErrorMessage = null
+}
 
 import org.eclipse.ui.views.contentoutline.ContentOutlinePage
 
