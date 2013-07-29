@@ -57,11 +57,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
     buildFiles(changedFiles, args, monitor)
   }
   
-  private def getCorrespondingObject(s : IFile) : Option[IFile] = {
+  private def getCorrespondingObject(s : IPath) : Option[IFile] = {
     for (i <- loadPath) i match {
-      case ProjectSourceLoadPath(src, bin) if src.contains(s) =>
-        val p = s.getProjectRelativePath.removeFirstSegments(
-            src.getProjectRelativePath.segmentCount).
+      case ProjectSourceLoadPath(src, bin) if src.getLocation.isPrefixOf(s) =>
+        val p = s.removeFirstSegments(src.getLocation.segmentCount).
             removeFileExtension.addFileExtension("vo")
         val outputFolder = bin.map(_.folder).getOrElse(
             ICoqModel.forProject(getProject).getDefaultOutputLocation)
@@ -86,8 +85,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
     
     /* files contains only those files which are known to have changed. Their
      * object files, and all their dependencies, must be deleted */
-    var done = Set[IFile]()
-    var todo = List[IFile]() ++ files
+    var done = Set[IPath]()
+    var todo = List[IPath]() ++ files.map(_.getLocation)
     while (todo.headOption != None) {
       val i = todo.head
       todo = todo.tail
@@ -98,12 +97,12 @@ class CoqBuilder extends IncrementalProjectBuilder {
           if (a.exists)
             a.delete(IWorkspace.AVOID_UPDATE, null)
           dg.allDependencies.foreach(a => {
-            val (file, dependencies) = a
+            val (path, dependencies) = a
             /* If file depended on this object, then schedule its object for
              * deletion */
             dependencies.exists(_ match {
-              case (_, Resolved(p_)) if p == p_ => todo :+= file; true
-              case (_, Resolvable(p_)) if p == p_ => todo :+= file; true
+              case (_, Resolved(p_)) if p == p_ => todo :+= path; true
+              case (_, Resolvable(p_)) if p == p_ => todo :+= path; true
               case _ => false
             })
           })
@@ -116,24 +115,26 @@ class CoqBuilder extends IncrementalProjectBuilder {
     /* Schedule all files with broken dependencies to be built, too (because
      * those dependencies might become satisfiable) */
     dg.allDependencies.foreach(a => {
-      val (file, dependencies) = a
+      val (path, dependencies) = a
       if (dependencies.exists(b => !b._2.isInstanceOf[Resolved]))
-        done += file
+        done += path
     })
     
     done = done.flatMap(i => {
-      if (i.exists) {
+      val file = getFileForLocation(i)
+      if (file.exists) {
         /* This file's going to be built; create the output directory (and
          * remove any stale objects)... */
         getCorrespondingObject(i).foreach(a => {
           if (a.exists) {
-            if (a.getLocalTimeStamp < i.getLocalTimeStamp)
+            if (a.getLocalTimeStamp < file.getLocalTimeStamp)
               a.delete(IWorkspace.AVOID_UPDATE, null)
           } else new FolderCreationRunner(a).run(null)
         })
 
         /* ... clear all of the problem markers... */
-        i.deleteMarkers(KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO)
+        file.deleteMarkers(
+            KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO)
 
         /* ... and forget all of the resolved dependencies */
         dg.setDependencies(i, dg.getDependencies(i).map(_ match {
@@ -151,7 +152,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     /* Recalculate the dependencies for the files which have actually
      * changed */
     files.filter(_.exists).foreach(
-        i => dg.setDependencies(i, generateDeps(i)))
+        i => dg.setDependencies(i.getLocation, generateDeps(i)))
     
     monitor.beginTask("Working", done.size)
     
@@ -172,7 +173,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     possibleObjects = done.flatMap(getCorrespondingObject).map(_.getLocation)
     
     var failureCount = 0
-    var failed : Option[List[IFile]] = None
+    var failed : Option[List[IPath]] = None
     todo = done.toList
     done = Set()
     while (todo.headOption != None && !monitor.isCanceled) {
@@ -182,20 +183,21 @@ class CoqBuilder extends IncrementalProjectBuilder {
         val deps = dg.getDependencies(i)
         if (!deps.exists(a => !a._2.isInstanceOf[Resolved])) {
           /* Attempt to compile files whose dependencies are all satisfied */
+          val f = getFileForLocation(i)
           try {
-            new CoqCompileRunner(i, getCorrespondingObject(i)).run(
-                monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
+            new CoqCompileRunner(f, getCorrespondingObject(i)).run(
+              monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
           } catch {
             case e : org.eclipse.core.runtime.CoreException =>
               e.getStatus.getMessage.trim match {
                 case CompilationError(_, line, _, _, message) =>
                   createLineErrorMarker(
-                      i, line.toInt, message.replaceAll("\\s+", " ").trim)
-                case msg => createResourceErrorMarker(i, msg)
+                      f, line.toInt, message.replaceAll("\\s+", " ").trim)
+                case msg => createResourceErrorMarker(f, msg)
               }
           }
           failureCount = 0
-          done = done + i
+          done += i
         } else {
           /* Prepare files for compilation by trying to resolve their broken
            * dependencies */
@@ -223,10 +225,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
         }))
     
     /* Create error markers for files with broken dependencies */
-    for (a <- failed; b <- a) {
+    for (a <- failed; bL <- a) {
+      val b = getFileForLocation(bL)
       var missing = Set[String]()
       var broken = Set[String]()
-      dg.getDependencies(b).foreach(_ match {
+      dg.getDependencies(bL).foreach(_ match {
         case ((arg, _), Unresolved) =>
           missing += arg
         case ((arg, _), Resolvable(b)) =>
@@ -282,7 +285,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     
     traverse[IFile](getProject,
         a => Option(a).flatMap(TryCast[IFile]).flatMap(extensionFilter("v")),
-        a => dg.setDependencies(a, generateDeps(a)))
+        a => dg.setDependencies(a.getLocation, generateDeps(a)))
     buildFiles(Set(), args, monitor)
   }
   
@@ -367,6 +370,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
   }
   
   override def toString = "(CoqBuilder for " + getProject + ")"
+  
+  private def getFileForLocation(l : IPath) =
+    getProject.getWorkspace.getRoot.getFileForLocation(l)
 }
 object CoqBuilder {
   final val BUILDER_ID = "dk.itu.sdg.kopitiam.CoqBuilder"
@@ -438,14 +444,14 @@ object Substring {
 class DependencyGraph {
   import DependencyGraph._
 
-  private var deps = Map[IFile, Set[Dep]]()
+  private var deps = Map[IPath, Set[Dep]]()
 
-  def addDependency(from : IFile, to : Dep) : Unit =
+  def addDependency(from : IPath, to : Dep) : Unit =
     deps = deps + (from -> (getDependencies(from) + to))
-  def setDependencies(from : IFile, to : Set[Dep]) =
+  def setDependencies(from : IPath, to : Set[Dep]) =
     deps = deps + (from -> to)
 
-  def resolveDependencies(file : IFile) : Boolean = {
+  def resolveDependencies(file : IPath) : Boolean = {
     var resolution = false
     setDependencies(file, getDependencies(file).map(_ match {
       case d @ (_, Resolved(_)) => /* do nothing */ d
@@ -461,7 +467,7 @@ class DependencyGraph {
     resolution
   }
 
-  def getDependencies(from : IFile) : Set[Dep] = deps.getOrElse(from, Set())
+  def getDependencies(from : IPath) : Set[Dep] = deps.getOrElse(from, Set())
 
   def allDependencies = deps.iterator
 }
