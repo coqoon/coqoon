@@ -101,8 +101,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
             /* If file depended on this object, then schedule its object for
              * deletion */
             dependencies.exists(_ match {
-              case (_, Resolved(p_)) if p == p_ => todo :+= path; true
-              case (_, Resolvable(p_)) if p == p_ => todo :+= path; true
+              case (_, Some(p_)) if p == p_ => todo :+= path; true
               case _ => false
             })
           })
@@ -116,7 +115,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
      * those dependencies might become satisfiable) */
     dg.allDependencies.foreach(a => {
       val (path, dependencies) = a
-      if (dependencies.exists(b => !b._2.isInstanceOf[Resolved]))
+      if (dependencies.exists(b => b._2 == None))
         done += path
     })
     
@@ -138,7 +137,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
 
         /* ... and forget all of the resolved dependencies */
         dg.setDependencies(i, dg.getDependencies(i).map(_ match {
-          case (f, _) => (f, Unresolved)
+          case (f, _) => (f, None)
         }))
         Some(i)
       } else {
@@ -181,7 +180,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
       todo = todo.tail
       if (!done.contains(i)) {
         val deps = dg.getDependencies(i)
-        if (!deps.exists(a => !a._2.isInstanceOf[Resolved])) {
+        if (!deps.exists(a => a._2 == None)) {
           /* Attempt to compile files whose dependencies are all satisfied */
           val f = getFileForLocation(i)
           try {
@@ -221,24 +220,18 @@ class CoqBuilder extends IncrementalProjectBuilder {
        * compilation run */
       for (i <- todo)
         dg.setDependencies(i, dg.getDependencies(i).map(_ match {
-          case (f, _) => (f, Unresolved)
+          case (f, _) => (f, None)
         }))
     
     /* Create error markers for files with broken dependencies */
     for (a <- failed; bL <- a) {
       val b = getFileForLocation(bL)
-      var missing = Set[String]()
       var broken = Set[String]()
       dg.getDependencies(bL).foreach(_ match {
-        case ((arg, _), Unresolved) =>
-          missing += arg
-        case ((arg, _), Resolvable(b)) =>
+        case ((arg, _), None) =>
           broken += arg
         case _ =>
       })
-      if (!missing.isEmpty)
-        createResourceErrorMarker(b,
-            "Missing dependencies: " + missing.mkString(", ") + ".")
       if (!broken.isEmpty)
         createResourceErrorMarker(b,
             "Broken dependencies: " + broken.mkString(", ") + ".")
@@ -321,8 +314,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
   }
   
-  private def resolveLoad(t : String) : DependencyStatus = Unresolved
-  private def resolveRequire(t : String) : DependencyStatus = {
+  private def resolveLoad(t : String) : Option[IPath] = None
+  private def resolveRequire(t : String) : Option[IPath] = {
     val (coqdir, libname) = {
       val i = t.split('.').toSeq
       (i.init, i.last)
@@ -337,11 +330,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
           if (possibleObjects.contains(p))
             /* This object is the best candidate, but it doesn't exist yet,
              * so we should try again later */
-            return Resolvable(p)
-        } else return Resolved(p)
+            return None
+        } else return Some(p)
       }
     }
-    Unresolved
+    None
   }
 
   private def generateDeps(file : IFile) : Set[DependencyGraph.Dep] = {
@@ -349,7 +342,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
      * considered for compilation, every file starts with a synthetic,
      * trivially-satisfiable dependency on itself */
     var result : Set[DependencyGraph.DepCallback] = Set(
-        ("!Dummy", _ => Resolvable(file.getLocation)))
+        ("!Dummy", _ => Some(file.getLocation)))
     for (i <- sentences(
         FunctionIterator.lines(file.getContents).mkString("\n"))) {
       i.text.trim match {
@@ -366,7 +359,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
         case _ =>
       }
     }
-    result.map(a => (a, Unresolved))
+    result.map(a => (a, None))
   }
   
   override def toString = "(CoqBuilder for " + getProject + ")"
@@ -454,12 +447,9 @@ class DependencyGraph {
   def resolveDependencies(file : IPath) : Boolean = {
     var resolution = false
     setDependencies(file, getDependencies(file).map(_ match {
-      case d @ (_, Resolved(_)) => /* do nothing */ d
+      case d @ (_, Some(_)) => /* do nothing */ d
       case (p @ (identifier, resolver), q) =>
-        val r = q match {
-          case Unresolved => resolver(identifier)
-          case r : Resolvable => r.tryResolve
-        }
+        val r = resolver(identifier)
         if (r != q)
           resolution = true
         (p, r)
@@ -472,15 +462,8 @@ class DependencyGraph {
   def allDependencies = deps.iterator
 }
 object DependencyGraph {
-  abstract class DependencyStatus
-  case object Unresolved extends DependencyStatus
-  case class Resolved(location : IPath) extends DependencyStatus
-  case class Resolvable(location : IPath) extends DependencyStatus {
-    def tryResolve = if (location.toFile.exists) Resolved(location) else this
-  }
-  
-  type DepCallback = (String, String => DependencyStatus)
-  type Dep = (DepCallback, DependencyStatus)
+  type DepCallback = (String, String => Option[IPath])
+  type Dep = (DepCallback, Option[IPath])
 }
 
 class FunctionIterator[A](f : () => Option[A]) extends Iterator[A] {
