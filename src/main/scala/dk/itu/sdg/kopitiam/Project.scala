@@ -97,14 +97,15 @@ class CoqBuilder extends IncrementalProjectBuilder {
           val p = a.getLocation
           if (a.exists)
             a.delete(IWorkspace.AVOID_UPDATE, null)
-          dg.dependencySet.foreach(_ match {
-            /* If f depended on this object, then schedule its object for
+          dg.allDependencies.foreach(a => {
+            val (file, dependencies) = a
+            /* If file depended on this object, then schedule its object for
              * deletion */
-            case (f, (_, Resolved(p_))) if p == p_ =>
-              todo :+= f
-            case (f, (_, Resolvable(p_))) if p == p_ =>
-              todo :+= f
-            case _ =>
+            dependencies.exists(_ match {
+              case (_, Resolved(p_)) if p == p_ => todo :+= file; true
+              case (_, Resolvable(p_)) if p == p_ => todo :+= file; true
+              case _ => false
+            })
           })
         })
       }
@@ -114,10 +115,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
     
     /* Schedule all files with broken dependencies to be built, too (because
      * those dependencies might become satisfiable) */
-    dg.dependencySet.foreach(_ match {
-      case (file, (_, Unresolved)) => done += file
-      case (file, (_, Resolvable(_))) => done += file
-      case _ =>
+    dg.allDependencies.foreach(a => {
+      val (file, dependencies) = a
+      if (dependencies.exists(b => !b._2.isInstanceOf[Resolved]))
+        done += file
     })
     
     done = done.flatMap(i => {
@@ -437,11 +438,12 @@ object Substring {
 class DependencyGraph {
   import DependencyGraph._
 
-  private var deps = Set[(IFile, Dep)]()
+  private var deps = Map[IFile, Set[Dep]]()
 
-  def addDependency(from : IFile, to : Dep) : Unit = (deps += from -> to)
-  def setDependencies(file : IFile, to : Set[Dep]) =
-    deps = deps.filterNot(_._1 == file) ++ to.map(a => file -> a)
+  def addDependency(from : IFile, to : Dep) : Unit =
+    deps = deps + (from -> (getDependencies(from) + to))
+  def setDependencies(from : IFile, to : Set[Dep]) =
+    deps = deps + (from -> to)
 
   def resolveDependencies(file : IFile) : Boolean = {
     var resolution = false
@@ -459,10 +461,9 @@ class DependencyGraph {
     resolution
   }
 
-  def getDependencies(from : IFile) : Set[Dep] =
-    deps.filter(_._1 == from).map(_._2)
+  def getDependencies(from : IFile) : Set[Dep] = deps.getOrElse(from, Set())
 
-  def dependencySet = deps
+  def allDependencies = deps.iterator
 }
 object DependencyGraph {
   abstract class DependencyStatus
