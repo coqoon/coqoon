@@ -460,10 +460,19 @@ class DependencyGraph {
   def getDependencies(from : IPath) : Set[Dep] = deps.getOrElse(from, Set())
 
   def allDependencies = deps.iterator
+  
+  override def toString = allDependencies.map(
+      a => (Seq(a._1.toPortableString) ++ a._2.map(dep2String)).mkString("\n\t\t")).
+          mkString("DG\n\t", "\n\t", "")
 }
 object DependencyGraph {
   type DepCallback = (String, String => Option[IPath])
   type Dep = (DepCallback, Option[IPath])
+  
+  implicit def dep2String(d : Dep) : String = d match {
+    case ((ident, _), None) => "[X] " + ident
+    case (_, Some(p)) => "[O] " + p.toPortableString
+  }
 }
 
 class FunctionIterator[A](f : () => Option[A]) extends Iterator[A] {
