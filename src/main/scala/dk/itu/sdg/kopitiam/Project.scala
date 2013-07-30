@@ -171,71 +171,60 @@ class CoqBuilder extends IncrementalProjectBuilder {
     
     possibleObjects = done.flatMap(getCorrespondingObject).map(_.getLocation)
     
-    var failureCount = 0
-    var failed : Option[List[IPath]] = None
-    todo = done.toList
-    done = Set()
-    while (todo.headOption != None && !monitor.isCanceled) {
-      val i = todo.head
-      todo = todo.tail
-      if (!done.contains(i)) {
-        val deps = dg.getDependencies(i)
-        if (!deps.exists(a => a._2 == None)) {
-          /* Attempt to compile files whose dependencies are all satisfied */
-          val f = getFileForLocation(i)
-          try {
-            new CoqCompileRunner(f, getCorrespondingObject(i)).run(
-              monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
-          } catch {
-            case e : org.eclipse.core.runtime.CoreException =>
-              e.getStatus.getMessage.trim match {
-                case CompilationError(_, line, _, _, message) =>
-                  createLineErrorMarker(
-                      f, line.toInt, message.replaceAll("\\s+", " ").trim)
-                case msg => createResourceErrorMarker(f, msg)
-              }
-          }
-          failureCount = 0
-          done += i
-        } else {
-          /* Prepare files for compilation by trying to resolve their broken
-           * dependencies */
-          if (dg.resolveDependencies(i)) {
-            failureCount = 0
-          } else failureCount = failureCount + 1
-          todo :+= i
+    class BuildTask(src : IPath) {
+      def needsBuild = true
+      def canBuild = {
+        dg.resolveDependencies(src)
+        !dg.getDependencies(src).exists(a => a._2 == None)
+      }
+      def build(monitor : SubMonitor) = {
+        val f = getFileForLocation(src)
+        try {
+          new CoqCompileRunner(f, getCorrespondingObject(src)).run(monitor)
+        } catch {
+          case e : org.eclipse.core.runtime.CoreException =>
+            e.getStatus.getMessage.trim match {
+              case CompilationError(_, line, _, _, message) =>
+                createLineErrorMarker(
+                  f, line.toInt, message.replaceAll("\\s+", " ").trim)
+              case msg => createResourceErrorMarker(f, msg)
+            }
         }
       }
-      /* If we've been through the entire build queue without being able to
-       * resolve any more dependencies, then give up */
-      if (todo.size > 0 && failureCount == todo.size) {
-        failed = Some(todo)
-        todo = List()
+      
+      def fail = {
+        val f = getFileForLocation(src)
+        var broken = dg.getDependencies(src).collect {
+          case ((arg, _), None) => arg
+        }
+        if (!broken.isEmpty)
+          createResourceErrorMarker(f,
+            "Broken dependencies: " + broken.mkString(", ") + ".")
       }
+      
+      def forget =
+        dg.setDependencies(src, dg.getDependencies(src).map(_ match {
+          case (f, _) => (f, None)
+        }))
     }
+    
+    var toBuild : Set[BuildTask] = done.map(new BuildTask(_))
+    var buildable : Set[BuildTask] = Set()
+    do {
+      buildable.foreach(
+          _.build(monitor.newChild(1, SubMonitor.SUPPRESS_NONE)))
+      buildable = toBuild.filter(a => a.needsBuild && a.canBuild)
+      toBuild = toBuild.filterNot(buildable.contains)
+    } while (!buildable.isEmpty && !monitor.isCanceled)
     
     if (monitor.isCanceled)
       /* Intentionally unresolve the dependencies of all the files that were
        * awaiting compilation, thereby forcing them to be added to the next
        * compilation run */
-      for (i <- todo)
-        dg.setDependencies(i, dg.getDependencies(i).map(_ match {
-          case (f, _) => (f, None)
-        }))
+      buildable.map(_.forget)
     
     /* Create error markers for files with broken dependencies */
-    for (a <- failed; bL <- a) {
-      val b = getFileForLocation(bL)
-      var broken = Set[String]()
-      dg.getDependencies(bL).foreach(_ match {
-        case ((arg, _), None) =>
-          broken += arg
-        case _ =>
-      })
-      if (!broken.isEmpty)
-        createResourceErrorMarker(b,
-            "Broken dependencies: " + broken.mkString(", ") + ".")
-    }
+    toBuild.map(_.fail)
     
     Array()
   }
