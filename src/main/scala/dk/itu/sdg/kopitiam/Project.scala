@@ -153,8 +153,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
     files.filter(_.exists).foreach(
         i => dg.setDependencies(i.getLocation, generateDeps(i)))
     
-    monitor.beginTask("Working", done.size)
-    
     /* Expand the load path */
     def recurse(lp : ICoqLoadPath) : Seq[LPEntry] = {
       def _recurse(coqdir : Seq[String], f : File) : Seq[LPEntry] = {
@@ -171,13 +169,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
     
     possibleObjects = done.flatMap(getCorrespondingObject).map(_.getLocation)
     
-    class BuildTask(src : IPath) {
-      def needsBuild = true
-      def canBuild = {
+    class BuildTaskImpl(src : IPath) extends BuildTask {
+      override def needsBuild = true
+      override def canBuild = {
         dg.resolveDependencies(src)
         !dg.getDependencies(src).exists(a => a._2 == None)
       }
-      def build(monitor : SubMonitor) = {
+      override def build(monitor : SubMonitor) = {
         val f = getFileForLocation(src)
         try {
           new CoqCompileRunner(f, getCorrespondingObject(src)).run(monitor)
@@ -192,7 +190,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
         }
       }
       
-      def fail = {
+      override def fail = {
         val f = getFileForLocation(src)
         var broken = dg.getDependencies(src).collect {
           case ((arg, _), None) => arg
@@ -202,30 +200,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
             "Broken dependencies: " + broken.mkString(", ") + ".")
       }
       
-      def forget =
+      override def forget =
         dg.setDependencies(src, dg.getDependencies(src).map(_ match {
           case (f, _) => (f, None)
         }))
     }
     
-    var toBuild : Set[BuildTask] = done.map(new BuildTask(_))
-    var buildable : Set[BuildTask] = Set()
-    do {
-      buildable.foreach(
-          _.build(monitor.newChild(1, SubMonitor.SUPPRESS_NONE)))
-      buildable = toBuild.filter(a => a.needsBuild && a.canBuild)
-      toBuild = toBuild.filterNot(buildable.contains)
-    } while (!buildable.isEmpty && !monitor.isCanceled)
-    
-    if (monitor.isCanceled)
-      /* Intentionally unresolve the dependencies of all the files that were
-       * awaiting compilation, thereby forcing them to be added to the next
-       * compilation run */
-      buildable.map(_.forget)
-    
-    /* Create error markers for files with broken dependencies */
-    toBuild.map(_.fail)
-    
+    buildLoop(monitor, done.map(new BuildTaskImpl(_)))
     Array()
   }
   
@@ -393,6 +374,29 @@ object CoqBuilder {
     }
     (regions :+ Substring(doc, regionStart, i)).
         mkString(" ").replaceAll("\\s+", " ").trim
+  }
+  
+  trait BuildTask {
+    def build(monitor : SubMonitor)
+    def canBuild() : Boolean
+    def needsBuild() : Boolean
+    
+    def fail()
+    def forget()
+  }
+  
+  def buildLoop(monitor : SubMonitor, toBuild_ : Set[BuildTask]) = {
+    var toBuild = toBuild_.filter(a => a.needsBuild)
+    monitor.beginTask("Compiling", toBuild.size)
+    var buildable : Set[BuildTask] = Set()
+    do {
+      buildable.foreach(
+          _.build(monitor.newChild(1, SubMonitor.SUPPRESS_NONE)))
+      buildable = toBuild.filter(a => a.needsBuild && a.canBuild)
+      toBuild = toBuild.filterNot(buildable.contains)
+    } while (!buildable.isEmpty && !monitor.isCanceled)
+    buildable.map(_.forget)
+    toBuild.map(_.fail)
   }
 }
 
