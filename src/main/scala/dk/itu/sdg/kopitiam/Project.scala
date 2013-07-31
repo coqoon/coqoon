@@ -284,7 +284,24 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
   }
   
-  private def resolveLoad(t : String) : Option[IPath] = None
+  private def resolveLoad(t : String) : Option[IPath] = {
+    val dg = deps.get
+    for (lp <- completeLoadPath) {
+      val p = new Path(lp.location.getAbsolutePath).
+          append(t).addFileExtension("v")
+      val deps = dg.getDependencies(p)
+      if (!deps.isEmpty) {
+        if (deps.exists(a => a._2 == None)) {
+          /* This source file is the best candidate, but its dependencies
+           * haven't been resolved yet, so we should try it again later (when
+           * it's more likely to work properly) */
+          return None
+        } else return Some(p)
+      }
+    }
+    return None
+  }
+  
   private def resolveRequire(t : String) : Option[IPath] = {
     val (coqdir, libname) = {
       val i = t.split('.').toSeq
@@ -292,14 +309,14 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
     
     for (lp <- completeLoadPath) {
-      val p = new Path(
-          lp.location.getAbsolutePath).append(libname).addFileExtension("vo")
+      val p = new Path(lp.location.getAbsolutePath).
+          append(libname).addFileExtension("vo")
       val f = p.toFile
       if (lp.coqdir.endsWith(coqdir)) {
         if (!f.exists) {
           if (possibleObjects.contains(p))
             /* This object is the best candidate, but it doesn't exist yet,
-             * so we should try again later */
+             * so we should try it again later */
             return None
         } else return Some(p)
       }
