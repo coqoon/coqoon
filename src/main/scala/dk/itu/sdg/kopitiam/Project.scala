@@ -70,9 +70,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
     None
   }
   
-  import java.io.File
-  private case class LPEntry(coqdir : Seq[String], location : File)
-  private var completeLoadPath : Seq[LPEntry] = Seq()
+  import ICoqLoadPath._
+  private var completeLoadPath : Seq[LoadPathEntry] = Seq()
   private var possibleObjects : Set[IPath] = Set()
   
   private def buildFiles(files : Set[IFile],
@@ -154,18 +153,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
         i => dg.setDependencies(i.getLocation, generateDeps(i)))
     
     /* Expand the load path */
-    def recurse(lp : ICoqLoadPath) : Seq[LPEntry] = {
-      def _recurse(coqdir : Seq[String], f : File) : Seq[LPEntry] = {
-        val l = f.listFiles
-        (if (l != null) {
-          l.toSeq.filter(_.isDirectory).flatMap(
-            f => _recurse(coqdir :+ f.getName, f))
-        } else Seq.empty) :+ LPEntry(coqdir, f)
-      }
-      _recurse(
-        lp.coqdir.map(_.split('.').toSeq).getOrElse(Seq()), lp.path.toFile)
-    }
-    completeLoadPath = loadPath.flatMap(recurse)
+    completeLoadPath = loadPath.flatMap(ICoqLoadPath.expand)
     
     possibleObjects = done.flatMap(getCorrespondingObject).map(_.getLocation)
     
@@ -286,8 +274,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   private def resolveLoad(t : String) : Option[IPath] = {
     val dg = deps.get
-    for (lp <- completeLoadPath) {
-      val p = new Path(lp.location.getAbsolutePath).
+    for ((_, location) <- completeLoadPath) {
+      val p = new Path(location.getAbsolutePath).
           append(t).addFileExtension("v")
       val deps = dg.getDependencies(p)
       if (!deps.isEmpty) {
@@ -308,11 +296,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
       (i.init, i.last)
     }
     
-    for (lp <- completeLoadPath) {
-      val p = new Path(lp.location.getAbsolutePath).
+    for ((coqdir, location) <- completeLoadPath) {
+      val p = new Path(location.getAbsolutePath).
           append(libname).addFileExtension("vo")
       val f = p.toFile
-      if (lp.coqdir.endsWith(coqdir)) {
+      if (coqdir.endsWith(coqdir)) {
         if (!f.exists) {
           if (possibleObjects.contains(p))
             /* This object is the best candidate, but it doesn't exist yet,

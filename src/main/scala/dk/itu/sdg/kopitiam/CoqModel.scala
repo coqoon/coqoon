@@ -117,6 +117,21 @@ trait ICoqLoadPath {
   def asArguments : Seq[String] =
     Seq("-R", path.toOSString, coqdir.getOrElse(""))
 }
+object ICoqLoadPath {
+  import java.io.File
+  type LoadPathEntry = (Seq[String], File)
+  def expand(lp : ICoqLoadPath) : Seq[LoadPathEntry] = {
+    def _recurse(coqdir : Seq[String], f : File) : Seq[LoadPathEntry] = {
+      val l = f.listFiles
+      (if (l != null) {
+        l.toSeq.filter(_.isDirectory).flatMap(
+          f => _recurse(coqdir :+ f.getName, f))
+      } else Seq.empty) :+ (coqdir, f)
+    }
+    _recurse(
+      lp.coqdir.map(_.split('.').toSeq).getOrElse(Seq()), lp.path.toFile)
+  }
+}
 
 case class ProjectSourceLoadPath(
     val folder : IFolder, val output : Option[ProjectBinaryLoadPath] = None)
