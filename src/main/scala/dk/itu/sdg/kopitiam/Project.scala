@@ -154,7 +154,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
     possibleObjects = done.flatMap(getCorrespondingObject).map(_.getLocation)
     
     class BuildTaskImpl(src : IPath) extends BuildTask {
-      override def needsBuild = true
       override def canBuild = {
         dt.resolveDependencies(src)
         !dt.getDependencies(src).exists(a => a._2 == None)
@@ -370,20 +369,19 @@ object CoqBuilder {
   trait BuildTask {
     def build(monitor : SubMonitor)
     def canBuild() : Boolean
-    def needsBuild() : Boolean
     
     def fail()
     def forget()
   }
   
   def buildLoop(monitor : SubMonitor, toBuild_ : Set[BuildTask]) = {
-    var toBuild = toBuild_.filter(a => a.needsBuild)
+    var toBuild = toBuild_
     monitor.beginTask("Compiling", toBuild.size)
     var buildable : Set[BuildTask] = Set()
     do {
       buildable.foreach(
           _.build(monitor.newChild(1, SubMonitor.SUPPRESS_NONE)))
-      buildable = toBuild.filter(a => a.needsBuild && a.canBuild)
+      buildable = toBuild.filter(a => a.canBuild)
       toBuild = toBuild.filterNot(buildable.contains)
     } while (!buildable.isEmpty && !monitor.isCanceled)
     buildable.map(_.forget)
@@ -499,7 +497,6 @@ object CoqBuilder {
     
     var sb = new StringBuilder
     class BuildTaskImpl(src : IPath) extends BuildTask {
-      override def needsBuild = true
       override def canBuild = {
         dt.resolveDependencies(src, true)
         !dt.getDependencies(src).exists(a => a._2 == None)
