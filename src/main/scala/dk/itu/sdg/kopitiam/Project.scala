@@ -305,28 +305,15 @@ class CoqBuilder extends IncrementalProjectBuilder {
   }
 
   private def generateDeps(file : IFile) : Set[DependencyGraph.Dep] = {
+    val deps = CoqBuilder.generateDeps(file).map(_ match {
+      case LoadRef(r) => (r, resolveLoad(_))
+      case RequireRef(r) => (r, resolveRequire(_))
+    })
     /* In order to force files whose dependencies have been recalculated to be
      * considered for compilation, every file starts with a synthetic,
      * trivially-satisfiable dependency on itself */
-    var result : Set[DependencyGraph.DepCallback] = Set(
-        ("!Dummy", _ => Some(file.getLocation)))
-    for (i <- sentences(
-        FunctionIterator.lines(file.getContents).mkString("\n"))) {
-      i.text.trim match {
-        case Load(what) =>
-          result += ((what, resolveLoad))
-        case Require(how, what) =>
-          if (what(0) == '"') {
-            val filename = what.substring(1).split("\"", 2)(0)
-            result += ((filename, resolveRequire))
-          } else {
-            for (j <- what.split(" "))
-              result += ((j, resolveRequire))
-          }
-        case _ =>
-      }
-    }
-    result.map(a => (a, None))
+    val fakeDependency = ("!Dummy", (_ : String) => Some(file.getLocation()))
+    (deps :+ fakeDependency).map(a => (a, None)).toSet
   }
   
   override def toString = "(CoqBuilder for " + getProject + ")"
@@ -402,6 +389,31 @@ object CoqBuilder {
     } while (!buildable.isEmpty && !monitor.isCanceled)
     buildable.map(_.forget)
     toBuild.map(_.fail)
+  }
+  
+  abstract class CoqReference
+  case class LoadRef(value : String) extends CoqReference
+  case class RequireRef(value : String) extends CoqReference
+  
+  private def generateDeps(file : IFile) : Seq[CoqReference] = {
+    var result = Seq.newBuilder[CoqReference]
+    for (i <- sentences(
+        FunctionIterator.lines(file.getContents).mkString("\n"))) {
+      i.text.trim match {
+        case Load(what) =>
+          result += LoadRef(what)
+        case Require(how, what) =>
+          if (what(0) == '"') {
+            val filename = what.substring(1).split("\"", 2)(0)
+            result += RequireRef(filename)
+          } else {
+            for (j <- what.split(" "))
+              result += RequireRef(j)
+          }
+        case _ =>
+      }
+    }
+    result.result
   }
 }
 
