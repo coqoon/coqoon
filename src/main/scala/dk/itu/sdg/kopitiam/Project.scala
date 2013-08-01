@@ -215,14 +215,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
         (IMarker.SEVERITY, IMarker.SEVERITY_ERROR)))
   }
   
-  private def traverse[A <: IResource](folder : IContainer,
-      filter : IResource => Option[A], f : A => Unit) : Unit = {
-    for (i <- folder.members(IContainer.INCLUDE_HIDDEN)) {
-      filter(i).map(f)
-      TryCast[IContainer](i).foreach(traverse(_, filter, f))
-    }
-  }
-  
   private def extensionFilter[A <: IResource](ext : String)(r : A) : Option[A] =
     Option(r).filter(_.getFileExtension == ext)
     
@@ -379,6 +371,14 @@ object CoqBuilder {
     }
     (regions :+ Substring(doc, regionStart, i)).
         mkString(" ").replaceAll("\\s+", " ").trim
+  }
+  
+  def traverse[A <: IResource](folder : IContainer,
+      filter : IResource => Option[A], f : A => Unit) : Unit = {
+    for (i <- folder.members(IContainer.INCLUDE_HIDDEN)) {
+      filter(i).map(f)
+      TryCast[IContainer](i).foreach(traverse(_, filter, f))
+    }
   }
   
   trait BuildTask {
