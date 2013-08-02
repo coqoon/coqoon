@@ -670,6 +670,7 @@
          </activeWhen>
       </handler>
       <handler
+            class="dk.itu.sdg.kopitiam.ExportCoqMakefileHandler"
             commandId="Kopitiam.export_coq_makefile">
       </handler>
    </extension>

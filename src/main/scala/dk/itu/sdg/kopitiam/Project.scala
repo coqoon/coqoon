@@ -413,7 +413,7 @@ object CoqBuilder {
     result.result
   }
   
-  private def generateMakefile(project : IProject) : String = {
+  def generateMakefile(project : IProject) : String = {
     val cp = ICoqModel.forProject(project)
     val loadPath = {
       val libraryLocation = getLibraryLocation
@@ -525,9 +525,9 @@ object CoqBuilder {
         "(generateMakefileDeps.BuildTaskImpl for " + src + ")"
     }
     
-    sb ++= "override _COQCMD = " +
+    sb ++= "override _COQCMD = \\\n\t" +
         """mkdir -p "`dirname "$@"`" && coqc $(COQFLAGS) "$<" && mv "$<o" "$@" """ +
-        "\n\n"
+        "\nCOQFLAGS = -noglob\n\n"
     
     for (i <- cp.getLoadPath) {
       i match {
