@@ -314,7 +314,7 @@ object CoqBuilder {
   final val BUILDER_ID = "dk.itu.sdg.kopitiam.CoqBuilder"
   
   private def getLibraryLocation = new Path(
-    CoqProgram("coqtop").run(Seq("-where"), false).readAll._2)
+    CoqProgram("coqtop").run(Seq("-where")).readAll._2)
     
   private val Load = "^Load (.*)\\.$".r
   private val Require = "^Require (Import |Export |)(.*)\\.$".r

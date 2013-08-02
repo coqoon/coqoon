@@ -10,7 +10,8 @@ package dk.itu.sdg.kopitiam
 trait CoqProgram {
   def path : String
   def check : Boolean = new java.io.File(path).exists
-  def run(args : Seq[String], redirect : Boolean) : CoqProgramInstance
+  def run(args : Seq[String],
+      config : ProcessBuilder => Unit = (_ => ())) : CoqProgramInstance
 }
 object CoqProgram {
   protected def getCoqPath = Option(Activator.getDefault).map(
@@ -22,16 +23,16 @@ object CoqProgram {
         path + java.io.File.separator + name
       case _ => name
     }
-    override def run(
-        args : Seq[String], redirect : Boolean) : CoqProgramInstance =
-      new CoqProgramInstanceImplPOSIX(path +: args, redirect)
+    override def run(args : Seq[String],
+        config : ProcessBuilder => Unit) : CoqProgramInstance =
+      new CoqProgramInstanceImplPOSIX(path +: args, config)
   }
   
   private class ProgramImplWindows(
       name : String) extends ProgramImpl(name + ".exe") {
-    override def run(
-        args : Seq[String], redirect : Boolean) : CoqProgramInstance =
-      new CoqProgramInstanceImplWindows(path +: args, redirect)
+    override def run(args : Seq[String],
+        config : ProcessBuilder => Unit) : CoqProgramInstance =
+      new CoqProgramInstanceImplWindows(path +: args, config)
   }
   
   def apply(name : String) : CoqProgram =
@@ -55,14 +56,15 @@ trait CoqProgramInstance {
   def interrupt
 }
 
-private class CoqProgramInstanceImpl(argv : Seq[String], redirect : Boolean)
-    extends CoqProgramInstance {
+private class CoqProgramInstanceImpl(argv : Seq[String],
+    config : ProcessBuilder => Unit) extends CoqProgramInstance {
   private val (in, out, pr) = {
     import java.io.{InputStreamReader, OutputStreamWriter}
     import java.lang.{Process, ProcessBuilder}
     
-    val pr =
-      new ProcessBuilder(argv : _*).redirectErrorStream(redirect).start()
+    val pb = new ProcessBuilder(argv : _*)
+    config(pb)
+    val pr = pb.start()
     val in = new OutputStreamWriter(pr.getOutputStream)
     val out = new InputStreamReader(pr.getInputStream)
     (in, out, pr)
@@ -81,13 +83,13 @@ private class CoqProgramInstanceImpl(argv : Seq[String], redirect : Boolean)
 }
 
 private class CoqProgramInstanceImplWindows(
-    argv : Seq[String], redirect : Boolean)
-        extends CoqProgramInstanceImpl(argv.map(a => '"' + a + '"'), redirect)
+    argv : Seq[String], config : ProcessBuilder => Unit)
+        extends CoqProgramInstanceImpl(argv.map(a => '"' + a + '"'), config)
 
-private class CoqProgramInstanceImplPOSIX(
-    argv : Seq[String], redirect : Boolean) extends CoqProgramInstanceImpl(Seq(
-        "/bin/sh", "-c", "echo $$; exec \"$@\"", "wrapper") ++ argv,
-            redirect) {
+private class CoqProgramInstanceImplPOSIX(argv : Seq[String],
+    config : ProcessBuilder => Unit) extends CoqProgramInstanceImpl(
+        Seq("/bin/sh", "-c", "echo $$; exec \"$@\"", "wrapper") ++ argv,
+            config) {
   private var pid : String = {
     var pid = ""
     var a : Int = stdout.read
@@ -179,7 +181,7 @@ private class CoqTopIdeSlaveImpl(
       val ct = CoqProgram("coqtop")
       if (!ct.check)
         throw new java.io.IOException("Couldn't find the coqtop program")
-      pr = Option(ct.run(args ++ Seq("-ideslave"), false))
+      pr = Option(ct.run(args ++ Seq("-ideslave")))
     }
     pr.get.stdin.write(n.toString())
     pr.get.stdin.flush()

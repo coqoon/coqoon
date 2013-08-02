@@ -54,7 +54,8 @@ class CoqCompileRunner(
         (ICoqModel.forProject(source.getProject).getLoadPath ++
             Activator.getDefault.getChargeLoadPath).flatMap(_.asArguments)
       val coqcp =
-        coqc.run(flp ++ Seq("-noglob", "-compile", location.toOSString), true)
+        coqc.run(flp ++ Seq("-noglob", "-compile", location.toOSString),
+            a => a.redirectErrorStream(true))
       
       coqcp.readAll match {
         case (i, msgs) if i != 0 =>
