@@ -151,6 +151,11 @@
             id="Kopitiam.save_proof_certificate"
             name="Save Java proof certificate command">
       </command>
+      <command
+            categoryId="Kopitiam.category"
+            id="Kopitiam.export_coq_makefile"
+            name="Export Coq project makefile command">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.contexts">
@@ -341,6 +346,34 @@
                </with>
             </visibleWhen>
          </menu>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:org.eclipse.ui.navigator.ProjectExplorer#PopupMenu">
+         <command
+               commandId="Kopitiam.export_coq_makefile"
+               icon="icons/coqide.gif"
+               label="Export Makefile"
+               style="push"
+               tooltip="Export Makefile">
+            <visibleWhen
+                  checkEnabled="false">
+               <with
+                     variable="selection">
+                  <iterate
+                        ifEmpty="false"
+                        operator="and">
+                     <adapt
+                           type="org.eclipse.core.resources.IProject">
+                        <test
+                              property="org.eclipse.core.resources.projectNature"
+                              value="dk.itu.sdg.kopitiam.CoqNature">
+                        </test>
+                     </adapt>
+                  </iterate>
+               </with>
+            </visibleWhen>
+         </command>
       </menuContribution>
 <!--      <menuContribution
             locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
@@ -635,6 +668,9 @@
                   definitionId="Kopitiam.activeEditorIsJava">
             </reference>
          </activeWhen>
+      </handler>
+      <handler
+            commandId="Kopitiam.export_coq_makefile">
       </handler>
    </extension>
    <extension
