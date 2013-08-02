@@ -413,10 +413,11 @@ object CoqBuilder {
     result.result
   }
   
-  private def generateMakefileDeps(project : IProject) : String = {
+  private def generateMakefile(project : IProject) : String = {
+    val cp = ICoqModel.forProject(project)
     val loadPath = {
       val libraryLocation = getLibraryLocation
-      ICoqModel.forProject(project).getLoadPath :+
+      cp.getLoadPath :+
         ExternalLoadPath(libraryLocation.append("theories"), Some("Coq")) :+
         ExternalLoadPath(libraryLocation.append("plugins"), Some("Coq"))
     }
@@ -495,6 +496,13 @@ object CoqBuilder {
       getCorrespondingObject(l).map(_.getLocation)
     })
     
+    def makeLocationRelative(l : IPath) = {
+      val p = project.getLocation
+      if (p.isPrefixOf(l)) {
+        Some(l.removeFirstSegments(p.segmentCount))
+      } else None
+    }
+    
     var sb = new StringBuilder
     class BuildTaskImpl(src : IPath) extends BuildTask {
       override def canBuild = {
@@ -502,10 +510,12 @@ object CoqBuilder {
         !dt.getDependencies(src).exists(a => a._2 == None)
       }
       override def build(monitor : SubMonitor) = {
-        val co = getCorrespondingObject(src).get.getLocation
-        sb ++= co.toString + ": " +
-            dt.getDependencies(src).map(_._2.get).mkString(" ") + "\n"
-        built += co
+        val cf = getCorrespondingObject(src).get
+        sb ++= cf.getProjectRelativePath + ": " +
+            /* Skip all dependencies with absolute paths */
+            dt.getDependencies(src).flatMap(_._2).flatMap(
+                makeLocationRelative).mkString(" ") + "\n"
+        built += cf.getLocation
       }
       
       override def fail = ()
@@ -515,10 +525,27 @@ object CoqBuilder {
         "(generateMakefileDeps.BuildTaskImpl for " + src + ")"
     }
     
+    sb ++= "override _COQCMD = " +
+        """mkdir -p "`dirname "$@"`" && coqc $(COQFLAGS) "$<" && mv "$<o" "$@" """ +
+        "\n\n"
+    
+    for (i <- cp.getLoadPath) {
+      i match {
+        case ProjectSourceLoadPath(src, bin_) =>
+          val bin = bin_.map(_.folder).getOrElse(cp.getDefaultOutputLocation)
+          sb ++= bin.getProjectRelativePath + "/%.vo: " +
+              src.getProjectRelativePath + "/%.v\n\t$(_COQCMD)\n"
+        case _ =>
+      }
+      sb ++= "override COQFLAGS += -R \"" + i.path + "\" \"\"\n"
+    }
+    sb ++= "override COQFLAGS += -R \"" +
+        cp.getDefaultOutputLocation.getLocation + "\" \"\"\n\n"
+    
     sb ++= "OBJECTS = " + allFiles.flatMap(
-        a => getCorrespondingObject(a.getLocation).map(_.getLocation)).
+        a => getCorrespondingObject(a.getLocation).map(_.getProjectRelativePath)).
             mkString("\\\n\t", " \\\n\t", "")
-    sb ++= "\n\nall: $(OBJECTS)\n\n"
+    sb ++= "\n\nall: $(OBJECTS)\nclean:\n\trm -f $(OBJECTS)\n\n"
         
     buildLoop(SubMonitor.convert(null),
         allFiles.map(a => new BuildTaskImpl(a.getLocation)))
