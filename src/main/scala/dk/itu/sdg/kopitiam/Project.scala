@@ -526,10 +526,12 @@ object CoqBuilder {
               src.getProjectRelativePath + "/%.v\n\t$(_COQCMD)\n"
         case _ =>
       }
-      sb ++= "override COQFLAGS += -R \"" + i.path + "\" \"\"\n"
+      sb ++= "override COQFLAGS += -R \"" +
+          makeLocationRelative(i.path).getOrElse(i.path) + "\" \"\"\n"
     }
+    val path = cp.getDefaultOutputLocation.getLocation
     sb ++= "override COQFLAGS += -R \"" +
-        cp.getDefaultOutputLocation.getLocation + "\" \"\"\n\n"
+        makeLocationRelative(path).getOrElse(path) + "\" \"\"\n\n"
     
     sb ++= "OBJECTS = " + allFiles.flatMap(
         a => getCorrespondingObject(a.getLocation).map(_.getProjectRelativePath)).

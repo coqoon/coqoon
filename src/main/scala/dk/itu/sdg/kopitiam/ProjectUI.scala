@@ -205,7 +205,7 @@ class ExportCoqMakefileRunner(project : IProject) extends JobRunner[Unit] {
       case f : IFile if f.exists =>
         f.setContents(contents, IResource.NONE, monitor)
       case f : IFile =>
-        f.create(contents, IResource.NONE, monitor)
+        f.create(contents, IResource.DERIVED, monitor)
     }
   }
 }
