@@ -23,12 +23,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   override protected def getRule(
       type_ : Int, args : JMap[String, String]) = getProject
   
-  def loadPath : Seq[ICoqLoadPath] = {
-    val libraryLocation = getLibraryLocation
-    ICoqModel.forProject(getProject).getLoadPath :+
-      ExternalLoadPath(libraryLocation.append("theories"), Some("Coq")) :+
-      ExternalLoadPath(libraryLocation.append("plugins"), Some("Coq"))
-  }
+  def loadPath = getLoadPath(getProject)
       
   private var deps : Option[DependencyTracker] = None
   
@@ -53,18 +48,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
     buildFiles(changedFiles, args, monitor)
   }
   
-  private def getCorrespondingObject(s : IPath) : Option[IFile] = {
-    for (i <- loadPath) i match {
-      case ProjectSourceLoadPath(src, bin) if src.getLocation.isPrefixOf(s) =>
-        val p = s.removeFirstSegments(src.getLocation.segmentCount).
-            removeFileExtension.addFileExtension("vo")
-        val outputFolder = bin.map(_.folder).getOrElse(
-            ICoqModel.forProject(getProject).getDefaultOutputLocation)
-        return Some(outputFolder.getFile(p))
-      case _ =>
-    }
-    None
-  }
+  private def getCorrespondingObject(s : IPath) =
+    CoqBuilder.getCorrespondingObject(getProject)(s)
   
   import ICoqLoadPath._
   private var completeLoadPath : Seq[LoadPathEntry] = Seq()
@@ -387,6 +372,26 @@ object CoqBuilder {
     buildable.map(_.forget)
     toBuild.map(_.fail)
   }
+
+  def getLoadPath(p : IProject) : Seq[ICoqLoadPath] = {
+    val libraryLocation = getLibraryLocation
+    ICoqModel.forProject(p).getLoadPath :+
+      ExternalLoadPath(libraryLocation.append("theories"), Some("Coq")) :+
+      ExternalLoadPath(libraryLocation.append("plugins"), Some("Coq"))
+  }
+  
+  def getCorrespondingObject(project : IProject)(s : IPath) : Option[IFile] = {
+    for (i <- getLoadPath(project)) i match {
+      case ProjectSourceLoadPath(src, bin) if src.getLocation.isPrefixOf(s) =>
+        val p = s.removeFirstSegments(src.getLocation.segmentCount).
+          removeFileExtension.addFileExtension("vo")
+        val outputFolder = bin.map(_.folder).getOrElse(
+          ICoqModel.forProject(project).getDefaultOutputLocation)
+        return Some(outputFolder.getFile(p))
+      case _ =>
+    }
+    None
+  }
   
   sealed abstract class CoqReference
   case class LoadRef(value : String) extends CoqReference
@@ -415,26 +420,10 @@ object CoqBuilder {
   
   def generateMakefile(project : IProject) : String = {
     val cp = ICoqModel.forProject(project)
-    val loadPath = {
-      val libraryLocation = getLibraryLocation
-      cp.getLoadPath :+
-        ExternalLoadPath(libraryLocation.append("theories"), Some("Coq")) :+
-        ExternalLoadPath(libraryLocation.append("plugins"), Some("Coq"))
-    }
+    val loadPath = getLoadPath(project)
     val completeLoadPath = loadPath.flatMap(ICoqLoadPath.expand)
-    
-    def getCorrespondingObject(s : IPath) : Option[IFile] = {
-      for (i <- loadPath) i match {
-        case ProjectSourceLoadPath(src, bin) if src.getLocation.isPrefixOf(s) =>
-          val p = s.removeFirstSegments(src.getLocation.segmentCount).
-            removeFileExtension.addFileExtension("vo")
-          val outputFolder = bin.map(_.folder).getOrElse(
-            ICoqModel.forProject(project).getDefaultOutputLocation)
-          return Some(outputFolder.getFile(p))
-        case _ =>
-      }
-      None
-    }
+    def getCorrespondingObject(s : IPath) =
+      CoqBuilder.getCorrespondingObject(project)(s)
     
     val dt = new DependencyTracker
     var allFiles : Set[IFile] = Set()
