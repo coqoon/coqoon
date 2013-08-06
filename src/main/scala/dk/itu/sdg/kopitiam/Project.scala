@@ -488,7 +488,7 @@ object CoqBuilder {
     def makeLocationRelative(l : IPath) = {
       val p = project.getLocation
       if (p.isPrefixOf(l)) {
-        Some(l.removeFirstSegments(p.segmentCount))
+        Some(l.setDevice(null).removeFirstSegments(p.segmentCount))
       } else None
     }
     
