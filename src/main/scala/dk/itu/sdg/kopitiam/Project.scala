@@ -70,9 +70,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
     while (todo.headOption != None) {
       val i = todo.head
       todo = todo.tail
-      if (!done.contains(i)) {
-        done += i
-        getCorrespondingObject(i).foreach(a => {
+      val correspondingObject = getCorrespondingObject(i)
+      getCorrespondingObject(i) match {
+        case Some(a) =>
+          done += i
           val p = a.getLocation
           if (a.exists)
             a.delete(IWorkspace.AVOID_UPDATE, null)
@@ -85,7 +86,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
               case _ => false
             })
           })
-        })
+        case None =>
       }
     }
     /* done now contains those files which must be built -- that is, which have
@@ -99,18 +100,16 @@ class CoqBuilder extends IncrementalProjectBuilder {
         done += path
     })
     
-    done = done.flatMap(i => {
-      val file = getFileForLocation(i)
-      if (file.exists) {
+    done = done.flatMap(
+        i => (getCorrespondingObject(i), getFileForLocation(i)) match {
+      case (Some(output), file) if file.exists =>
         /* This file's going to be built; create the output directory (and
          * remove any stale objects)... */
-        getCorrespondingObject(i).foreach(a => {
-          if (a.exists) {
-            if (a.getLocalTimeStamp < file.getLocalTimeStamp)
-              a.delete(IWorkspace.AVOID_UPDATE, null)
-          } else new FolderCreationRunner(a).run(null)
-        })
-
+        if (output.exists) {
+          if (output.getLocalTimeStamp < file.getLocalTimeStamp)
+            output.delete(IWorkspace.AVOID_UPDATE, null)
+        } else new FolderCreationRunner(output).run(null)
+        
         /* ... clear all of the problem markers... */
         file.deleteMarkers(
             KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO)
@@ -120,12 +119,12 @@ class CoqBuilder extends IncrementalProjectBuilder {
           case (f, _) => (f, None)
         }))
         Some(i)
-      } else {
-        /* This file has been deleted; discard its dependencies and remove it
-         * from the build queue */
+      case _ =>
+        /* This file can't be built (either because it's been deleted or
+         * because it has no possible output location): discard its
+         * dependencies and remove it from the buid queue */
         dt.setDependencies(i, Set.empty)
         None
-      }
     })
     
     /* Recalculate the dependencies for the files which have actually
