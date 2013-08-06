@@ -1,3 +1,6 @@
+* Kopitiam 0.3.2 [6th August 2013]
+** Add support for generating Makefiles from Coq projects
+** Improve the reliability of the Coq project builder
 * Kopitiam 0.3.1 [19th July 2013]
 ** Add support for Coq projects
 ** Add an automatic builder for Coq projects
