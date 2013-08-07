@@ -34,15 +34,8 @@ trait ICoqElement {
   def getParent : Option[ICoqElement with IParent]
   def getElementType : Class[_ <: ICoqElement]
   def getCorrespondingResource : Option[IResource]
-  def getContainingResource : Option[IResource] = {
-    getCorrespondingResource match {
-      case Some(a) => Some(a)
-      case None => getParent match {
-        case Some(a) => a.getContainingResource
-        case None => None
-      }
-    }
-  }
+  def getContainingResource : Option[IResource] =
+    getCorrespondingResource.orElse(getParent.flatMap(_.getContainingResource))
   def getModel : ICoqModel = getAncestor(classOf[ICoqModel]).get
 }
 

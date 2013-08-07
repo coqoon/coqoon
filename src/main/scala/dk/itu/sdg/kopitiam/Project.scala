@@ -37,10 +37,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
     val delta = getDelta(getProject())
     delta.accept(new IResourceDeltaVisitor {
       override def visit(d : IResourceDelta) : Boolean = {
-        TryCast[IFile](d.getResource).flatMap(extensionFilter("v")) match {
-          case Some(f) => changedFiles += f
-          case _ =>
-        }
+        TryCast[IFile](d.getResource).flatMap(extensionFilter("v")).foreach(
+            f => changedFiles += f)
         true
       }
     })
@@ -70,24 +68,22 @@ class CoqBuilder extends IncrementalProjectBuilder {
     while (todo.headOption != None) {
       val i = todo.head
       todo = todo.tail
-      val correspondingObject = getCorrespondingObject(i)
-      getCorrespondingObject(i) match {
-        case Some(a) =>
-          done += i
-          val p = a.getLocation
-          if (a.exists)
-            a.delete(IWorkspace.AVOID_UPDATE, null)
-          dt.allDependencies.foreach(a => {
-            val (path, dependencies) = a
-            /* If file depended on this object, then schedule its object for
-             * deletion */
-            dependencies.exists(_ match {
-              case (_, Some(p_)) if p == p_ => todo :+= path; true
-              case _ => false
-            })
+      getCorrespondingObject(i).foreach(a => {
+        done += i
+        val p = a.getLocation
+        if (a.exists)
+          a.delete(IWorkspace.AVOID_UPDATE, null)
+        dt.allDependencies.foreach(a => {
+          val (path, dependencies) = a
+          /* If file depended on this object, then schedule its object for
+           * deletion */
+          dependencies.exists(_ match {
+            case (_, Some(p_)) if p == p_ =>
+              todo :+= path; true
+            case _ => false
           })
-        case None =>
-      }
+        })
+      })
     }
     /* done now contains those files which must be built -- that is, which have
      * changed (or which have a dependency on something which changed) */
@@ -115,9 +111,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
             KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO)
 
         /* ... and forget all of the resolved dependencies */
-        dt.setDependencies(i, dt.getDependencies(i).map(_ match {
-          case (f, _) => (f, None)
-        }))
+        dt.setDependencies(i, dt.getDependencies(i).map(a => (a._1, None)))
         Some(i)
       case _ =>
         /* This file can't be built (either because it's been deleted or
@@ -168,9 +162,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
       }
       
       override def forget =
-        dt.setDependencies(src, dt.getDependencies(src).map(_ match {
-          case (f, _) => (f, None)
-        }))
+        dt.setDependencies(src, dt.getDependencies(src).map(a => (a._1, None)))
     }
     
     buildLoop(monitor, done.map(new BuildTaskImpl(_)))
@@ -403,14 +395,12 @@ object CoqBuilder {
       i.text.trim match {
         case Load(what) =>
           result += LoadRef(what)
+        case Require(how, what) if what(0) == '"' =>
+          val filename = what.substring(1).split("\"", 2)(0)
+          result += RequireRef(filename)
         case Require(how, what) =>
-          if (what(0) == '"') {
-            val filename = what.substring(1).split("\"", 2)(0)
-            result += RequireRef(filename)
-          } else {
-            for (j <- what.split(" "))
-              result += RequireRef(j)
-          }
+          for (j <- what.split(" "))
+            result += RequireRef(j)
         case _ =>
       }
     }

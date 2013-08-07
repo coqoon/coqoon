@@ -123,36 +123,33 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
         range, ep._2).schedule
   }
   
-  override def finish = {
-    updateGoals match {
-      case Some(goals) if goals.fg_goals.isEmpty && goals.bg_goals.isEmpty =>
-        jes.coqTop.interp(false, false, "Qed.") match {
-          case CoqTypes.Good(s) =>
-            val method = jes.method.get
-            jes.completedMethods :+= method
-            jes.steps.synchronized { jes.steps.clear }
-            
-            UIUtils.asyncExec {
-              jes.setMethod(None)
-              jes.markCompletedMethods
+  override def finish = updateGoals.foreach(goals => {
+    if (goals.fg_goals.isEmpty && goals.bg_goals.isEmpty)
+      jes.coqTop.interp(false, false, "Qed.") match {
+        case CoqTypes.Good(s) =>
+          val method = jes.method.get
+          jes.completedMethods :+= method
+          jes.steps.synchronized { jes.steps.clear }
 
-              val c = jes.compilationUnit.get
-              if (jes.completedMethods.size == JavaASTUtils.countMethods(c)) {
-                if (UIUtils.Dialog.question("Proof completed",
-                    "All method proofs have been completed.\n\n" +
-                    "Save the proof certificate now?")) {
-                  import org.eclipse.ui.handlers.IHandlerService
-                  TryService[IHandlerService](UIUtils.getWorkbench).foreach(
-                      _.executeCommand("Kopitiam.save_proof_certificate", null))
-                }
+          UIUtils.asyncExec {
+            jes.setMethod(None)
+            jes.markCompletedMethods
+
+            val c = jes.compilationUnit.get
+            if (jes.completedMethods.size == JavaASTUtils.countMethods(c)) {
+              if (UIUtils.Dialog.question("Proof completed",
+                "All method proofs have been completed.\n\n" +
+                  "Save the proof certificate now?")) {
+                import org.eclipse.ui.handlers.IHandlerService
+                TryService[IHandlerService](UIUtils.getWorkbench).foreach(
+                  _.executeCommand("Kopitiam.save_proof_certificate", null))
               }
-              ()
             }
-          case _ =>
-        }
-      case _ =>
-    }
-  }
+            ()
+          }
+        case _ =>
+      }
+  })
 }
 
 class JavaStepBackJob(jes : JavaEditorState, stepCount : Int)

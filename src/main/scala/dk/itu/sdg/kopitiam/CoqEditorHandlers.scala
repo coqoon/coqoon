@@ -62,10 +62,7 @@ object CoqEditorHandler {
   }
   
   def makeStep(doc : String, offset : Int) : Option[CoqStep] =
-    getNextCommand(doc, offset) match {
-      case Some(text) => Some(CoqStep(offset, text.toString, false))
-      case _ => None
-    }
+    getNextCommand(doc, offset).map(s => CoqStep(offset, s.toString, false))
   
   def makeSteps(
       doc : String, from : Int, to : Int) : List[CoqStep] = {
@@ -112,15 +109,13 @@ import org.eclipse.core.commands.ExecutionEvent
 
 class CoqStepForwardHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
-    if (isEnabled()) {
-      CoqEditorHandler.makeStep(editor.document.get, editor.underway) match {
-        case Some(step) =>
-          // We're running in the UI thread, so always move the underway marker
-          editor.setUnderway(step.offset + step.text.length())
-          scheduleJob(new CoqStepForwardJob(editor, List(step)))
-        case _ =>
-      }
-    }
+    if (isEnabled())
+      CoqEditorHandler.makeStep(editor.document.get, editor.underway).foreach(
+          step => {
+        // We're running in the UI thread, so always move the underway marker
+        editor.setUnderway(step.offset + step.text.length())
+        scheduleJob(new CoqStepForwardJob(editor, List(step)))
+      })
     null
   }
 }
