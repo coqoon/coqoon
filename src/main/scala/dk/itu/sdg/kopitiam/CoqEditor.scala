@@ -601,8 +601,7 @@ class NewCoqFileWizardPage (selection: IStructuredSelection) extends WizardNewFi
 
 import org.eclipse.jface.wizard.Wizard
 import org.eclipse.ui.INewWizard
-import dk.itu.sdg.util.KopitiamLogger
-class NewCoqFileWizard extends Wizard with INewWizard with KopitiamLogger {
+class NewCoqFileWizard extends Wizard with INewWizard {
   import org.eclipse.core.resources.IFile
   import org.eclipse.ui.{IWorkbench, PlatformUI, IWorkbenchPage}
   import org.eclipse.jface.viewers.IStructuredSelection
@@ -633,7 +632,7 @@ class NewCoqFileWizard extends Wizard with INewWizard with KopitiamLogger {
       try {
         IDE.openEditor(workbenchPage, f, true)
       } catch {
-        case e : PartInitException => log.warning("Caught an " + e)
+        case e : PartInitException =>
       }
     }
     !file.isEmpty
