@@ -14,8 +14,7 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
   def steps = stepsV
   
   import org.eclipse.ui.handlers.IHandlerService
-  def getHandlerService = UIUtils.getWorkbench.
-      getService(classOf[IHandlerService]).asInstanceOf[IHandlerService]
+  def getHandlerService = TryService[IHandlerService](UIUtils.getWorkbench).get
     
   private var coqTopV : CoqTopIdeSlave_v20120710 = null
   def coqTop = {

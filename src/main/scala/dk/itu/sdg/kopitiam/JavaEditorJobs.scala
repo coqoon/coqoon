@@ -142,9 +142,8 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
                     "All method proofs have been completed.\n\n" +
                     "Save the proof certificate now?")) {
                   import org.eclipse.ui.handlers.IHandlerService
-                  UIUtils.getWorkbench.getService(classOf[IHandlerService]).
-                      asInstanceOf[IHandlerService].executeCommand(
-                          "Kopitiam.save_proof_certificate", null)
+                  TryService[IHandlerService](UIUtils.getWorkbench).foreach(
+                      _.executeCommand("Kopitiam.save_proof_certificate", null))
                 }
               }
               ()
