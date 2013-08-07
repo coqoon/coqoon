@@ -209,6 +209,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   override protected def build(kind : Int, args_ : JMap[String, String],
       monitor_ : IProgressMonitor) : Array[IProject] = {
+    println(getBuildConfig)
     getProject.deleteMarkers(
         KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO)
     val monitor = SubMonitor.convert(

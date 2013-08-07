@@ -1,7 +1,8 @@
 /* (c) 2010-2011 Hannes Mehnert
  * Copyright © 2013 Alexander Faithfull */
 
-package dk.itu.sdg.kopitiam
+package dk.itu.sdg.kopitiam.javap
+import dk.itu.sdg.kopitiam._
 
 import org.eclipse.jdt.core.dom.Statement
 import org.eclipse.ui.texteditor.ITextEditor

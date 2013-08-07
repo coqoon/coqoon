@@ -1,4 +1,5 @@
-package dk.itu.sdg.kopitiam
+package dk.itu.sdg.kopitiam.javap
+import dk.itu.sdg.kopitiam._
 
 import org.eclipse.ui.texteditor.ITextEditor
 import org.eclipse.core.commands.{IHandler, ExecutionEvent}

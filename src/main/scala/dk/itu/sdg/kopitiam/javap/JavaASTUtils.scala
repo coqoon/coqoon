@@ -1,6 +1,7 @@
 /* (c) 2013 Hannes Mehnert */
 
-package dk.itu.sdg.kopitiam
+package dk.itu.sdg.kopitiam.javap
+import dk.itu.sdg.kopitiam._
 
 object JavaASTUtils {
 

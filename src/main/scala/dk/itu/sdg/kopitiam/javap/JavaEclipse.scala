@@ -1,6 +1,7 @@
 /* (c) 2012 Hannes Mehnert */
 
-package dk.itu.sdg.kopitiam
+package dk.itu.sdg.kopitiam.javap
+import dk.itu.sdg.kopitiam._
 
 object EclipseJavaASTProperties {
   import org.eclipse.jdt.core.dom._

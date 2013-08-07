@@ -571,7 +571,7 @@
          point="org.eclipse.core.runtime.adapters">
       <factory
             adaptableType="org.eclipse.jdt.internal.ui.javaeditor.JavaEditor"
-            class="dk.itu.sdg.kopitiam.JavaEditorStateFactory">
+            class="dk.itu.sdg.kopitiam.javap.JavaEditorStateFactory">
          <adapter
                type="dk.itu.sdg.kopitiam.CoqTopContainer">
          </adapter>
@@ -652,7 +652,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.sdg.kopitiam.VerifyMethodHandler"
+            class="dk.itu.sdg.kopitiam.javap.VerifyMethodHandler"
             commandId="Kopitiam.verify_method">
          <activeWhen>
             <reference
@@ -661,7 +661,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.sdg.kopitiam.SaveProofCertificateHandler"
+            class="dk.itu.sdg.kopitiam.javap.SaveProofCertificateHandler"
             commandId="Kopitiam.save_proof_certificate">
          <activeWhen>
             <reference
@@ -695,7 +695,7 @@
             <adapt
                   type="dk.itu.sdg.kopitiam.CoqTopContainer">
                <instanceof
-                     value="dk.itu.sdg.kopitiam.JavaEditorState">
+                     value="dk.itu.sdg.kopitiam.javap.JavaEditorState">
                </instanceof>
             </adapt>
          </with>
