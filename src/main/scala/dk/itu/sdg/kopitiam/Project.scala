@@ -136,10 +136,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
         dt.resolveDependencies(src)
         !dt.getDependencies(src).exists(a => a._2 == None)
       }
-      override def build(monitor : SubMonitor) = {
+      override def build = {
+        val monitor_ = monitor.newChild(1, SubMonitor.SUPPRESS_NONE)
         val f = getFileForLocation(src)
         try {
-          new CoqCompileRunner(f, getCorrespondingObject(src)).run(monitor)
+          new CoqCompileRunner(f, getCorrespondingObject(src)).run(monitor_)
         } catch {
           case e : org.eclipse.core.runtime.CoreException =>
             e.getStatus.getMessage.trim match {
@@ -165,7 +166,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
         dt.setDependencies(src, dt.getDependencies(src).map(a => (a._1, None)))
     }
     
-    buildLoop(monitor, done.map(new BuildTaskImpl(_)))
+    buildLoop(done.map(new BuildTaskImpl(_)), () => !monitor.isCanceled)
     Array()
   }
   
@@ -341,23 +342,21 @@ object CoqBuilder {
     Option(r).filter(_.isDerived == der)
   
   trait BuildTask {
-    def build(monitor : SubMonitor)
+    def build()
     def canBuild() : Boolean
     
     def fail()
     def forget()
   }
   
-  def buildLoop(monitor : SubMonitor, toBuild_ : Set[BuildTask]) = {
+  def buildLoop(toBuild_ : Set[BuildTask], continue : () => Boolean) = {
     var toBuild = toBuild_
-    monitor.beginTask("Compiling", toBuild.size)
     var buildable : Set[BuildTask] = Set()
     do {
-      buildable.foreach(
-          _.build(monitor.newChild(1, SubMonitor.SUPPRESS_NONE)))
+      buildable.foreach(task => task.build)
       buildable = toBuild.filter(a => a.canBuild)
       toBuild = toBuild.filterNot(buildable.contains)
-    } while (!buildable.isEmpty && !monitor.isCanceled)
+    } while (!buildable.isEmpty && continue())
     buildable.map(_.forget)
     toBuild.map(_.fail)
   }
@@ -485,7 +484,7 @@ object CoqBuilder {
         dt.resolveDependencies(src, true)
         !dt.getDependencies(src).exists(a => a._2 == None)
       }
-      override def build(monitor : SubMonitor) = {
+      override def build() = {
         val cf = getCorrespondingObject(src).get
         sb ++= cf.getProjectRelativePath + ": " +
             /* Skip all dependencies with absolute paths */
@@ -525,8 +524,7 @@ object CoqBuilder {
             mkString("\\\n\t", " \\\n\t", "")
     sb ++= "\n\nall: $(OBJECTS)\nclean:\n\trm -f $(OBJECTS)\n\n"
         
-    buildLoop(SubMonitor.convert(null),
-        allFiles.map(a => new BuildTaskImpl(a.getLocation)))
+    buildLoop(allFiles.map(a => new BuildTaskImpl(a.getLocation)), () => true)
     sb.result
   }
 }
