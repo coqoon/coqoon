@@ -166,7 +166,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
         dt.setDependencies(src, dt.getDependencies(src).map(a => (a._1, None)))
     }
     
-    buildLoop(done.map(new BuildTaskImpl(_)), () => !monitor.isCanceled)
+    buildLoop(done.map(new BuildTaskImpl(_)),
+        () => !monitor.isCanceled && !isInterrupted)
     Array()
   }
   
