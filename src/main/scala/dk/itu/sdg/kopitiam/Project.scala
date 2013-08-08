@@ -1,5 +1,5 @@
 /* Project.scala
- * Supporting code and wizards for Coq projects and resources
+ * Coq project configuration managers and the Coq project builder
  * Copyright © 2013 Alexander Faithfull
  * 
  * You may use, copy, modify and/or redistribute this code subject to the terms
@@ -209,7 +209,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   override protected def build(kind : Int, args_ : JMap[String, String],
       monitor_ : IProgressMonitor) : Array[IProject] = {
-    println(getBuildConfig)
     getProject.deleteMarkers(
         KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO)
     val monitor = SubMonitor.convert(
