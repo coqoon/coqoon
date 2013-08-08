@@ -9,7 +9,7 @@ package dk.itu.sdg.kopitiam
 
 import org.eclipse.ui.IPerspectiveFactory
 
-class CoqPerspective extends IPerspectiveFactory {
+class CoqPerspectiveFactory extends IPerspectiveFactory {
   import org.eclipse.ui.IPageLayout
   import org.eclipse.ui.console.IConsoleConstants
   
@@ -24,7 +24,7 @@ class CoqPerspective extends IPerspectiveFactory {
         
     leftA.addView(IPageLayout.ID_PROJECT_EXPLORER)
     
-    rightA.addView("kopitiam.GoalViewer")
+    rightA.addView(ManifestIdentifiers.VIEW_GOAL_VIEWER)
     rightA.addView(IPageLayout.ID_OUTLINE)
     
     bottomA.addView(IConsoleConstants.ID_CONSOLE_VIEW)

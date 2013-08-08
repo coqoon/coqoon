@@ -2,7 +2,7 @@ package dk.itu.sdg.kopitiam.javap
 import dk.itu.sdg.kopitiam._
 
 import org.eclipse.ui.IFileEditorInput
-import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status, SubMonitor}
+import org.eclipse.core.runtime.{IProgressMonitor, IStatus, SubMonitor}
 import org.eclipse.core.runtime.Path
 import org.eclipse.core.runtime.jobs.Job
 
@@ -88,7 +88,7 @@ class JavaProofInitialisationRunner(
       jes.activateHandler("Kopitiam.retract", new JavaRetractAllHandler)
     }) match {
       case CoqTypes.Fail((_, message)) => fail(
-          new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", message))
+          Activator.makeStatus(IStatus.ERROR, message))
       case _ =>
     }
   }

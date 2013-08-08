@@ -26,7 +26,7 @@ class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
     }) match {
       case CoqTypes.Fail((_, message)) =>
         editor.clearFlag(CoqEditor.FLAG_INITIALISED)
-        fail(new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", message))
+        fail(Activator.makeStatus(IStatus.ERROR, message))
       case _ =>
         editor.setFlag(CoqEditor.FLAG_INITIALISED)
     }

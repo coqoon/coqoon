@@ -206,10 +206,10 @@ private class CoqProofReconcilingStrategy(
     
     if (input != null && input.isInstanceOf[IFileEditorInput]) {
       val file = input.asInstanceOf[IFileEditorInput].getFile()
-      if (file.findMarkers(
-          KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO).length > 0)
-        new DeleteMarkersJob(file,
-            KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO).schedule
+      if (file.findMarkers(ManifestIdentifiers.MARKER_PROBLEM,
+          true, IResource.DEPTH_ZERO).length > 0)
+        new DeleteMarkersJob(file, ManifestIdentifiers.MARKER_PROBLEM,
+            true, IResource.DEPTH_ZERO).schedule
     }
 
     val off = r.getOffset

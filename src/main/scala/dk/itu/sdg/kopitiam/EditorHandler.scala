@@ -123,9 +123,9 @@ trait CoqTopEditorContainer extends CoqTopContainer {
         None
     }
     completeA = _do(r._1, completeA,
-        "dk.itu.sdg.kopitiam.processed", "Processed Proof")
+        ManifestIdentifiers.ANNOTATION_PROCESSED, "Processed Proof")
     underwayA = _do(r._2, underwayA,
-        "dk.itu.sdg.kopitiam.processing", "Processing Proof")
+        ManifestIdentifiers.ANNOTATION_PROCESSING, "Processing Proof")
   }
 }
 object CoqTopEditorContainer {

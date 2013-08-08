@@ -31,7 +31,7 @@ class CoqCompileJob(source : IFile) extends JobBase(
     "Compiling Coq file " + source.getName, new CoqCompileRunner(source, None))
 class CoqCompileRunner(
     source : IFile, output : Option[IFile]) extends JobRunner[Unit] {
-  import org.eclipse.core.runtime.{Path, Status, IStatus}
+  import org.eclipse.core.runtime.{Path, IStatus}
   import java.io.{File, FileInputStream}
   
   override protected def doOperation(monitor : SubMonitor) : Unit = {
@@ -59,7 +59,7 @@ class CoqCompileRunner(
       
       coqcp.readAll match {
         case (i, msgs) if i != 0 =>
-          fail(new Status(IStatus.ERROR, "dk.itu.sdg.kopitiam", msgs))
+          fail(Activator.makeStatus(IStatus.ERROR, msgs))
         case _ =>
       }
       

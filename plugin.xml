@@ -418,11 +418,14 @@
       <type
             name="dk.itu.sdg.kopitiam.processed">
       </type>
-   </extension>
-   <extension
-         point="org.eclipse.ui.editors.annotationTypes">
       <type
             name="dk.itu.sdg.kopitiam.processing">
+      </type>
+      <type
+            markerSeverity="2"
+            markerType="dk.itu.sdg.kopitiam.provenmarker"
+            name="dk.itu.sdg.kopitiam.provenannotation"
+            super="org.eclipse.ui.workbench.texteditor.warning">
       </type>
    </extension>
    <extension
@@ -434,15 +437,6 @@
       <super
             type="org.eclipse.core.resources.textmarker">
       </super>
-   </extension>
-   <extension
-         point="org.eclipse.ui.editors.annotationTypes">
-      <type
-            markerSeverity="2"
-            markerType="dk.itu.sdg.kopitiam.provenmarker"
-            name="dk.itu.sdg.kopitiam.provenannotation"
-            super="org.eclipse.ui.workbench.texteditor.warning">
-      </type>
    </extension>
    <extension
          point="org.eclipse.ui.editors.markerAnnotationSpecification">
@@ -519,7 +513,7 @@
    <extension
          point="org.eclipse.ui.perspectives">
       <perspective
-            class="dk.itu.sdg.kopitiam.CoqPerspective"
+            class="dk.itu.sdg.kopitiam.CoqPerspectiveFactory"
             icon="icons/coqide.gif"
             id="dk.itu.sdg.kopitiam.CoqPerspective"
             name="Coq">

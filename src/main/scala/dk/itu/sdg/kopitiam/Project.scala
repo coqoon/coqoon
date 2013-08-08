@@ -108,7 +108,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
         
         /* ... clear all of the problem markers... */
         file.deleteMarkers(
-            KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO)
+            ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_ZERO)
 
         /* ... and forget all of the resolved dependencies */
         dt.setDependencies(i, dt.getDependencies(i).map(a => (a._1, None)))
@@ -171,7 +171,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   private def createResourceErrorMarker(r : IResource, s : String) = {
     import scala.collection.JavaConversions._
-    r.createMarker(KopitiamMarkers.Problem.ID).setAttributes(Map(
+    r.createMarker(ManifestIdentifiers.MARKER_PROBLEM).setAttributes(Map(
         (IMarker.MESSAGE, s),
         (IMarker.SEVERITY, IMarker.SEVERITY_ERROR)))
   }
@@ -179,7 +179,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   private def createLineErrorMarker(
       f : IFile, line : Int, s : String) = {
     import scala.collection.JavaConversions._
-    f.createMarker(KopitiamMarkers.Problem.ID).setAttributes(Map(
+    f.createMarker(ManifestIdentifiers.MARKER_PROBLEM).setAttributes(Map(
         (IMarker.MESSAGE, s),
         (IMarker.LOCATION, "line " + line),
         (IMarker.LINE_NUMBER, line),
@@ -200,7 +200,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   override protected def clean(monitor : IProgressMonitor) = {
     deps = None
     getProject.deleteMarkers(
-        KopitiamMarkers.Problem.ID, true, IResource.DEPTH_INFINITE)
+        ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_INFINITE)
     traverse[IFile](getProject,
         a => TryCast[IFile](a).flatMap(
             extensionFilter("vo")).flatMap(derivedFilter(true)),
@@ -210,7 +210,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   override protected def build(kind : Int, args_ : JMap[String, String],
       monitor_ : IProgressMonitor) : Array[IProject] = {
     getProject.deleteMarkers(
-        KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO)
+        ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_ZERO)
     val monitor = SubMonitor.convert(
         monitor_, "Building " + getProject.getName, 1)
     val args = scala.collection.JavaConversions.asScalaMap(args_).toMap
@@ -287,8 +287,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
     getProject.getWorkspace.getRoot.getFileForLocation(l)
 }
 object CoqBuilder {
-  final val BUILDER_ID = "dk.itu.sdg.kopitiam.CoqBuilder"
-  
   private def getLibraryLocation = new Path(
     CoqProgram("coqtop").run(Seq("-where")).readAll._2)
     
@@ -633,7 +631,6 @@ object TryCast {
 }
 
 class CoqNature extends IProjectNature {
-  import CoqNature._
   import org.eclipse.core.resources.ICommand
   
   private var project : IProject = null
@@ -653,7 +650,4 @@ class CoqNature extends IProjectNature {
     project.setDescription(
         ICoqProject.deconfigureDescription(project.getDescription), null)
   }
-}
-object CoqNature {
-  final val NATURE_ID = "dk.itu.sdg.kopitiam.CoqNature"
 }

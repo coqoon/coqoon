@@ -36,8 +36,24 @@ class Activator extends AbstractUIPlugin {
   }
 }
 object Activator {
-  final val PLUGIN_ID = "Kopitiam"
-  
   private var single : Activator = null
   def getDefault() = single
+  
+  import org.eclipse.core.runtime.{Status, IStatus}
+  def makeStatus(severity : Int,
+      message : String, exception : Throwable = null) : IStatus =
+    new Status(severity, ManifestIdentifiers.PLUGIN, message)
+}
+
+object ManifestIdentifiers {
+  final val ANNOTATION_PROCESSED = "dk.itu.sdg.kopitiam.processed"
+  final val ANNOTATION_PROCESSING = "dk.itu.sdg.kopitiam.processing"
+  final val BUILDER_COQ = "dk.itu.sdg.kopitiam.CoqBuilder"
+  final val CONTENT_TYPE_COQFILE = "dk.itu.sdg.kopitiam.CoqFile"
+  final val CONTENT_TYPE_COQOBJECTFILE = "dk.itu.sdg.kopitiam.CoqObjectFile"
+  final val MARKER_PROVEN = "dk.itu.sdg.kopitiam.provenmarker"
+  final val MARKER_PROBLEM = "dk.itu.sdg.kopitiam.problemmarker"
+  final val NATURE_COQ = "dk.itu.sdg.kopitiam.CoqNature"
+  final val PLUGIN = "dk.itu.sdg.kopitiam"
+  final val VIEW_GOAL_VIEWER = "kopitiam.GoalViewer"
 }

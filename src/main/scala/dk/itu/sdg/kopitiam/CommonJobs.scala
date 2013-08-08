@@ -40,29 +40,21 @@ abstract class ResourceJob(name : String, resource : IResource,
     JobBase.wrap { doOperation(monitor) }
 }
 
-object KopitiamMarkers {
-  import org.eclipse.ui.IMarkerResolution
-  
-  object Problem {
-    final val ID = "dk.itu.sdg.kopitiam.problemmarker"
-      
-    object ConfigureCoqPathResolution extends IMarkerResolution {
-      override def getLabel = "Configure the path to Coq"
+import org.eclipse.ui.IMarkerResolution
 
-      override def run(r : IMarker) = {
-        import org.eclipse.ui.dialogs.PreferencesUtil
-        PreferencesUtil.createPreferenceDialogOn(UIUtils.getActiveShell,
-          "Kopitiam.settings", null, null).open
-      }
-    }
+object ConfigureCoqPathResolution extends IMarkerResolution {
+  override def getLabel = "Configure the path to Coq"
+
+  override def run(r : IMarker) = {
+    import org.eclipse.ui.dialogs.PreferencesUtil
+    PreferencesUtil.createPreferenceDialogOn(UIUtils.getActiveShell,
+      "Kopitiam.settings", null, null).open
   }
 }
 
 import org.eclipse.ui.{IMarkerResolutionGenerator}
 class ResolutionGenerator extends IMarkerResolutionGenerator {
-  import org.eclipse.ui.IMarkerResolution
-  override def getResolutions(m : IMarker) =
-    Array(KopitiamMarkers.Problem.ConfigureCoqPathResolution)
+  override def getResolutions(m : IMarker) = Array(ConfigureCoqPathResolution)
 }
 
 abstract class MarkerJob(resource : IResource) extends ResourceJob(
@@ -91,7 +83,7 @@ class CreateMarkerJob(
 class CreateErrorMarkerJob(
     resource : IResource, region : (Int, Int), message : String)
     extends CreateMarkerJob(resource, region,
-        message, KopitiamMarkers.Problem.ID, IMarker.SEVERITY_ERROR)
+        message, ManifestIdentifiers.MARKER_PROBLEM, IMarker.SEVERITY_ERROR)
 object CreateErrorMarkerJob {
   def apply(
       resource : IResource, step : CoqStep, ep : (CoqTypes.location, String)) : CreateErrorMarkerJob = {
@@ -120,8 +112,8 @@ object JobBase {
     f
     Status.OK_STATUS
   } catch {
-    case e : CoreException => new Status(e.getStatus.getSeverity,
-          "dk.itu.sdg.kopitiam", "Execution failed.", e)
+    case e : CoreException =>
+      Activator.makeStatus(e.getStatus.getSeverity, "Execution failed.", e)
   }
 }
 

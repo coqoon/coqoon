@@ -165,8 +165,9 @@ trait ICoqProject extends ICoqElement with IParent {
   override def getChildren : Seq[ICoqPackageFragmentRoot]
 }
 object ICoqProject {
-  def isCoqNature(a : String) = (CoqNature.NATURE_ID == a)
-  def isCoqBuilder(a : ICommand) = (CoqBuilder.BUILDER_ID == a.getBuilderName)
+  def isCoqNature(a : String) = (ManifestIdentifiers.NATURE_COQ == a)
+  def isCoqBuilder(a : ICommand) =
+    (ManifestIdentifiers.BUILDER_COQ == a.getBuilderName)
     
   def newDescription(ws : IWorkspace, name : String) : IProjectDescription =
       configureDescription(ws.newProjectDescription(name))
@@ -181,7 +182,7 @@ object ICoqProject {
       d.setBuildSpec(bs :+ makeBuilderCommand(d))
     val ns = d.getNatureIds
     if (!ns.exists(isCoqNature))
-      d.setNatureIds(ns :+ CoqNature.NATURE_ID)
+      d.setNatureIds(ns :+ ManifestIdentifiers.NATURE_COQ)
     d
   }
   
@@ -194,7 +195,7 @@ object ICoqProject {
   
   def makeBuilderCommand(d : IProjectDescription) = {
     val c = d.newCommand()
-    c.setBuilderName(CoqBuilder.BUILDER_ID)
+    c.setBuilderName(ManifestIdentifiers.BUILDER_COQ)
     c
   }
 }
@@ -389,9 +390,8 @@ trait ICoqVernacFile extends ICoqFile {
 }
 object ICoqVernacFile {
   import org.eclipse.core.runtime.Platform
-  final def CONTENT_TYPE =
-      Platform.getContentTypeManager.getContentType(CONTENT_TYPE_ID)
-  final val CONTENT_TYPE_ID = "dk.itu.sdg.kopitiam.CoqFile"
+  final def CONTENT_TYPE = Platform.getContentTypeManager.getContentType(
+      ManifestIdentifiers.CONTENT_TYPE_COQFILE)
 }
 
 private class CoqVernacFileImpl(
@@ -420,9 +420,8 @@ trait ICoqObjectFile extends ICoqFile {
 }
 object ICoqObjectFile {
   import org.eclipse.core.runtime.Platform
-  final def CONTENT_TYPE =
-    Platform.getContentTypeManager.getContentType(CONTENT_TYPE_ID)
-  final val CONTENT_TYPE_ID = "dk.itu.sdg.kopitiam.CoqObjectFile"
+  final def CONTENT_TYPE = Platform.getContentTypeManager.getContentType(
+      ManifestIdentifiers.CONTENT_TYPE_COQOBJECTFILE)
 }
 
 private class CoqObjectFileImpl(

@@ -85,13 +85,13 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
     import org.eclipse.ui.IFileEditorInput
     import org.eclipse.core.resources.IResource
     val input = editor.getEditorInput.asInstanceOf[IFileEditorInput].getFile
-    new DeleteMarkersJob(input, "dk.itu.sdg.kopitiam.provenmarker",
+    new DeleteMarkersJob(input, ManifestIdentifiers.MARKER_PROVEN,
         true, IResource.DEPTH_ZERO).schedule
     completedMethods.map(a =>
       new CreateMarkerJob(input,
           (a.getStartPosition, a.getStartPosition + a.getLength),
           "Proven:\n\n" + JavaEditorState.getProofScript(a).mkString("\n"),
-          "dk.itu.sdg.kopitiam.provenmarker", IMarker.SEVERITY_ERROR).schedule)
+          ManifestIdentifiers.MARKER_PROVEN, IMarker.SEVERITY_ERROR).schedule)
   }
   
   import org.eclipse.ui.handlers.IHandlerActivation
@@ -200,10 +200,10 @@ private class JavaEditorReconcilingStrategy(
     
     if (input != null && input.isInstanceOf[IFileEditorInput]) {
       val file = input.asInstanceOf[IFileEditorInput].getFile()
-      if (file.findMarkers(
-          KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO).length > 0)
-        new DeleteMarkersJob(file,
-            KopitiamMarkers.Problem.ID, true, IResource.DEPTH_ZERO).schedule
+      if (file.findMarkers(ManifestIdentifiers.MARKER_PROBLEM,
+          true, IResource.DEPTH_ZERO).length > 0)
+        new DeleteMarkersJob(file, ManifestIdentifiers.MARKER_PROBLEM,
+            true, IResource.DEPTH_ZERO).schedule
     }
 
     val off = r.getOffset
