@@ -354,9 +354,14 @@ object CoqBuilder {
     var toBuild = toBuild_
     var buildable : Set[BuildTask] = Set()
     do {
-      buildable.foreach(task => task.build)
+      val built = buildable.filter(task => {
+        if (continue()) {
+          task.build
+          true
+        } else false
+      })
+      toBuild = toBuild.filterNot(built.contains)
       buildable = toBuild.filter(a => a.canBuild)
-      toBuild = toBuild.filterNot(buildable.contains)
     } while (!buildable.isEmpty && continue())
     buildable.map(_.forget)
     toBuild.map(_.fail)
