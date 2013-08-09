@@ -114,12 +114,9 @@ class CoqStepForwardRunner(
   }
   
   override protected def onFail(
-      step : CoqStep, result : CoqTypes.Fail[String]) = {
-    import org.eclipse.ui.IFileEditorInput
-    CreateErrorMarkerJob(
-        editor.getEditorInput.asInstanceOf[IFileEditorInput].getFile,
-        step, result.value).schedule
-  }
+      step : CoqStep, result : CoqTypes.Fail[String]) =
+    editor.file.foreach(
+        f => CreateErrorMarkerJob(f, step, result.value).schedule)
   
   override protected def initialise = {
     super.initialise

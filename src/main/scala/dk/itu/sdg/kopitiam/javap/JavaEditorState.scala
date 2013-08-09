@@ -129,9 +129,9 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
     	
     	val newCompletedMethods =
     	  for (i <- completedMethods;
-    	       j <- Seq(cu.findDeclaringNode(i.resolveBinding.getKey))
-    	       if j != null && j.isInstanceOf[MethodDeclaration])
-    	    yield j.asInstanceOf[MethodDeclaration]
+    	       j <- TryCast[MethodDeclaration](
+    	           cu.findDeclaringNode(i.resolveBinding.getKey)))
+    	    yield j
     	val update = (completedMethods.size != newCompletedMethods.size)
     	
     	UIUtils.asyncExec {
@@ -176,10 +176,11 @@ object JavaEditorState {
 import org.eclipse.core.runtime.IAdapterFactory
 class JavaEditorStateFactory extends IAdapterFactory {
   override def getAdapterList = Array(classOf[CoqTopContainer])
-  override def getAdapter(a : Any, klass : Class[_]) = {
-    if (a.isInstanceOf[ITextEditor] && klass == classOf[CoqTopContainer]) {
-      JavaEditorState.requireStateFor(a.asInstanceOf[ITextEditor])
-    } else null
+  override def getAdapter(a : Any, klass : Class[_]) =
+      TryCast[ITextEditor](a) match {
+    case Some(a) if klass == classOf[CoqTopContainer] =>
+      JavaEditorState.requireStateFor(a)
+    case _ => null
   }
 }
 
@@ -196,15 +197,12 @@ private class JavaEditorReconcilingStrategy(
     if (jes.method == None)
       return
     
-    val input = jes.editor.getEditorInput
-    
-    if (input != null && input.isInstanceOf[IFileEditorInput]) {
-      val file = input.asInstanceOf[IFileEditorInput].getFile()
+    jes.file.foreach(file => {
       if (file.findMarkers(ManifestIdentifiers.MARKER_PROBLEM,
           true, IResource.DEPTH_ZERO).length > 0)
         new DeleteMarkersJob(file, ManifestIdentifiers.MARKER_PROBLEM,
             true, IResource.DEPTH_ZERO).schedule
-    }
+    })
 
     val off = r.getOffset
     val node = EclipseJavaHelper.findASTNode(jes.method.orNull, off, 0)

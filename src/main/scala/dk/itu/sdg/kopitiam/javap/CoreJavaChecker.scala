@@ -143,11 +143,13 @@ object CoreJavaChecker {
         case y => false
       }
 
+    import scala.collection.JavaConversions.asScalaBuffer
+    
     //currently we only support empty constructors
     def isClassInstanceCreationGood (node : ClassInstanceCreation) : Boolean =
-      scala.collection.JavaConversions.asScalaBuffer(node.arguments).map(_.asInstanceOf[Expression]).toList.length == 0
+      asScalaBuffer(node.arguments).flatMap(TryCast[Expression]).toList.length == 0
     def isMethodInvocationGood (node : MethodInvocation) : Boolean =
-      areArgumentsGood(scala.collection.JavaConversions.asScalaBuffer(node.arguments).map(_.asInstanceOf[Expression]).toList)
+      areArgumentsGood(asScalaBuffer(node.arguments).flatMap(TryCast[Expression]).toList)
 
     def areArgumentsGood (args : List[Expression]) : Boolean =
       args.filterNot(containsRealExpressions).length == 0
@@ -198,7 +200,7 @@ object CoreJavaChecker {
             reportError("The test of a while loop may only contain a simple expression which accesses variables on the stack in Kopitiam. Also, only a limited set of operators is supported.", tst)
         case x : FieldDeclaration =>
           //no initialzers!
-          val frag = scala.collection.JavaConversions.asScalaBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList
+          val frag = asScalaBuffer(x.fragments).flatMap(TryCast[VariableDeclarationFragment]).toList
           if (frag.filter(_.getInitializer != null).length > 0)
             reportError("A Field declaration with an initialization expression is not yet supported by Kopitiam", x)
         case x : BreakStatement =>

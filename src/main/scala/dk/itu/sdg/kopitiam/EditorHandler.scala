@@ -18,15 +18,13 @@ abstract class EditorHandler extends AbstractHandler {
   protected def editor = editorV
   
   override protected def setEnabled(evaluationContext : Object) = {
-    val activeEditor = if (evaluationContext != null) {
-      evaluationContext.asInstanceOf[IEvaluationContext].getVariable(
-          ISources.ACTIVE_EDITOR_NAME)
-    } else UIUtils.getWorkbench.getActiveWorkbenchWindow.
-        getActivePage.getActiveEditor
-    if (activeEditor != null && activeEditor.isInstanceOf[IEditorPart]) {
-      editorV = activeEditor.asInstanceOf[IEditorPart]
-      setBaseEnabled(calculateEnabled)
-    } else setBaseEnabled(false)
+    val activeEditor = TryCast[IEvaluationContext](evaluationContext) match {
+      case Some(e) => e.getVariable(ISources.ACTIVE_EDITOR_NAME)
+      case _ => UIUtils.getWorkbench.getActiveWorkbenchWindow.
+          getActivePage.getActiveEditor
+    }
+    editorV = TryCast[IEditorPart](activeEditor).orNull
+    setBaseEnabled(editorV != null && calculateEnabled)
   }
   
   protected def getCoqTopContainer = TryAdapt[CoqTopContainer](editor).orNull
@@ -81,8 +79,10 @@ trait CoqTopEditorContainer extends CoqTopContainer {
   import org.eclipse.jface.text.{Position, IDocument, ITextSelection}
   import org.eclipse.jface.text.source.{
     Annotation, IAnnotationModel, IAnnotationModelExtension}
+  import org.eclipse.ui.IFileEditorInput
   import org.eclipse.ui.texteditor.ITextEditor
   
+  def file = TryCast[IFileEditorInput](editor.getEditorInput).map(_.getFile)
   def editor : ITextEditor
   def document : IDocument =
     editor.getDocumentProvider.getDocument(editor.getEditorInput)

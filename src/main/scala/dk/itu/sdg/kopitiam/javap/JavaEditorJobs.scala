@@ -29,9 +29,9 @@ class JavaProofInitialisationRunner(
       monitor.worked(1)
 
       monitor.subTask("Preparing model")
-      val fei = jes.editor.getEditorInput().asInstanceOf[IFileEditorInput]
-      val proj = fei.getFile.getParent
-      val basename = fei.getFile.getName().dropRight(5)
+      val f = jes.file.get
+      val proj = f.getParent
+      val basename = f.getName().dropRight(5)
       val model = proj.getFile(new Path(basename + "_model.v"))
       if (!model.exists) {
         UIUtils.syncExec {
@@ -119,9 +119,7 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
         (step.node.getStartPosition,
             step.node.getStartPosition + step.node.getLength)
     }
-    CreateErrorMarkerJob(
-        jes.editor.getEditorInput.asInstanceOf[IFileEditorInput].getFile,
-        range, ep._2).schedule
+    jes.file.foreach(file => CreateErrorMarkerJob(file, range, ep._2).schedule)
   }
   
   override def finish = updateGoals.foreach(goals => {

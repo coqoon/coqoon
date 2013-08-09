@@ -36,6 +36,7 @@ object JavaASTUtils {
           None
     }
 
+  import scala.collection.JavaConversions.asScalaBuffer
   import scala.collection.immutable.Stack
   import org.eclipse.jdt.core.dom.{MethodDeclaration, Statement, WhileStatement, IfStatement, Block}
   def traverseAST [A](method : MethodDeclaration, forward : Boolean, early : Boolean, callback : Statement => Option[A]) : List[A] = {
@@ -48,7 +49,7 @@ object JavaASTUtils {
       todo = todo.pop
       st match {
         case x : Block =>
-          val body = scala.collection.JavaConversions.asScalaBuffer(x.statements).map(_.asInstanceOf[Statement])
+          val body = asScalaBuffer(x.statements).flatMap(TryCast[Statement])
           if (forward)
             todo = todo.pushAll(body.reverse)
           else
@@ -80,7 +81,7 @@ object JavaASTUtils {
   def traverseCU [A](c : CompilationUnit, callback : MethodDeclaration => A) : List[A] = {
     var res : List[A] = List[A]()
     var todo : Stack[AbstractTypeDeclaration] = Stack[AbstractTypeDeclaration]()
-    todo = todo.pushAll(scala.collection.JavaConversions.asScalaBuffer(c.types).map(_.asInstanceOf[AbstractTypeDeclaration]))
+    todo = todo.pushAll(asScalaBuffer(c.types).flatMap(TryCast[AbstractTypeDeclaration]))
     while (!todo.isEmpty) {
       val t = todo.top
       todo = todo.pop

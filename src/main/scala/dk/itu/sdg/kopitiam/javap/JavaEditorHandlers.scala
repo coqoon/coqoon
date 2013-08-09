@@ -130,14 +130,9 @@ class SaveProofCertificateHandler extends JavaEditorHandler {
           JavaASTUtils.countMethods(getState.compilationUnit.get)
 }
 private object SaveProofCertificateHandler {
-  import org.eclipse.core.resources.IFile
-  def getCertificateFile(jes : JavaEditorState) : IFile = {
-    import org.eclipse.ui.IFileEditorInput
-    val path = jes.editor.getEditorInput.
-        asInstanceOf[IFileEditorInput].getFile.getFullPath
-    ResourcesPlugin.getWorkspace.getRoot.getFile(
-        path.removeFileExtension.addFileExtension("cert.v"))
-  }
+  def getCertificateFile(jes : JavaEditorState) =
+    ResourcesPlugin.getWorkspace.getRoot.getFile(jes.file.
+        get.getFullPath.removeFileExtension.addFileExtension("cert.v"))
 }
 
 class JavaStepForwardHandler extends JavaEditorHandler {

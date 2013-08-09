@@ -26,12 +26,10 @@ object VisitingAST {
     def getSuccess = success
     
     import org.eclipse.jdt.core.dom.ASTNode
-    def reportError (txt : String, s : ASTNode) : Unit = {
-      import org.eclipse.ui.IFileEditorInput
+    def reportError(e : String, s : ASTNode) : Unit = {
       success = false
-      CreateErrorMarkerJob(
-          jes.editor.getEditorInput.asInstanceOf[IFileEditorInput].getFile,
-          (s.getStartPosition, s.getStartPosition + s.getLength), txt).schedule
+      jes.file.foreach(file => CreateErrorMarkerJob(file,
+          (s.getStartPosition, s.getStartPosition + s.getLength), e).schedule)
     }
   }
   

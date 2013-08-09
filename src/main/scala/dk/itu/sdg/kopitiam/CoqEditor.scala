@@ -202,15 +202,12 @@ private class CoqProofReconcilingStrategy(
   import org.eclipse.core.resources.{IMarker,IResource}
   
   override def reconcile(r : IRegion) : Unit = {
-    val input = editor.getEditorInput
-    
-    if (input != null && input.isInstanceOf[IFileEditorInput]) {
-      val file = input.asInstanceOf[IFileEditorInput].getFile()
+    editor.file.foreach(file => {
       if (file.findMarkers(ManifestIdentifiers.MARKER_PROBLEM,
           true, IResource.DEPTH_ZERO).length > 0)
         new DeleteMarkersJob(file, ManifestIdentifiers.MARKER_PROBLEM,
             true, IResource.DEPTH_ZERO).schedule
-    }
+    })
 
     val off = r.getOffset
     if (off < editor.underway) {

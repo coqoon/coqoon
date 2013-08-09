@@ -43,52 +43,38 @@ object EclipseJavaASTProperties {
 }
 
 object EclipseJavaHelper {
+  import scala.collection.JavaConversions.asScalaBuffer
+  
   import org.eclipse.jdt.core.ITypeRoot
   import org.eclipse.jdt.ui.JavaUI
   import org.eclipse.ui.IEditorInput
-  def getRoot (ei : IEditorInput) : ITypeRoot = {
-    val input = JavaUI.getEditorInputJavaElement(ei)
-    if (input.isInstanceOf[ITypeRoot])
-      input.asInstanceOf[ITypeRoot]
-    else {
-      Console.println("something bad happened, got " + input)
-      null
-    }
-  }
+  def getRoot (ei : IEditorInput) : ITypeRoot =
+    TryCast[ITypeRoot](JavaUI.getEditorInputJavaElement(ei)).orNull
 
   import org.eclipse.jdt.core.dom.{CompilationUnit, ASTParser, AST}
   import org.eclipse.jdt.core.{ICompilationUnit, IClassFile}
   import org.eclipse.jdt.ui.SharedASTProvider
-  def getCompilationUnit (input : ITypeRoot) : CompilationUnit = {
-    var root : CompilationUnit = null
-    //if we have a cache!
-    if (input.isInstanceOf[ICompilationUnit]) {
-      val cu : ICompilationUnit = input.asInstanceOf[ICompilationUnit]
-      root = SharedASTProvider.getAST(cu, SharedASTProvider.WAIT_YES, null)
-    } else {
+  def getCompilationUnit (input : ITypeRoot) : CompilationUnit =
+      TryCast[ICompilationUnit](input) match {
+    case Some(cu) =>
+      /* XXX: Is this cache actually safe to use here? */
+      SharedASTProvider.getAST(cu, SharedASTProvider.WAIT_YES, null)
+    case None =>
       val parser : ASTParser = ASTParser.newParser(AST.JLS4)
       parser.setResolveBindings(true)
       parser.setSource(input.asInstanceOf[IClassFile])
       parser.setStatementsRecovery(true)
       parser.setBindingsRecovery(true)
       parser.setIgnoreMethodBodies(false)
-      root = parser.createAST(null).asInstanceOf[CompilationUnit]
-    }
-    //Console.println("root (which we return) is " + root.getClass.toString)
-    return root
+      parser.createAST(null).asInstanceOf[CompilationUnit]
   }
 
   import org.eclipse.jdt.core.dom.{ASTNode, MethodDeclaration, Initializer}
-  def findMethod (x : ASTNode) : Option[MethodDeclaration] = {
-    if (x == null)
-      None
-    else {
-      x match {
-        case y : MethodDeclaration => Some(y)
-        case y : Initializer => EclipseJavaASTProperties.getMethod(y)
-        case y => findMethod(y.getParent)
-      }
-    }
+  def findMethod (x : ASTNode) : Option[MethodDeclaration] = Option(x) match {
+    case None => None
+    case Some(y : MethodDeclaration) => Some(y)
+    case Some(y : Initializer) => EclipseJavaASTProperties.getMethod(y)
+    case Some(y) => findMethod(y.getParent)
   }
 
   def findASTNode (root : ASTNode, offset : Int, length : Int) : ASTNode = {
@@ -175,7 +161,7 @@ object EclipseJavaHelper {
           val body = x.getBody
           val name = x.getName.getIdentifier
           val st = (x.getModifiers & Modifier.STATIC) == Modifier.STATIC
-          val arguments = scala.collection.JavaConversions.asScalaBuffer(x.parameters).map(_.asInstanceOf[SingleVariableDeclaration]).toList.map(_.getName)
+          val arguments = asScalaBuffer(x.parameters).flatMap(TryCast[SingleVariableDeclaration]).toList.map(_.getName)
           val argli = arguments.map(printE(_))
           val arglis = if (st) argli else "\"this\"" :: argli
           val arglist = arglis.mkString("[", ";", "]")
@@ -305,7 +291,7 @@ object EclipseJavaHelper {
           }
           //class def (Build_Class) - fields + methods
           val nam = x.getName.getIdentifier
-          val fieldnames = x.getFields.map(x => scala.collection.JavaConversions.asScalaBuffer(x.fragments).map(_.asInstanceOf[VariableDeclarationFragment]).toList.map(_.getName.getIdentifier)).flatten
+          val fieldnames = x.getFields.map(x => asScalaBuffer(x.fragments).flatMap(TryCast[VariableDeclarationFragment]).toList.map(_.getName.getIdentifier)).flatten
           val fields = fieldnames.foldRight("(SS.empty)")("(SS.add \"" + _ + "\" " + _ + ")")
           val metstring = methods.foldRight("(SM.empty _)")("(SM.add " + _ + " " + _ + ")")
           val cd = List(
@@ -320,7 +306,7 @@ object EclipseJavaHelper {
           var classes : Set[String] = Set[String]()
           var pname : Option[String] = None
           var todo : Stack[AbstractTypeDeclaration] = Stack[AbstractTypeDeclaration]()
-          todo = todo.pushAll(scala.collection.JavaConversions.asScalaBuffer(x.types).map(_.asInstanceOf[AbstractTypeDeclaration]))
+          todo = todo.pushAll(asScalaBuffer(x.types).flatMap(TryCast[AbstractTypeDeclaration]))
           while (!todo.isEmpty) {
             val t = todo.top
             todo = todo.pop
@@ -374,7 +360,7 @@ object EclipseJavaHelper {
     private def getBodyString (b : Statement) : Option[String] =
       b match {
         case x : Block =>
-          val bod = scala.collection.JavaConversions.asScalaBuffer(x.statements).map(_.asInstanceOf[Statement]).toList
+          val bod = asScalaBuffer(x.statements).flatMap(TryCast[Statement]).toList
           val bs = bod.map(getBodyString(_))
           Some(printB(bs.flatMap(x => x)))
         case x : ExpressionStatement =>
@@ -550,7 +536,7 @@ object EclipseJavaHelper {
             "`false"
         case x : ClassInstanceCreation =>
           val n = x.getType.toString
-          val a = scala.collection.JavaConversions.asScalaBuffer(x.arguments)
+          val a = asScalaBuffer(x.arguments)
           if (a.size != 0) //for now!
             reportError("for now only constructors without arguments are supported", x)
           //val as = a.map(printE(_)).mkString("[", "; ", "]")
@@ -572,7 +558,7 @@ object EclipseJavaHelper {
         case x : MethodInvocation =>
           val n = x.getName
           val e = x.getExpression
-          val a = scala.collection.JavaConversions.asScalaBuffer(x.arguments).map(_.asInstanceOf[Expression])
+          val a = asScalaBuffer(x.arguments).flatMap(TryCast[Expression])
           val as = a.map(printE(_)).mkString("[", "; ", "]")
           val st = (x.resolveMethodBinding.getModifiers & Modifier.STATIC) == Modifier.STATIC
           val expr =
