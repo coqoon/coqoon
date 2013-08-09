@@ -34,6 +34,9 @@ class CoqCompileRunner(
   import org.eclipse.core.runtime.{Path, IStatus}
   import java.io.{File, FileInputStream}
   
+  private var ticker : Option[() => Boolean] = None
+  def setTicker(f : Option[() => Boolean]) = (ticker = f)
+  
   override protected def doOperation(monitor : SubMonitor) : Unit = {
     monitor.beginTask("Compiling " + source, 2)
     
@@ -55,7 +58,26 @@ class CoqCompileRunner(
             Activator.getDefault.getChargeLoadPath).flatMap(_.asArguments)
       val coqcp =
         coqc.run(flp ++ Seq("-noglob", "-compile", location.toOSString),
-            a => { a.redirectErrorStream(true); a.start })
+            a => {
+              a.redirectErrorStream(true)
+              val process = a.start
+              ticker.foreach(w => {
+                val thread = new Thread() {
+                  setDaemon(true)
+                  private def isFinished = try {
+                    process.exitValue; true
+                  } catch {
+                    case e : IllegalThreadStateException => false
+                  }
+                  override def run = while (!isFinished) {
+                    if (!w())
+                      process.destroy
+                    Thread.sleep(200)
+                  }
+                }.start
+              })
+              process
+            })
       
       coqcp.readAll match {
         case (i, msgs) if i != 0 =>
