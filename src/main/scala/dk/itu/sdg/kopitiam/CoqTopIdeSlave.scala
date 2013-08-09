@@ -11,7 +11,7 @@ trait CoqProgram {
   def path : String
   def check : Boolean = new java.io.File(path).exists
   def run(args : Seq[String],
-      config : ProcessBuilder => Unit = (_ => ())) : CoqProgramInstance
+      start : ProcessBuilder => Process = (a => a.start)) : CoqProgramInstance
 }
 object CoqProgram {
   protected def getCoqPath = Option(Activator.getDefault).map(
@@ -24,15 +24,15 @@ object CoqProgram {
       case _ => name
     }
     override def run(args : Seq[String],
-        config : ProcessBuilder => Unit) : CoqProgramInstance =
-      new CoqProgramInstanceImplPOSIX(path +: args, config)
+        start : ProcessBuilder => Process) : CoqProgramInstance =
+      new CoqProgramInstanceImplPOSIX(path +: args, start)
   }
   
   private class ProgramImplWindows(
       name : String) extends ProgramImpl(name + ".exe") {
     override def run(args : Seq[String],
-        config : ProcessBuilder => Unit) : CoqProgramInstance =
-      new CoqProgramInstanceImplWindows(path +: args, config)
+        start : ProcessBuilder => Process) : CoqProgramInstance =
+      new CoqProgramInstanceImplWindows(path +: args, start)
   }
   
   def apply(name : String) : CoqProgram =
@@ -57,14 +57,13 @@ trait CoqProgramInstance {
 }
 
 private class CoqProgramInstanceImpl(argv : Seq[String],
-    config : ProcessBuilder => Unit) extends CoqProgramInstance {
+    start : ProcessBuilder => Process) extends CoqProgramInstance {
   private val (in, out, pr) = {
     import java.io.{InputStreamReader, OutputStreamWriter}
     import java.lang.{Process, ProcessBuilder}
     
     val pb = new ProcessBuilder(argv : _*)
-    config(pb)
-    val pr = pb.start()
+    val pr = start(pb)
     val in = new OutputStreamWriter(pr.getOutputStream)
     val out = new InputStreamReader(pr.getInputStream)
     (in, out, pr)
@@ -83,13 +82,13 @@ private class CoqProgramInstanceImpl(argv : Seq[String],
 }
 
 private class CoqProgramInstanceImplWindows(
-    argv : Seq[String], config : ProcessBuilder => Unit)
-        extends CoqProgramInstanceImpl(argv.map(a => '"' + a + '"'), config)
+    argv : Seq[String], start : ProcessBuilder => Process)
+        extends CoqProgramInstanceImpl(argv.map(a => '"' + a + '"'), start)
 
 private class CoqProgramInstanceImplPOSIX(argv : Seq[String],
-    config : ProcessBuilder => Unit) extends CoqProgramInstanceImpl(
+    start : ProcessBuilder => Process) extends CoqProgramInstanceImpl(
         Seq("/bin/sh", "-c", "echo $$; exec \"$@\"", "wrapper") ++ argv,
-            config) {
+            start) {
   private var pid : String = {
     var pid = ""
     var a : Int = stdout.read
