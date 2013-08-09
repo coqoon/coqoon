@@ -140,7 +140,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
         val monitor_ = monitor.newChild(1, SubMonitor.SUPPRESS_NONE)
         val f = getFileForLocation(src)
         try {
-          new CoqCompileRunner(f, getCorrespondingObject(src)).run(monitor_)
+          val r = new CoqCompileRunner(f, getCorrespondingObject(src))
+          r.setTicker(Some(() => !isInterrupted()))
+          r.run(monitor_)
         } catch {
           case e : org.eclipse.core.runtime.CoreException =>
             e.getStatus.getMessage.trim match {
