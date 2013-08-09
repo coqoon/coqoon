@@ -79,21 +79,26 @@ class CoqCompileRunner(
               process
             })
       
-      coqcp.readAll match {
-        case (i, msgs) if i != 0 =>
-          fail(Activator.makeStatus(IStatus.ERROR, msgs))
-        case _ =>
+      try {
+        coqcp.readAll match {
+          case (i, msgs) if i != 0 =>
+            fail(Activator.makeStatus(IStatus.ERROR, msgs))
+          case _ =>
+        }
+
+        monitor.worked(1)
+
+        output.foreach(output => {
+          val is = new FileInputStream(outputFile)
+          if (output.exists) {
+            output.setContents(is, IResource.NONE, monitor.newChild(1))
+          } else output.create(is, IResource.DERIVED, monitor.newChild(1))
+          outputFile.delete
+        })
+      } catch {
+        case e : java.io.IOException =>
+          fail(Activator.makeStatus(IStatus.ERROR, e.getLocalizedMessage, e))
       }
-      
-      monitor.worked(1)
-        
-      output.foreach(output => {
-        val is = new FileInputStream(outputFile)
-        if (output.exists) {
-          output.setContents(is, IResource.NONE, monitor.newChild(1))
-        } else output.create(is, IResource.DERIVED, monitor.newChild(1))
-        outputFile.delete
-      })
     }
   }
 }
