@@ -93,12 +93,11 @@ class CoqCompileRunner(
           if (output.exists) {
             output.setContents(is, IResource.NONE, monitor.newChild(1))
           } else output.create(is, IResource.DERIVED, monitor.newChild(1))
-          outputFile.delete
         })
       } catch {
         case e : java.io.IOException =>
           fail(Activator.makeStatus(IStatus.ERROR, e.getLocalizedMessage, e))
-      }
+      } finally output.foreach(_ => outputFile.delete)
     }
   }
 }
