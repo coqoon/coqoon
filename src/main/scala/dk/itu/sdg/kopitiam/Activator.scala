@@ -42,7 +42,7 @@ object Activator {
   import org.eclipse.core.runtime.{Status, IStatus}
   def makeStatus(severity : Int,
       message : String, exception : Throwable = null) : IStatus =
-    new Status(severity, ManifestIdentifiers.PLUGIN, message)
+    new Status(severity, ManifestIdentifiers.PLUGIN, message, exception)
 }
 
 object ManifestIdentifiers {
