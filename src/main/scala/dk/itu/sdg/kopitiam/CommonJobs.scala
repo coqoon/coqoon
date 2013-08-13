@@ -174,11 +174,12 @@ abstract class StepForwardRunner[A <: CoqCommand](
     onGood(step, CoqTypes.Good[String](result.value))
   protected def initialise = ()
   
-  private def perhapsPrint(msg_ : String) = {
+  private def perhapsPrint(
+      s : org.eclipse.ui.console.MessageConsoleStream, msg_ : String) = {
     if (msg_ != null) {
       val msg = msg_.trim
       if (msg.length != 0)
-        EclipseConsole.out.println(msg)
+        s.println(msg)
     }
   }
       
@@ -192,14 +193,15 @@ abstract class StepForwardRunner[A <: CoqCommand](
       monitor.subTask(step.text.trim)
       step.run(container.coqTop) match {
         case r @ CoqTypes.Good(msg) =>
-          perhapsPrint(msg)
+          perhapsPrint(EclipseConsole.out, msg)
           onGood(step, r)
         case r @ CoqTypes.Unsafe(msg) =>
-          perhapsPrint(msg)
+          perhapsPrint(EclipseConsole.out, msg)
           onUnsafe(step, r)
         case r : CoqTypes.Fail[String] =>
+          perhapsPrint(EclipseConsole.err, r.value._2)
           onFail(step, r)
-          return CoqTypes.Fail(r.value)
+          return r
       }
       monitor.worked(1)
     }
