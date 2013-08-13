@@ -131,45 +131,52 @@ class CoqBuilder extends IncrementalProjectBuilder {
     
     possibleObjects = done.flatMap(getCorrespondingObject).map(_.getLocation)
     
-    class BuildTaskImpl(src : IPath) extends BuildTask {
-      override def canBuild = {
+    class BuildTaskImpl(src : IPath) extends BuildManager.BuildTask {
+      private def canBuild = {
         dt.resolveDependencies(src)
         !dt.getDependencies(src).exists(a => a._2 == None)
       }
-      override def build = {
-        val monitor_ = monitor.newChild(1, SubMonitor.SUPPRESS_NONE)
-        val f = getFileForLocation(src)
+      override def build = if (isInterrupted || monitor.isCanceled) {
+        BuildManager.BuildTask.Abandoned
+      } else if (canBuild) {
+        val r = new CoqCompileRunner(
+          getFileForLocation(src), getCorrespondingObject(src))
+        r.setTicker(Some(() => !isInterrupted()))
         try {
-          val r = new CoqCompileRunner(f, getCorrespondingObject(src))
-          r.setTicker(Some(() => !isInterrupted()))
-          r.run(monitor_)
+          r.run(monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
+          BuildManager.BuildTask.Succeeded
         } catch {
-          case e : org.eclipse.core.runtime.CoreException =>
-            e.getStatus.getMessage.trim match {
-              case CompilationError(_, line, _, _, message) =>
-                createLineErrorMarker(
-                  f, line.toInt, message.replaceAll("\\s+", " ").trim)
-              case msg => createResourceErrorMarker(f, msg)
-            }
+          case c : org.eclipse.core.runtime.CoreException =>
+            BuildManager.BuildTask.Failed(c)
         }
-      }
+      } else BuildManager.BuildTask.Waiting
       
-      override def fail = {
-        val f = getFileForLocation(src)
-        var broken = dt.getDependencies(src).collect {
-          case ((arg, _), None) => arg
-        }
-        if (!broken.isEmpty)
-          createResourceErrorMarker(f,
-            "Broken dependencies: " + broken.mkString(", ") + ".")
+      import BuildManager.BuildTask._
+      override def cleanup = state match {
+        case Waiting =>
+          val f = getFileForLocation(src)
+          var broken = dt.getDependencies(src).collect {
+            case ((arg, _), None) => arg
+          }
+          if (!broken.isEmpty)
+            createResourceErrorMarker(f,
+              "Broken dependencies: " + broken.mkString(", ") + ".")
+        case Failed(e) =>
+          val f = getFileForLocation(src)
+          e.getStatus.getMessage.trim match {
+            case CompilationError(_, line, _, _, message) =>
+              createLineErrorMarker(
+                f, line.toInt, message.replaceAll("\\s+", " ").trim)
+            case msg => createResourceErrorMarker(f, msg)
+          }
+        case Abandoned => dt.setDependencies(src,
+            dt.getDependencies(src).map(a => (a._1, None)))
+        case Succeeded =>
       }
-      
-      override def forget =
-        dt.setDependencies(src, dt.getDependencies(src).map(a => (a._1, None)))
     }
     
-    buildLoop(done.map(new BuildTaskImpl(_)),
-        () => !monitor.isCanceled && !isInterrupted)
+    monitor.beginTask("Compiling", done.size)
+    BuildManager.buildLoop(done.map(new BuildTaskImpl(_)))
     Array()
   }
   
@@ -343,31 +350,6 @@ object CoqBuilder {
     
   def derivedFilter[A <: IResource](der : Boolean)(r : A) : Option[A] =
     Option(r).filter(_.isDerived == der)
-  
-  trait BuildTask {
-    def build()
-    def canBuild() : Boolean
-    
-    def fail()
-    def forget()
-  }
-  
-  def buildLoop(toBuild_ : Set[BuildTask], continue : () => Boolean) = {
-    var toBuild = toBuild_
-    var buildable : Set[BuildTask] = Set()
-    do {
-      val built = buildable.filter(task => {
-        if (continue()) {
-          task.build
-          true
-        } else false
-      })
-      toBuild = toBuild.filterNot(built.contains)
-      buildable = toBuild.filter(a => a.canBuild)
-    } while (!buildable.isEmpty && continue())
-    buildable.map(_.forget)
-    toBuild.map(_.fail)
-  }
 
   def getLoadPath(p : IProject) : Seq[ICoqLoadPath] = {
     val libraryLocation = getLibraryLocation
@@ -487,22 +469,22 @@ object CoqBuilder {
     }
     
     var sb = new StringBuilder
-    class BuildTaskImpl(src : IPath) extends BuildTask {
-      override def canBuild = {
+    class BuildTaskImpl(src : IPath) extends BuildManager.BuildTask {
+      private def canBuild = {
         dt.resolveDependencies(src, true)
         !dt.getDependencies(src).exists(a => a._2 == None)
       }
-      override def build() = {
+      override def build() = if (canBuild) {
         val cf = getCorrespondingObject(src).get
         sb ++= cf.getProjectRelativePath + ": " +
             /* Skip all dependencies with absolute paths */
             dt.getDependencies(src).flatMap(_._2).flatMap(
                 makeLocationRelative).mkString(" ") + "\n"
         built += cf.getLocation
-      }
+        BuildManager.BuildTask.Succeeded
+      } else BuildManager.BuildTask.Waiting
       
-      override def fail = ()
-      override def forget = ()
+      override def cleanup = ()
       
       override def toString =
         "(generateMakefileDeps.BuildTaskImpl for " + src + ")"
@@ -532,7 +514,7 @@ object CoqBuilder {
             mkString("\\\n\t", " \\\n\t", "")
     sb ++= "\n\nall: $(OBJECTS)\nclean:\n\trm -f $(OBJECTS)\n\n"
         
-    buildLoop(allFiles.map(a => new BuildTaskImpl(a.getLocation)), () => true)
+    BuildManager.buildLoop(allFiles.map(a => new BuildTaskImpl(a.getLocation)))
     sb.result
   }
 }
