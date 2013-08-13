@@ -72,11 +72,7 @@ private class CoqProgramInstanceImpl(argv : Seq[String],
   override def stdin = in
   override def stdout = out
   
-  override def kill = {
-    in.close
-    out.close
-    pr.destroy
-  }
+  override def kill = pr.destroy
   override def waitFor = pr.waitFor
   override def interrupt = ()
 }
