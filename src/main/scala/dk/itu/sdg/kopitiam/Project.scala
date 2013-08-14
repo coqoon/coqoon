@@ -136,18 +136,20 @@ class CoqBuilder extends IncrementalProjectBuilder {
         dt.resolveDependencies(src)
         !dt.getDependencies(src).exists(a => a._2 == None)
       }
+      import org.eclipse.core.runtime.CoreException
       override def build = if (isInterrupted || monitor.isCanceled) {
         BuildManager.BuildTask.Abandoned
       } else if (canBuild) {
         val r = new CoqCompileRunner(
           getFileForLocation(src), getCorrespondingObject(src))
-        r.setTicker(Some(() => !isInterrupted()))
+        r.setTicker(Some(() => !isInterrupted() && !monitor.isCanceled))
         try {
           r.run(monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
           BuildManager.BuildTask.Succeeded
         } catch {
-          case c : org.eclipse.core.runtime.CoreException =>
-            BuildManager.BuildTask.Failed(c)
+          case c : CoreException if isInterrupted || monitor.isCanceled =>
+            BuildManager.BuildTask.Abandoned
+          case c : CoreException => BuildManager.BuildTask.Failed(c)
         }
       } else BuildManager.BuildTask.Waiting
       
