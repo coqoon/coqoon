@@ -54,9 +54,9 @@ import org.eclipse.core.resources.{IFile, IResource}
 import org.eclipse.core.runtime.jobs.Job
 import org.eclipse.core.runtime.{SubMonitor, IProgressMonitor}
 
-class CoqCompileJob(source : IFile) extends JobBase(
-    "Compiling Coq file " + source.getName, new CoqCompileRunner(source, None))
-class CoqCompileRunner(
+class CompileCoqJob(source : IFile) extends JobBase(
+    "Compiling Coq file " + source.getName, new CompileCoqRunner(source, None))
+class CompileCoqRunner(
     source : IFile, output : Option[IFile]) extends JobRunner[Unit] {
   import org.eclipse.core.runtime.{Path, IStatus}
   import java.io.{File, FileInputStream}

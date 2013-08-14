@@ -189,7 +189,7 @@ class CompileCoqHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     import org.eclipse.ui.IFileEditorInput
     if (isEnabled())
-      editor.file.foreach(f => new CoqCompileJob(f).schedule())
+      editor.file.foreach(f => new CompileCoqJob(f).schedule())
     null
   }
 }

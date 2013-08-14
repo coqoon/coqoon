@@ -140,7 +140,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
       override def build = if (isInterrupted || monitor.isCanceled) {
         BuildManager.BuildTask.Abandoned
       } else if (canBuild) {
-        val r = new CoqCompileRunner(
+        val r = new CompileCoqRunner(
           getFileForLocation(src), getCorrespondingObject(src))
         r.setTicker(Some(() => !isInterrupted() && !monitor.isCanceled))
         try {
