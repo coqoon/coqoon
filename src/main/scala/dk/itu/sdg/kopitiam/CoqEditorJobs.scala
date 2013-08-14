@@ -102,10 +102,7 @@ class CoqStepForwardJob(editor : CoqEditor, steps : List[CoqStep])
 class CoqStepForwardRunner(
     editor : CoqEditor,
     steps : List[CoqStep]) extends StepForwardRunner(editor, steps) {
-  override protected def finish = {
-    editor.setUnderway(editor.completed)
-    super.finish
-  }
+  override protected def finish = super.finish
   
   override protected def onGood(
       step : CoqStep, result : CoqTypes.Good[String]) = {
@@ -114,9 +111,11 @@ class CoqStepForwardRunner(
   }
   
   override protected def onFail(
-      step : CoqStep, result : CoqTypes.Fail[String]) =
+      step : CoqStep, result : CoqTypes.Fail[String]) = {
     editor.file.foreach(
         f => CreateErrorMarkerJob(f, step, result.value).schedule)
+    editor.setUnderway(editor.completed)
+  }
   
   override protected def initialise = {
     super.initialise
