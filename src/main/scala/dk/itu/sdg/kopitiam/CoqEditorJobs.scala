@@ -102,7 +102,13 @@ class CoqStepForwardJob(editor : CoqEditor, steps : List[CoqStep])
 class CoqStepForwardRunner(
     editor : CoqEditor,
     steps : List[CoqStep]) extends StepForwardRunner(editor, steps) {
-  override protected def finish = super.finish
+  override protected def preCheck =
+    if (editor.completed != steps.head.offset) {
+      /* We seem to have missed a step somewhere, which means that something's
+       * gone wrong (an earlier step has probably failed). Bail out
+       * immediately */
+      Some(CoqTypes.Fail((None, "(missing step)")))
+    } else None
   
   override protected def onGood(
       step : CoqStep, result : CoqTypes.Good[String]) = {
