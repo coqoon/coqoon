@@ -40,7 +40,9 @@ object EclipseConsole {
         err_ = Some(console.newMessageStream)
         err_.foreach(a => {
           a.setEncoding("UTF-8")
-          a.setColor(RED)
+          UIUtils.exec {
+            a.setColor(RED)
+          }
         })
         err_.get
     }
