@@ -128,10 +128,12 @@ abstract class ContainerJobBase(name : String, runner : JobRunner[_],
 }
 
 trait JobRunner[A] {
+  protected def preCheck : Option[A] = None
   protected def finish : Unit = ()
   protected def doOperation(monitor : SubMonitor) : A
   
   def run(monitor_ : IProgressMonitor) : A = {
+    preCheck.foreach(a => return a)
     val monitor = SubMonitor.convert(monitor_)
     try {
       doOperation(monitor)
