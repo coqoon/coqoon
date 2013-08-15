@@ -13,13 +13,18 @@ object UIUtils {
   def getDisplay = getWorkbench.getDisplay
   def getActiveShell = getDisplay.getActiveShell
   
-  def syncExec(r : Runnable) : Unit = getDisplay.syncExec(r)
-  def syncExec(r : => Unit) : Unit = syncExec(new Runnable() {
-    override def run = r
-  })
+  def exec[A](r : => A) : A = {
+    object ResultHolder {
+      var result : Option[A] = None
+    }
+    getDisplay.syncExec(new Runnable() {
+      override def run =
+        ResultHolder synchronized (ResultHolder.result = Option(r))
+    })
+    ResultHolder synchronized (ResultHolder.result.get)
+  }
   
-  def asyncExec(r : Runnable) : Unit = getDisplay.asyncExec(r)
-  def asyncExec(r : => Unit) : Unit = asyncExec(new Runnable() {
+  def asyncExec(r : => Unit) : Unit = getDisplay.asyncExec(new Runnable() {
     override def run = r
   })
   

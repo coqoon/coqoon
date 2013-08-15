@@ -34,7 +34,7 @@ class JavaProofInitialisationRunner(
       val basename = f.getName().dropRight(5)
       val model = proj.getFile(new Path(basename + "_model.v"))
       if (!model.exists) {
-        UIUtils.syncExec {
+        UIUtils.exec {
           UIUtils.Dialog.warning("Model file missing",
               "Please write a model file for this Java file named '" +
               basename + "_model'.")
