@@ -31,14 +31,19 @@ object CoqEditorHandler {
   final val CommentStart = """^\(\*""".r.unanchored
   final val CommentEnd = """^\*\)""".r.unanchored
   final val QuotationMark = "^\"".r.unanchored
+  final val Bullet = """^(\+|-|\*)""".r.unanchored
+  final val CurlyBracket = """^(\{|\})(\s|$)""".r.unanchored
   final val FullStop = """^\.(\s|$)""".r.unanchored
   final val Ellipsis = """^\.\.\.(\s|$)""".r.unanchored
+  
   final val DotRun = """^(\.+)(\s|$)""".r.unanchored
+  final val WhitespaceRun = """^(\s+)""".r.unanchored
   
   def getNextCommand(doc : String, offset : Int = 0) : Option[Substring] = {
     var i = offset
     var commentDepth = 0
     var inString = false
+    var content = false
     while (i < doc.length) Substring(doc, i) match {
       case CommentStart() if !inString =>
         commentDepth += 1
@@ -53,9 +58,17 @@ object CoqEditorHandler {
         return Some(Substring(doc, offset, i + 1))
       case Ellipsis(_) if !inString && commentDepth == 0 =>
         return Some(Substring(doc, offset, i + 3))
+      case CurlyBracket(t, _) if !content && !inString && commentDepth == 0 =>
+        return Some(Substring(doc, offset, i + 1))
+      case Bullet(_) if !content && !inString && commentDepth == 0 =>
+        return Some(Substring(doc, offset, i + 1))
       case DotRun(dots, end) if !inString && commentDepth == 0 =>
+        content = true
         i += dots.length + end.length
+      case WhitespaceRun(ws) =>
+        i += ws.length
       case _ =>
+        content = true
         i += 1
     }
     None
