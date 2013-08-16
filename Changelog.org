@@ -1,3 +1,7 @@
+* Kopitiam 0.3.3 [16th August 2013]
+** Add support for Coq 8.4's proof-structuring commands
+** Allow multiple step jobs to be enqueued at once
+** Improve the Coq project builder's error and cancellation handling
 * Kopitiam 0.3.2 [6th August 2013]
 ** Add support for generating Makefiles from Coq projects
 ** Improve the reliability of the Coq project builder
