@@ -61,6 +61,13 @@ class CoqStepBackJob(editor : CoqEditor, stepCount : Int) extends CoqEditorJob(
     "Stepping back", new CoqStepBackRunner(editor, stepCount), editor)
 class CoqStepBackRunner(editor : CoqEditor, stepCount : Int)
     extends StepRunner[String](editor) {
+  override protected def finish = {
+    super.finish
+    UIUtils.asyncExec {
+      editor.selectAndReveal(editor.completed, 0)
+    }
+  }
+  
   override protected def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
     monitor.beginTask("Stepping back", 2)
@@ -102,6 +109,13 @@ class CoqStepForwardJob(editor : CoqEditor, steps : List[CoqStep])
 class CoqStepForwardRunner(
     editor : CoqEditor,
     steps : List[CoqStep]) extends StepForwardRunner(editor, steps) {
+  override protected def finish = {
+    super.finish
+    UIUtils.asyncExec {
+      editor.selectAndReveal(editor.completed, 0)
+    }
+  }
+  
   override protected def preCheck =
     if (editor.completed != steps.head.offset) {
       /* We seem to have missed a step somewhere, which means that something's
