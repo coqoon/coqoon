@@ -1,6 +1,6 @@
 package dk.itu.sdg.kopitiam
 
-import org.eclipse.swt.widgets.{Composite, Control, Text}
+import org.eclipse.swt.widgets.{Text, Control, TabItem, Composite}
 
 trait GoalPresenter {
   def init(parent : Composite)
@@ -11,18 +11,19 @@ trait GoalPresenter {
 import org.eclipse.swt.SWT
 import org.eclipse.swt.layout.FillLayout
 
-class DefaultGoalPresenter extends GoalPresenter {
-  import org.eclipse.swt.widgets.{TabFolder, TabItem}
+abstract class TabbedGoalPresenter extends GoalPresenter {
+  import org.eclipse.swt.widgets.TabFolder
   
-  private var goals : TabFolder = null
+  private var goals_ : TabFolder = null
+  protected def goals : TabFolder = goals_
+  protected def subgoals = goals.getItems()
+
   override def init(parent : Composite) = {
-    goals = new TabFolder(parent, SWT.NONE)
-    goals
+    goals_ = new TabFolder(parent, SWT.NONE)
   }
   
-  override def dispose = goals.dispose
-  
-  private def subgoals = goals.getItems()
+  protected def makeTab() : Unit
+  protected def updateTab(goal : CoqTypes.goal, control : TabItem) : Unit
   
   override def render(coqGoals : Option[CoqTypes.goals]) = {
     val goalData = coqGoals match {
@@ -30,87 +31,73 @@ class DefaultGoalPresenter extends GoalPresenter {
       case Some(x) => x.fg_goals
     }
     if (subgoals.length < goalData.length) {
-      while (subgoals.length != goalData.length) {
-        val ti = new TabItem(goals, SWT.NONE)
-        val area = new Composite(goals, SWT.NONE)
-        area.setLayout(new FillLayout(SWT.VERTICAL))
-        ti.setControl(area)
-        
-        new Text(area,
-            SWT.BORDER | SWT.READ_ONLY | SWT.MULTI |
-            SWT.H_SCROLL | SWT.V_SCROLL)
-        new Text(area,
-            SWT.BORDER | SWT.READ_ONLY | SWT.MULTI |
-            SWT.H_SCROLL | SWT.V_SCROLL)
-        ti.setText(subgoals.length.toString)
-      }
+      while (subgoals.length != goalData.length)
+        makeTab
     } else subgoals.drop(goalData.length).map(_.dispose)
     goals.pack
-    goalData.zip(subgoals).foreach(_ match {
-      case (goal, control) =>
-        val comp = control.getControl().asInstanceOf[Composite]
-        comp.getChildren()(0).asInstanceOf[Text].setText(goal.goal_hyp.mkString("\n"))
-        comp.getChildren()(1).asInstanceOf[Text].setText(goal.goal_ccl)
-    })
+    goalData.zip(subgoals).foreach(a => updateTab(a._1, a._2))
+  }
+
+  override def dispose = goals_.dispose
+}
+
+class DefaultGoalPresenter extends TabbedGoalPresenter {
+  override protected def makeTab = {
+    val ti = new TabItem(goals, SWT.NONE)
+    val area = new Composite(goals, SWT.NONE)
+    area.setLayout(new FillLayout(SWT.VERTICAL))
+    ti.setControl(area)
+
+    new Text(area,
+      SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+    new Text(area,
+      SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+    ti.setText(subgoals.length.toString)
+  }
+  
+  override protected def updateTab(goal : CoqTypes.goal, control : TabItem) = {
+    val comp = control.getControl().asInstanceOf[Composite]
+    comp.getChildren()(0).asInstanceOf[Text].setText(
+        goal.goal_hyp.mkString("\n"))
+    comp.getChildren()(1).asInstanceOf[Text].setText(goal.goal_ccl)
   }
 }
 
-class TabularGoalPresenter extends GoalPresenter {
-  import org.eclipse.swt.widgets.{TabFolder, TabItem}
+class TabularGoalPresenter extends TabbedGoalPresenter {
   import org.eclipse.swt.widgets.{Table, TableItem, TableColumn}
-  
-  private var goals : TabFolder = null
-  override def init(parent : Composite) = {
-    goals = new TabFolder(parent, SWT.NONE)
-    goals
+
+  override protected def makeTab = {
+    val ti = new TabItem(goals, SWT.NONE)
+    val area = new Composite(goals, SWT.NONE)
+    area.setLayout(new FillLayout(SWT.VERTICAL))
+    ti.setControl(area)
+
+    val ta = new Table(area, SWT.BORDER | SWT.MULTI)
+    new TableColumn(ta, SWT.LEFT).setText("Name")
+    new TableColumn(ta, SWT.LEFT).setText("Value")
+    ta.setColumnOrder(Array(0, 1))
+    ta.setLinesVisible(true)
+    ta.setHeaderVisible(true)
+    new Text(area,
+      SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+    ti.setText(subgoals.length.toString)
   }
-  
-  override def dispose = goals.dispose
-  
-  private def subgoals = goals.getItems()
-  
-  override def render(coqGoals : Option[CoqTypes.goals]) = {
-    val goalData = coqGoals match {
-      case None => List.empty
-      case Some(x) => x.fg_goals
-    }
-    if (subgoals.length <= goalData.length) {
-      while (subgoals.length != goalData.length) {
-        val ti = new TabItem(goals, SWT.NONE)
-        val area = new Composite(goals, SWT.NONE)
-        area.setLayout(new FillLayout(SWT.VERTICAL))
-        ti.setControl(area)
-        
-        val ta = new Table(area, SWT.BORDER | SWT.MULTI)
-        new TableColumn(ta, SWT.LEFT).setText("Name")
-        new TableColumn(ta, SWT.LEFT).setText("Value")
-        ta.setColumnOrder(Array(0, 1))
-        ta.setLinesVisible(true)
-        ta.setHeaderVisible(true)
-        new Text(area,
-            SWT.BORDER | SWT.READ_ONLY | SWT.MULTI |
-            SWT.H_SCROLL | SWT.V_SCROLL)
-        ti.setText(subgoals.length.toString)
-      }
-    } else subgoals.drop(goalData.length).map(_.dispose)
-    goals.pack
-    goalData.zip(subgoals).foreach(_ match {
-      case (goal, control) =>
-        val comp = control.getControl().asInstanceOf[Composite]
-        
-        val table = comp.getChildren()(0).asInstanceOf[Table]
-        if (table.getItems.length < goal.goal_hyp.length) {
-          while (table.getItems.length < goal.goal_hyp.length)
-            new TableItem(table, SWT.NONE)
-        } else table.getItems.drop(goal.goal_hyp.length).map(_.dispose)
-        table.getColumns.map(_.pack)
-        table.getItems.zip(goal.goal_hyp).foreach(_ match {
-          case (entry, hypothesis) =>
-            entry.setText(hypothesis.split(":", 2).map(_.trim))
-        })
-        
-        comp.getChildren()(1).asInstanceOf[Text].setText(goal.goal_ccl)
+
+  override protected def updateTab(goal : CoqTypes.goal, control : TabItem) = {
+    val comp = control.getControl().asInstanceOf[Composite]
+
+    val table = comp.getChildren()(0).asInstanceOf[Table]
+    if (table.getItems.length < goal.goal_hyp.length) {
+      while (table.getItems.length < goal.goal_hyp.length)
+        new TableItem(table, SWT.NONE)
+    } else table.getItems.drop(goal.goal_hyp.length).map(_.dispose)
+    table.getColumns.map(_.pack)
+    table.getItems.zip(goal.goal_hyp).foreach(_ match {
+      case (entry, hypothesis) =>
+        entry.setText(hypothesis.split(":", 2).map(_.trim))
     })
+
+    comp.getChildren()(1).asInstanceOf[Text].setText(goal.goal_ccl)
   }
 }
 
