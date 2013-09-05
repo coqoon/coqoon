@@ -57,7 +57,9 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     reconciler.uninstall
     super.dispose
   }
-    
+
+  final def getViewer = super.getSourceViewer
+
   import dk.itu.sdg.coqparser.VernacularRegion
   import org.eclipse.jface.text.source.{Annotation, ISourceViewer, IVerticalRuler}
   import org.eclipse.jface.text.{IDocument, Position}

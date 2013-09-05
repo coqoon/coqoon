@@ -64,7 +64,7 @@ class CoqStepBackRunner(editor : CoqEditor, stepCount : Int)
   override protected def finish = {
     super.finish
     UIUtils.asyncExec {
-      editor.selectAndReveal(editor.completed, 0)
+      editor.getViewer.revealRange(editor.completed, 0)
     }
   }
   
@@ -112,7 +112,7 @@ class CoqStepForwardRunner(
   override protected def finish = {
     super.finish
     UIUtils.asyncExec {
-      editor.selectAndReveal(editor.completed, 0)
+      editor.getViewer.revealRange(editor.completed, 0)
     }
   }
   
