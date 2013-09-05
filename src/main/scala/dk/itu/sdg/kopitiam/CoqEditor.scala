@@ -216,14 +216,15 @@ private class CoqProofReconcilingStrategy(
       if (editor.busy)
         editor.coqTop.interrupt
       if (off < editor.completed)
-        UIUtils.asyncExec {
+        /* We can't finish reconciliation until the job is scheduled */
+        UIUtils.exec {
           CoqEditorHandler.doStepBack(editor,
               _.prefixLength(a => (off < (a.offset + a.text.length))))
         }
     }
   }
   
-  override def reconcile(dr : DirtyRegion, r : IRegion) = reconcile(r)
+  override def reconcile(dr : DirtyRegion, r : IRegion) = reconcile(dr)
   
   override def setDocument(newDocument : IDocument) = ()
 }

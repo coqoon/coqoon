@@ -220,7 +220,7 @@ private class JavaEditorReconcilingStrategy(
           val completeOffset =
             jes.complete.map(a => a.getStartPosition + a.getLength).getOrElse { Int.MinValue }
           if (off < completeOffset)
-            UIUtils.asyncExec {
+            UIUtils.exec {
               JavaEditorHandler.doStepBack(jes, _.prefixLength(
                 a => (off < (a.node.getStartPosition + a.node.getLength))))
             }
@@ -229,7 +229,7 @@ private class JavaEditorReconcilingStrategy(
         jes.updateASTifValid(off)
         
       case _ =>
-        UIUtils.asyncExec {
+        UIUtils.exec {
           jes.coqTop.kill /* XXX: can't use a step back job (goal update) */
           jes.setMethod(None)
           jes.completedMethods = List()

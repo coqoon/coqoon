@@ -86,7 +86,8 @@ class CoqStepBackRunner(editor : CoqEditor, stepCount : Int)
             var redoSteps = editor.steps.take(extra).toList.reverse
             for (step <- redoSteps)
               editor.steps.pop
-            new CoqStepForwardRunner(editor, redoSteps).doOperation(monitor.newChild(1))
+            new CoqStepForwardRunner(
+                editor, redoSteps).doOperation(monitor.newChild(1))
           }
         }
         CoqTypes.Good("")
