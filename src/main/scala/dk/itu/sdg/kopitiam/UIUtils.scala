@@ -15,13 +15,13 @@ object UIUtils {
   
   def exec[A](r : => A) : A = {
     object ResultHolder {
-      var result : Option[A] = None
+      var result : A = _
     }
     getDisplay.syncExec(new Runnable() {
       override def run =
-        ResultHolder synchronized (ResultHolder.result = Option(r))
+        ResultHolder synchronized (ResultHolder.result = r)
     })
-    ResultHolder synchronized (ResultHolder.result.get)
+    ResultHolder synchronized (ResultHolder.result)
   }
   
   def asyncExec(r : => Unit) : Unit = getDisplay.asyncExec(new Runnable() {
