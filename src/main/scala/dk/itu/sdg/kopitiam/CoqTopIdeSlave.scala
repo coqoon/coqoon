@@ -206,9 +206,8 @@ private class CoqTopIdeSlaveImpl(
   }
   
   import scala.xml.UnprefixedAttribute
-  
-  implicit def pairToAttribute(a : Pair[String, String]) : UnprefixedAttribute =
-    new UnprefixedAttribute(a._1, a._2, Null)
+  def attr(name : String, value : String) : UnprefixedAttribute =
+    new UnprefixedAttribute(name, value, Null)
   
   private def wrapString(a : String) : Elem = <string>{a}</string>
   private def unwrapString(e : Elem) = e.text.trim()
@@ -217,7 +216,7 @@ private class CoqTopIdeSlaveImpl(
   private def unwrapInt(e : Elem) = unwrapString(e).toInt
   
   private def wrapBoolean(a : Boolean) : Elem =
-    Elem(null, "bool", ("val", a.toString), scala.xml.TopScope)
+    Elem(null, "bool", attr("val", a.toString), scala.xml.TopScope, true)
     
   private def unwrapBoolean(e : Elem) = e.attribute("val") match {
   	case Some(Seq(Text(a))) => a.trim.toBoolean
@@ -245,7 +244,7 @@ private class CoqTopIdeSlaveImpl(
       case Some(b) => ("some", f(b))
       case None => ("none", null)
     }
-    Elem(null, "option", ("val", wr._1), scala.xml.TopScope, wr._2)
+    Elem(null, "option", attr("val", wr._1), scala.xml.TopScope, true, wr._2)
   }
   
   private def unwrapOption[A](e : Elem, f : Elem => A) = {
@@ -257,7 +256,7 @@ private class CoqTopIdeSlaveImpl(
   
   private def wrapList[A](sf : List[A], f : A => Elem) : Elem = {
     val children = sf.map(f)
-    Elem(null, "list", Null, scala.xml.TopScope, children : _*)
+    Elem(null, "list", Null, scala.xml.TopScope, true, children : _*)
   }
   
   private def unwrapList[A](e : Elem, f : Elem => A) = {
@@ -266,7 +265,7 @@ private class CoqTopIdeSlaveImpl(
   
   private def wrapPair[A, B](a : Pair[A, B], f : A => Elem, g : B => Elem) = {
     val children = List(f(a._1), g(a._2))
-    Elem(null, "pair", Null, scala.xml.TopScope, children : _*)
+    Elem(null, "pair", Null, scala.xml.TopScope, true, children : _*)
   }
   
   private def unwrapPair[A, B](e : Elem, f : Elem => A, g : Elem => B) = {
@@ -336,7 +335,8 @@ private class CoqTopIdeSlaveImpl(
       case s : CoqTypes.StringValue =>
         ("stringvalue", wrapString(s.value))
     }
-    Elem(null, "option_value", ("val", wr._1), scala.xml.TopScope, wr._2)
+    Elem(null, "option_value",
+        attr("val", wr._1), scala.xml.TopScope, true, wr._2)
   }
   
   private def unwrapOptionValue(a : Elem) = {
@@ -355,13 +355,13 @@ private class CoqTopIdeSlaveImpl(
   override def interp(r : CoqTypes.raw, v : CoqTypes.verbose, s : String) =
     send(
       (<call val="interp">{s}</call> %
-        ("raw", if (r) "true" else null) %
-        ("verbose", if (v) "true" else null)),
+        attr("raw", if (r) "true" else null) %
+        attr("verbose", if (v) "true" else null)),
       unwrapString)
   
   override def rewind(steps : Int) =
     send(
-      (<call val="rewind" /> % ("steps", steps.toString)),
+      (<call val="rewind" /> % attr("steps", steps.toString)),
       a => unwrapInt(childElements(a).head))
 
   override def goals =
@@ -404,32 +404,33 @@ private class CoqTopIdeSlaveImpl(
   private def wrapSearchFlags(sf : CoqTypes.search_flags) : List[Elem] =
     sf.map(_ match {
       case (c : CoqTypes.search_constraint, b) =>
-        Elem(null, "pair", Null, scala.xml.TopScope, c match {
+        Elem(null, "pair", Null, scala.xml.TopScope, true, c match {
           case p : CoqTypes.Name_Pattern =>
             Elem(null, "search_constraint",
-                ("val", "name_pattern"), scala.xml.TopScope,
+                attr("val", "name_pattern"), scala.xml.TopScope, true,
                 wrapString(p.value))
           case p : CoqTypes.Type_Pattern =>
             Elem(null, "search_constraint",
-                ("val", "type_pattern"), scala.xml.TopScope,
+                attr("val", "type_pattern"), scala.xml.TopScope, true,
                 wrapString(p.value))
           case p : CoqTypes.SubType_Pattern =>
             Elem(null, "search_constraint",
-                ("val", "subtype_pattern"), scala.xml.TopScope,
+                attr("val", "subtype_pattern"), scala.xml.TopScope, true,
                 wrapString(p.value))
           case p : CoqTypes.In_Module =>
             Elem(null, "search_constraint",
-                ("val", "in_module"), scala.xml.TopScope,
+                attr("val", "in_module"), scala.xml.TopScope, true,
                 wrapList(p.value, wrapString))
           case p : CoqTypes.Include_Blacklist =>
             Elem(null, "search_constraint",
-                ("val", "include_blacklist"), scala.xml.TopScope)
+                attr("val", "include_blacklist"), scala.xml.TopScope, true)
         }, wrapBoolean(b))
     })
   
   private def wrapSearch(sf : CoqTypes.search_flags) : Elem = {
     val children = wrapSearchFlags(sf)
-    Elem(null, "call", ("val", "search"), scala.xml.TopScope, children : _*)
+    Elem(null, "call",
+        attr("val", "search"), scala.xml.TopScope, true, children : _*)
   }
   
   override def search(sf : CoqTypes.search_flags) =
@@ -458,8 +459,8 @@ private class CoqTopIdeSlaveImpl(
       options : List[Pair[CoqTypes.option_name, CoqTypes.option_value]]) :
           Elem = {
     val children = wrapOptions(options)
-    Elem(null,
-        "call", ("val", "setoptions"), scala.xml.TopScope, children : _*)
+    Elem(null, "call",
+        attr("val", "setoptions"), scala.xml.TopScope, true, children : _*)
   }
               
   override def set_options(

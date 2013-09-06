@@ -39,14 +39,6 @@ trait ICoqElement {
   def getModel : ICoqModel = getAncestor(classOf[ICoqModel]).get
 }
 
-object PathUtilities {
-  object Implicits {
-    implicit def stringToPath(s : String) : IPath = new Path(s)
-    implicit def stringSeqToPath(s : Seq[String]) : IPath =
-      new Path(s.mkString("/"))
-  }
-}
-
 private abstract class CoqElementImpl[
     A <: IResource, B <: ICoqElement with IParent](
     private val res : A, private val parent : B) extends ICoqElement {

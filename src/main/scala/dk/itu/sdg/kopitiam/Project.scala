@@ -226,7 +226,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
         ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_ZERO)
     val monitor = SubMonitor.convert(
         monitor_, "Building " + getProject.getName, 1)
-    val args = scala.collection.JavaConversions.asScalaMap(args_).toMap
+    val args = scala.collection.JavaConversions.mapAsScalaMap(args_).toMap
     try {
       val delta = getDelta(getProject())
       kind match {
@@ -576,14 +576,14 @@ class DependencyTracker {
   def allDependencies = deps.iterator
   
   override def toString = allDependencies.map(
-      a => (Seq(a._1.toPortableString) ++ a._2.map(dep2String)).mkString("\n\t\t")).
+      a => (Seq(a._1.toPortableString) ++ a._2.map(depToString)).mkString("\n\t\t")).
           mkString("DG\n\t", "\n\t", "")
 }
 object DependencyTracker {
   type DepCallback = (String, String => Option[IPath])
   type Dep = (DepCallback, Option[IPath])
   
-  implicit def dep2String(d : Dep) : String = d match {
+  def depToString(d : Dep) : String = d match {
     case ((ident, _), None) => "[X] " + ident
     case (_, Some(p)) => "[O] " + p.toPortableString
   }

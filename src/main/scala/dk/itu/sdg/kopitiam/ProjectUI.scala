@@ -53,12 +53,12 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
       val monitor = SubMonitor.convert(monitor_, 4)
       
       monitor.beginTask("New Coq project", 4)
-      import PathUtilities.Implicits._
+      import org.eclipse.core.runtime.Path
       val infoAdapter = WorkspaceUndoUtil.getUIInfoAdapter(getShell)
       project.getCreateOperation.execute(monitor.newChild(1), infoAdapter)
-      val src = project.getPackageFragmentRoot("src")
+      val src = project.getPackageFragmentRoot(new Path("src"))
       src.getCreateOperation.execute(monitor.newChild(1), infoAdapter)
-      val bin = project.getPackageFragmentRoot("bin")
+      val bin = project.getPackageFragmentRoot(new Path("bin"))
       bin.getCreateOperation.execute(monitor.newChild(1), infoAdapter)
       
       val binFolder = bin.getCorrespondingResource.get

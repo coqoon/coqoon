@@ -447,7 +447,7 @@ class CoqContentAssistantProcessor(
         index -= 1
       }
     }
-    prefix toString
+    prefix.toString
   }
 
   def getCompletionProposal (completion : String, moreinfo : String, prefix : String, offset : Int) : ICompletionProposal = {

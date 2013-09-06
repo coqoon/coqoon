@@ -5,7 +5,6 @@ import org.eclipse.ui.texteditor.ITextEditor
 import org.eclipse.core.commands.{IHandler, ExecutionEvent}
 
 class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
-  @deprecated
   type ForbiddenJavaEditor = org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
   
   import org.eclipse.jdt.core.dom._
