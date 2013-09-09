@@ -22,3 +22,10 @@ Require-Bundle: org.scala-ide.scala.library,
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ClassPath: .
+Export-Package-Alarming-Disclaimer: 
+ No API guarantees of any kind are offered for the packages exported by this
+ plugin, which are only exported to enable certain experiments and which are
+ neither intended nor designed for general use
+Export-Package: dk.itu.sdg.coqparser,
+ dk.itu.sdg.kopitiam,
+ dk.itu.sdg.parsing
