@@ -1,11 +1,9 @@
 * VSTTE
-** translate java to simplejava code
 ** softening spec requirements: only needed specs, others replace with true
 ** comment parsing
-** multiple . in antiquotes
+## multiple . in antiquotes
 ** compilation is brittle - esp the automatic one
 ** don't backtrack everything - leave the require import in there (DocumentMonitor)
-** enable/disable actions in java editor
 ** put model into proof certificate!
 ** keybindings in goal viewer etc
 
@@ -16,7 +14,7 @@
 ** useful notes:
       val bun = Platform.getBundle("dk.itu.sdg.kopitiam")
       val loc = FileLocator.getBundleFile(bun).getParentFile.getParentFile.toString
-** move global loadpath into project-specific settings (similar to referenced libraries in eclipse)!
+## move global loadpath into project-specific settings (similar to referenced libraries in eclipse)!
 ** future: incrementally run proofer in the background, annoy user then with unproven stuff (when code is changed)
 ** incremental combinator parsers, done in yi http://yi-editor.blogspot.com/2008/11/incremental-parsing-in-yi.html
 ** remove occurences of "null". these are evil!
@@ -36,18 +34,14 @@
 
   maybe it is easier to treat each comment as a step?
 ** if focus on goalviewer, still enable step fwd/backward keyboard shortcuts
-** closing comment *) without beginning -> out of heap space
 ** lots of proof obligations -> find some useful interface for the tabs
-** dependency graph of coq files, run coqc as background task
 ** coq projects which depend upon each other
 ** lazily run coqc when required (SfLib - just run coqc on Import SfLib)
 ** syntax highlighting in GoalViewer
 ** indicate when Qed
-** run coqtop from project dir, rather than "Add LoadPath" <- implies one coqtop for each project!
-** Jump to definition -- jface.text.hyperlink
+## Jump to definition -- jface.text.hyperlink
 ** completion for arguments "apply foo with (x := y + 1)" <- x is argument name of lemma
 ** cleanup outline - and add icons
-** disable refresh action if not inside of proof (CoqState.proofMode)
 ** folding broken due to comments
 ** Notation: "Print Grammar constr." <- useful!?!? also: "Set Printing Notations."
 
@@ -59,22 +53,21 @@
 CoqResponse should parse more carefully here - maybe
 
 ** Undo from just after End should jump to start of Section/Module/whatever
-** remove hack that searches for '. ' to send command
 ** retract proof/leave for later
 *** especially Admitted/Abort/Abort All/Suspend/Resume
-** Restore State/Write State support
-*** to fight performance issues - being able to load current state again
-*** might also help for background proofing
-** interrupt on windows (custom c code which sends ctrl-c)
-*** http://msdn.microsoft.com/en-us/library/ms811896
-*** http://msdn.microsoft.com/en-us/library/ms683155(v=vs.85).aspx
-*** http://stackoverflow.com/questions/1835885/send-ctrl-c-to-process-open-by-java
+## Restore State/Write State support
+### to fight performance issues - being able to load current state again
+### might also help for background proofing
+## interrupt on windows (custom c code which sends ctrl-c)
+### http://msdn.microsoft.com/en-us/library/ms811896
+### http://msdn.microsoft.com/en-us/library/ms683155(v=vs.85).aspx
+### http://stackoverflow.com/questions/1835885/send-ctrl-c-to-process-open-by-java
 ** Reset ident <- undefines everything back to ident
 * Java side
 ** more lazy about backtrack, especially when typing <% and %>
 ** default specs for methods - only require those needed to be specified (don't need add to prove length)
-** warn if an antiquote contains multiple statements! (or support multiple coq statements in a single antiquote)
-** Re-Implement translation of Java to SimpleJava
+## warn if an antiquote contains multiple statements! (or support multiple coq statements in a single antiquote)
+## Re-Implement translation of Java to SimpleJava
 - introduction of temporary variables on nested field access
  foo.bar.baz --> Object tmp1 = foo.bar ; Object tmp2 = tmp1.baz
 - Move statements out of test (conditional/while):
@@ -89,13 +82,9 @@ CoqResponse should parse more carefully here - maybe
 - move field initializers to constructor
 (there might be more - https://github.com/hannesm/Kopitiam/tree/before-using-Eclipse-AST/src/test/resources/javaparser/source)
 ** Keybindings for Coq actions
-** Step All / Step Until
-** reveal when stepping
-** proper enabling and disabling of actions (esp during prove method)
 ** field initializers - during constructor - translate that - and/or infer specification
 ** constructors (currently calloc instead of call to constructor)
 ** use mouse position instead of cursor position for right-click "prove this method"
-** javaNewerThanSource unused!
 ** stepping over if <- emit forward; but here offset computations are bad!
 ** SimpleJava optimizations
 observations from SnapshotTrees.java:
@@ -145,9 +134,9 @@ if (node.item > 20)
 ** there's an alternative way to get the source of an editor:
   final IEditorInput editorInput = window.getActivePage().getActiveEditor().getEditorInput();
   final IFile selectedFile = (IFile) editorInput.getAdapter(IFile.class);
-* Java features
-** Generics
-** Exceptions
-** array types
-** dynamic casts
+# Java features
+## Generics
+## Exceptions
+## array types
+## dynamic casts
 
