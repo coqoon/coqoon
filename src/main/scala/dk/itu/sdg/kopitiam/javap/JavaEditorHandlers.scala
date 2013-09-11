@@ -125,9 +125,13 @@ class SaveProofCertificateHandler extends JavaEditorHandler {
     null
   }
   
-  override def calculateEnabled = super.calculateEnabled &&
-      getState.completedMethods.size ==
-          JavaASTUtils.countMethods(getState.compilationUnit.get)
+  override def calculateEnabled = if (super.calculateEnabled) {
+    val state = getState
+    val cu = state.compilationUnit
+    if (cu == None) {
+      false
+    } else state.completedMethods.size == JavaASTUtils.countMethods(cu.get)
+  } else false
 }
 private object SaveProofCertificateHandler {
   def getCertificateFile(jes : JavaEditorState) =
