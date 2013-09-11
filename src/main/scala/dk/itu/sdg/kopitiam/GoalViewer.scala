@@ -1,6 +1,6 @@
 package dk.itu.sdg.kopitiam
 
-import org.eclipse.swt.widgets.{Text, Control, TabItem, Composite}
+import org.eclipse.swt.widgets.{Text, Control, Composite}
 
 trait GoalPresenter {
   def init(parent : Composite)
@@ -11,15 +11,16 @@ trait GoalPresenter {
 import org.eclipse.swt.SWT
 import org.eclipse.swt.layout.FillLayout
 
-abstract class TabbedGoalPresenter extends GoalPresenter {
-  import org.eclipse.swt.widgets.TabFolder
+import org.eclipse.swt.custom.{
+  CTabItem => TabItemImpl, CTabFolder => TabFolderImpl}
 
-  private var goals_ : TabFolder = null
-  protected def goals : TabFolder = goals_
+abstract class TabbedGoalPresenter extends GoalPresenter {
+  private var goals_ : TabFolderImpl = null
+  protected def goals : TabFolderImpl = goals_
   protected def subgoals = goals.getItems()
 
   override def init(parent : Composite) = {
-    goals_ = new TabFolder(parent, SWT.NONE)
+    goals_ = new TabFolderImpl(parent, SWT.BORDER)
   }
 
   protected def makeTab(parent : Composite) : Control
@@ -32,12 +33,14 @@ abstract class TabbedGoalPresenter extends GoalPresenter {
     }
     if (subgoals.length < goalData.length) {
       while (subgoals.length != goalData.length) {
-        val ti = new TabItem(goals, SWT.NONE)
+        val ti = new TabItemImpl(goals, SWT.NONE)
         ti.setControl(makeTab(goals))
         ti.setText(subgoals.length.toString)
       }
     } else subgoals.drop(goalData.length).map(_.dispose)
     goals.layout
+    if (goals.getSelection == null)
+      goals.getItems().headOption.map(goals.setSelection)
     goalData.zip(subgoals).foreach(a => updateTab(a._1, a._2.getControl))
   }
 
