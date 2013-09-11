@@ -105,7 +105,8 @@ object CoqEditorHandler {
     (count, mostRecent)
   }
   
-  def doStepBack(editor : CoqEditor, f : Stack[CoqStep] => Int) = {
+  def doStepBack(
+      editor : CoqEditor, f : Stack[CoqStep] => Int, reveal : Boolean = true) = {
     val p = getStepBackPair(editor.steps, f)
     if (p._1 > 0) {
       editor.setUnderway(p._2 match {
@@ -113,7 +114,7 @@ object CoqEditorHandler {
         case Some(x) => x.offset + x.text.length
       })
       editor.setBusy(true)
-      new CoqStepBackJob(editor, p._1).schedule()
+      new CoqStepBackJob(editor, p._1, reveal).schedule()
     }
   }
 }

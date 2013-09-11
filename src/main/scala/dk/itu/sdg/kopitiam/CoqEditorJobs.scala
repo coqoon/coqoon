@@ -57,14 +57,17 @@ class RestartCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
   }
 }
 
-class CoqStepBackJob(editor : CoqEditor, stepCount : Int) extends CoqEditorJob(
-    "Stepping back", new CoqStepBackRunner(editor, stepCount), editor)
-class CoqStepBackRunner(editor : CoqEditor, stepCount : Int)
+class CoqStepBackJob(editor : CoqEditor, stepCount : Int,
+    reveal : Boolean) extends CoqEditorJob("Stepping back",
+        new CoqStepBackRunner(editor, stepCount, reveal), editor)
+class CoqStepBackRunner(editor : CoqEditor, stepCount : Int, reveal : Boolean)
     extends StepRunner[String](editor) {
   override protected def finish = {
     super.finish
-    UIUtils.asyncExec {
-      editor.getViewer.revealRange(editor.completed, 0)
+    if (reveal) {
+      UIUtils.asyncExec {
+        editor.getViewer.revealRange(editor.completed, 0)
+      }
     }
   }
   

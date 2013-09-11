@@ -219,7 +219,7 @@ private class CoqProofReconcilingStrategy(
         /* We can't finish reconciliation until the job is scheduled */
         UIUtils.exec {
           CoqEditorHandler.doStepBack(editor,
-              _.prefixLength(a => (off < (a.offset + a.text.length))))
+              _.prefixLength(a => (off < (a.offset + a.text.length))), false)
         }
     }
   }
