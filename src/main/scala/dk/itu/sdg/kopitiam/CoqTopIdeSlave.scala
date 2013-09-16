@@ -241,10 +241,10 @@ private class CoqTopIdeSlaveImpl(
   
   private def wrapOption[A](a : Option[A], f : A => Elem) : Elem = {
     val wr = a match {
-      case Some(b) => ("some", f(b))
-      case None => ("none", null)
+      case Some(b) => ("some", Seq(f(b)))
+      case None => ("none", Seq())
     }
-    Elem(null, "option", attr("val", wr._1), scala.xml.TopScope, true, wr._2)
+    Elem(null, "option", attr("val", wr._1), scala.xml.TopScope, true, wr._2 : _*)
   }
   
   private def unwrapOption[A](e : Elem, f : Elem => A) = {
