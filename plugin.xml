@@ -386,18 +386,6 @@
             </visibleWhen>
          </command>
       </menuContribution>
-<!--      <menuContribution
-            locationURI="popup:org.eclipse.jdt.ui.PackageExplorer">
-         <command
-               commandId="Kopitiam.translatetosimplejava">
-         </command>
-      </menuContribution>
-      <menuContribution
-            locationURI="popup:org.eclipse.ui.navigator.ProjectExplorer#PopupMenu?after=additions">
-        <command
-        	commandId="Kopitiam.translatetosimplejava">
-       	</command>
-      </menuContribution> -->
    </extension>
    <extension
          point="org.eclipse.ui.newWizards">
@@ -678,6 +666,15 @@
             class="dk.itu.sdg.kopitiam.ExportCoqMakefileHandler"
             commandId="Kopitiam.export_coq_makefile">
       </handler>
+      <handler
+            class="dk.itu.sdg.kopitiam.ToggleCoqFlagHandler"
+            commandId="Kopitiam.toggle_coq_flag">
+         <activeWhen>
+            <reference
+                  definitionId="Kopitiam.activeEditorHasCoq">
+            </reference>
+         </activeWhen>
+      </handler>
    </extension>
    <extension
          point="org.eclipse.core.expressions.definitions">
@@ -702,6 +699,15 @@
                <instanceof
                      value="dk.itu.sdg.kopitiam.javap.JavaEditorState">
                </instanceof>
+            </adapt>
+         </with>
+      </definition>
+      <definition
+            id="Kopitiam.activeEditorHasCoq">
+         <with
+               variable="activeEditor">
+            <adapt
+                  type="dk.itu.sdg.kopitiam.CoqTopContainer">
             </adapt>
          </with>
       </definition>

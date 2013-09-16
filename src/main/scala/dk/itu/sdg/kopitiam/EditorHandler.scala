@@ -42,7 +42,7 @@ trait CoqTopContainer {
   private val lock = new Object
   
   def coqTop : CoqTopIdeSlave_v20120710
-  
+
   private var goals_ : Option[CoqTypes.goals] = None
   def goals = lock synchronized { goals_ }
   def setGoals(g : Option[CoqTypes.goals]) = {
@@ -157,4 +157,44 @@ class InterruptCoqHandler extends EditorHandler {
   
   override def calculateEnabled =
     (getCoqTopContainer != null && getCoqTopContainer.busy)
+}
+
+import org.eclipse.ui.menus.UIElement
+import org.eclipse.ui.commands.IElementUpdater
+
+class ToggleCoqFlagHandler extends EditorHandler with IElementUpdater {
+  import CoqTypes._
+
+  override def execute(ev : ExecutionEvent) = {
+    if (isEnabled()) {
+      val name = ev.getParameter(
+          ManifestIdentifiers.COMMAND_PARAMETER_TOGGLE_COQ_FLAG_NAME).
+              split(" ").toList
+      scheduleJob(new SetCoqOptionJob(name,
+          BoolValue(!states.getOrElse(name, false)), getCoqTopContainer))
+    }
+    null
+  }
+
+  private var states : Map[option_name, Boolean] = Map()
+
+  override def updateElement(
+      element : UIElement, map : java.util.Map[_, _]) = {
+    TryCast[String](map.get(
+        ManifestIdentifiers.COMMAND_PARAMETER_TOGGLE_COQ_FLAG_NAME)) match {
+      case Some(name_) =>
+        val name = name_.split(" ").toList
+        getCoqTopContainer.coqTop.get_options match {
+          case Good(options) =>
+            options.find(a => a._1 == name) match {
+              case Some((_, option_state(_, _, _, BoolValue(v)))) =>
+                states += (name -> v)
+                element.setChecked(v)
+              case _ =>
+            }
+          case _ =>
+        }
+      case _ =>
+    }
+  }
 }
