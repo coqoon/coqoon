@@ -551,6 +551,7 @@ private class OptionalCoqTopIdeSlave_v20120710(
 
   private def check[A](result : value[A]) : value[A] = {
     Option(options.toList).filterNot(_.isEmpty).foreach(base.set_options(_))
+    optionCache = None
     result
   }
 
@@ -567,10 +568,22 @@ private class OptionalCoqTopIdeSlave_v20120710(
   override def mkcases(inductive : String) = base.mkcases(inductive)
   override def evars = base.evars
   override def search(sf : search_flags) = base.search(sf)
-  override def get_options = base.get_options
+
+  var optionCache :
+      Option[CoqTypes.value[List[(option_name, option_state)]]] = None
+
+  override def get_options = optionCache match {
+    case Some(a) => a
+    case None =>
+      val v = base.get_options
+      optionCache = Some(v)
+      v
+  }
   override def set_options(options : List[(option_name, option_value)]) =
       base.set_options(options) match {
-    case a : Good[Unit] => this.options ++= options; a
+    case a : Good[Unit] =>
+      optionCache = None
+      this.options ++= options; a
     case a => a
   }
   override def quit = base.quit
