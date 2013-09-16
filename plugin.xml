@@ -156,6 +156,17 @@
             id="Kopitiam.export_coq_makefile"
             name="Export Coq project makefile command">
       </command>
+      <command
+            categoryId="Kopitiam.category"
+            description="Toggle a Coq flag"
+            id="Kopitiam.toggle_coq_flag"
+            name="Toggle Coq flag command">
+         <commandParameter
+               id="Kopitiam.toggle_coq_flag.name"
+               name="Flag"
+               optional="false">
+         </commandParameter>
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.contexts">

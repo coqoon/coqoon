@@ -56,4 +56,7 @@ object ManifestIdentifiers {
   final val NATURE_COQ = "dk.itu.sdg.kopitiam.CoqNature"
   final val PLUGIN = "dk.itu.sdg.kopitiam"
   final val VIEW_GOAL_VIEWER = "kopitiam.GoalViewer"
+  final val COMMAND_TOGGLE_COQ_FLAG = "Kopitiam.toggle_coq_flag"
+  final val COMMAND_PARAMETER_TOGGLE_COQ_FLAG_NAME =
+    "Kopitiam.toggle_coq_flag.name"
 }

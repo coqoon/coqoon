@@ -218,6 +218,15 @@ class SetCoqOptionJob(name : option_name, value : option_value,
         new SetCoqOptionRunner(name, value, container), container)
 class SetCoqOptionRunner(name : option_name, value : option_value,
     container : CoqTopContainer) extends StepRunner[Unit](container) {
+  override def finish = {
+    super.finish
+    UIUtils.asyncExec {
+      TryService[org.eclipse.ui.commands.ICommandService](
+          UIUtils.getWorkbench).map(_.refreshElements(
+              ManifestIdentifiers.COMMAND_TOGGLE_COQ_FLAG, null))
+    }
+  }
+
   override protected def doOperation(
       monitor : SubMonitor) : CoqTypes.value[Unit] =
     container.coqTop.set_options(List((name, value)))
