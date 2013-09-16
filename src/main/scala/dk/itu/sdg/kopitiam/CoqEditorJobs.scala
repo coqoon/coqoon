@@ -148,11 +148,12 @@ class CoqStepForwardRunner(
         new InitialiseCoqRunner(editor).run(null)
       } catch {
         case t : Throwable =>
+          editor.setUnderway(editor.completed)
           UIUtils.asyncExec {
             UIUtils.Dialog.question("Initialisation failed",
-                "Coq initialisation failed " +
-                "(\"" + t.getMessage.trim + "\").\n\n" +
-                "Open the Coq preferences dialog now?") match {
+                "Coq initialisation failed (\"" +
+                Option(t.getMessage).map(_.trim).orNull +
+                "\").\n\nOpen the Coq preferences dialog now?") match {
               case true =>
                 import org.eclipse.ui.dialogs.PreferencesUtil
                 PreferencesUtil.createPreferenceDialogOn(
