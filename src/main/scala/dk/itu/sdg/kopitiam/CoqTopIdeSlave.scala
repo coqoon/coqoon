@@ -145,6 +145,9 @@ trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
         CoqTypes.Fail[A](ep)
     }
   }
+
+  def optionOverlay() : CoqTopIdeSlave_v20120710 =
+    new OptionalCoqTopIdeSlave_v20120710(this)
 }
 object CoqTopIdeSlave_v20120710 {
   def apply() : Option[CoqTopIdeSlave_v20120710] = apply(Seq.empty)
@@ -152,7 +155,30 @@ object CoqTopIdeSlave_v20120710 {
   def apply(args : Seq[String]) : Option[CoqTopIdeSlave_v20120710] = {
     val ct = new CoqTopIdeSlaveImpl(args)
     ct.about
-    Some(ct)
+    Some(ct.optionOverlay)
+  }
+}
+
+class OptionCache(ct : CoqTopIdeSlave_v20120710) {
+  import CoqTypes._
+
+  var optionCache : Map[option_name, option_state] = Map()
+  ct.get_options match {
+    case Good(options) => options.foreach(a => optionCache = optionCache + a)
+    case _ =>
+  }
+
+  def get(name : option_name) : Option[option_state] = optionCache.get(name)
+  def getValue(name : option_name) : Option[option_value] =
+    get(name).map(_.opt_value)
+  def set(name : option_name, value : option_value) : Unit = {
+    ct.set_options(List((name, value))) match {
+      case Good(_) =>
+        val os = get(name).get
+        optionCache = optionCache + Pair(name, option_state(
+            os.opt_sync, os.opt_depr, os.opt_name, value))
+      case _ =>
+    }
   }
 }
 
@@ -516,3 +542,37 @@ private class ExceptionalCoqTopIdeSlave_v20120710(
 }
 private case class CoqFail(
     ep : Pair[CoqTypes.location, String]) extends Exception
+
+private class OptionalCoqTopIdeSlave_v20120710(
+    base : CoqTopIdeSlave_v20120710) extends CoqTopIdeSlave_v20120710 {
+  import CoqTypes._
+
+  var options : Map[option_name, option_value] = Map()
+
+  private def check[A](result : value[A]) : value[A] = {
+    Option(options.toList).filterNot(_.isEmpty).foreach(base.set_options(_))
+    result
+  }
+
+  override def kill = base.kill
+  override def interrupt = base.interrupt
+
+  override def interp(raw : raw, verbose : verbose, string : String) =
+    check(base.interp(raw, verbose, string))
+  override def rewind(steps : Int) = check(base.rewind(steps))
+  override def goals = base.goals
+  override def hints = base.hints
+  override def status = base.status
+  override def inloadpath(dir : String) = base.inloadpath(dir)
+  override def mkcases(inductive : String) = base.mkcases(inductive)
+  override def evars = base.evars
+  override def search(sf : search_flags) = base.search(sf)
+  override def get_options = base.get_options
+  override def set_options(options : List[(option_name, option_value)]) =
+      base.set_options(options) match {
+    case a : Good[Unit] => this.options ++= options; a
+    case a => a
+  }
+  override def quit = base.quit
+  override def about = base.about
+}
