@@ -210,3 +210,15 @@ abstract class StepForwardRunner[A <: CoqCommand](
     CoqTypes.Good("")
   }
 }
+
+import CoqTypes.{option_name, option_value}
+
+class SetCoqOptionJob(name : option_name, value : option_value,
+    container : CoqTopContainer) extends ContainerJobBase("Set " + name,
+        new SetCoqOptionRunner(name, value, container), container)
+class SetCoqOptionRunner(name : option_name, value : option_value,
+    container : CoqTopContainer) extends StepRunner[Unit](container) {
+  override protected def doOperation(
+      monitor : SubMonitor) : CoqTypes.value[Unit] =
+    container.coqTop.set_options(List((name, value)))
+}
