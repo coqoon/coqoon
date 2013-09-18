@@ -49,6 +49,8 @@ object CoqEditorHandler {
       case CommentStart() if !inString =>
         commentDepth += 1
         i += 2
+      case CommentEnd() if !content && !inString && commentDepth == 1 =>
+        return Some((Substring(doc, offset, i + 2), true))
       case CommentEnd() if !inString && commentDepth > 0 =>
         commentDepth -= 1
         i += 2
@@ -69,7 +71,8 @@ object CoqEditorHandler {
       case WhitespaceRun(ws) =>
         i += ws.length
       case _ =>
-        content = true
+        if (commentDepth == 0)
+          content = true
         i += 1
     }
     None
