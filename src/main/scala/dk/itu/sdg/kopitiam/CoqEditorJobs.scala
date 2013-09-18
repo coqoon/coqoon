@@ -85,8 +85,14 @@ class CoqStepBackRunner(editor : CoqEditor, stepCount : Int, reveal : Boolean)
             editor.steps.pop
           
           if (extra > 0) {
-            // XXX: synthetic steps
-            var redoSteps = editor.steps.take(extra).toList.reverse
+            var i = 0
+            var redoSteps = editor.steps.takeWhile(a => {
+              if (i < extra) {
+                if (!a.synthetic)
+                  i += 1
+                true
+              } else false
+            }).toList.reverse
             for (step <- redoSteps)
               editor.steps.pop
             new CoqStepForwardRunner(
