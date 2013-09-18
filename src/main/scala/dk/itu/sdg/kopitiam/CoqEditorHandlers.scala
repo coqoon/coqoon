@@ -39,7 +39,8 @@ object CoqEditorHandler {
   final val DotRun = """^(\.+)(\s|$)""".r.unanchored
   final val WhitespaceRun = """^(\s+)""".r.unanchored
   
-  def getNextCommand(doc : String, offset : Int = 0) : Option[Substring] = {
+  def getNextCommand(
+      doc : String, offset : Int = 0) : Option[(Substring, Boolean)] = {
     var i = offset
     var commentDepth = 0
     var inString = false
@@ -55,13 +56,13 @@ object CoqEditorHandler {
         inString = !inString
         i += 1
       case FullStop(_) if !inString && commentDepth == 0 =>
-        return Some(Substring(doc, offset, i + 1))
+        return Some((Substring(doc, offset, i + 1), false))
       case Ellipsis(_) if !inString && commentDepth == 0 =>
-        return Some(Substring(doc, offset, i + 3))
+        return Some((Substring(doc, offset, i + 3), false))
       case CurlyBracket(t, _) if !content && !inString && commentDepth == 0 =>
-        return Some(Substring(doc, offset, i + 1))
+        return Some((Substring(doc, offset, i + 1), false))
       case Bullet(_) if !content && !inString && commentDepth == 0 =>
-        return Some(Substring(doc, offset, i + 1))
+        return Some((Substring(doc, offset, i + 1), false))
       case DotRun(dots, end) if !inString && commentDepth == 0 =>
         content = true
         i += dots.length + end.length
@@ -75,7 +76,7 @@ object CoqEditorHandler {
   }
   
   def makeStep(doc : String, offset : Int) : Option[CoqStep] =
-    getNextCommand(doc, offset).map(s => CoqStep(offset, s.toString, false))
+    getNextCommand(doc, offset).map(s => CoqStep(offset, s._1.toString, s._2))
   
   def makeSteps(
       doc : String, from : Int, to : Int) : List[CoqStep] = {
