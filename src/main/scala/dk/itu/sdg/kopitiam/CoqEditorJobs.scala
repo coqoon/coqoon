@@ -120,9 +120,18 @@ class CoqStepForwardRunner(
     editor : CoqEditor,
     steps : List[CoqStep]) extends StepForwardRunner(editor, steps) {
   override protected def finish = {
+    import org.eclipse.core.resources.{IMarker, IResource}
+
     super.finish
     UIUtils.asyncExec {
       editor.getViewer.revealRange(editor.completed, 0)
+      for (
+          f <- editor.file;
+          i <- f.findMarkers(
+              ManifestIdentifiers.MARKER_PROBLEM, false, IResource.DEPTH_ZERO)
+            if i.getAttribute(
+                IMarker.CHAR_END, Int.MaxValue) <= editor.completed)
+        i.delete
     }
   }
   
