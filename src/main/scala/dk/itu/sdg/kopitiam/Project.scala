@@ -355,9 +355,10 @@ object CoqBuilder {
 
   def getLoadPath(p : IProject) : Seq[ICoqLoadPath] = {
     val libraryLocation = getLibraryLocation
-    ICoqModel.forProject(p).getLoadPath :+
-      ExternalLoadPath(libraryLocation.append("theories"), Some("Coq")) :+
-      ExternalLoadPath(libraryLocation.append("plugins"), Some("Coq"))
+    ICoqModel.forProject(p).getLoadPath ++ List(
+        ExternalLoadPath(libraryLocation.append("theories"), Some("Coq")),
+        ExternalLoadPath(libraryLocation.append("plugins"), Some("Coq")),
+        ExternalLoadPath(libraryLocation.append("user-contrib"), None))
   }
   
   def getCorrespondingObject(project : IProject)(s : IPath) : Option[IFile] = {
