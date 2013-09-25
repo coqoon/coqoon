@@ -208,13 +208,13 @@ private class CoqTopIdeSlaveImpl(
     pr.get.stdin.flush()
     /* println("TO   " + n.toString()) */
     var t = new String()
+    var buf = new Array[Char](64)
     @scala.annotation.tailrec def _util : Elem = {
-      val c = pr.get.stdout.read()
-      if (c == -1)
+      val count = pr.get.stdout.read(buf)
+      if (count == -1)
         return null
-      val ch = c.asInstanceOf[Char]
-      t += ch
-      if (ch == '>' && t.endsWith("</value>")) {
+      t ++= buf.toSeq.take(count)
+      if (t.endsWith("</value>")) {
         XML.loadString(t)
       } else _util
     }
