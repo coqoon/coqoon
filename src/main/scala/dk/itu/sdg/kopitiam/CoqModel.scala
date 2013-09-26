@@ -210,9 +210,64 @@ private class CoqProjectImpl(
         Array(res), "Delete Coq project", deleteContent)
   }
   
-  override def getLoadPath : Seq[ICoqLoadPath] = List(
-      new ProjectSourceLoadPath(res.getFolder("src")),
-      new ProjectBinaryLoadPath(res.getFolder("bin")))
+  import CoqProjectFile._
+  import java.io.ByteArrayInputStream
+  private def setProjectConfiguration(
+      cfg : CoqProjectFile, monitor : IProgressMonitor) = {
+    val f = res.getFile("_CoqProject")
+    if (!cfg.isEmpty) {
+      val contents = new ByteArrayInputStream(
+        CoqProjectFile.toString(cfg).getBytes)
+      if (f.exists) {
+        f.setContents(contents, IResource.NONE, monitor)
+      } else f.create(contents, IResource.DERIVED, monitor)
+    } else if (f.exists) {
+      f.delete(IResource.KEEP_HISTORY, monitor)
+    }
+  }
+  private def getProjectConfiguration : CoqProjectFile = {
+    val f = res.getFile("_CoqProject")
+    if (f.exists) {
+      CoqProjectFile.fromString(
+          FunctionIterator.lines(f.getContents).mkString("\n"))
+    } else Seq()
+  }
+
+  override def getLoadPath : Seq[ICoqLoadPath] = {
+    var loadPathMap : Map[String, String] = Map()
+    def _util(seq : Seq[CoqProjectEntry]) : Seq[ICoqLoadPath] = seq match {
+      /* XXX: also parse the -R options later? */
+      case (q @ VariableEntry(name, value)) :: tail
+          if name.startsWith("KOPITIAM_") =>
+        EclipseConsole.err.println(q.toString)
+        CoqProjectFile.shellTokenise(value) match {
+          case "DefaultOutput" :: bindir :: Nil =>
+            new ProjectBinaryLoadPath(res.getFolder(bindir)) +: _util(tail)
+          case "ProjectBinaryLoadPath" :: bindir :: Nil =>
+            new ProjectBinaryLoadPath(res.getFolder(bindir)) +: _util(tail)
+          case "ProjectSourceLoadPath" :: srcdir :: Nil =>
+            new ProjectSourceLoadPath(res.getFolder(srcdir)) +: _util(tail)
+          case "ProjectSourceLoadPath" :: srcdir :: bindir :: Nil =>
+            new ProjectSourceLoadPath(res.getFolder(srcdir),
+                Some(new ProjectBinaryLoadPath(
+                    res.getFolder(bindir)))) +: _util(tail)
+          case "ExternalLoadPath" :: physical :: Nil =>
+            new ExternalLoadPath(new Path(physical), None) +: _util(tail)
+          case "ExternalLoadPath" :: physical :: logical :: Nil =>
+            new ExternalLoadPath(
+                new Path(physical), Some(logical)) +: _util(tail)
+          case _ => _util(tail)
+        }
+      case _ :: tail => _util(tail)
+      case Nil => Seq.empty
+    }
+    getProjectConfiguration match {
+      case Nil => List(
+          new ProjectSourceLoadPath(res.getFolder("src")),
+          new ProjectBinaryLoadPath(res.getFolder("bin")))
+      case pc => _util(pc)
+    }
+  }
   override def setLoadPath(
       lp : Seq[ICoqLoadPath], monitor : IProgressMonitor) = ()
   
