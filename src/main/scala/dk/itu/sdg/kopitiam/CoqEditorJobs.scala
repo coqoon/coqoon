@@ -147,9 +147,13 @@ class CoqStepForwardRunner(
   
   override protected def onFail(
       step : CoqStep, result : CoqTypes.Fail[String]) = {
-    editor.file.foreach(
-        f => CreateErrorMarkerJob(f, step, result.value).schedule)
-    editor.setUnderway(editor.completed)
+    /* We might have failed because the user stopped Coq. If that's the case,
+     * don't do anything */
+    if (editor.testFlag(CoqEditor.FLAG_INITIALISED)) {
+      editor.file.foreach(
+          f => CreateErrorMarkerJob(f, step, result.value).schedule)
+      editor.setUnderway(editor.completed)
+    }
   }
   
   override protected def initialise = {
