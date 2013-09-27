@@ -239,7 +239,6 @@ private class CoqProjectImpl(
       /* XXX: also parse the -R options later? */
       case (q @ VariableEntry(name, value)) :: tail
           if name.startsWith("KOPITIAM_") =>
-        EclipseConsole.err.println(q.toString)
         CoqProjectFile.shellTokenise(value) match {
           case "DefaultOutput" :: bindir :: Nil =>
             new ProjectBinaryLoadPath(res.getFolder(bindir)) +: _util(tail)

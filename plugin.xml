@@ -46,7 +46,6 @@
             sequence="M1+M3+A">
          <parameter
                id="Kopitiam.toggle_coq_flag.name"
-               name="Kopitiam.toggle_coq_flag.name"
                value="Printing All">
          </parameter>
       </key>
