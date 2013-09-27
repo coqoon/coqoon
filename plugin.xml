@@ -49,6 +49,16 @@
                value="Printing All">
          </parameter>
       </key>
+      <key
+            commandId="Kopitiam.toggle_coq_flag"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+I">
+         <parameter
+               id="Kopitiam.toggle_coq_flag.name"
+               value="Printing Implicit">
+         </parameter>
+      </key>
    </extension>
    <extension
          point="org.eclipse.ui.editors">
