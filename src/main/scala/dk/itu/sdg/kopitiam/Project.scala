@@ -506,7 +506,8 @@ object CoqBuilder {
         case _ =>
       }
       sb ++= "override COQFLAGS += -R \"" +
-          makeLocationRelative(i.path).getOrElse(i.path) + "\" \"\"\n"
+          makeLocationRelative(i.path).getOrElse(i.path) + "\" \"" +
+          i.coqdir.getOrElse("") + "\"\n"
     }
     val path = cp.getDefaultOutputLocation.getLocation
     sb ++= "override COQFLAGS += -R \"" +
