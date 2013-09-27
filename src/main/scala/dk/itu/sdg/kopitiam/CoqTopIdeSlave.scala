@@ -224,8 +224,9 @@ private class CoqTopIdeSlaveImpl(
     x
   }
   
-  private def send[A](n : Elem, f : Elem => A) = {
-    unwrapValue(sendRaw(n), f)
+  private def send[A](n : Elem, f : Elem => A) = Option(sendRaw(n)) match {
+    case Some(result) => unwrapValue(result, f)
+    case None => CoqTypes.Fail[A]((None, "Unexpected end-of-stream"))
   }
   
   private def childElements(e : Elem) : Seq[Elem] = {
