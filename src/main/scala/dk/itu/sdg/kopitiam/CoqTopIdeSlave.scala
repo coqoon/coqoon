@@ -138,7 +138,7 @@ trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
       case _ => None
     }
     try {
-      CoqTypes.Good(f(new ExceptionalCoqTopIdeSlave_v20120710(this)))
+      CoqTypes.Good(f(transactionOverlay))
     } catch {
       case CoqFail(ep) =>
         interp(true, false, "BackTo " + status.getOrElse(1) + ".")
@@ -146,8 +146,18 @@ trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
     }
   }
 
+  def transactionOverlay() : CoqTopIdeSlave_v20120710 =
+    new ExceptionalCoqTopIdeSlave_v20120710(this)
   def optionOverlay() : CoqTopIdeSlave_v20120710 =
     new OptionalCoqTopIdeSlave_v20120710(this)
+
+  def getOption(name : option_name) : Option[option_state] =
+      get_options match {
+    case Good(options) => options.find(a => a._1 == name).map(_._2)
+    case _ => None
+  }
+  def getOptionValue(name : option_name) : Option[option_value] =
+    getOption(name).map(_.opt_value)
 }
 object CoqTopIdeSlave_v20120710 {
   def apply() : Option[CoqTopIdeSlave_v20120710] = apply(Seq.empty)
