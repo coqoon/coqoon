@@ -39,6 +39,17 @@
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="Ctrl+C">
       </key>
+      <key
+            commandId="Kopitiam.toggle_coq_flag"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+A">
+         <parameter
+               id="Kopitiam.toggle_coq_flag.name"
+               name="Kopitiam.toggle_coq_flag.name"
+               value="Printing All">
+         </parameter>
+      </key>
    </extension>
    <extension
          point="org.eclipse.ui.editors">
