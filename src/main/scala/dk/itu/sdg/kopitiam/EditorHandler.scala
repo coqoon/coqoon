@@ -184,6 +184,12 @@ class ToggleCoqFlagHandler extends EditorHandler with IElementUpdater {
     null
   }
 
+  /* The states of the UI elements associated with this handler must be updated
+   * whenever the active editor changes */
+  override protected def editorChanged(o : IEditorPart, n : IEditorPart) =
+    TryAdapt[CoqTopContainer](n).foreach(_ => UIUtils.refreshElements(
+        ManifestIdentifiers.COMMAND_TOGGLE_COQ_FLAG))
+
   override def updateElement(
       element : UIElement, map : java.util.Map[_, _]) = {
     TryCast[String](map.get(
