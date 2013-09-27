@@ -23,10 +23,15 @@ abstract class EditorHandler extends AbstractHandler {
       case _ => UIUtils.getWorkbench.getActiveWorkbenchWindow.
           getActivePage.getActiveEditor
     }
+    val oldEditor = editorV
     editorV = TryCast[IEditorPart](activeEditor).orNull
+    if (oldEditor != editorV)
+      editorChanged(oldEditor, editorV)
     setBaseEnabled(editorV != null && calculateEnabled)
   }
-  
+
+  protected def editorChanged(o : IEditorPart, n : IEditorPart) = ()
+
   protected def getCoqTopContainer = TryAdapt[CoqTopContainer](editor).orNull
   
   import org.eclipse.core.runtime.jobs.Job
