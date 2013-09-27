@@ -170,13 +170,14 @@ class ToggleCoqFlagHandler extends EditorHandler with IElementUpdater {
       val name = ev.getParameter(
           ManifestIdentifiers.COMMAND_PARAMETER_TOGGLE_COQ_FLAG_NAME).
               split(" ").toList
-      scheduleJob(new SetCoqOptionJob(name,
-          BoolValue(!states.getOrElse(name, false)), getCoqTopContainer))
+      getCoqTopContainer.coqTop.getOptionValue(name) match {
+        case Some(BoolValue(v)) => scheduleJob(
+            new SetCoqOptionJob(name, BoolValue(!v), getCoqTopContainer))
+        case _ =>
+      }
     }
     null
   }
-
-  private var states : Map[option_name, Boolean] = Map()
 
   override def updateElement(
       element : UIElement, map : java.util.Map[_, _]) = {
@@ -184,14 +185,8 @@ class ToggleCoqFlagHandler extends EditorHandler with IElementUpdater {
         ManifestIdentifiers.COMMAND_PARAMETER_TOGGLE_COQ_FLAG_NAME)) match {
       case Some(name_) =>
         val name = name_.split(" ").toList
-        getCoqTopContainer.coqTop.get_options match {
-          case Good(options) =>
-            options.find(a => a._1 == name) match {
-              case Some((_, option_state(_, _, _, BoolValue(v)))) =>
-                states += (name -> v)
-                element.setChecked(v)
-              case _ =>
-            }
+        getCoqTopContainer.coqTop.getOptionValue(name) match {
+          case Some(BoolValue(v)) => element.setChecked(v)
           case _ =>
         }
       case _ =>
