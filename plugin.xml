@@ -128,8 +128,8 @@
       </command>
       <command
             categoryId="Kopitiam.category"
-            id="Kopitiam.restart_coq"
-            name="Restart Coq command">
+            id="Kopitiam.stop_coq"
+            name="Stop Coq command">
       </command>
       <command
             categoryId="Kopitiam.category"
@@ -221,11 +221,11 @@
                   tooltip="Step All">
             </command>
             <command
-                  commandId="Kopitiam.restart_coq"
+                  commandId="Kopitiam.stop_coq"
                   icon="icons/dead.gif"
-                  label="Restart Coq"
+                  label="Stop Coq"
                   style="push"
-                  tooltip="Restart Coq">
+                  tooltip="Stop Coq">
             </command>
             <command
                   commandId="Kopitiam.interrupt"
@@ -304,11 +304,11 @@
                   tooltip="Step All">
             </command>
             <command
-                  commandId="Kopitiam.restart_coq"
+                  commandId="Kopitiam.stop_coq"
                   icon="icons/dead.gif"
-                  label="Restart Coq"
+                  label="Stop Coq"
                   style="push"
-                  tooltip="Restart Coq">
+                  tooltip="Stop Coq">
             </command>
             <command
                   commandId="Kopitiam.interrupt"
@@ -707,8 +707,8 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.sdg.kopitiam.RestartCoqHandler"
-            commandId="Kopitiam.restart_coq">
+            class="dk.itu.sdg.kopitiam.StopCoqHandler"
+            commandId="Kopitiam.stop_coq">
          <activeWhen>
             <reference
                   definitionId="Kopitiam.activeEditorIsCoq">

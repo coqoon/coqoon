@@ -198,12 +198,15 @@ class CoqRetractAllHandler extends CoqEditorHandler {
     super.calculateEnabled && (editor.steps.length > 0)
 }
 
-class RestartCoqHandler extends CoqEditorHandler {
+class StopCoqHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled())
-      new RestartCoqJob(editor).schedule()
+      new StopCoqRunner(editor).run(null)
     null
   }
+
+  override def calculateEnabled = (getCoqTopContainer != null &&
+      getCoqTopContainer.testFlag(CoqEditor.FLAG_INITIALISED))
 }
 
 class CompileCoqHandler extends CoqEditorHandler {

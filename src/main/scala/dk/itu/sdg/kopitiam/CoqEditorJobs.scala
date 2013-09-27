@@ -36,11 +36,9 @@ class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
 abstract class CoqEditorJob(name : String, runner : JobRunner[_],
     editor : CoqEditor) extends ContainerJobBase(name, runner, editor)
 
-class RestartCoqJob(editor : CoqEditor) extends CoqEditorJob(
-    "Restarting Coq", new RestartCoqRunner(editor), editor)
-class RestartCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
+class StopCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
   override protected def doOperation(monitor : SubMonitor) = {
-    monitor.beginTask("Restarting Coq", 3)
+    monitor.beginTask("Stopping Coq", 2)
     
     monitor.subTask("Clearing state")
     editor.steps.synchronized { editor.steps.clear }
@@ -50,10 +48,8 @@ class RestartCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
 
     monitor.subTask("Stopping Coq")
     editor.coqTop.kill
+    editor.clearFlag(CoqEditor.FLAG_INITIALISED)
     monitor.worked(1)
-
-    monitor.subTask("Starting Coq")
-    new InitialiseCoqRunner(editor).run(monitor.newChild(1))
   }
 }
 
