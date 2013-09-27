@@ -221,9 +221,7 @@ class SetCoqOptionRunner(name : option_name, value : option_value,
   override def finish = {
     super.finish
     UIUtils.asyncExec {
-      TryService[org.eclipse.ui.commands.ICommandService](
-          UIUtils.getWorkbench).map(_.refreshElements(
-              ManifestIdentifiers.COMMAND_TOGGLE_COQ_FLAG, null))
+      UIUtils.refreshElements(ManifestIdentifiers.COMMAND_TOGGLE_COQ_FLAG)
     }
   }
 

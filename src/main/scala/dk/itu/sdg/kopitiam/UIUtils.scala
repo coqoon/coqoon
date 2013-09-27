@@ -61,6 +61,11 @@ object UIUtils {
       apply(org.eclipse.jface.preference.PreferenceConverter.getColor(
           Activator.getDefault.getPreferenceStore, key))
   }
+
+  import org.eclipse.ui.commands.ICommandService
+  def refreshElements(commandIdentifier : String) : Unit =
+    TryService[ICommandService](UIUtils.getWorkbench).foreach(
+        _.refreshElements(commandIdentifier, null))
 }
 
 object TryAdapt {
