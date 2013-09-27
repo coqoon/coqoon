@@ -1,3 +1,11 @@
+* Kopitiam 0.3.6 [27th September 2013]
+** Add keyboard shortcuts to the display control menu
+** Add a handler for stopping the running Coq instance
+** Add support for loading configuration from the _CoqProject file
+** Fix the broken editor synchronisation in the display control menu
+** Fix some bugs in the Coq project Makefile generation process
+** Remove the handler for restarting the running Coq instance
+** Improve the I/O performance by using a buffer when reading from coqtop
 * Kopitiam 0.3.5 [23rd September 2013]
 ** Add support for stepping over single comment blocks
 ** Fix a load path-related dependency resolution problem in the Coq builder
