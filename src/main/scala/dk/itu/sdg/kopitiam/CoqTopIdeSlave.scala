@@ -196,6 +196,8 @@ private class CoqTopIdeSlaveImpl(
   
   override def interrupt = { pr.foreach(_.interrupt) }
   
+  private var buf = new Array[Char](32768)
+
   import scala.xml.{Attribute, Elem, Node, Null, Text, XML}
   private def sendRaw(n : Elem) : Elem = synchronized {
     if (pr == None) {
@@ -208,7 +210,6 @@ private class CoqTopIdeSlaveImpl(
     pr.get.stdin.flush()
     /* println("TO   " + n.toString()) */
     var t = new String()
-    var buf = new Array[Char](64)
     @scala.annotation.tailrec def _util : Elem = {
       val count = pr.get.stdout.read(buf)
       if (count == -1)
