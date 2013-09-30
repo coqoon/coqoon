@@ -97,13 +97,14 @@ trait CoqTopEditorContainer extends CoqTopContainer {
   import org.eclipse.jface.text.source.IAnnotationModel
   protected def doConnectedToAnnotationModel(f : IAnnotationModel => Unit) = {
     val doc = document
-    val model =
-      editor.getDocumentProvider.getAnnotationModel(editor.getEditorInput)
-    model.connect(doc)
-    try {
-      f(model)
-    } finally model.disconnect(doc)
-    invalidate()
+    Option(editor.getDocumentProvider.getAnnotationModel(
+        editor.getEditorInput)).foreach(model => {
+      model.connect(doc)
+      try {
+        f(model)
+      } finally model.disconnect(doc)
+      invalidate()
+    })
   }
   
   protected def invalidate()

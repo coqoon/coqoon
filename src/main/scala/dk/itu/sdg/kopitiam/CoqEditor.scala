@@ -68,7 +68,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
   import org.eclipse.ui.views.contentoutline.{ContentOutlinePage, IContentOutlinePage}
   import org.eclipse.jface.text.source.projection.{ProjectionAnnotation, ProjectionAnnotationModel}
 
-  var annotationModel : ProjectionAnnotationModel = null
+  var annotationModel : Option[ProjectionAnnotationModel] = None
 
   override protected def initializeEditor () : Unit = {
     //Console.println("initializeEditor was called")
@@ -94,7 +94,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     //turn projection mode on
     projViewer.doOperation(ProjectionViewer.TOGGLE)
 
-    annotationModel = projViewer.getProjectionAnnotationModel()
+    annotationModel = Option(projViewer.getProjectionAnnotationModel)
 
     val doc = this.getDocumentProvider.getDocument(getEditorInput)
     val outline = CoqDocumentProvider.getOutline(doc)
@@ -154,7 +154,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     val doc = this.getDocumentProvider.getDocument(input)
     val outline = CoqDocumentProvider.getOutline(doc)
     outline map (_.root) foreach {root =>
-      if (annotationModel != null) this.updateFolding(root, doc)
+      updateFolding(root, doc)
     }
   }
 
@@ -171,7 +171,8 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     var newAnnotations = new java.util.HashMap[Any, Any]
 
     for ((pos, annot) <- annotations) newAnnotations.put(annot, pos)
-    annotationModel.modifyAnnotations(oldAnnotations, newAnnotations, null)
+    annotationModel.foreach(
+      am => am.modifyAnnotations(oldAnnotations, newAnnotations, null))
     oldAnnotations = annotations.map(_._2).toArray
     //Console.println("Updated folding " + annotations.toList)
   }
