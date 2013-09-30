@@ -179,6 +179,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
     
     monitor.beginTask("Compiling", done.size)
     BuildManager.buildLoop(done.map(new BuildTaskImpl(_)))
+
+    /* Remove any unused output directories */
+    cleanProject(ICoqModel.forProject(getProject))
+
     Array()
   }
   
@@ -308,7 +312,26 @@ object CoqBuilder {
   private val CompilationError =
     """(?s)File "(.*)", line (\d+), characters (\d+)-(\d+):(.*)$""".
         r.unanchored
-        
+
+  private def cleanProject(project : ICoqProject) : Unit = {
+    val i = (for (i <- project.getLoadPath;
+                 j <- TryCast[ProjectSourceLoadPath](i);
+                 k <- j.output;
+                 l <- project.getCorrespondingResource;
+                 m <- Option(
+                     l.getWorkspace.getRoot.getContainerForLocation(k.path)))
+      yield m) :+ project.getDefaultOutputLocation
+    i.foreach(cleanHierarchy)
+  }
+
+  private def cleanHierarchy(dir : IContainer) : Unit = {
+    for (i <- dir.members;
+         j <- TryCast[IContainer](i))
+      cleanHierarchy(j)
+    if (dir.members().length == 0)
+      dir.delete(IResource.NONE, null)
+  }
+
   private def sentences(content : String) : Seq[CoqStep] =
     CoqEditorHandler.makeSteps(stripComments(content), 0, content.length)
   private def stripComments(doc : String) : String = {
