@@ -153,11 +153,6 @@
       </command>
       <command
             categoryId="Kopitiam.category"
-            id="Kopitiam.compile_coq"
-            name="Compile Coq">
-      </command>
-      <command
-            categoryId="Kopitiam.category"
             id="Kopitiam.interrupt"
             name="Interrupt Coq command">
       </command>
@@ -254,13 +249,6 @@
                   style="push"
                   tooltip="Interrupt Coq">
             </command>
-            <command
-                  commandId="Kopitiam.compile_coq"
-                  icon="icons/compile.gif"
-                  label="Compile"
-                  style="push"
-                  tooltip="Compile">
-            </command>
          </toolbar>
       </menuContribution>
       <menuContribution
@@ -336,13 +324,6 @@
                   label="Interrupt Coq"
                   style="push"
                   tooltip="Interrupt Coq">
-            </command>
-            <command
-                  commandId="Kopitiam.compile_coq"
-                  icon="icons/compile.gif"
-                  label="Compile"
-                  style="push"
-                  tooltip="Compile">
             </command>
             <separator
                   name="Kopitiam.coqMenu.separator1"
@@ -729,15 +710,6 @@
       <handler
             class="dk.itu.sdg.kopitiam.StopCoqHandler"
             commandId="Kopitiam.stop_coq">
-         <activeWhen>
-            <reference
-                  definitionId="Kopitiam.activeEditorIsCoq">
-            </reference>
-         </activeWhen>
-      </handler>
-      <handler
-            class="dk.itu.sdg.kopitiam.CompileCoqHandler"
-            commandId="Kopitiam.compile_coq">
          <activeWhen>
             <reference
                   definitionId="Kopitiam.activeEditorIsCoq">

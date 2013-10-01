@@ -208,12 +208,3 @@ class StopCoqHandler extends CoqEditorHandler {
   override def calculateEnabled = (getCoqTopContainer != null &&
       getCoqTopContainer.testFlag(CoqEditor.FLAG_INITIALISED))
 }
-
-class CompileCoqHandler extends CoqEditorHandler {
-  override def execute(ev : ExecutionEvent) = {
-    import org.eclipse.ui.IFileEditorInput
-    if (isEnabled())
-      editor.file.foreach(f => new CompileCoqJob(f).schedule())
-    null
-  }
-}
