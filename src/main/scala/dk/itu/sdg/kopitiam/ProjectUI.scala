@@ -101,7 +101,7 @@ private class LoadPathContentProvider extends ITreeContentProvider {
     viewer.refresh
   
   override def getElements(input : Any) = input match {
-    case a : ICoqProject => a.getLoadPath.toArray
+    case a : ICoqProject => a.getLoadPathProviders.toArray
     case _ => Array()
   }
   
@@ -111,7 +111,8 @@ private class LoadPathContentProvider extends ITreeContentProvider {
   }
   
   override def getParent(child : Any) = null
-  override def hasChildren(parent : Any) = true
+  override def hasChildren(parent : Any) =
+    (TryCast[ICoqLoadPathProvider](parent) != None)
 }
 
 import org.eclipse.swt.SWT
