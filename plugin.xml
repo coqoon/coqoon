@@ -43,6 +43,56 @@
             commandId="Kopitiam.toggle_coq_flag"
             contextId="Kopitiam.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+I">
+         <parameter
+               id="Kopitiam.toggle_coq_flag.name"
+               value="Printing Implicit">
+         </parameter>
+      </key>
+      <key
+            commandId="Kopitiam.toggle_coq_flag"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+C">
+         <parameter
+               id="Kopitiam.toggle_coq_flag.name"
+               value="Printing Coercions">
+         </parameter>
+      </key>
+      <key
+            commandId="Kopitiam.toggle_coq_flag"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+M">
+         <parameter
+               id="Kopitiam.toggle_coq_flag.name"
+               value="Printing Matching">
+         </parameter>
+      </key>
+      <key
+            commandId="Kopitiam.toggle_coq_flag"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+S">
+         <parameter
+               id="Kopitiam.toggle_coq_flag.name"
+               value="Printing Synth">
+         </parameter>
+      </key>
+      <key
+            commandId="Kopitiam.toggle_coq_flag"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+N">
+         <parameter
+               id="Kopitiam.toggle_coq_flag.name"
+               value="Printing Notations">
+         </parameter>
+      </key>
+      <key
+            commandId="Kopitiam.toggle_coq_flag"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+A">
          <parameter
                id="Kopitiam.toggle_coq_flag.name"
@@ -53,10 +103,30 @@
             commandId="Kopitiam.toggle_coq_flag"
             contextId="Kopitiam.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="M1+M3+I">
+            sequence="M1+M3+R">
          <parameter
                id="Kopitiam.toggle_coq_flag.name"
-               value="Printing Implicit">
+               value="Printing Records">
+         </parameter>
+      </key>
+      <key
+            commandId="Kopitiam.toggle_coq_flag"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+E">
+         <parameter
+               id="Kopitiam.toggle_coq_flag.name"
+               value="Printing Existential Instances">
+         </parameter>
+      </key>
+      <key
+            commandId="Kopitiam.toggle_coq_flag"
+            contextId="Kopitiam.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+U">
+         <parameter
+               id="Kopitiam.toggle_coq_flag.name"
+               value="Printing Universes">
          </parameter>
       </key>
    </extension>
