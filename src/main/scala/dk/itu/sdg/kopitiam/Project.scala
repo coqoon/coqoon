@@ -316,11 +316,8 @@ object CoqBuilder {
   private def cleanProject(project : ICoqProject) : Unit = {
     val i = (for (i <- project.getLoadPath;
                  j <- TryCast[ProjectSourceLoadPath](i);
-                 k <- j.output;
-                 l <- project.getCorrespondingResource;
-                 m <- Option(
-                     l.getWorkspace.getRoot.getContainerForLocation(k.path)))
-      yield m) :+ project.getDefaultOutputLocation
+                 k <- j.output)
+      yield k) :+ project.getDefaultOutputLocation
     i.foreach(cleanHierarchy)
   }
 
@@ -389,7 +386,7 @@ object CoqBuilder {
       case ProjectSourceLoadPath(src, bin) if src.getLocation.isPrefixOf(s) =>
         val p = s.removeFirstSegments(src.getLocation.segmentCount).
           removeFileExtension.addFileExtension("vo")
-        val outputFolder = bin.map(_.folder).getOrElse(
+        val outputFolder = bin.getOrElse(
           ICoqModel.forProject(project).getDefaultOutputLocation)
         return Some(outputFolder.getFile(p))
       case _ =>
@@ -523,7 +520,7 @@ object CoqBuilder {
     for (i <- cp.getLoadPath) {
       i match {
         case ProjectSourceLoadPath(src, bin_) =>
-          val bin = bin_.map(_.folder).getOrElse(cp.getDefaultOutputLocation)
+          val bin = bin_.getOrElse(cp.getDefaultOutputLocation)
           sb ++= bin.getProjectRelativePath + "/%.vo: " +
               src.getProjectRelativePath + "/%.v\n\t$(_COQCMD)\n"
         case _ =>

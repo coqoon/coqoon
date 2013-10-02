@@ -119,7 +119,7 @@ object ICoqLoadPath {
 }
 
 case class ProjectSourceLoadPath(
-    val folder : IFolder, val output : Option[ProjectBinaryLoadPath] = None)
+    val folder : IFolder, val output : Option[IFolder] = None)
     extends ICoqLoadPath {
   override def path = folder.getLocation
   override def coqdir = None
@@ -248,8 +248,7 @@ private class CoqProjectImpl(
             new ProjectSourceLoadPath(res.getFolder(srcdir)) +: _util(tail)
           case "ProjectSourceLoadPath" :: srcdir :: bindir :: Nil =>
             new ProjectSourceLoadPath(res.getFolder(srcdir),
-                Some(new ProjectBinaryLoadPath(
-                    res.getFolder(bindir)))) +: _util(tail)
+                Option(res.getFolder(bindir))) +: _util(tail)
           case "ExternalLoadPath" :: physical :: Nil =>
             new ExternalLoadPath(new Path(physical), None) +: _util(tail)
           case "ExternalLoadPath" :: physical :: logical :: Nil =>
