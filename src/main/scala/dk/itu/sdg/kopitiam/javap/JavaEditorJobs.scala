@@ -16,8 +16,8 @@ class JavaProofInitialisationRunner(
     
     jes.coqTop.transaction[Unit](ct => {
       monitor.subTask("Performing custom Coq initialisation")
-      Activator.getDefault.getChargeLoadPath.foreach(
-          p => ct.interp(false, false, p.asCommand))
+      Activator.getDefault.getChargeLoadPath.toSeq.flatMap(
+          _.getLoadPath).foreach(p => ct.interp(false, false, p.asCommand))
 
       import org.eclipse.core.resources.IResource
 

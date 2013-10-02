@@ -8,8 +8,8 @@ class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
     
     editor.coqTop.transaction[Unit](ct => {
       monitor.subTask("Adding global loadpath entries")
-      Activator.getDefault.getChargeLoadPath.foreach(
-          p => ct.interp(false, false, p.asCommand))
+      Activator.getDefault.getChargeLoadPath.toSeq.flatMap(
+          _.getLoadPath).foreach(p => ct.interp(false, false, p.asCommand))
       monitor.worked(1)
 
       monitor.subTask("Adding project loadpath entries")

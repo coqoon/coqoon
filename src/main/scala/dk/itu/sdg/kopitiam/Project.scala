@@ -23,7 +23,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   override protected def getRule(
       type_ : Int, args : JMap[String, String]) = getProject
   
-  def loadPath = getLoadPath(getProject)
+  def loadPathProviders = getLoadPathProviders(getProject)
       
   private var deps : Option[DependencyTracker] = None
   
@@ -49,8 +49,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   private def getCorrespondingObject(s : IPath) =
     CoqBuilder.getCorrespondingObject(getProject)(s)
   
-  import ICoqLoadPath._
-  private var completeLoadPath : Seq[LoadPathEntry] = Seq()
+  private var completeLoadPath : Seq[(Seq[String], java.io.File)] = Seq()
   private var possibleObjects : Set[IPath] = Set()
   
   private def buildFiles(files : Set[IFile],
@@ -127,7 +126,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
         i => dt.setDependencies(i.getLocation, generateDeps(i)))
     
     /* Expand the load path */
-    completeLoadPath = loadPath.flatMap(ICoqLoadPath.expand)
+    completeLoadPath =
+      loadPathProviders.flatMap(_.getLoadPath).flatMap(_.expand)
     
     possibleObjects = done.flatMap(getCorrespondingObject).map(_.getLocation)
     
@@ -313,13 +313,12 @@ object CoqBuilder {
     """(?s)File "(.*)", line (\d+), characters (\d+)-(\d+):(.*)$""".
         r.unanchored
 
-  private def cleanProject(project : ICoqProject) : Unit = {
-    val i = (for (i <- project.getLoadPath;
-                 j <- TryCast[ProjectSourceLoadPath](i);
-                 k <- j.output)
-      yield k) :+ project.getDefaultOutputLocation
-    i.foreach(cleanHierarchy)
-  }
+  private def cleanProject(project : ICoqProject) : Unit =
+    for (i <- project.getLoadPathProviders) i match {
+      case SourceLoadPath(_, Some(output)) => cleanHierarchy(output)
+      case DefaultOutputLoadPath(output) => cleanHierarchy(output)
+      case _ =>
+    }
 
   private def cleanHierarchy(dir : IContainer) : Unit = {
     for (i <- dir.members;
@@ -373,17 +372,17 @@ object CoqBuilder {
   def derivedFilter[A <: IResource](der : Boolean)(r : A) : Option[A] =
     Option(r).filter(_.isDerived == der)
 
-  def getLoadPath(p : IProject) : Seq[ICoqLoadPath] = {
+  def getLoadPathProviders(p : IProject) : Seq[ICoqLoadPathProvider] = {
     val libraryLocation = getLibraryLocation
-    ICoqModel.forProject(p).getLoadPath ++ List(
+    ICoqModel.forProject(p).getLoadPathProviders ++ List(
         ExternalLoadPath(libraryLocation.append("theories"), Some("Coq")),
         ExternalLoadPath(libraryLocation.append("plugins"), Some("Coq")),
         ExternalLoadPath(libraryLocation.append("user-contrib"), None))
   }
   
   def getCorrespondingObject(project : IProject)(s : IPath) : Option[IFile] = {
-    for (i <- getLoadPath(project)) i match {
-      case ProjectSourceLoadPath(src, bin) if src.getLocation.isPrefixOf(s) =>
+    for (i <- getLoadPathProviders(project)) i match {
+      case SourceLoadPath(src, bin) if src.getLocation.isPrefixOf(s) =>
         val p = s.removeFirstSegments(src.getLocation.segmentCount).
           removeFileExtension.addFileExtension("vo")
         val outputFolder = bin.getOrElse(
@@ -419,8 +418,8 @@ object CoqBuilder {
   
   def generateMakefile(project : IProject) : String = {
     val cp = ICoqModel.forProject(project)
-    val loadPath = getLoadPath(project)
-    val completeLoadPath = loadPath.flatMap(ICoqLoadPath.expand)
+    val loadPath = getLoadPathProviders(project)
+    val completeLoadPath = loadPath.flatMap(_.getLoadPath).flatMap(_.expand)
     def getCorrespondingObject(s : IPath) =
       CoqBuilder.getCorrespondingObject(project)(s)
     
@@ -517,21 +516,19 @@ object CoqBuilder {
         """mkdir -p "`dirname "$@"`" && coqc $(COQFLAGS) "$<" && mv "$<o" "$@" """ +
         "\nCOQFLAGS = -noglob\n\n"
     
-    for (i <- cp.getLoadPath) {
+    for (i <- cp.getLoadPathProviders) {
       i match {
-        case ProjectSourceLoadPath(src, bin_) =>
+        case SourceLoadPath(src, bin_) =>
           val bin = bin_.getOrElse(cp.getDefaultOutputLocation)
           sb ++= bin.getProjectRelativePath + "/%.vo: " +
               src.getProjectRelativePath + "/%.v\n\t$(_COQCMD)\n"
         case _ =>
       }
-      sb ++= "override COQFLAGS += -R \"" +
-          makeLocationRelative(i.path).getOrElse(i.path) + "\" \"" +
-          i.coqdir.getOrElse("") + "\"\n"
+      for (j <- i.getLoadPath)
+        sb ++= "override COQFLAGS += -R \"" +
+            makeLocationRelative(j.path).getOrElse(j.path) + "\" \"" +
+            j.coqdir.getOrElse("") + "\"\n"
     }
-    val path = cp.getDefaultOutputLocation.getLocation
-    sb ++= "override COQFLAGS += -R \"" +
-        makeLocationRelative(path).getOrElse(path) + "\" \"\"\n\n"
     
     sb ++= "OBJECTS = " + allFiles.flatMap(
         a => getCorrespondingObject(a.getLocation).map(_.getProjectRelativePath)).

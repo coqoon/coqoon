@@ -106,7 +106,7 @@ private class LoadPathContentProvider extends ITreeContentProvider {
   }
   
   override def getChildren(parent : Any) = parent match {
-    case a : ICoqLoadPath => Array((a.coqdir, a.path))
+    case a : ICoqLoadPathProvider => a.getLoadPath.toArray
     case _ => Array()
   }
   

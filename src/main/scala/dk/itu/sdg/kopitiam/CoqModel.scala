@@ -90,10 +90,7 @@ private object CoqModelImpl {
     (a.getDescription.getNatureIds.exists(ICoqProject.isCoqNature))
 }
 
-trait ICoqLoadPath {
-  def path : IPath
-  def coqdir : Option[String]
-  
+final case class CoqLoadPath(path : IPath, coqdir : Option[String]) {
   def asCommand : String =
     "Add Rec LoadPath \"" + path.toOSString + "\"" + (coqdir match {
       case Some(dir) => " as " + dir
@@ -101,39 +98,39 @@ trait ICoqLoadPath {
     }) + "."
   def asArguments : Seq[String] =
     Seq("-R", path.toOSString, coqdir.getOrElse(""))
-}
-object ICoqLoadPath {
+
   import java.io.File
-  type LoadPathEntry = (Seq[String], File)
-  def expand(lp : ICoqLoadPath) : Seq[LoadPathEntry] = {
-    def _recurse(coqdir : Seq[String], f : File) : Seq[LoadPathEntry] = {
+
+  def expand() : Seq[(Seq[String], File)] = {
+    def _recurse(coqdir : Seq[String], f : File) : Seq[(Seq[String], File)] = {
       val l = f.listFiles
       (if (l != null) {
         l.toSeq.filter(_.isDirectory).flatMap(
           f => _recurse(coqdir :+ f.getName, f))
       } else Seq.empty) :+ (coqdir, f)
     }
-    _recurse(
-      lp.coqdir.map(_.split('.').toSeq).getOrElse(Seq()), lp.path.toFile)
+    _recurse(coqdir.map(_.split('.').toSeq).getOrElse(Seq()), path.toFile)
   }
 }
 
-case class ProjectSourceLoadPath(
-    val folder : IFolder, val output : Option[IFolder] = None)
-    extends ICoqLoadPath {
-  override def path = folder.getLocation
-  override def coqdir = None
+trait ICoqLoadPathProvider {
+  def getLoadPath() : Seq[CoqLoadPath]
 }
 
-case class ProjectBinaryLoadPath(val folder : IFolder) extends ICoqLoadPath {
-  override def path = folder.getLocation
-  override def coqdir = None
+case class SourceLoadPath(val folder : IFolder,
+    val output : Option[IFolder] = None) extends ICoqLoadPathProvider {
+  override def getLoadPath = List(CoqLoadPath(folder.getLocation, None)) ++
+      output.map(a => CoqLoadPath(a.getLocation, None))
+}
+
+case class DefaultOutputLoadPath(
+    val folder : IFolder) extends ICoqLoadPathProvider {
+  override def getLoadPath = List(CoqLoadPath(folder.getLocation, None))
 }
 
 case class ExternalLoadPath(val fsPath : IPath, val dir : Option[String])
-    extends ICoqLoadPath {
-  override def path = fsPath
-  override def coqdir = dir
+    extends ICoqLoadPathProvider {
+  override def getLoadPath = List(CoqLoadPath(fsPath, dir))
 }
 
 trait ICoqProject extends ICoqElement with IParent {
@@ -142,8 +139,12 @@ trait ICoqProject extends ICoqElement with IParent {
   override def getParent : Option[ICoqModel]
   override def getCorrespondingResource : Option[IProject]
   
-  def getLoadPath : Seq[ICoqLoadPath]
-  def setLoadPath(lp : Seq[ICoqLoadPath], monitor : IProgressMonitor)
+  def getLoadPath() : Seq[CoqLoadPath] =
+    getLoadPathProviders.flatMap(_.getLoadPath)
+
+  def getLoadPathProviders() : Seq[ICoqLoadPathProvider]
+  def setLoadPathProviders(
+      lp : Seq[ICoqLoadPathProvider], monitor : IProgressMonitor)
   
   def getDefaultOutputLocation : IFolder
   
@@ -233,21 +234,20 @@ private class CoqProjectImpl(
     } else Seq()
   }
 
-  override def getLoadPath : Seq[ICoqLoadPath] = {
+  override def getLoadPathProviders : Seq[ICoqLoadPathProvider] = {
     var loadPathMap : Map[String, String] = Map()
-    def _util(seq : Seq[CoqProjectEntry]) : Seq[ICoqLoadPath] = seq match {
+    def _util(
+        seq : Seq[CoqProjectEntry]) : Seq[ICoqLoadPathProvider] = seq match {
       /* XXX: also parse the -R options later? */
       case (q @ VariableEntry(name, value)) :: tail
           if name.startsWith("KOPITIAM_") =>
         CoqProjectFile.shellTokenise(value) match {
           case "DefaultOutput" :: bindir :: Nil =>
-            new ProjectBinaryLoadPath(res.getFolder(bindir)) +: _util(tail)
-          case "ProjectBinaryLoadPath" :: bindir :: Nil =>
-            new ProjectBinaryLoadPath(res.getFolder(bindir)) +: _util(tail)
-          case "ProjectSourceLoadPath" :: srcdir :: Nil =>
-            new ProjectSourceLoadPath(res.getFolder(srcdir)) +: _util(tail)
-          case "ProjectSourceLoadPath" :: srcdir :: bindir :: Nil =>
-            new ProjectSourceLoadPath(res.getFolder(srcdir),
+            new DefaultOutputLoadPath(res.getFolder(bindir)) +: _util(tail)
+          case "SourceLoadPath" :: srcdir :: Nil =>
+            new SourceLoadPath(res.getFolder(srcdir)) +: _util(tail)
+          case "SourceLoadPath" :: srcdir :: bindir :: Nil =>
+            new SourceLoadPath(res.getFolder(srcdir),
                 Option(res.getFolder(bindir))) +: _util(tail)
           case "ExternalLoadPath" :: physical :: Nil =>
             new ExternalLoadPath(new Path(physical), None) +: _util(tail)
@@ -261,23 +261,23 @@ private class CoqProjectImpl(
     }
     getProjectConfiguration match {
       case Nil => List(
-          new ProjectSourceLoadPath(res.getFolder("src")),
-          new ProjectBinaryLoadPath(res.getFolder("bin")))
+          new SourceLoadPath(res.getFolder("src")),
+          new DefaultOutputLoadPath(getDefaultOutputLocation))
       case pc => _util(pc)
     }
   }
-  override def setLoadPath(
-      lp : Seq[ICoqLoadPath], monitor : IProgressMonitor) = ()
+  override def setLoadPathProviders(
+      lp : Seq[ICoqLoadPathProvider], monitor : IProgressMonitor) = ()
   
   override def getDefaultOutputLocation = res.getFolder("bin")
   
   override def getPackageFragmentRoot(folder : IPath) =
     new CoqPackageFragmentRootImpl(res.getFolder(folder), this)
-  override def getPackageFragmentRoots = getLoadPath.collect {
-    case ProjectSourceLoadPath(folder, output)
+  override def getPackageFragmentRoots = getLoadPathProviders.collect {
+    case SourceLoadPath(folder, output)
         if (res == folder.getProject) =>
       new CoqPackageFragmentRootImpl(folder, this)
-    case ProjectBinaryLoadPath(folder)
+    case DefaultOutputLoadPath(folder)
         if (res == folder.getProject) =>
       new CoqPackageFragmentRootImpl(folder, this)
   }
