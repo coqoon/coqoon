@@ -320,7 +320,7 @@ object CoqBuilder {
       case _ =>
     }
 
-  private def cleanHierarchy(dir : IContainer) : Unit = {
+  private def cleanHierarchy(dir : IContainer) : Unit = if (dir.exists) {
     for (i <- dir.members;
          j <- TryCast[IContainer](i))
       cleanHierarchy(j)
