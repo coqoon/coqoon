@@ -117,6 +117,11 @@ trait ICoqLoadPathProvider {
   def getLoadPath() : Seq[CoqLoadPath]
 }
 
+case class ProjectLoadPath(
+    val project : IProject) extends ICoqLoadPathProvider {
+  override def getLoadPath = ICoqModel.forProject(project).getLoadPath
+}
+
 case class SourceLoadPath(val folder : IFolder,
     val output : Option[IFolder] = None) extends ICoqLoadPathProvider {
   override def getLoadPath = List(CoqLoadPath(folder.getLocation, None)) ++
@@ -244,6 +249,9 @@ private class CoqProjectImpl(
         CoqProjectFile.shellTokenise(value) match {
           case "DefaultOutput" :: bindir :: Nil =>
             new DefaultOutputLoadPath(res.getFolder(bindir)) +: _util(tail)
+          case "ProjectLoadPath" :: project :: Nil =>
+            new ProjectLoadPath(
+                res.getWorkspace.getRoot.getProject(project)) +: _util(tail)
           case "SourceLoadPath" :: srcdir :: Nil =>
             new SourceLoadPath(res.getFolder(srcdir)) +: _util(tail)
           case "SourceLoadPath" :: srcdir :: bindir :: Nil =>
