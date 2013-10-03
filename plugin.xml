@@ -136,7 +136,7 @@
             class="dk.itu.sdg.kopitiam.CoqEditor"
             contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
             extensions="v"
-            icon="icons/coqide.gif"
+            icon="icons/coqfile_obj.gif"
             id="kopitiam.CoqEditor"
             name="Coq Editor">
          <contentTypeBinding
@@ -154,7 +154,7 @@
             allowMultiple="false"
             category="Kopitiam"
             class="dk.itu.sdg.kopitiam.GoalViewer"
-            icon="icons/coqide.gif"
+            icon="icons/coqide.png"
             id="kopitiam.GoalViewer"
             name="Goal Viewer">
       </view>
@@ -523,7 +523,7 @@
             locationURI="popup:org.eclipse.ui.navigator.ProjectExplorer#PopupMenu">
          <command
                commandId="Kopitiam.export_coq_makefile"
-               icon="icons/coqide.gif"
+               icon="icons/coqide.png"
                label="Export Makefile"
                style="push"
                tooltip="Export Makefile">
@@ -552,7 +552,7 @@
       <wizard
             category="Kopitiam.coq"
             class="dk.itu.sdg.kopitiam.NewCoqFileWizard"
-            icon="icons/coqide.gif"
+            icon="icons/coqide.png"
             id="Kopitiam.newCoqFileWizard"
             name="Coq File">
       </wizard>
@@ -560,7 +560,7 @@
             category="Kopitiam.coq"
             class="dk.itu.sdg.kopitiam.NewCoqProjectWizard"
             finalPerspective="dk.itu.sdg.kopitiam.CoqPerspective"
-            icon="icons/coqide.gif"
+            icon="icons/coqide.png"
             id="Kopitiam.newCoqProjectWizard"
             name="Coq Project"
             preferredPerspectives="dk.itu.sdg.kopitiam.CoqPerspective"
@@ -673,7 +673,7 @@
          point="org.eclipse.ui.perspectives">
       <perspective
             class="dk.itu.sdg.kopitiam.CoqPerspectiveFactory"
-            icon="icons/coqide.gif"
+            icon="icons/coqide.png"
             id="dk.itu.sdg.kopitiam.CoqPerspective"
             name="Coq">
       </perspective>
@@ -706,7 +706,7 @@
          point="org.eclipse.ui.propertyPages">
       <page
             class="dk.itu.sdg.kopitiam.LoadPathConfigurationPage"
-            icon="icons/coqide.gif"
+            icon="icons/coqide.png"
             id="dk.itu.sdg.kopitiam.propertyPages.CoqLoadPath"
             name="Coq Load Path">
          <enabledWhen>
