@@ -19,24 +19,19 @@ trait IParent {
   def hasChildren : Boolean = (!getChildren.isEmpty)
 }
 
-trait ICoqElement {
+sealed trait ICoqElement {
   def exists : Boolean
-  def getAncestor[A](klass : Class[A]) : Option[A] = {
-    var a = getParent
-    while (a != None) {
-      val a_ = a.orNull
-      if (klass.isInstance(a))
-        return Some(klass.cast(a))
-      a = a_.getParent
+  def getAncestor[A]()(implicit a0 : Manifest[A]) : Option[A] =
+    getParent.flatMap(TryCast[A]) match {
+      case q @ Some(_) => q
+      case None => getParent.flatMap(_.getAncestor[A])
     }
-    None
-  }
   def getParent : Option[ICoqElement with IParent]
   def getElementType : Class[_ <: ICoqElement]
   def getCorrespondingResource : Option[IResource]
   def getContainingResource : Option[IResource] =
     getCorrespondingResource.orElse(getParent.flatMap(_.getContainingResource))
-  def getModel : ICoqModel = getAncestor(classOf[ICoqModel]).get
+  def getModel : ICoqModel = getAncestor[ICoqModel].get
 }
 
 private abstract class CoqElementImpl[
