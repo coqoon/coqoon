@@ -42,6 +42,13 @@ private abstract class CoqElementImpl[
   override def getCorrespondingResource = Option(res)
 }
 
+import org.eclipse.core.resources.IResourceChangeEvent
+
+private trait ICache {
+  def update(ev : IResourceChangeEvent)
+  def destroy
+}
+
 private abstract class ParentImpl[
     A <: IResource, B <: ICoqElement with IParent](
     private val res : A, private val parent : B)
@@ -57,7 +64,7 @@ trait ICoqModel extends ICoqElement with IParent {
   def getProjects : Seq[ICoqProject]
   def hasProjects : Boolean = (!getProjects.isEmpty)
 
-  protected[kopitiam] def getCacheFor[A](element : ICoqElement,
+  protected[kopitiam] def getCacheFor[A <: ICache](element : ICoqElement,
       constructor : => A)(implicit a0 : Manifest[A]) : A
 }
 object ICoqModel {
@@ -83,8 +90,8 @@ private case class CoqModelImpl(
   
   override def getChildren = getProjects
 
-  private var cache = scala.collection.mutable.Map[ICoqElement, Any]()
-  override protected[kopitiam] def getCacheFor[A](
+  private var cache = scala.collection.mutable.Map[ICoqElement, ICache]()
+  override protected[kopitiam] def getCacheFor[A <: ICache](
       element : ICoqElement, constructor : => A)(implicit a0 : Manifest[A]) =
     cache synchronized {
       cache.getOrElseUpdate(element, constructor).asInstanceOf[A]
