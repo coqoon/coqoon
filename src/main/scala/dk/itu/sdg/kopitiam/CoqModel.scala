@@ -68,7 +68,7 @@ object ICoqModel {
     getInstance.getProject(project.getName)
 }
 
-private class CoqModelImpl(
+private case class CoqModelImpl(
     private val res : IWorkspaceRoot)
     extends ParentImpl(res, null) with ICoqModel {
   import CoqModelImpl._
@@ -195,7 +195,7 @@ object ICoqProject {
 
 import org.eclipse.ui.ide.undo.DeleteResourcesOperation
 
-private class CoqProjectImpl(
+private case class CoqProjectImpl(
     private val res : IProject,
     private val parent : ICoqModel)
     extends ParentImpl(res, parent) with ICoqProject {
@@ -304,7 +304,7 @@ trait ICoqPackageFragmentRoot extends ICoqElement with IParent {
   override def getChildren : Seq[ICoqPackageFragment]
 }
 
-private class CoqPackageFragmentRootImpl(
+private case class CoqPackageFragmentRootImpl(
     private val res : IFolder,
     private val parent : ICoqProject)
     extends ParentImpl(res, parent) with ICoqPackageFragmentRoot {
@@ -367,7 +367,7 @@ trait ICoqPackageFragment extends ICoqElement with IParent {
   override def getChildren : Seq[ICoqFile]
 }
 
-private class CoqPackageFragmentImpl(
+private case class CoqPackageFragmentImpl(
     private val res : IFolder,
     private val parent : ICoqPackageFragmentRoot)
     extends ParentImpl(res, parent) with ICoqPackageFragment {
@@ -442,7 +442,7 @@ object ICoqVernacFile {
       ManifestIdentifiers.CONTENT_TYPE_COQFILE)
 }
 
-private class CoqVernacFileImpl(
+private case class CoqVernacFileImpl(
     private val res : IFile,
     private val parent : ICoqPackageFragment)
     extends CoqElementImpl(res, parent) with ICoqVernacFile {
@@ -472,7 +472,7 @@ object ICoqObjectFile {
       ManifestIdentifiers.CONTENT_TYPE_COQOBJECTFILE)
 }
 
-private class CoqObjectFileImpl(
+private case class CoqObjectFileImpl(
     private val res : IFile,
     private val parent : ICoqPackageFragment)
     extends CoqElementImpl(res, parent) with ICoqObjectFile {
