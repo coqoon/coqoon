@@ -56,6 +56,9 @@ trait ICoqModel extends ICoqElement with IParent {
   def getProject(name : String) : ICoqProject
   def getProjects : Seq[ICoqProject]
   def hasProjects : Boolean = (!getProjects.isEmpty)
+
+  protected[kopitiam] def getCacheFor[A](element : ICoqElement,
+      constructor : => A)(implicit a0 : Manifest[A]) : A
 }
 object ICoqModel {
   def create(root : IWorkspaceRoot) : ICoqModel = new CoqModelImpl(root)
@@ -79,6 +82,13 @@ private case class CoqModelImpl(
       a => new CoqProjectImpl(a, this))
   
   override def getChildren = getProjects
+
+  private var cache = scala.collection.mutable.Map[ICoqElement, Any]()
+  override protected[kopitiam] def getCacheFor[A](
+      element : ICoqElement, constructor : => A)(implicit a0 : Manifest[A]) =
+    cache synchronized {
+      cache.getOrElseUpdate(element, constructor).asInstanceOf[A]
+    }
 }
 private object CoqModelImpl {
   def hasNature(a : IProject) =
