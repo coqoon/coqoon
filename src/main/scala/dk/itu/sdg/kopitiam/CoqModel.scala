@@ -233,15 +233,52 @@ private case class CoqProjectImpl(
     private val parent : ICoqModel)
     extends ParentImpl(res, parent) with ICoqProject {
   private class Cache extends ICache {
-    def destroy = projectFile.clear
+    def destroy = Seq(projectFile, loadPathProviders).map(_.clear)
 
     import CoqProjectFile._
-    val projectFile = new CacheSlot[CoqProjectFile](() => {
+    private[CoqProjectImpl] final val projectFile =
+        new CacheSlot[CoqProjectFile](() => {
       val f = res.getFile("_CoqProject")
       if (f.exists) {
         CoqProjectFile.fromString(
             FunctionIterator.lines(f.getContents).mkString("\n"))
       } else Seq()
+    })
+
+    private[CoqProjectImpl] final val loadPathProviders =
+        new CacheSlot[Seq[ICoqLoadPathProvider]](() => {
+      def _util(
+        seq : Seq[CoqProjectEntry]) : Seq[ICoqLoadPathProvider] = seq match {
+        /* XXX: also parse the -R options later? */
+        case (q @ VariableEntry(name, value)) :: tail
+            if name.startsWith("KOPITIAM_") =>
+          CoqProjectFile.shellTokenise(value) match {
+            case "DefaultOutput" :: bindir :: Nil =>
+              new DefaultOutputLoadPath(res.getFolder(bindir)) +: _util(tail)
+            case "ProjectLoadPath" :: project :: Nil =>
+              new ProjectLoadPath(
+                res.getWorkspace.getRoot.getProject(project)) +: _util(tail)
+            case "SourceLoadPath" :: srcdir :: Nil =>
+              new SourceLoadPath(res.getFolder(srcdir)) +: _util(tail)
+            case "SourceLoadPath" :: srcdir :: bindir :: Nil =>
+              new SourceLoadPath(res.getFolder(srcdir),
+                Option(res.getFolder(bindir))) +: _util(tail)
+            case "ExternalLoadPath" :: physical :: Nil =>
+              new ExternalLoadPath(new Path(physical), None) +: _util(tail)
+            case "ExternalLoadPath" :: physical :: logical :: Nil =>
+              new ExternalLoadPath(
+                new Path(physical), Some(logical)) +: _util(tail)
+            case _ => _util(tail)
+          }
+        case _ :: tail => _util(tail)
+        case Nil => Seq.empty
+      }
+      projectFile.get match {
+        case Nil => List(
+          new SourceLoadPath(res.getFolder("src")),
+          new DefaultOutputLoadPath(res.getFolder("bin")))
+        case pc => _util(pc)
+      }
     })
   }
   private def getCache() = getModel.getCacheFor(this, new Cache)
@@ -277,45 +314,17 @@ private case class CoqProjectImpl(
   private def getProjectConfiguration : CoqProjectFile =
     getCache.projectFile.get
 
-  override def getLoadPathProviders : Seq[ICoqLoadPathProvider] = {
-    var loadPathMap : Map[String, String] = Map()
-    def _util(
-        seq : Seq[CoqProjectEntry]) : Seq[ICoqLoadPathProvider] = seq match {
-      /* XXX: also parse the -R options later? */
-      case (q @ VariableEntry(name, value)) :: tail
-          if name.startsWith("KOPITIAM_") =>
-        CoqProjectFile.shellTokenise(value) match {
-          case "DefaultOutput" :: bindir :: Nil =>
-            new DefaultOutputLoadPath(res.getFolder(bindir)) +: _util(tail)
-          case "ProjectLoadPath" :: project :: Nil =>
-            new ProjectLoadPath(
-                res.getWorkspace.getRoot.getProject(project)) +: _util(tail)
-          case "SourceLoadPath" :: srcdir :: Nil =>
-            new SourceLoadPath(res.getFolder(srcdir)) +: _util(tail)
-          case "SourceLoadPath" :: srcdir :: bindir :: Nil =>
-            new SourceLoadPath(res.getFolder(srcdir),
-                Option(res.getFolder(bindir))) +: _util(tail)
-          case "ExternalLoadPath" :: physical :: Nil =>
-            new ExternalLoadPath(new Path(physical), None) +: _util(tail)
-          case "ExternalLoadPath" :: physical :: logical :: Nil =>
-            new ExternalLoadPath(
-                new Path(physical), Some(logical)) +: _util(tail)
-          case _ => _util(tail)
-        }
-      case _ :: tail => _util(tail)
-      case Nil => Seq.empty
-    }
-    getProjectConfiguration match {
-      case Nil => List(
-          new SourceLoadPath(res.getFolder("src")),
-          new DefaultOutputLoadPath(getDefaultOutputLocation))
-      case pc => _util(pc)
-    }
-  }
   override def setLoadPathProviders(
       lp : Seq[ICoqLoadPathProvider], monitor : IProgressMonitor) = ()
-  
-  override def getDefaultOutputLocation = res.getFolder("bin")
+  override def getLoadPathProviders : Seq[ICoqLoadPathProvider] =
+    getCache.loadPathProviders.get
+
+  override def getDefaultOutputLocation : IFolder = {
+    for (i <- getLoadPathProviders;
+         j <- TryCast[DefaultOutputLoadPath](i))
+      return j.folder
+    res.getFolder("bin")
+  }
   
   override def getPackageFragmentRoot(folder : IPath) =
     new CoqPackageFragmentRootImpl(res.getFolder(folder), this)
