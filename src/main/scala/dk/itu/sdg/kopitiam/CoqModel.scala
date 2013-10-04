@@ -45,8 +45,24 @@ private abstract class CoqElementImpl[
 import org.eclipse.core.resources.IResourceChangeEvent
 
 private trait ICache {
-  def update(ev : IResourceChangeEvent)
-  def destroy
+  /* Update the cache to take into account the changes represented by @ev. */
+  def update(ev : IResourceChangeEvent) = destroy
+  /* Forget all information stored in the cache. */
+  def destroy()
+}
+
+private class CacheSlot[A](constructor : () => A) {
+  private val lock = new Object
+
+  private var slot : Option[A] = None
+  def test() = lock synchronized (slot != None)
+  def get() = lock synchronized slot match {
+    case Some(x) => x
+    case None =>
+      slot = Option(constructor()); slot.get
+  }
+  def set(value : Option[A]) = lock synchronized (slot = value)
+  def clear() = set(None)
 }
 
 private abstract class ParentImpl[
@@ -216,6 +232,20 @@ private case class CoqProjectImpl(
     private val res : IProject,
     private val parent : ICoqModel)
     extends ParentImpl(res, parent) with ICoqProject {
+  private class Cache extends ICache {
+    def destroy = projectFile.clear
+
+    import CoqProjectFile._
+    val projectFile = new CacheSlot[CoqProjectFile](() => {
+      val f = res.getFile("_CoqProject")
+      if (f.exists) {
+        CoqProjectFile.fromString(
+            FunctionIterator.lines(f.getContents).mkString("\n"))
+      } else Seq()
+    })
+  }
+  private def getCache() = getModel.getCacheFor(this, new Cache)
+
   import org.eclipse.ui.ide.undo.CreateProjectOperation
   
   override def getCreateOperation = {
@@ -242,14 +272,10 @@ private case class CoqProjectImpl(
     } else if (f.exists) {
       f.delete(IResource.KEEP_HISTORY, monitor)
     }
+    getCache.projectFile.set(Option(cfg))
   }
-  private def getProjectConfiguration : CoqProjectFile = {
-    val f = res.getFile("_CoqProject")
-    if (f.exists) {
-      CoqProjectFile.fromString(
-          FunctionIterator.lines(f.getContents).mkString("\n"))
-    } else Seq()
-  }
+  private def getProjectConfiguration : CoqProjectFile =
+    getCache.projectFile.get
 
   override def getLoadPathProviders : Seq[ICoqLoadPathProvider] = {
     var loadPathMap : Map[String, String] = Map()
