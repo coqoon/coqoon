@@ -45,11 +45,9 @@ private abstract class CoqElementImpl[
 import org.eclipse.core.resources.IResourceChangeEvent
 
 private trait ICache {
-  /* Update the cache to take into account the changes represented by @ev. */
-  def update(ev : IResourceChangeEvent) = {
-    EclipseConsole.err.println("Destroyerating " + this)
-    destroy
-  }
+  /* Clear the cache, in whole or in part, in response to the changes
+   * represented by @ev. */
+  def update(ev : IResourceChangeEvent) = destroy
   /* Forget all information stored in the cache. */
   def destroy()
 }
