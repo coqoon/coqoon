@@ -71,7 +71,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
         done += i
         val p = a.getLocation
         if (a.exists)
-          a.delete(IWorkspace.AVOID_UPDATE, null)
+          a.delete(IResource.NONE, null)
         dt.allDependencies.foreach(a => {
           val (path, dependencies) = a
           /* If file depended on this object, then schedule its object for
