@@ -46,7 +46,10 @@ import org.eclipse.core.resources.IResourceChangeEvent
 
 private trait ICache {
   /* Update the cache to take into account the changes represented by @ev. */
-  def update(ev : IResourceChangeEvent) = destroy
+  def update(ev : IResourceChangeEvent) = {
+    EclipseConsole.err.println("Destroyerating " + this)
+    destroy
+  }
   /* Forget all information stored in the cache. */
   def destroy()
 }
@@ -80,6 +83,8 @@ trait ICoqModel extends ICoqElement with IParent {
   def getProjects : Seq[ICoqProject]
   def hasProjects : Boolean = (!getProjects.isEmpty)
 
+  def toCoqElement(resource : IResource) : Option[ICoqElement]
+
   protected[kopitiam] def getCacheFor[A <: ICache](element : ICoqElement,
       constructor : => A)(implicit a0 : Manifest[A]) : A
 }
@@ -90,8 +95,8 @@ object ICoqModel {
       org.eclipse.core.resources.ResourcesPlugin.getWorkspace.getRoot)
   def getInstance : ICoqModel = instance
   
-  def forProject(project : IProject) : ICoqProject =
-    getInstance.getProject(project.getName)
+  def toCoqProject(project : IProject) : ICoqProject =
+    getInstance.toCoqElement(project).flatMap(TryCast[ICoqProject]).orNull
 }
 
 private case class CoqModelImpl(
@@ -103,7 +108,18 @@ private case class CoqModelImpl(
     new CoqProjectImpl(res.getProject(name), this)
   override def getProjects = res.getProjects.filter(hasNature).map(
       a => new CoqProjectImpl(a, this))
-  
+
+  override def toCoqElement(resource : IResource) : Option[ICoqElement] =
+      resource match {
+    case p : IProject if hasNature(p) =>
+      Some(getProject(p.getName))
+    case f : IFolder if hasNature(f.getProject) =>
+      None /* XXX: convert into an ICoqPackageFragment(Root) */
+    case f : IFile if hasNature(f.getProject) =>
+      None /* XXX: convert into an ICoq(Object|Vernac)File */
+    case _ => None
+  }
+
   override def getChildren = getProjects
 
   private var cache = scala.collection.mutable.Map[ICoqElement, ICache]()
@@ -147,7 +163,7 @@ trait ICoqLoadPathProvider {
 
 case class ProjectLoadPath(
     val project : IProject) extends ICoqLoadPathProvider {
-  override def getLoadPath = ICoqModel.forProject(project).getLoadPath
+  override def getLoadPath = ICoqModel.toCoqProject(project).getLoadPath
 }
 
 case class SourceLoadPath(val folder : IFolder,

@@ -23,7 +23,7 @@ class JavaProofInitialisationRunner(
 
       val input = jes.editor.getEditorInput
       TryCast[IFileEditorInput](input).map(_.getFile).foreach(f => {
-        val cp = ICoqModel.forProject(f.getProject)
+        val cp = ICoqModel.toCoqProject(f.getProject)
         cp.getLoadPath.foreach(lpe => ct.interp(false, false, lpe.asCommand))
       })
       monitor.worked(1)

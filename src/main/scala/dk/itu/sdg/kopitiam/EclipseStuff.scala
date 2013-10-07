@@ -80,7 +80,7 @@ class CompileCoqRunner(
     val coqc = CoqProgram("coqtop")
     if (coqc.check) {
       val flp =
-        (ICoqModel.forProject(source.getProject).getLoadPathProviders ++
+        (ICoqModel.toCoqProject(source.getProject).getLoadPathProviders ++
             Activator.getDefault.getChargeLoadPath).flatMap(
                 _.getLoadPath).flatMap(_.asArguments)
       val coqcp =

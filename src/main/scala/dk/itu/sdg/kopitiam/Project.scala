@@ -181,7 +181,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     BuildManager.buildLoop(done.map(new BuildTaskImpl(_)))
 
     /* Remove any unused output directories */
-    cleanProject(ICoqModel.forProject(getProject))
+    cleanProject(ICoqModel.toCoqProject(getProject))
 
     Array()
   }
@@ -374,7 +374,7 @@ object CoqBuilder {
 
   def getLoadPathProviders(p : IProject) : Seq[ICoqLoadPathProvider] = {
     val libraryLocation = getLibraryLocation
-    ICoqModel.forProject(p).getLoadPathProviders ++ List(
+    ICoqModel.toCoqProject(p).getLoadPathProviders ++ List(
         ExternalLoadPath(libraryLocation.append("theories"), Some("Coq")),
         ExternalLoadPath(libraryLocation.append("plugins"), Some("Coq")),
         ExternalLoadPath(libraryLocation.append("user-contrib"), None))
@@ -386,7 +386,7 @@ object CoqBuilder {
         val p = s.removeFirstSegments(src.getLocation.segmentCount).
           removeFileExtension.addFileExtension("vo")
         val outputFolder = bin.getOrElse(
-          ICoqModel.forProject(project).getDefaultOutputLocation)
+          ICoqModel.toCoqProject(project).getDefaultOutputLocation)
         return Some(outputFolder.getFile(p))
       case _ =>
     }
@@ -417,7 +417,7 @@ object CoqBuilder {
   }
   
   def generateMakefile(project : IProject) : String = {
-    val cp = ICoqModel.forProject(project)
+    val cp = ICoqModel.toCoqProject(project)
     val loadPath = getLoadPathProviders(project)
     val completeLoadPath = loadPath.flatMap(_.getLoadPath).flatMap(_.expand)
     def getCorrespondingObject(s : IPath) =

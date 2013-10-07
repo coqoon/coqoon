@@ -18,7 +18,7 @@ class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
       
       val input = editor.getEditorInput
       TryCast[IFileEditorInput](input).map(_.getFile).foreach(file => {
-        val cp = ICoqModel.forProject(file.getProject)
+        val cp = ICoqModel.toCoqProject(file.getProject)
         cp.getLoadPath.foreach(lpe => ct.interp(false, false, lpe.asCommand))
       })
 
