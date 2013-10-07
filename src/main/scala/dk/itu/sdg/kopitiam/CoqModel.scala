@@ -65,6 +65,9 @@ private class CacheSlot[A](constructor : () => A) {
   def set(value : Option[A]) = lock synchronized (slot = value)
   def clear() = set(None)
 }
+private object CacheSlot {
+  def apply[A](constructor : => A) = new CacheSlot(() => constructor)
+}
 
 private abstract class ParentImpl[
     A <: IResource, B <: ICoqElement with IParent](
@@ -273,16 +276,16 @@ private case class CoqProjectImpl(
 
     import CoqProjectFile._
     private[CoqProjectImpl] final val projectFile =
-        new CacheSlot[CoqProjectFile](() => {
+        CacheSlot[CoqProjectFile] {
       val f = res.getFile("_CoqProject")
       if (f.exists) {
         CoqProjectFile.fromString(
             FunctionIterator.lines(f.getContents).mkString("\n"))
       } else Seq()
-    })
+    }
 
     private[CoqProjectImpl] final val loadPathProviders =
-        new CacheSlot[Seq[ICoqLoadPathProvider]](() => {
+        CacheSlot[Seq[ICoqLoadPathProvider]] {
       def _util(
         seq : Seq[CoqProjectEntry]) : Seq[ICoqLoadPathProvider] = seq match {
         /* XXX: also parse the -R options later? */
@@ -315,7 +318,7 @@ private case class CoqProjectImpl(
           new DefaultOutputLoadPath(res.getFolder("bin")))
         case pc => _util(pc)
       }
-    })
+    }
   }
   private def getCache() = getModel.getCacheFor(this, new Cache)
 
