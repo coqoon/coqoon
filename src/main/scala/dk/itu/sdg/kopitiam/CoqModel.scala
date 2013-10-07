@@ -104,13 +104,35 @@ private case class CoqModelImpl(
     extends ParentImpl(res, null) with ICoqModel {
   import CoqModelImpl._
   
+  import org.eclipse.core.resources
+  object WorkspaceListener extends resources.IResourceChangeListener {
+    class DeltaVisitor(ev : resources.IResourceChangeEvent)
+        extends resources.IResourceDeltaVisitor {
+      override def visit(d : resources.IResourceDelta) = {
+        toCoqElement(d.getResource).foreach(el => {
+          val entry = cache synchronized { cache.get(el) }
+          entry.foreach(_.update(ev))
+        })
+        true
+      }
+    }
+
+    override def resourceChanged(ev : resources.IResourceChangeEvent) =
+        ev.getType() match {
+      case resources.IResourceChangeEvent.PRE_BUILD =>
+        ev.getDelta().accept(new DeltaVisitor(ev))
+      case _ =>
+    }
+  }
+  res.getWorkspace.addResourceChangeListener(
+      WorkspaceListener, resources.IResourceChangeEvent.PRE_BUILD)
+
   override def getProject(name : String) =
     new CoqProjectImpl(res.getProject(name), this)
   override def getProjects = res.getProjects.filter(hasNature).map(
       a => new CoqProjectImpl(a, this))
 
-  override def toCoqElement(resource : IResource) : Option[ICoqElement] =
-      resource match {
+  override def toCoqElement(resource : IResource) = resource match {
     case p : IProject if hasNature(p) =>
       Some(getProject(p.getName))
     case f : IFolder if hasNature(f.getProject) =>
