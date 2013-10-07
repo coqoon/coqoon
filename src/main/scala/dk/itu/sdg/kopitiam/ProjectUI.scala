@@ -94,14 +94,15 @@ import org.eclipse.jface.viewers.{
 
 private class LoadPathLabelProvider extends LabelProvider
 
-private class LoadPathContentProvider extends ITreeContentProvider {
+private class LoadPathContentProvider(
+    filter : ICoqLoadPathProvider => Boolean) extends ITreeContentProvider {
   override def dispose = ()
   
   override def inputChanged(viewer : Viewer, oldInput : Any, newInput : Any) =
     viewer.refresh
   
   override def getElements(input : Any) = input match {
-    case a : ICoqProject => a.getLoadPathProviders.toArray
+    case a : ICoqProject => a.getLoadPathProviders.filter(filter).toArray
     case _ => Array()
   }
   
@@ -117,7 +118,8 @@ private class LoadPathContentProvider extends ITreeContentProvider {
 
 import org.eclipse.swt.SWT
 import org.eclipse.swt.layout.FillLayout
-import org.eclipse.swt.widgets.{Composite, Button, Label, TabFolder, TabItem}
+import org.eclipse.swt.widgets.{
+  Text, Composite, Button, Label, TabFolder, TabItem}
 import org.eclipse.core.runtime.IAdaptable
 import org.eclipse.ui.IWorkbenchPropertyPage
 import org.eclipse.jface.preference.PreferencePage
@@ -129,37 +131,99 @@ class LoadPathConfigurationPage
   override def getElement : IProject = TryCast[IProject](element).get
   override def setElement(element : IAdaptable) = (this.element = element)
   override def createContents(c : Composite) = {
-    val tf = new TabFolder(c, SWT.NONE)
-    
-    val t1 = new TabItem(tf, SWT.NONE)
+    import org.eclipse.swt.layout._
+    import org.eclipse.jface.layout._
+
+    val folder = new TabFolder(c, SWT.NONE)
+
+    val t1 = new TabItem(folder, SWT.NONE)
     t1.setText("Source")
-    val c1 = new Composite(tf, SWT.NONE)
+
+    val c1 = new Composite(folder, SWT.NONE)
     t1.setControl(c1)
-    c1.setLayout(new FillLayout(SWT.HORIZONTAL))
-    
-    val c1l = new Composite(c1, SWT.NONE)
-    c1l.setLayout(new FillLayout(SWT.VERTICAL))
-    
-    val tv = new TreeViewer(c1l)
-    tv.setLabelProvider(new LoadPathLabelProvider)
-    tv.setContentProvider(new LoadPathContentProvider)
-    tv.setInput(ICoqModel.create(
-        getElement.getWorkspace.getRoot).getProject(getElement.getName()))
-    
+    c1.setLayout(GridLayoutFactory.swtDefaults().numColumns(2).create)
+
+    val tv1 = new TreeViewer(c1)
+    tv1.setLabelProvider(new LoadPathLabelProvider)
+    tv1.setContentProvider(new LoadPathContentProvider(
+        a => a.isInstanceOf[SourceLoadPath]))
+    tv1.setInput(ICoqModel.toCoqProject(getElement))
+    tv1.getControl.setLayoutData(GridDataFactory.swtDefaults().
+        align(SWT.FILL, SWT.FILL).hint(0, 0).grab(true, true).create)
+
     val c1r = new Composite(c1, SWT.NONE)
-    c1r.setLayout(new FillLayout(SWT.VERTICAL))
-    
+    c1r.setLayout(RowLayoutFactory.swtDefaults().
+        `type`(SWT.VERTICAL).fill(true).create())
+    c1r.setLayoutData(GridDataFactory.swtDefaults().
+        align(SWT.FILL, SWT.TOP).create)
+
     new Button(c1r, SWT.NONE).setText("I'm a button!")
     new Button(c1r, SWT.NONE).setText("I'm also a button!")
-    
-    val t2 = new TabItem(tf, SWT.NONE)
+
+    val oll = new Label(c1, SWT.NONE)
+    oll.setLayoutData(GridDataFactory.swtDefaults().
+        align(SWT.FILL, SWT.TOP).span(2, 1).create)
+    oll.setText("Default output location:")
+
+    val olt = new Text(c1, SWT.BORDER)
+    olt.setLayoutData(GridDataFactory.swtDefaults().
+        align(SWT.FILL, SWT.TOP).create)
+
+    val olb = new Button(c1, SWT.NONE)
+    olb.setLayoutData(GridDataFactory.swtDefaults().
+        align(SWT.FILL, SWT.TOP).create)
+    olb.setText("Browse...")
+
+    val t2 = new TabItem(folder, SWT.NONE)
     t2.setText("Projects")
-    
-    val t3 = new TabItem(tf, SWT.NONE)
+
+    val c2 = new Composite(folder, SWT.NONE)
+    t2.setControl(c2)
+    c2.setLayout(GridLayoutFactory.swtDefaults().numColumns(2).create)
+
+    val tv2 = new TreeViewer(c2)
+    tv2.setLabelProvider(new LoadPathLabelProvider)
+    tv2.setContentProvider(new LoadPathContentProvider(
+        a => a.isInstanceOf[ProjectLoadPath]))
+    tv2.setInput(ICoqModel.toCoqProject(getElement))
+    tv2.getControl.setLayoutData(GridDataFactory.swtDefaults().
+        align(SWT.FILL, SWT.FILL).hint(0, 0).grab(true, true).create)
+
+    val c2r = new Composite(c2, SWT.NONE)
+    c2r.setLayout(RowLayoutFactory.swtDefaults().
+        `type`(SWT.VERTICAL).fill(true).create())
+    c2r.setLayoutData(GridDataFactory.swtDefaults().
+        align(SWT.FILL, SWT.TOP).create)
+
+    new Button(c2r, SWT.NONE).setText("I'm a button!")
+    new Button(c2r, SWT.NONE).setText("I'm also a button!")
+
+    val t3 = new TabItem(folder, SWT.NONE)
     t3.setText("Libraries")
-    
-    tf.pack
-    tf
+
+    val c3 = new Composite(folder, SWT.NONE)
+    t3.setControl(c3)
+    c3.setLayout(GridLayoutFactory.swtDefaults().numColumns(2).create)
+
+    val tv3 = new TreeViewer(c3)
+    tv3.setLabelProvider(new LoadPathLabelProvider)
+    tv3.setContentProvider(new LoadPathContentProvider(
+        a => a.isInstanceOf[ExternalLoadPath]))
+    tv3.setInput(ICoqModel.toCoqProject(getElement))
+    tv3.getControl.setLayoutData(GridDataFactory.swtDefaults().
+        align(SWT.FILL, SWT.FILL).hint(0, 0).grab(true, true).create)
+
+    val c3r = new Composite(c3, SWT.NONE)
+    c3r.setLayout(RowLayoutFactory.swtDefaults().
+        `type`(SWT.VERTICAL).fill(true).create())
+    c3r.setLayoutData(GridDataFactory.swtDefaults().
+        align(SWT.FILL, SWT.TOP).create)
+
+    new Button(c3r, SWT.NONE).setText("I'm a button!")
+    new Button(c3r, SWT.NONE).setText("I'm also a button!")
+
+    folder.pack
+    folder
   }
 }
 
