@@ -247,8 +247,7 @@ trait ICoqProject extends ICoqElement with IParent {
   override def getParent : Option[ICoqModel]
   override def getCorrespondingResource : Option[IProject]
   
-  def getLoadPath() : Seq[CoqLoadPath] =
-    getLoadPathProviders.flatMap(_.getLoadPath)
+  def getLoadPath() : Seq[CoqLoadPath]
 
   def getLoadPathProviders() : Seq[ICoqLoadPathProvider]
   def setLoadPathProviders(
@@ -308,7 +307,7 @@ private case class CoqProjectImpl(
     private val parent : ICoqModel)
     extends ParentImpl(res, parent) with ICoqProject {
   private class Cache extends ICache {
-    def destroy = Seq(projectFile, loadPathProviders).map(_.clear)
+    def destroy = Seq(projectFile, loadPathProviders, loadPath).map(_.clear)
 
     import CoqProjectFile._
     private[CoqProjectImpl] final val projectFile =
@@ -358,6 +357,11 @@ private case class CoqProjectImpl(
         case pc => _util(pc)
       }
     }
+
+    private[CoqProjectImpl] final val loadPath =
+        CacheSlot[Seq[CoqLoadPath]] {
+      loadPathProviders.get.flatMap(_.getLoadPath)
+    }
   }
   private def getCache() = getModel.getCacheFor(this, new Cache)
 
@@ -391,6 +395,8 @@ private case class CoqProjectImpl(
   }
   private def getProjectConfiguration : CoqProjectFile =
     getCache.projectFile.get
+
+  override def getLoadPath() = getCache.loadPath.get
 
   override def setLoadPathProviders(
       lp : Seq[ICoqLoadPathProvider], monitor : IProgressMonitor) = ()
