@@ -205,6 +205,42 @@ case class ExternalLoadPath(val fsPath : IPath, val dir : Option[String])
   override def getLoadPath = List(CoqLoadPath(fsPath, dir))
 }
 
+case class AbstractLoadPath(
+    val identifier : String) extends ICoqLoadPathProvider {
+  override def getLoadPath = AbstractLoadPathManager.getInstance.
+      getProviderFor(identifier).map(_.getLoadPath).getOrElse(Seq())
+}
+
+class AbstractLoadPathManager {
+  private var providers : Map[String, ICoqLoadPathProvider] = Map()
+
+  def getProviderFor(identifier : String) : Option[ICoqLoadPathProvider] =
+    providers.get(identifier)
+
+  def setProviderFor(identifier : String, provider : ICoqLoadPathProvider) =
+    providers += (identifier -> provider)
+}
+object AbstractLoadPathManager {
+  private final val instance = new AbstractLoadPathManager
+  def getInstance() : AbstractLoadPathManager = instance
+
+  getInstance().setProviderFor(COQ_8_4, new Coq84Library())
+
+  final val COQ_8_4 = "dk.itu.sdg.kopitiam/lp/coq/8.4"
+}
+
+private class Coq84Library extends ICoqLoadPathProvider {
+  override def getLoadPath =
+      CoqProgram("coqtop").run(Seq("-where")).readAll match {
+    case (0, libraryPath_) =>
+      val libraryPath = new Path(libraryPath_)
+      Seq(CoqLoadPath(libraryPath.append("theories"), Some("Coq")),
+          CoqLoadPath(libraryPath.append("plugins"), Some("Coq")),
+          CoqLoadPath(libraryPath.append("user-theories"), None))
+    case _ => Seq()
+  }
+}
+
 trait ICoqProject extends ICoqElement with IParent {
   override def getElementType = classOf[ICoqProject]
   
@@ -307,6 +343,8 @@ private case class CoqProjectImpl(
             case "ExternalLoadPath" :: physical :: logical :: Nil =>
               new ExternalLoadPath(
                 new Path(physical), Some(logical)) +: _util(tail)
+            case "AbstractLoadPath" :: identifier :: Nil =>
+              new AbstractLoadPath(identifier) +: _util(tail)
             case _ => _util(tail)
           }
         case _ :: tail => _util(tail)
@@ -315,7 +353,8 @@ private case class CoqProjectImpl(
       projectFile.get match {
         case Nil => List(
           new SourceLoadPath(res.getFolder("src")),
-          new DefaultOutputLoadPath(res.getFolder("bin")))
+          new DefaultOutputLoadPath(res.getFolder("bin")),
+          new AbstractLoadPath(AbstractLoadPathManager.COQ_8_4))
         case pc => _util(pc)
       }
     }

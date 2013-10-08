@@ -304,9 +304,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
     getProject.getWorkspace.getRoot.getFileForLocation(l)
 }
 object CoqBuilder {
-  private def getLibraryLocation = new Path(
-    CoqProgram("coqtop").run(Seq("-where")).readAll._2)
-    
   private val Load = "^Load (.*)\\.$".r
   private val Require = "^Require (Import |Export |)(.*)\\.$".r
   private val CompilationError =
@@ -372,13 +369,8 @@ object CoqBuilder {
   def derivedFilter[A <: IResource](der : Boolean)(r : A) : Option[A] =
     Option(r).filter(_.isDerived == der)
 
-  def getLoadPathProviders(p : IProject) : Seq[ICoqLoadPathProvider] = {
-    val libraryLocation = getLibraryLocation
-    ICoqModel.toCoqProject(p).getLoadPathProviders ++ List(
-        ExternalLoadPath(libraryLocation.append("theories"), Some("Coq")),
-        ExternalLoadPath(libraryLocation.append("plugins"), Some("Coq")),
-        ExternalLoadPath(libraryLocation.append("user-contrib"), None))
-  }
+  def getLoadPathProviders(p : IProject) : Seq[ICoqLoadPathProvider] =
+    ICoqModel.toCoqProject(p).getLoadPathProviders
   
   def getCorrespondingObject(project : IProject)(s : IPath) : Option[IFile] = {
     for (i <- getLoadPathProviders(project)) i match {
