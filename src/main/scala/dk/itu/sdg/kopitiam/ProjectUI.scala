@@ -92,7 +92,13 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
 import org.eclipse.jface.viewers.{
   LabelProvider, ILabelProviderListener, ITreeContentProvider, Viewer}
 
-private class LoadPathLabelProvider extends LabelProvider
+private class LoadPathLabelProvider extends LabelProvider {
+  override def getText(input : Any) = input match {
+    case q @ AbstractLoadPath(identifier) => q.getProvider.map(
+        a => a.getName).getOrElse("(missing library " + identifier + ")")
+    case _ => super.getText(input)
+  }
+}
 
 private class LoadPathContentProvider(
     filter : ICoqLoadPathProvider => Boolean) extends ITreeContentProvider {
@@ -157,8 +163,9 @@ class LoadPathConfigurationPage
     c1r.setLayoutData(GridDataFactory.swtDefaults().
         align(SWT.FILL, SWT.TOP).create)
 
-    new Button(c1r, SWT.NONE).setText("I'm a button!")
-    new Button(c1r, SWT.NONE).setText("I'm also a button!")
+    new Button(c1r, SWT.NONE).setText("Add Folder...")
+    new Label(c1r, SWT.SEPARATOR | SWT.HORIZONTAL)
+    new Button(c1r, SWT.NONE).setText("Delete")
 
     val oll = new Label(c1, SWT.NONE)
     oll.setLayoutData(GridDataFactory.swtDefaults().
@@ -195,8 +202,9 @@ class LoadPathConfigurationPage
     c2r.setLayoutData(GridDataFactory.swtDefaults().
         align(SWT.FILL, SWT.TOP).create)
 
-    new Button(c2r, SWT.NONE).setText("I'm a button!")
-    new Button(c2r, SWT.NONE).setText("I'm also a button!")
+    new Button(c2r, SWT.NONE).setText("Add...")
+    new Label(c2r, SWT.SEPARATOR | SWT.HORIZONTAL)
+    new Button(c2r, SWT.NONE).setText("Delete")
 
     val t3 = new TabItem(folder, SWT.NONE)
     t3.setText("Libraries")
@@ -208,7 +216,8 @@ class LoadPathConfigurationPage
     val tv3 = new TreeViewer(c3)
     tv3.setLabelProvider(new LoadPathLabelProvider)
     tv3.setContentProvider(new LoadPathContentProvider(
-        a => a.isInstanceOf[ExternalLoadPath]))
+        a => a.isInstanceOf[ExternalLoadPath] ||
+            a.isInstanceOf[AbstractLoadPath]))
     tv3.setInput(ICoqModel.toCoqProject(getElement))
     tv3.getControl.setLayoutData(GridDataFactory.swtDefaults().
         align(SWT.FILL, SWT.FILL).hint(0, 0).grab(true, true).create)
@@ -219,8 +228,10 @@ class LoadPathConfigurationPage
     c3r.setLayoutData(GridDataFactory.swtDefaults().
         align(SWT.FILL, SWT.TOP).create)
 
-    new Button(c3r, SWT.NONE).setText("I'm a button!")
-    new Button(c3r, SWT.NONE).setText("I'm also a button!")
+    new Button(c3r, SWT.NONE).setText("Add Library...")
+    new Button(c3r, SWT.NONE).setText("Add System Library...")
+    new Label(c3r, SWT.SEPARATOR | SWT.HORIZONTAL)
+    new Button(c3r, SWT.NONE).setText("Delete")
 
     folder.pack
     folder
