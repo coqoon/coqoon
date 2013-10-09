@@ -207,8 +207,10 @@ case class ExternalLoadPath(val fsPath : IPath, val dir : Option[String])
 
 case class AbstractLoadPath(
     val identifier : String) extends ICoqLoadPathProvider {
-  override def getLoadPath = AbstractLoadPathManager.getInstance.
-      getProviderFor(identifier).map(_.getLoadPath).getOrElse(Nil)
+  override def getLoadPath = getProvider.map(_.getLoadPath).getOrElse(Nil)
+
+  def getProvider() =
+    AbstractLoadPathManager.getInstance.getProviderFor(identifier)
 }
 
 trait AbstractLoadPathProvider {
