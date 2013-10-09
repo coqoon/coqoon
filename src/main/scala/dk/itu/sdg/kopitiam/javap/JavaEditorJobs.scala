@@ -78,6 +78,8 @@ class JavaProofInitialisationRunner(
         case _ => None
       }
       UIUtils.asyncExec {
+        jes.setComplete(
+            jes.method.flatMap(EclipseJavaASTProperties.getPostcondition))
         jes.setGoals(goals)
       }
       //register handlers!

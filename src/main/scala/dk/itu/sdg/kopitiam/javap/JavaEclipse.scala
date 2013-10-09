@@ -34,10 +34,25 @@ object EclipseJavaASTProperties {
     TryCast[MethodDeclaration](a.getProperty(method))
   def setMethod(a : ASTNode, p : Option[MethodDeclaration]) =
     a.setProperty(method, p.orNull)
+
+  private val precondition : String = "dk.itu.sdg.kopitiam.precondition"
+  def getPrecondition(a : ASTNode) : Option[Initializer] =
+    TryCast[Initializer](a.getProperty(precondition))
+  def setPrecondition(a : ASTNode, p : Option[Initializer]) =
+    a.setProperty(precondition, p.orNull)
+
+  private val postcondition : String = "dk.itu.sdg.kopitiam.postcondition"
+  def getPostcondition(a : ASTNode) : Option[Initializer] =
+    TryCast[Initializer](a.getProperty(postcondition))
+  def setPostcondition(a : ASTNode, p : Option[Initializer]) =
+    a.setProperty(postcondition, p.orNull)
+
+  private val quantification = "dk.itu.sdg.kopitiam.quantification"
+  def getQuantification(a : ASTNode) : Option[Initializer] =
+    TryCast[Initializer](a.getProperty(quantification))
+  def setQuantification(a : ASTNode, p : Option[Initializer]) =
+    a.setProperty(quantification, p.orNull)
   
-  val precondition : String = "dk.itu.sdg.kopitiam.precondition"
-  val postcondition : String = "dk.itu.sdg.kopitiam.postcondition"
-  val quantification : String = "dk.itu.sdg.kopitiam.quantification"
   val coqOffset : String = "dk.itu.sdg.kopitiam.coqOffset"
   val specOffset : String = "dk.itu.sdg.kopitiam.specOffset"
 }
@@ -191,21 +206,21 @@ object EclipseJavaHelper {
             if (lvaridx > -1) {
               if (quant != None)
                 reportError("multiple logical variable statements, only one supported", s)
-              x.setProperty(EclipseJavaASTProperties.quantification, s)
+              EclipseJavaASTProperties.setQuantification(x, Some(s))
               quant = Some((s, spectxt))
             } else {
               val preidx = scala.math.max(spectxt.indexOf("precondition:"), spectxt.indexOf("requires:"))
               if (preidx > -1) {
                 if (pre != None)
                   reportError("multiple precondition statements, only one supported", s)
-                x.setProperty(EclipseJavaASTProperties.precondition, s)
+                EclipseJavaASTProperties.setPrecondition(x, Some(s))
                 pre = Some((s, spectxt))
               } else {
                 val postidx = scala.math.max(spectxt.indexOf("postcondition:"), spectxt.indexOf("ensures:"))
                 if (postidx > -1) {
                   if (post != None)
                     reportError("multiple postcondition statements, only one supported", s)
-                  x.setProperty(EclipseJavaASTProperties.postcondition, s)
+                  EclipseJavaASTProperties.setPostcondition(x, Some(s))
                   post = Some((s, spectxt))
                 }
               }

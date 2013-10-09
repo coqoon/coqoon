@@ -70,11 +70,23 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
   import org.eclipse.jface.text.source.IAnnotationModel
   private def addAnnotations(
       complete : Option[ASTNode], underway : Option[ASTNode],
-      model : IAnnotationModel) : Unit =
+      model : IAnnotationModel) : Unit = {
+    var startNode : Option[ASTNode] = None
+    method.flatMap(EclipseJavaASTProperties.getQuantification) match {
+      case n @ Some(q) => startNode = n
+      case _ => method.flatMap(EclipseJavaASTProperties.getPrecondition) match {
+        case n @ Some(p) => startNode = n
+        case _ => method.flatMap(EclipseJavaASTProperties.getPostcondition) match {
+          case n @ Some(p) => startNode = n
+          case _ => startNode = method
+        }
+      }
+    }
     doSplitAnnotations(CoqTopEditorContainer.getSplitAnnotationRanges(
-        method.map(a => a.getStartPosition),
+        startNode.map(a => a.getStartPosition),
         complete.map(a => a.getStartPosition + a.getLength),
         underway.map(a => a.getStartPosition + a.getLength)), model)
+  }
   
   import org.eclipse.core.resources.IMarker
   
