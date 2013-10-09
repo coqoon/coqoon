@@ -4,14 +4,9 @@ import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status, SubMonitor}
 
 class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
   override def doOperation(monitor : SubMonitor) = {
-    monitor.beginTask("Initialising Coq", 2)
+    monitor.beginTask("Initialising Coq", 1)
     
     editor.coqTop.transaction[Unit](ct => {
-      monitor.subTask("Adding global loadpath entries")
-      Activator.getDefault.getChargeLoadPath.toSeq.flatMap(
-          _.getLoadPath).foreach(p => ct.interp(false, false, p.asCommand))
-      monitor.worked(1)
-
       monitor.subTask("Adding project loadpath entries")
 
       import org.eclipse.ui.IFileEditorInput

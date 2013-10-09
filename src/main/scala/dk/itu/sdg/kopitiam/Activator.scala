@@ -27,13 +27,6 @@ class Activator extends AbstractUIPlugin {
     PreferenceConverter.setDefault(store, "coqKeywordFg", new RGB(127, 6, 101))
     store.setDefault("implicit", true)
   }
-  
-  import org.eclipse.core.runtime.Path
-  def getChargeLoadPath : Option[ICoqLoadPathProvider] =
-      getPreferenceStore.getString("loadpath") match {
-    case p if p.length > 0 => Some(ExternalLoadPath(new Path(p), None))
-    case p => None
-  }
 }
 object Activator {
   private var single : Activator = null
