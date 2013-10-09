@@ -225,8 +225,10 @@ object AbstractLoadPathManager {
   def getInstance() : AbstractLoadPathManager = instance
 
   getInstance().setProviderFor(COQ_8_4, new Coq84Library())
+  getInstance().setProviderFor(CHARGE_0_1, new ChargeLibrary())
 
   final val COQ_8_4 = "dk.itu.sdg.kopitiam/lp/coq/8.4"
+  final val CHARGE_0_1 = "dk.itu.sdg.kopitiam/lp/charge/0.1"
 }
 
 private class Coq84Library extends ICoqLoadPathProvider {
@@ -237,7 +239,16 @@ private class Coq84Library extends ICoqLoadPathProvider {
       Seq(CoqLoadPath(libraryPath.append("theories"), Some("Coq")),
           CoqLoadPath(libraryPath.append("plugins"), Some("Coq")),
           CoqLoadPath(libraryPath.append("user-theories"), None))
-    case _ => Seq()
+    case _ => Nil
+  }
+}
+
+private class ChargeLibrary extends ICoqLoadPathProvider {
+  import org.eclipse.core.runtime.Path
+  override def getLoadPath =
+      Activator.getDefault.getPreferenceStore.getString("loadpath") match {
+    case p if p.length > 0 => Seq(CoqLoadPath(new Path(p), None))
+    case p => Nil
   }
 }
 
