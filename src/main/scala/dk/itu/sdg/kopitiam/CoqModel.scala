@@ -180,7 +180,7 @@ final case class CoqLoadPath(path : IPath, coqdir : Option[String]) {
   }
 }
 
-trait ICoqLoadPathProvider {
+sealed trait ICoqLoadPathProvider {
   def getLoadPath() : Seq[CoqLoadPath]
 }
 
@@ -208,16 +208,21 @@ case class ExternalLoadPath(val fsPath : IPath, val dir : Option[String])
 case class AbstractLoadPath(
     val identifier : String) extends ICoqLoadPathProvider {
   override def getLoadPath = AbstractLoadPathManager.getInstance.
-      getProviderFor(identifier).map(_.getLoadPath).getOrElse(Seq())
+      getProviderFor(identifier).map(_.getLoadPath).getOrElse(Nil)
+}
+
+trait AbstractLoadPathProvider {
+  def getName() : String
+  def getLoadPath() : Seq[CoqLoadPath]
 }
 
 class AbstractLoadPathManager {
-  private var providers : Map[String, ICoqLoadPathProvider] = Map()
+  private var providers : Map[String, AbstractLoadPathProvider] = Map()
 
-  def getProviderFor(identifier : String) : Option[ICoqLoadPathProvider] =
+  def getProviderFor(identifier : String) : Option[AbstractLoadPathProvider] =
     providers.get(identifier)
 
-  def setProviderFor(identifier : String, provider : ICoqLoadPathProvider) =
+  def setProviderFor(identifier : String, provider : AbstractLoadPathProvider) =
     providers += (identifier -> provider)
 }
 object AbstractLoadPathManager {
@@ -231,7 +236,9 @@ object AbstractLoadPathManager {
   final val CHARGE_0_1 = "dk.itu.sdg.kopitiam/lp/charge/0.1"
 }
 
-private class Coq84Library extends ICoqLoadPathProvider {
+private class Coq84Library extends AbstractLoadPathProvider {
+  override def getName = "Coq 8.4 standard library"
+
   override def getLoadPath =
       CoqProgram("coqtop").run(Seq("-where")).readAll match {
     case (0, libraryPath_) =>
@@ -243,7 +250,9 @@ private class Coq84Library extends ICoqLoadPathProvider {
   }
 }
 
-private class ChargeLibrary extends ICoqLoadPathProvider {
+private class ChargeLibrary extends AbstractLoadPathProvider {
+  override def getName = "Charge! for Java"
+
   import org.eclipse.core.runtime.Path
   override def getLoadPath =
       Activator.getDefault.getPreferenceStore.getString("loadpath") match {
