@@ -52,7 +52,7 @@ private trait ICache {
   def destroy()
 }
 
-private class CacheSlot[A](constructor : () => A) {
+class CacheSlot[A](constructor : () => A) {
   private val lock = new Object
 
   private var slot : Option[A] = None
@@ -65,7 +65,7 @@ private class CacheSlot[A](constructor : () => A) {
   def set(value : Option[A]) = lock synchronized (slot = value)
   def clear() = set(None)
 }
-private object CacheSlot {
+object CacheSlot {
   def apply[A](constructor : => A) = new CacheSlot(() => constructor)
 }
 
