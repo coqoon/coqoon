@@ -15,13 +15,13 @@ object JavaASTUtils {
               if (script.contains("invariant:")) {
                 val i1 = script.indexOf(":")
                 val i2 = script.indexOf("frame:")
-                val i3 = if (i2 == -1) script.length - 3 else i2
+                val i3 = if (i2 == -1) script.length else i2
                 val i = script.substring(i1 + 1, i3).trim
                 val f =
                   if (i2 == -1)
                     "<true>"
                   else
-                    script.substring(i3 + 6, script.length - 3).trim
+                    script.substring(i3 + 6, script.length).trim
                 "forward (" + i + ") (" + f + ")."
               } else script
             Some(con)
