@@ -108,7 +108,11 @@ private class LoadPathContentProvider(
     viewer.refresh
   
   override def getElements(input : Any) = input match {
-    case a : ICoqProject => a.getLoadPathProviders.filter(filter).toArray
+    case c : CacheSlot[_] => getElements(c.get)
+    case a : Seq[_] => a.flatMap(_ match {
+      case q : ICoqLoadPathProvider if filter(q) => Some(q)
+      case _ => None
+    }).toArray
     case _ => Array()
   }
   
@@ -133,6 +137,17 @@ import org.eclipse.jface.viewers.TreeViewer
 
 class LoadPathConfigurationPage
     extends PreferencePage with IWorkbenchPropertyPage {
+  private var loadPath = CacheSlot[Seq[ICoqLoadPathProvider]](actualLoadPath)
+  private def actualLoadPath() = TryCast[IProject](element).map(
+      ICoqModel.toCoqProject).map(_.getLoadPathProviders).getOrElse(Nil)
+
+  override def performOk() = {
+    if (loadPath.get != actualLoadPath)
+      TryCast[IProject](element).map(ICoqModel.toCoqProject).foreach(
+          _.setLoadPathProviders(loadPath.get, null))
+    true
+  }
+
   private var element : IAdaptable = null
   override def getElement : IProject = TryCast[IProject](element).get
   override def setElement(element : IAdaptable) = (this.element = element)
@@ -153,7 +168,7 @@ class LoadPathConfigurationPage
     tv1.setLabelProvider(new LoadPathLabelProvider)
     tv1.setContentProvider(new LoadPathContentProvider(
         a => a.isInstanceOf[SourceLoadPath]))
-    tv1.setInput(ICoqModel.toCoqProject(getElement))
+    tv1.setInput(loadPath)
     tv1.getControl.setLayoutData(GridDataFactory.swtDefaults().
         align(SWT.FILL, SWT.FILL).hint(0, 0).grab(true, true).create)
 
@@ -192,7 +207,7 @@ class LoadPathConfigurationPage
     tv2.setLabelProvider(new LoadPathLabelProvider)
     tv2.setContentProvider(new LoadPathContentProvider(
         a => a.isInstanceOf[ProjectLoadPath]))
-    tv2.setInput(ICoqModel.toCoqProject(getElement))
+    tv2.setInput(loadPath)
     tv2.getControl.setLayoutData(GridDataFactory.swtDefaults().
         align(SWT.FILL, SWT.FILL).hint(0, 0).grab(true, true).create)
 
@@ -218,7 +233,7 @@ class LoadPathConfigurationPage
     tv3.setContentProvider(new LoadPathContentProvider(
         a => a.isInstanceOf[ExternalLoadPath] ||
             a.isInstanceOf[AbstractLoadPath]))
-    tv3.setInput(ICoqModel.toCoqProject(getElement))
+    tv3.setInput(loadPath)
     tv3.getControl.setLayoutData(GridDataFactory.swtDefaults().
         align(SWT.FILL, SWT.FILL).hint(0, 0).grab(true, true).create)
 
