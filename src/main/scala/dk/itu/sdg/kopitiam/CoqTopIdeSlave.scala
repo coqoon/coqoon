@@ -64,8 +64,8 @@ private class CoqProgramInstanceImpl(argv : Seq[String],
     
     val pb = new ProcessBuilder(argv : _*)
     val pr = start(pb)
-    val in = new OutputStreamWriter(pr.getOutputStream)
-    val out = new InputStreamReader(pr.getInputStream)
+    val in = new OutputStreamWriter(pr.getOutputStream, "UTF-8")
+    val out = new InputStreamReader(pr.getInputStream, "UTF-8")
     (in, out, pr)
   }
   
