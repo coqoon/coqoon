@@ -881,5 +881,27 @@
             markerType="dk.itu.sdg.kopitiam.problemmarker">
       </markerResolutionGenerator>
    </extension>
+   <extension
+         point="org.eclipse.ui.navigator.navigatorContent">
+      <commonFilter
+            activeByDefault="true"
+            class="dk.itu.sdg.kopitiam.OutputFolderFilter"
+            description="Hides Coq output folders."
+            id="dk.itu.sdg.kopitiam.commonFilter.OutputFolderFilter"
+            name="Coq output folders"
+            visibleInUI="true">
+      </commonFilter>
+   </extension>
+   <extension
+         point="org.eclipse.ui.navigator.viewer">
+      <viewerContentBinding
+            viewerId="org.eclipse.ui.navigator.ProjectExplorer">
+         <includes>
+            <contentExtension
+                  pattern="dk.itu.sdg.kopitiam.commonFilter.*">
+            </contentExtension>
+         </includes>
+      </viewerContentBinding>
+   </extension>
 
 </plugin>
