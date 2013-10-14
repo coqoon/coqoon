@@ -139,8 +139,15 @@ class LoadPathConfigurationPage
   override def getElement : IProject = TryCast[IProject](element).get
   override def setElement(element : IAdaptable) = (this.element = element)
   override def createContents(c : Composite) = {
-    import org.eclipse.swt.layout._
+    import org.eclipse.swt.events._, org.eclipse.swt.layout._
+    import org.eclipse.ui.model.WorkbenchLabelProvider
+    import org.eclipse.ui.model.WorkbenchContentProvider
+    import org.eclipse.ui.dialogs.{
+      ElementTreeSelectionDialog, ISelectionStatusValidator}
+    import org.eclipse.core.runtime.IStatus
+    import org.eclipse.core.resources.IFolder
     import org.eclipse.jface.layout._
+    import org.eclipse.jface.viewers.{Viewer, ViewerFilter}
 
     val folder = new TabFolder(c, SWT.NONE)
 
@@ -165,7 +172,20 @@ class LoadPathConfigurationPage
     c1r.setLayoutData(GridDataFactory.swtDefaults().
         align(SWT.FILL, SWT.TOP).create)
 
-    new Button(c1r, SWT.NONE).setText("Add Folder...")
+    val afb = new Button(c1r, SWT.NONE)
+    afb.setText("Add Folder...")
+    afb.addSelectionListener(new SelectionAdapter {
+      override def widgetSelected(ev : SelectionEvent) = {
+        val dialog = new ElementTreeSelectionDialog(getShell,
+            WorkbenchLabelProvider.getDecoratingWorkbenchLabelProvider(),
+            new WorkbenchContentProvider)
+        dialog.setInput(getElement)
+        dialog.addFilter(MultiFilter(new OnlyFoldersFilter,
+            new NoOutputFoldersFilter, new NoHiddenResourcesFilter))
+        dialog.setAllowMultiple(false)
+        dialog.open
+      }
+    })
     new Label(c1r, SWT.SEPARATOR | SWT.HORIZONTAL)
     new Button(c1r, SWT.NONE).setText("Delete")
 
@@ -204,7 +224,19 @@ class LoadPathConfigurationPage
     c2r.setLayoutData(GridDataFactory.swtDefaults().
         align(SWT.FILL, SWT.TOP).create)
 
-    new Button(c2r, SWT.NONE).setText("Add...")
+    val apb = new Button(c2r, SWT.NONE)
+    apb.setText("Add Project...")
+    apb.addSelectionListener(new SelectionAdapter {
+      override def widgetSelected(ev : SelectionEvent) = {
+        val dialog = new ElementTreeSelectionDialog(getShell,
+            WorkbenchLabelProvider.getDecoratingWorkbenchLabelProvider(),
+            new WorkbenchContentProvider)
+        dialog.setInput(getElement.getWorkspace.getRoot)
+        dialog.addFilter(new OnlyProjectsFilter)
+        dialog.setAllowMultiple(false)
+        dialog.open
+      }
+    })
     new Label(c2r, SWT.SEPARATOR | SWT.HORIZONTAL)
     new Button(c2r, SWT.NONE).setText("Delete")
 
@@ -230,7 +262,15 @@ class LoadPathConfigurationPage
     c3r.setLayoutData(GridDataFactory.swtDefaults().
         align(SWT.FILL, SWT.TOP).create)
 
-    new Button(c3r, SWT.NONE).setText("Add Library...")
+    val alb = new Button(c3r, SWT.NONE)
+    alb.setText("Add Library...")
+    alb.addSelectionListener(new SelectionAdapter {
+      import org.eclipse.swt.widgets.DirectoryDialog
+      override def widgetSelected(ev : SelectionEvent) = {
+        val dialog = new DirectoryDialog(getShell)
+        dialog.open
+      }
+    })
     new Button(c3r, SWT.NONE).setText("Add System Library...")
     new Label(c3r, SWT.SEPARATOR | SWT.HORIZONTAL)
     new Button(c3r, SWT.NONE).setText("Delete")
@@ -298,7 +338,7 @@ class ExportCoqMakefileRunner(project : IProject) extends JobRunner[Unit] {
 import org.eclipse.core.resources.IFolder
 import org.eclipse.jface.viewers.{Viewer, ViewerFilter}
 
-class OutputFolderFilter extends ViewerFilter {
+class NoOutputFoldersFilter extends ViewerFilter {
   override def select(viewer : Viewer,
       parent : AnyRef, element : AnyRef) : Boolean = element match {
     case f : IFolder =>
@@ -312,5 +352,61 @@ class OutputFolderFilter extends ViewerFilter {
       }
       true
     case _ => true
+  }
+}
+
+class OnlyFoldersFilter extends ViewerFilter {
+  override def select(viewer : Viewer,
+      parent : AnyRef, element : AnyRef) : Boolean = element match {
+    case f : IFolder => true
+    case _ => false
+  }
+}
+
+class OnlyProjectsFilter extends ViewerFilter {
+  override def select(viewer : Viewer,
+      parent : AnyRef, element : AnyRef) : Boolean = element match {
+    case p : IProject => true
+    case _ => false
+  }
+}
+
+class NoHiddenResourcesFilter extends ViewerFilter {
+  import org.eclipse.core.filesystem.EFS
+  override def select(viewer : Viewer,
+      parent : AnyRef, element : AnyRef) : Boolean = element match {
+    case r : IResource if r.isHidden || r.getName()(0) == '.' || EFS.getStore(
+        r.getLocationURI()).fetchInfo().getAttribute(EFS.ATTRIBUTE_HIDDEN) =>
+      false
+    case _ => true
+  }
+}
+
+class MultiFilter extends ViewerFilter {
+  private var filters : Seq[ViewerFilter] = Nil
+
+  override def select(viewer : Viewer,
+      parent : AnyRef, element : AnyRef) : Boolean = {
+    for (f <- filters)
+      if (!f.select(viewer, parent, element))
+        return false
+    true
+  }
+
+  override def isFilterProperty(
+      element : AnyRef, property : String) : Boolean = {
+    for (f <- filters)
+      if (f.isFilterProperty(element, property))
+        return true
+    false
+  }
+
+  def setFilters(filters : Seq[ViewerFilter]) = (this.filters = filters)
+}
+object MultiFilter {
+  def apply(filters : ViewerFilter*) : MultiFilter = {
+    val f = new MultiFilter
+    f.setFilters(filters)
+    f
   }
 }
