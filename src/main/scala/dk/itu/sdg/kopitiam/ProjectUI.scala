@@ -42,17 +42,10 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
     import org.eclipse.core.resources.{IWorkspace, IWorkspaceRunnable}
     import org.eclipse.ui.ide.undo.WorkspaceUndoUtil
     
-    private class DerivedRunnable(r : IResource) extends IWorkspaceRunnable {
-      override def run(monitor : IProgressMonitor) = {
-        r.setHidden(true)
-        r.setDerived(true, monitor)
-      }
-    }
-    
     override def run(monitor_ : IProgressMonitor) = {
-      val monitor = SubMonitor.convert(monitor_, 4)
+      val monitor = SubMonitor.convert(monitor_, 3)
       
-      monitor.beginTask("New Coq project", 4)
+      monitor.beginTask("New Coq project", 3)
       import org.eclipse.core.runtime.Path
       val infoAdapter = WorkspaceUndoUtil.getUIInfoAdapter(getShell)
       project.getCreateOperation.execute(monitor.newChild(1), infoAdapter)
@@ -60,12 +53,6 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
       src.getCreateOperation.execute(monitor.newChild(1), infoAdapter)
       val bin = project.getPackageFragmentRoot(new Path("bin"))
       bin.getCreateOperation.execute(monitor.newChild(1), infoAdapter)
-      
-      val binFolder = bin.getCorrespondingResource.get
-      val ws = binFolder.getWorkspace
-      ws.run(new DerivedRunnable(binFolder),
-          ws.getRuleFactory.derivedRule(binFolder),
-          IWorkspace.AVOID_UPDATE, monitor.newChild(1))
     }
   }
   
