@@ -307,3 +307,23 @@ class ExportCoqMakefileRunner(project : IProject) extends JobRunner[Unit] {
     }
   }
 }
+
+import org.eclipse.core.resources.IFolder
+import org.eclipse.jface.viewers.{Viewer, ViewerFilter}
+
+class OutputFolderFilter extends ViewerFilter {
+  override def select(viewer : Viewer,
+      parent : AnyRef, element : AnyRef) : Boolean = element match {
+    case f : IFolder =>
+      val project = ICoqModel.toCoqProject(f.getProject)
+      for (i <- project.getLoadPathProviders) i match {
+        case DefaultOutputLoadPath(out) if f == out =>
+          return false
+        case SourceLoadPath(_, out) if f == out =>
+          return false
+        case _ =>
+      }
+      true
+    case _ => true
+  }
+}
