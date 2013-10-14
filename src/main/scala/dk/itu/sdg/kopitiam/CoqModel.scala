@@ -154,7 +154,7 @@ private case class CoqModelImpl(
 }
 private object CoqModelImpl {
   def hasNature(a : IProject) =
-    (a.getDescription.getNatureIds.exists(ICoqProject.isCoqNature))
+    (a.isOpen && a.getDescription.getNatureIds.exists(ICoqProject.isCoqNature))
 }
 
 final case class CoqLoadPath(path : IPath, coqdir : Option[String]) {
