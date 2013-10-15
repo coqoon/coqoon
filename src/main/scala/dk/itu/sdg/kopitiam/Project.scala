@@ -265,23 +265,22 @@ class CoqBuilder extends IncrementalProjectBuilder {
   }
   
   private def resolveRequire(t : String) : Option[IPath] = {
-    val (coqdir, libname) = {
+    val (libdir, libname) = {
       val i = t.split('.').toSeq
       (i.init, i.last)
     }
     
-    for ((coqdir, location) <- completeLoadPath) {
+    for ((coqdir, location) <- completeLoadPath
+        if coqdir.endsWith(libdir)) {
       val p = new Path(location.getAbsolutePath).
           append(libname).addFileExtension("vo")
       val f = p.toFile
-      if (coqdir.endsWith(coqdir)) {
-        if (!f.exists) {
-          if (possibleObjects.contains(p))
-            /* This object is the best candidate, but it doesn't exist yet,
-             * so we should try it again later */
-            return None
-        } else return Some(p)
-      }
+      if (!f.exists) {
+        if (possibleObjects.contains(p))
+          /* This object is the best candidate, but it doesn't exist yet,
+           * so we should try it again later */
+          return None
+      } else return Some(p)
     }
     None
   }
@@ -441,23 +440,22 @@ object CoqBuilder {
     }
 
     def resolveRequire(t : String) : Option[IPath] = {
-      val (coqdir, libname) = {
+      val (libdir, libname) = {
         val i = t.split('.').toSeq
         (i.init, i.last)
       }
 
-      for ((coqdir, location) <- completeLoadPath) {
+      for ((coqdir, location) <- completeLoadPath
+          if coqdir.endsWith(libdir)) {
         val p = new Path(location.getAbsolutePath).
           append(libname).addFileExtension("vo")
         val f = p.toFile
-        if (coqdir.endsWith(coqdir)) {
-          if (!f.exists && !built.contains(p)) {
-            if (possibleObjects.contains(p))
-              /* This object is the best candidate, but it doesn't exist yet,
-               * so we should try it again later */
-              return None
-          } else return Some(p)
-        }
+        if (!f.exists) {
+          if (possibleObjects.contains(p))
+            /* This object is the best candidate, but it doesn't exist yet,
+           * so we should try it again later */
+            return None
+        } else return Some(p)
       }
       None
     }
