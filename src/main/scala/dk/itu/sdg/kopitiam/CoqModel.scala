@@ -421,7 +421,44 @@ private case class CoqProjectImpl(
   override def getLoadPath() = getCache.loadPath.get
 
   override def setLoadPathProviders(
-      lp : Seq[ICoqLoadPathProvider], monitor : IProgressMonitor) = ()
+      lp : Seq[ICoqLoadPathProvider], monitor : IProgressMonitor) = {
+    var coqPart : List[CoqProjectEntry] = Nil
+    var kopitiamPart : List[CoqProjectEntry] = Nil
+    var count = 0
+    for (i <- lp) {
+      kopitiamPart :+= VariableEntry("KOPITIAM_" + count, (i match {
+        case AbstractLoadPath(identifier) =>
+          Seq("AbstractLoadPath", identifier)
+        case DefaultOutputLoadPath(bin) =>
+          val path = bin.getProjectRelativePath.toString
+          coqPart :+= RecursiveEntry(path, "")
+          Seq("DefaultOutput", bin.getProjectRelativePath.toString)
+        case ExternalLoadPath(path_, None) =>
+          val path = path_.toString
+          coqPart :+= RecursiveEntry(path, "")
+          Seq("ExternalLoadPath", path)
+        case ExternalLoadPath(path_, Some(coqdir)) =>
+          val path = path_.toString
+          coqPart :+= RecursiveEntry(path, coqdir)
+          Seq("ExternalLoadPath", path, coqdir)
+        case ProjectLoadPath(project) =>
+          val path = project.getName
+          Seq("ProjectLoadPath", project.getName)
+        case SourceLoadPath(src, None) =>
+          val srcPath = src.getProjectRelativePath.toString
+          coqPart :+= RecursiveEntry(srcPath, "")
+          Seq("SourceLoadPath", srcPath)
+        case SourceLoadPath(src, Some(bin)) =>
+          val srcPath = src.getProjectRelativePath.toString
+          val binPath = bin.getProjectRelativePath.toString
+          coqPart ++= Seq(
+            RecursiveEntry(srcPath, ""), RecursiveEntry(binPath, ""))
+          Seq("SourceLoadPath", srcPath, binPath)
+      }).map(CoqProjectEntry.escape).mkString(" "))
+      count += 1
+    }
+    setProjectConfiguration(coqPart ++ kopitiamPart, monitor)
+  }
   override def getLoadPathProviders : Seq[ICoqLoadPathProvider] =
     getCache.loadPathProviders.get
 
