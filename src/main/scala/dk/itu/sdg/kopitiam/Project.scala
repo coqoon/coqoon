@@ -22,7 +22,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   override protected def getRule(
       type_ : Int, args : JMap[String, String]) = getProject
-  
+
+  private val coqProject = CacheSlot[ICoqProject] {
+    ICoqModel.toCoqProject(getProject)
+  }
+
   def loadPathProviders = getLoadPathProviders(getProject)
       
   private var deps : Option[DependencyTracker] = None
@@ -181,9 +185,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
     BuildManager.buildLoop(done.map(new BuildTaskImpl(_)))
 
     /* Remove any unused output directories */
-    cleanProject(ICoqModel.toCoqProject(getProject))
+    cleanProject(coqProject.get)
 
-    Array()
+    coqProject.get.getLoadPathProviders.collect {
+      case pl : ProjectLoadPath => pl.project
+    }.toArray
   }
   
   private def createResourceErrorMarker(r : IResource, s : String) = {
@@ -226,6 +232,22 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   override protected def build(kind : Int, args_ : JMap[String, String],
       monitor_ : IProgressMonitor) : Array[IProject] = {
+    /* Check that our project dependencies are in order */
+    val description = getProject.getDescription
+    val descriptionDependencies = description.getReferencedProjects.toSet
+    val currentDependencies = coqProject.get.getLoadPathProviders.collect {
+      case pl : ProjectLoadPath => pl.project
+    }.toSet
+    if (descriptionDependencies != currentDependencies) {
+      description.setReferencedProjects(currentDependencies.toArray)
+      getProject.setDescription(description, IResource.KEEP_HISTORY, monitor_)
+
+      needRebuild()
+      rememberLastBuiltState()
+
+      return Array()
+    }
+
     getProject.deleteMarkers(
         ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_ZERO)
     val monitor = SubMonitor.convert(
