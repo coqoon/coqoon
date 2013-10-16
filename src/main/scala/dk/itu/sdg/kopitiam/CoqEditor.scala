@@ -7,6 +7,16 @@ import org.eclipse.ui.IFileEditorInput
 import org.eclipse.ui.editors.text.TextEditor
 
 class CoqEditor extends TextEditor with CoqTopEditorContainer {
+  private object ModelListener extends CoqElementChangeListener {
+    override def coqElementChanged(ev : CoqElementChangeEvent) = ev match {
+      case CoqLoadPathChangeEvent(project)
+          if project.getCorrespondingResource == file.map(_.getProject) =>
+        clearFlag(CoqEditor.FLAG_INITIALISED)
+      case _ =>
+    }
+  }
+  ICoqModel.getInstance.addListener(ModelListener)
+
   private val lock = new Object
   
   override def editor = this
@@ -54,6 +64,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
       coqTopV.kill
       coqTopV = null
     }
+    ICoqModel.getInstance.removeListener(ModelListener)
     reconciler.uninstall
     super.dispose
   }

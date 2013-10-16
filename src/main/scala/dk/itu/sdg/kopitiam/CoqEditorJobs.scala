@@ -11,7 +11,10 @@ class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
 
       editor.file.foreach(file => {
         val cp = ICoqModel.toCoqProject(file.getProject)
-        cp.getLoadPath.foreach(lpe => ct.interp(false, false, lpe.asCommand))
+        /* XXX: I don't like using raw="true" here, but it's the quickest way
+         * of making re-initialisation work properly (and, because load path
+         * changes can't be undone, it should be approximately safe) */
+        cp.getLoadPath.foreach(lpe => ct.interp(true, false, lpe.asCommand))
       })
 
       monitor.worked(1)
