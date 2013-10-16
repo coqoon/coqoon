@@ -17,9 +17,7 @@ class JavaProofInitialisationRunner(
     jes.coqTop.transaction[Unit](ct => {
       monitor.subTask("Performing custom Coq initialisation")
 
-      import org.eclipse.core.resources.IResource
-      val input = jes.editor.getEditorInput
-      TryCast[IFileEditorInput](input).map(_.getFile).foreach(f => {
+      jes.file.foreach(f => {
         val cp = ICoqModel.toCoqProject(f.getProject)
         cp.getLoadPath.foreach(lpe => ct.interp(false, false, lpe.asCommand))
       })

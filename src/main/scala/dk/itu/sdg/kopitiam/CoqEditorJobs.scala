@@ -9,10 +9,7 @@ class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
     editor.coqTop.transaction[Unit](ct => {
       monitor.subTask("Adding project loadpath entries")
 
-      import org.eclipse.ui.IFileEditorInput
-      
-      val input = editor.getEditorInput
-      TryCast[IFileEditorInput](input).map(_.getFile).foreach(file => {
+      editor.file.foreach(file => {
         val cp = ICoqModel.toCoqProject(file.getProject)
         cp.getLoadPath.foreach(lpe => ct.interp(false, false, lpe.asCommand))
       })
