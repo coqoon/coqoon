@@ -130,15 +130,38 @@ private case class CoqProjectImpl(
   private class Cache extends ICache {
     def destroy = Seq(projectFile, loadPathProviders, loadPath).map(_.clear)
 
-    override def update(ev : IResourceChangeEvent) = {
-      val projectDelta =
-        Option(ev.getDelta.findMember(res.getFile("_CoqProject").getFullPath))
-      projectDelta match {
+    override def update(ev : IResourceChangeEvent) : Unit = {
+      /* XXX: Is this a sensible place to send notifications from? */
+
+      val delta = ev.getDelta
+      Option(delta.findMember(res.getFile("_CoqProject").getFullPath)) match {
         case Some(delta) =>
-          /* XXX: Is this a sensible place to send notifications from? */
-          notifyListeners(CoqLoadPathChangeEvent(CoqProjectImpl.this))
           destroy
+          notifyListeners(CoqLoadPathChangeEvent(CoqProjectImpl.this))
+          return
         case None =>
+      }
+
+      /* XXX: This is over-enthusiastic -- only directories in the load path
+       * should be considered */
+      var hierarchyChanged = false
+      object ProjectVisitor extends IResourceDeltaVisitor {
+        override def visit(delta : IResourceDelta) : Boolean = {
+          if (hierarchyChanged)
+            return false
+          val kind = delta.getKind &
+              (IResourceDelta.ADDED | IResourceDelta.REMOVED)
+          if (delta.getResource.isInstanceOf[IFolder] && kind != 0) {
+            hierarchyChanged = true
+            false
+          } else true
+        }
+      }
+      delta.accept(ProjectVisitor)
+      if (hierarchyChanged) {
+        /* Only the expanded load path needs to be recomputed */
+        loadPath.clear
+        notifyListeners(CoqLoadPathChangeEvent(CoqProjectImpl.this))
       }
     }
 
