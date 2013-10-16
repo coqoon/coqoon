@@ -18,6 +18,9 @@ private abstract class CoqElementImpl[
   override def getCorrespondingResource = Option(res)
 
   override def getModel() : CoqModelImpl = getAncestor[CoqModelImpl].get
+
+  protected[kopitiam] def notifyListeners(ev : CoqElementChangeEvent) : Unit =
+    getModel.notifyListeners(this, ev)
 }
 
 private trait ICache {
@@ -101,6 +104,17 @@ private case class CoqModelImpl(
     cache synchronized {
       cache.getOrElseUpdate(element, constructor).asInstanceOf[A]
     }
+
+  private var listeners : Set[CoqElementChangeListener] = Set()
+
+  override def addListener(l : CoqElementChangeListener) = (listeners += l)
+  override def removeListener(l : CoqElementChangeListener) = (listeners -= l)
+
+  protected[kopitiam] def notifyListeners(
+      source : ICoqElement, ev : CoqElementChangeEvent) : Unit = {
+    for (i <- listeners)
+      i.coqElementChanged(ev)
+  }
 }
 private object CoqModelImpl {
   def hasNature(a : IProject) =

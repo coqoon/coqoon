@@ -45,6 +45,9 @@ trait ICoqModel extends ICoqElement with IParent {
   def hasProjects : Boolean = (!getProjects.isEmpty)
 
   def toCoqElement(resource : IResource) : Option[ICoqElement]
+
+  def addListener(l : CoqElementChangeListener)
+  def removeListener(l : CoqElementChangeListener)
 }
 object ICoqModel {
   def create(root : IWorkspaceRoot) : ICoqModel = new CoqModelImpl(root)
@@ -56,6 +59,15 @@ object ICoqModel {
   def toCoqProject(project : IProject) : ICoqProject =
     getInstance.toCoqElement(project).flatMap(TryCast[ICoqProject]).orNull
 }
+
+trait CoqElementChangeListener {
+  def coqElementChanged(ev : CoqElementChangeEvent)
+}
+
+trait CoqElementChangeEvent
+
+case class CoqLoadPathChangeEvent(
+    project : ICoqProject) extends CoqElementChangeEvent
 
 final case class CoqLoadPath(path : IPath, coqdir : Option[String]) {
   def asCommand : String =
