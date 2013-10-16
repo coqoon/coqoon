@@ -130,6 +130,18 @@ private case class CoqProjectImpl(
   private class Cache extends ICache {
     def destroy = Seq(projectFile, loadPathProviders, loadPath).map(_.clear)
 
+    override def update(ev : IResourceChangeEvent) = {
+      val projectDelta =
+        Option(ev.getDelta.findMember(res.getFile("_CoqProject").getFullPath))
+      projectDelta match {
+        case Some(delta) =>
+          /* XXX: Is this a sensible place to send notifications from? */
+          notifyListeners(CoqLoadPathChangeEvent(CoqProjectImpl.this))
+          destroy
+        case None =>
+      }
+    }
+
     import CoqProjectFile._
     private[CoqProjectImpl] final val projectFile =
         CacheSlot[CoqProjectFile] {
@@ -257,6 +269,7 @@ private case class CoqProjectImpl(
       count += 1
     }
     setProjectConfiguration(coqPart ++ kopitiamPart, monitor)
+    notifyListeners(CoqLoadPathChangeEvent(this))
   }
   override def getLoadPathProviders : Seq[ICoqLoadPathProvider] =
     getCache.loadPathProviders.get
