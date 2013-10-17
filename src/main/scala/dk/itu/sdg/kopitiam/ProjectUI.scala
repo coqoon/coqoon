@@ -124,12 +124,12 @@ import org.eclipse.jface.viewers.TreeViewer
 
 class LoadPathConfigurationPage
     extends PreferencePage with IWorkbenchPropertyPage {
-  private var loadPath = CacheSlot[Seq[ICoqLoadPathProvider]](actualLoadPath)
+  private var loadPath = CacheSlot(actualLoadPath.toBuffer)
   private def actualLoadPath() = TryCast[IProject](element).map(
       ICoqModel.toCoqProject).map(_.getLoadPathProviders).getOrElse(Nil)
 
   override def performOk() = {
-    if (loadPath.get != actualLoadPath)
+    if (loadPath.get.toSet != actualLoadPath.toSet)
       TryCast[IProject](element).map(ICoqModel.toCoqProject).foreach(
           _.setLoadPathProviders(loadPath.get, null))
     true
@@ -140,14 +140,13 @@ class LoadPathConfigurationPage
   override def setElement(element : IAdaptable) = (this.element = element)
   override def createContents(c : Composite) = {
     import org.eclipse.swt.events._, org.eclipse.swt.layout._
-    import org.eclipse.ui.model.WorkbenchLabelProvider
-    import org.eclipse.ui.model.WorkbenchContentProvider
     import org.eclipse.ui.dialogs.{
       ElementTreeSelectionDialog, ISelectionStatusValidator}
     import org.eclipse.core.runtime.IStatus
     import org.eclipse.core.resources.IFolder
     import org.eclipse.jface.layout._
-    import org.eclipse.jface.viewers.{Viewer, ViewerFilter}
+    import org.eclipse.jface.window.Window
+    import org.eclipse.jface.viewers._
 
     val folder = new TabFolder(c, SWT.NONE)
 
@@ -176,18 +175,45 @@ class LoadPathConfigurationPage
     afb.setText("Add Folder...")
     afb.addSelectionListener(new SelectionAdapter {
       override def widgetSelected(ev : SelectionEvent) = {
-        val dialog = new ElementTreeSelectionDialog(getShell,
-            WorkbenchLabelProvider.getDecoratingWorkbenchLabelProvider(),
-            new WorkbenchContentProvider)
+        val dialog = UIUtils.createWorkspaceElementDialog(getShell)
         dialog.setInput(getElement)
         dialog.addFilter(MultiFilter(new OnlyFoldersFilter,
             new NoOutputFoldersFilter, new NoHiddenResourcesFilter))
+        dialog.setValidator(new SelectionValidator {
+          override def check(selection : Object) : Option[String] = {
+            for (i <- loadPath.get;
+                 j <- TryCast[SourceLoadPath](i)
+                     if j.folder == selection)
+              return Some(j.folder.getName + " is already in the load path")
+            None
+          }
+        })
         dialog.setAllowMultiple(false)
-        dialog.open
+        if (dialog.open == Window.OK) {
+          Option(dialog.getFirstResult) match {
+            case Some(f : IFolder) =>
+              loadPath.get += new SourceLoadPath(f, None)
+              tv1.refresh()
+            case _ =>
+          }
+        }
       }
     })
     new Label(c1r, SWT.SEPARATOR | SWT.HORIZONTAL)
-    new Button(c1r, SWT.NONE).setText("Delete")
+    val dfb = new Button(c1r, SWT.NONE)
+    dfb.setText("Delete")
+    dfb.addSelectionListener(new SelectionAdapter {
+      import scala.collection.JavaConversions._
+      override def widgetSelected(ev : SelectionEvent) = {
+        for (i <- tv1.getSelection.asInstanceOf[TreeSelection].iterator)
+          Option(i) match {
+            case Some(slp : SourceLoadPath) =>
+              loadPath.get -= slp
+            case _ =>
+          }
+        tv1.refresh()
+      }
+    })
 
     val oll = new Label(c1, SWT.NONE)
     oll.setLayoutData(GridDataFactory.swtDefaults().
@@ -228,17 +254,45 @@ class LoadPathConfigurationPage
     apb.setText("Add Project...")
     apb.addSelectionListener(new SelectionAdapter {
       override def widgetSelected(ev : SelectionEvent) = {
-        val dialog = new ElementTreeSelectionDialog(getShell,
-            WorkbenchLabelProvider.getDecoratingWorkbenchLabelProvider(),
-            new WorkbenchContentProvider)
+        val dialog = UIUtils.createWorkspaceElementDialog(getShell)
         dialog.setInput(getElement.getWorkspace.getRoot)
-        dialog.addFilter(new OnlyProjectsFilter)
+        dialog.addFilter(MultiFilter(
+            new OnlyProjectsFilter, new OmitResourcesFilter(getElement)))
+        dialog.setValidator(new SelectionValidator {
+          override def check(selection : Object) : Option[String] = {
+            for (i <- loadPath.get;
+                 j <- TryCast[ProjectLoadPath](i)
+                     if j.project == selection)
+              return Some(j.project.getName + " is already in the load path")
+            None
+          }
+        })
         dialog.setAllowMultiple(false)
-        dialog.open
+        if (dialog.open == Window.OK) {
+          Option(dialog.getFirstResult) match {
+            case Some(p : IProject) =>
+              loadPath.get += new ProjectLoadPath(p)
+              tv2.refresh()
+            case _ =>
+          }
+        }
       }
     })
     new Label(c2r, SWT.SEPARATOR | SWT.HORIZONTAL)
-    new Button(c2r, SWT.NONE).setText("Delete")
+    val dpb = new Button(c2r, SWT.NONE)
+    dpb.setText("Delete")
+    dpb.addSelectionListener(new SelectionAdapter {
+      import scala.collection.JavaConversions._
+      override def widgetSelected(ev : SelectionEvent) = {
+        for (i <- tv2.getSelection.asInstanceOf[TreeSelection].iterator)
+          Option(i) match {
+            case Some(plp : ProjectLoadPath) =>
+              loadPath.get -= plp
+            case _ =>
+          }
+        tv2.refresh()
+      }
+    })
 
     val t3 = new TabItem(folder, SWT.NONE)
     t3.setText("Libraries")
@@ -266,14 +320,42 @@ class LoadPathConfigurationPage
     alb.setText("Add Library...")
     alb.addSelectionListener(new SelectionAdapter {
       import org.eclipse.swt.widgets.DirectoryDialog
-      override def widgetSelected(ev : SelectionEvent) = {
+      import org.eclipse.core.runtime.Path
+      override def widgetSelected(ev : SelectionEvent) : Unit = {
         val dialog = new DirectoryDialog(getShell)
-        dialog.open
+        Option(dialog.open).map(f => new Path(f)) match {
+          case Some(p) =>
+            for (i <- loadPath.get;
+                 j <- TryCast[ExternalLoadPath](i)
+                     if j.fsPath == p)
+              return
+            loadPath.get += new ExternalLoadPath(p, None)
+            tv3.refresh()
+          case _ =>
+        }
       }
     })
-    new Button(c3r, SWT.NONE).setText("Add System Library...")
+
+    val aslb = new Button(c3r, SWT.NONE)
+    aslb.setText("Add System Library...")
+    aslb.setEnabled(false)
     new Label(c3r, SWT.SEPARATOR | SWT.HORIZONTAL)
-    new Button(c3r, SWT.NONE).setText("Delete")
+    val dlb = new Button(c3r, SWT.NONE)
+    dlb.setText("Delete")
+    dlb.addSelectionListener(new SelectionAdapter {
+      import scala.collection.JavaConversions._
+      override def widgetSelected(ev : SelectionEvent) = {
+        for (i <- tv3.getSelection.asInstanceOf[TreeSelection].iterator)
+          Option(i) match {
+            case Some(elp : ExternalLoadPath) =>
+              loadPath.get -= elp
+            /* case Some(alp : AbstractLoadPath) =>
+              loadPath.get -= alp */
+            case _ =>
+          }
+        tv3.refresh()
+      }
+    })
 
     folder.pack
     folder
@@ -371,6 +453,11 @@ class OnlyProjectsFilter extends ViewerFilter {
   }
 }
 
+class OmitResourcesFilter(resources : IResource*) extends ViewerFilter {
+  override def select(viewer : Viewer, parent : AnyRef, element : AnyRef) =
+    !resources.contains(element)
+}
+
 class NoHiddenResourcesFilter extends ViewerFilter {
   import org.eclipse.core.filesystem.EFS
   override def select(viewer : Viewer,
@@ -408,5 +495,20 @@ object MultiFilter {
     val f = new MultiFilter
     f.setFilters(filters)
     f
+  }
+}
+
+import org.eclipse.ui.dialogs.ISelectionStatusValidator
+
+abstract class SelectionValidator extends ISelectionStatusValidator {
+  import org.eclipse.core.runtime.IStatus
+
+  def check(selection : Object) : Option[String]
+
+  override def validate(selection : Array[Object]) : IStatus = {
+    for (i <- selection;
+         j <- check(i))
+      return Activator.makeStatus(IStatus.ERROR, j)
+    Activator.makeStatus(IStatus.OK, "")
   }
 }
