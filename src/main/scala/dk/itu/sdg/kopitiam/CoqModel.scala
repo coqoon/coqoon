@@ -139,6 +139,8 @@ class AbstractLoadPathManager {
 
   def setProviderFor(identifier : String, provider : AbstractLoadPathProvider) =
     providers += (identifier -> provider)
+
+  def getProviders() = providers.values.toSeq
 }
 object AbstractLoadPathManager {
   private final val instance = new AbstractLoadPathManager
