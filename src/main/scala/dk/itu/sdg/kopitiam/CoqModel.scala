@@ -98,7 +98,8 @@ sealed trait ICoqLoadPathProvider {
 
 case class ProjectLoadPath(
     val project : IProject) extends ICoqLoadPathProvider {
-  override def getLoadPath = ICoqModel.toCoqProject(project).getLoadPath
+  override def getLoadPath =
+    Option(ICoqModel.toCoqProject(project)).map(_.getLoadPath).getOrElse(Seq())
 }
 
 case class SourceLoadPath(val folder : IFolder,
