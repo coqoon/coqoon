@@ -8,11 +8,21 @@
 package dk.itu.sdg.kopitiam
 
 object UIUtils {
+  import org.eclipse.swt.widgets.Shell
+
   import org.eclipse.ui.PlatformUI
   def getWorkbench = PlatformUI.getWorkbench
   def getDisplay = getWorkbench.getDisplay
   def getActiveShell = getDisplay.getActiveShell
-  
+
+  import org.eclipse.ui.model.{
+    WorkbenchLabelProvider, WorkbenchContentProvider}
+  import org.eclipse.ui.dialogs.ElementTreeSelectionDialog
+  def createWorkspaceElementDialog(parent : Shell) =
+    new ElementTreeSelectionDialog(parent,
+        WorkbenchLabelProvider.getDecoratingWorkbenchLabelProvider(),
+        new WorkbenchContentProvider)
+
   def exec[A](r : => A) : A = {
     object ResultHolder {
       var result : A = _
@@ -29,7 +39,6 @@ object UIUtils {
   })
   
   object Dialog {
-    import org.eclipse.swt.widgets.Shell
     protected def bindStockDialog[A](
         f : (Shell, String, String) => A) : (String, String) => A =
       f(getDisplay.getActiveShell, _ : String, _ : String)
