@@ -362,61 +362,6 @@ class LoadPathConfigurationPage
   }
 }
 
-import org.eclipse.core.commands.{ExecutionEvent, AbstractHandler}
-class ExportCoqMakefileHandler extends AbstractHandler {
-  private var project : Option[IProject] = None
-  
-  import org.eclipse.ui.ISources
-  import org.eclipse.core.expressions.IEvaluationContext
-  import org.eclipse.jface.viewers.IStructuredSelection
-  override protected def setEnabled(evaluationContext_ : Any) : Unit = {
-    val evaluationContext = TryCast[IEvaluationContext](evaluationContext_)
-    val selection = TryCast[IStructuredSelection](evaluationContext match {
-      case Some(a) => a.getVariable(ISources.ACTIVE_CURRENT_SELECTION_NAME)
-      case _ => UIUtils.getWorkbench.
-          getActiveWorkbenchWindow.getSelectionService.getSelection
-    })
-    selection match {
-      case Some(a : IStructuredSelection) =>
-        project = TryCast[IProject](a.getFirstElement)
-        project match {
-          case Some(a) =>
-            setBaseEnabled(true)
-            return
-          case _ =>
-        }
-      case _ =>
-    }
-    setBaseEnabled(false)
-  }
-  
-  override def execute(ev : ExecutionEvent) = {
-    if (isEnabled())
-      new ExportCoqMakefileJob(project.get).schedule
-    null
-  }
-}
-
-class ExportCoqMakefileJob(project : IProject) extends JobBase(
-    "Export Coq project Makefile", new ExportCoqMakefileRunner(project)) {
-  setRule(project)
-}
-class ExportCoqMakefileRunner(project : IProject) extends JobRunner[Unit] {
-  import org.eclipse.core.runtime.SubMonitor
-  override def doOperation(monitor : SubMonitor) = {
-    monitor.beginTask("Export Coq project Makefile", 1)
-    import java.io.ByteArrayInputStream
-    val contents = new ByteArrayInputStream(
-        CoqBuilder.generateMakefile(project).getBytes)
-    project.getFile("KopitiamMakefile") match {
-      case f : IFile if f.exists =>
-        f.setContents(contents, IResource.NONE, monitor)
-      case f : IFile =>
-        f.create(contents, IResource.NONE, monitor)
-    }
-  }
-}
-
 import org.eclipse.core.resources.IFolder
 import org.eclipse.jface.viewers.{Viewer, ViewerFilter}
 
