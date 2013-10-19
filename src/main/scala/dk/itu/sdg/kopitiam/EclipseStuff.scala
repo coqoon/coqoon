@@ -70,13 +70,6 @@ class CompileCoqRunner(
     val location = source.getLocation.removeFileExtension
     val outputFile = location.addFileExtension("vo").toFile
     
-    output match {
-      case Some(file)
-          if file.getLocalTimeStamp > source.getLocalTimeStamp =>
-        return
-      case _ =>
-    }
-    
     val coqc = CoqProgram("coqtop")
     if (coqc.check) {
       val flp = ICoqModel.toCoqProject(
