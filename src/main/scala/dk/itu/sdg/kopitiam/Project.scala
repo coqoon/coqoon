@@ -167,6 +167,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
     val cp = coqProject.get
     val sb = new StringBuilder
 
+    val orderedDeps = dt.getDependencies.keys.toSeq.sortWith(
+        (a, b) => a.toPortableString.compareTo(b.toPortableString) < 0)
+
     sb ++= "override _COQCMD = \\\n\t" +
         """mkdir -p "`dirname "$@"`" && """ +
         """coqc $(COQFLAGS) "$<" && mv "$<o" "$@" """ +
@@ -186,12 +189,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
             j.coqdir.getOrElse("") + "\"\n"
     }
 
-    sb ++= "OBJECTS = " + dt.getDependencies.keys.flatMap(makePathRelative).
+    sb ++= "OBJECTS = " + orderedDeps.flatMap(makePathRelative).
         mkString("\\\n\t", " \\\n\t", "")
     sb ++= "\n\nall: $(OBJECTS)\nclean:\n\trm -f $(OBJECTS)\n\n"
 
     sb ++= (
-      for ((out, deps) <- dt.getDependencies;
+      for (out <- orderedDeps;
+           deps <- Some(dt.getDependencies(out));
            r <- makePathRelative(out))
         yield r + ": " + (
           for ((_, _, Some(path)) <- deps;
