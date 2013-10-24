@@ -65,8 +65,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
     val dt = deps.get
     
-    completeLoadPath = coqProject.get.getLoadPath.flatMap(_.expand)
-    
     /* Delete any objects in the output folders that don't have a corresponding
      * source file */
     traverse[IFile](getProject,
@@ -83,7 +81,14 @@ class CoqBuilder extends IncrementalProjectBuilder {
       } else dt.clearDependencies(j)
       dt.unresolveDependencies(i.getLocation, j)
     }
-    
+
+    /* Pre-create all of the possible output directories so that the complete
+     * load path is actually complete */
+    for ((path, _) <- dt.getDependencies;
+         file <- makePathRelative(path).map(getProject.getFile))
+      new FolderCreationRunner(file).run(null)
+    completeLoadPath = coqProject.get.getLoadPath.flatMap(_.expand)
+
     getProject.deleteMarkers(
         ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_INFINITE)
 
