@@ -93,9 +93,12 @@ class CoqBuilder extends IncrementalProjectBuilder {
         ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_INFINITE)
 
     def isUpToDate(path : IPath) : Boolean = {
-      val lm = path.toFile.lastModified
-      dt.getDependencies(path).flatMap(_._3).forall(
-          d => isUpToDate(d) && d.toFile.lastModified < lm)
+      val f = path.toFile
+      if (f.exists) {
+        val lm = f.lastModified
+        dt.getDependencies(path).flatMap(_._3).forall(
+            d => isUpToDate(d) && d.toFile.lastModified < lm)
+      } else false
     }
 
     def canBuild(path : IPath) =
