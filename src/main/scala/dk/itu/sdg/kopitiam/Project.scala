@@ -163,6 +163,47 @@ class CoqBuilder extends IncrementalProjectBuilder {
       createResourceErrorMarker(f, "Unresolved dependencies: " +
           dt.getDependencies(i).filter(_._3 == None).map(_._1).mkString(", "))
 
+    /* Generate a new project makefile */
+    val cp = coqProject.get
+    val sb = new StringBuilder
+
+    sb ++= "override _COQCMD = \\\n\t" +
+        """mkdir -p "`dirname "$@"`" && """ +
+        """coqc $(COQFLAGS) "$<" && mv "$<o" "$@" """ +
+        "\nCOQFLAGS = -noglob\n\n"
+
+    for (i <- cp.getLoadPathProviders) {
+      i match {
+        case SourceLoadPath(src, bin_) =>
+          val bin = bin_.getOrElse(cp.getDefaultOutputLocation)
+          sb ++= bin.getProjectRelativePath + "/%.vo: " +
+              src.getProjectRelativePath + "/%.v\n\t$(_COQCMD)\n"
+        case _ =>
+      }
+      for (j <- i.getLoadPath)
+        sb ++= "override COQFLAGS += -R \"" +
+            makePathRelative(j.path).getOrElse(j.path) + "\" \"" +
+            j.coqdir.getOrElse("") + "\"\n"
+    }
+
+    sb ++= "OBJECTS = " + dt.getDependencies.keys.flatMap(makePathRelative).
+        mkString("\\\n\t", " \\\n\t", "")
+    sb ++= "\n\nall: $(OBJECTS)\nclean:\n\trm -f $(OBJECTS)\n\n"
+
+    sb ++= (
+      for ((out, deps) <- dt.getDependencies;
+           r <- makePathRelative(out))
+        yield r + ": " + (
+          for ((_, _, Some(path)) <- deps;
+               r <- makePathRelative(path))
+            yield r).mkString(" ")).mkString("\n")
+
+    val result = new java.io.ByteArrayInputStream(sb.result.getBytes("UTF-8"))
+    val f = getProject.getFile("KopitiamMakefile")
+    if (f.exists) {
+      f.setContents(result, IResource.NONE, monitor)
+    } else f.create(result, IResource.NONE, monitor)
+
     /* Remove any unused output directories */
     cleanProject(coqProject.get)
 
