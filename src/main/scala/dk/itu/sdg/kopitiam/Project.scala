@@ -347,13 +347,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
       val p = new Path(location.getAbsolutePath).
           append(libname).addFileExtension("vo")
       val f = p.toFile
-      if (!f.exists) {
-        if (deps.get.hasDependencies(p)) {
-          /* This object is the best candidate, but it doesn't exist yet,
-           * so we should try it again later */
-          return None
-        }
-      } else return Some(p)
+      if (f.exists || deps.get.hasDependencies(p))
+        return Some(p)
     }
     None
   }
