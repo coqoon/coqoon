@@ -27,7 +27,13 @@ class DependencyTracker2 {
       }))
     resolutions
   }
-  def unresolveDependencies(to : IPath*) =
+
+  def unresolveDependencies(from_ : IPath*) =
+    dependencies =
+      for ((from, deps) <- dependencies)
+        yield (from, if (!from_.contains(from)) deps
+            else deps.map(d => (d._1, d._2, None)))
+  def unresolveDependenciesUpon(to : IPath*) =
     dependencies =
       for ((from, deps) <- dependencies)
         yield (from, deps.map(dep => (dep._1, dep._2,

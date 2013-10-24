@@ -79,7 +79,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
       if (i.exists) {
         dt.setDependencies(j, generateDeps(i))
       } else dt.clearDependencies(j)
-      dt.unresolveDependencies(i.getLocation, j)
+      dt.unresolveDependenciesUpon(i.getLocation, j)
     }
 
     /* Pre-create all of the possible output directories so that the complete
@@ -144,7 +144,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
 
     monitor.beginTask("Compiling", dt.getDependencies().size)
-    
+
     var completed = Set[IPath]()
     var candidates : Seq[IPath] = Seq()
     do {
@@ -155,6 +155,16 @@ class CoqBuilder extends IncrementalProjectBuilder {
 
       candidates = dt.getResolved().filter(
           a => !completed.contains(a)).partition(canBuild) match {
+        case (Nil, Nil) => Nil
+        case (Nil, cannot) =>
+          /* This should only happen if there's a broken dependency on
+           * something we can't rebuild (for example, if a file we were once
+           * able to find in another project has been deleted). Re-resolve the
+           * dependencies so that the error handling code below will have
+           * something to show */
+          dt.unresolveDependencies(cannot : _*)
+          dt.resolveDependencies
+          Nil
         case (can, cannot) => can.partition(mustBuild) match {
           case (need, needNot) =>
             completed ++= needNot
