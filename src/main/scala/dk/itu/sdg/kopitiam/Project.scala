@@ -253,7 +253,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   }
   
   override protected def clean(monitor : IProgressMonitor) = {
-    def deleteObjects(f : IFolder) =
+    def deleteObjects(f : IFolder) = if (f.exists)
       traverse[IFile](f,
           a => TryCast[IFile](a).flatMap(extensionFilter("vo")),
           a => a.delete(IResource.NONE, monitor))
