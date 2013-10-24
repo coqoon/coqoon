@@ -18,7 +18,7 @@ import org.eclipse.core.resources.IProjectNature
 class CoqBuilder extends IncrementalProjectBuilder {
   import java.util.{Map => JMap}
   import CoqBuilder._
-  import DependencyTracker._
+  import DependencyTracker2._
   
   override protected def getRule(
       type_ : Int, args : JMap[String, String]) = getProject
@@ -26,10 +26,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
   private val coqProject = CacheSlot[ICoqProject] {
     ICoqModel.toCoqProject(getProject)
   }
-
-  def loadPathProviders = getLoadPathProviders(getProject)
       
-  private var deps : Option[DependencyTracker] = None
+  private var deps : Option[DependencyTracker2] = None
   
   private def partBuild(
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
@@ -50,11 +48,14 @@ class CoqBuilder extends IncrementalProjectBuilder {
     buildFiles(changedFiles, args, monitor)
   }
   
-  private def getCorrespondingObject(s : IPath) =
-    CoqBuilder.getCorrespondingObject(getProject)(s)
-  
+  private def sourceToObject(s : IPath) =
+    CoqBuilder.sourceToObject(coqProject.get)(s)
+  private def objectToSource(o : IPath) =
+    CoqBuilder.objectToSource(coqProject.get)(o)
+  private def makePathRelative(f : IPath) =
+    CoqBuilder.makePathRelative(getProject.getLocation, f)
+
   private var completeLoadPath : Seq[(Seq[String], java.io.File)] = Seq()
-  private var possibleObjects : Set[IPath] = Set()
   
   private def buildFiles(files : Set[IFile],
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
@@ -64,125 +65,103 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
     val dt = deps.get
     
-    /* files contains only those files which are known to have changed. Their
-     * object files, and all their dependencies, must be deleted */
-    var done = Set[IPath]()
-    var todo = List[IPath]() ++ files.map(_.getLocation)
-    while (todo.headOption != None) {
-      val i = todo.head
-      todo = todo.tail
-      getCorrespondingObject(i).foreach(a => {
-        done += i
-        val p = a.getLocation
-        if (a.exists)
-          a.delete(IResource.NONE, null)
-        dt.allDependencies.foreach(a => {
-          val (path, dependencies) = a
-          /* If file depended on this object, then schedule its object for
-           * deletion */
-          dependencies.exists(_ match {
-            case (_, Some(p_)) if p == p_ =>
-              todo :+= path; true
-            case _ => false
-          })
-        })
-      })
+    completeLoadPath = coqProject.get.getLoadPath.flatMap(_.expand)
+    
+    /* Delete any objects in the output folders that don't have a corresponding
+     * source file */
+    traverse[IFile](getProject,
+        a => TryCast[IFile](a).flatMap(extensionFilter("vo")).filter(
+            f => objectToSource(f.getLocation).size == 0),
+        a => a.delete(IResource.NONE, null))
+    
+    /* Recalculate the dependencies for all of the files that have changed (if
+     * those files are actually buildable in this project) */
+    for (i <- files;
+         j <- sourceToObject(i.getLocation)) {
+      if (i.exists) {
+        dt.setDependencies(j, generateDeps(i))
+      } else dt.clearDependencies(j)
+      dt.unresolveDependencies(i.getLocation, j)
     }
-    /* done now contains those files which must be built -- that is, which have
-     * changed (or which have a dependency on something which changed) */
     
-    /* Schedule all files with broken dependencies to be built, too (because
-     * those dependencies might become satisfiable) */
-    dt.allDependencies.foreach(a => {
-      val (path, dependencies) = a
-      if (dependencies.exists(b => b._2 == None))
-        done += path
-    })
-    
-    done = done.flatMap(
-        i => (getCorrespondingObject(i), getFileForLocation(i)) match {
-      case (Some(output), file) if file.exists =>
-        /* This file's going to be built; create the output directory (and
-         * remove any stale objects)... */
-        if (output.exists) {
-          if (output.getLocalTimeStamp < file.getLocalTimeStamp)
-            output.delete(IWorkspace.AVOID_UPDATE, null)
-        } else new FolderCreationRunner(output).run(null)
-        
-        /* ... clear all of the problem markers... */
-        file.deleteMarkers(
-            ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_ZERO)
+    getProject.deleteMarkers(
+        ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_INFINITE)
 
-        /* ... and forget all of the resolved dependencies */
-        dt.setDependencies(i, dt.getDependencies(i).map(a => (a._1, None)))
-        Some(i)
-      case _ =>
-        /* This file can't be built (either because it's been deleted or
-         * because it has no possible output location): discard its
-         * dependencies and remove it from the buid queue */
-        dt.setDependencies(i, Set.empty)
-        None
-    })
-    
-    /* Recalculate the dependencies for the files which have actually
-     * changed */
-    files.filter(_.exists).foreach(
-        i => dt.setDependencies(i.getLocation, generateDeps(i)))
-    
-    /* Expand the load path */
-    completeLoadPath =
-      loadPathProviders.flatMap(_.getLoadPath).flatMap(_.expand)
-    
-    possibleObjects = done.flatMap(getCorrespondingObject).map(_.getLocation)
-    
-    class BuildTaskImpl(src : IPath) extends BuildManager.BuildTask {
-      private def canBuild = {
-        dt.resolveDependencies(src)
-        !dt.getDependencies(src).exists(a => a._2 == None)
-      }
+    def isUpToDate(path : IPath) : Boolean = {
+      val lm = path.toFile.lastModified
+      dt.getDependencies(path).flatMap(_._3).forall(
+          d => isUpToDate(d) && d.toFile.lastModified < lm)
+    }
+
+    def canBuild(path : IPath) =
+      dt.getDependencies(path).flatMap(_._3).forall(isUpToDate)
+    def mustBuild(path : IPath) = {
+      val lm = path.toFile.lastModified
+      dt.getDependencies(path).flatMap(_._3).exists(_.toFile.lastModified > lm)
+    }
+
+    class BuildTask(val out : IPath) {
       import org.eclipse.core.runtime.CoreException
-      override def build = if (isInterrupted || monitor.isCanceled) {
-        BuildManager.BuildTask.Abandoned
-      } else if (canBuild) {
-        val r = new CompileCoqRunner(
-          getFileForLocation(src), getCorrespondingObject(src))
-        r.setTicker(Some(() => !isInterrupted() && !monitor.isCanceled))
-        try {
-          r.run(monitor.newChild(1, SubMonitor.SUPPRESS_NONE))
-          BuildManager.BuildTask.Succeeded
-        } catch {
-          case c : CoreException if isInterrupted || monitor.isCanceled =>
-            BuildManager.BuildTask.Abandoned
-          case c : CoreException => BuildManager.BuildTask.Failed(c)
+
+      def run(monitor : SubMonitor) = try {
+        import org.eclipse.core.runtime.{IStatus, CoreException}
+        objectToSource(out) match {
+          case in :: Nil =>
+            val inF = makePathRelative(in).map(getProject.getFile)
+            val outF = makePathRelative(out).map(getProject.getFile)
+            val runner = new CompileCoqRunner(inF.get, outF)
+            runner.setTicker(
+                Some(() => !isInterrupted && !monitor.isCanceled))
+            runner.run(monitor)
+          case Nil =>
+            throw new CoreException(Activator.makeStatus(
+                IStatus.ERROR, "Not enough source files for " + out))
+          case _ =>
+            throw new CoreException(Activator.makeStatus(
+                IStatus.ERROR, "Too many source files for " + out))
         }
-      } else BuildManager.BuildTask.Waiting
-      
-      import BuildManager.BuildTask._
-      override def cleanup = state match {
-        case Waiting =>
-          val f = getFileForLocation(src)
-          var broken = dt.getDependencies(src).collect {
-            case ((arg, _), None) => arg
+      } catch {
+        case e : CoreException
+            if isInterrupted || monitor.isCanceled => /* do nothing */
+        case e : CoreException =>
+          val f = objectToSource(out).flatMap(
+              makePathRelative).map(getProject.getFile)
+          (f, e.getStatus.getMessage.trim) match {
+            case (f :: Nil, CompilationError(_, line, _, _, message)) =>
+              createLineErrorMarker(f, line.toInt,
+                message.replaceAll("\\s+", " ").trim)
+            case (f :: Nil, msg) => createResourceErrorMarker(f, msg)
           }
-          if (!broken.isEmpty)
-            createResourceErrorMarker(f,
-              "Broken dependencies: " + broken.mkString(", ") + ".")
-        case Failed(e) =>
-          val f = getFileForLocation(src)
-          e.getStatus.getMessage.trim match {
-            case CompilationError(_, line, _, _, message) =>
-              createLineErrorMarker(
-                f, line.toInt, message.replaceAll("\\s+", " ").trim)
-            case msg => createResourceErrorMarker(f, msg)
-          }
-        case Abandoned => dt.setDependencies(src,
-            dt.getDependencies(src).map(a => (a._1, None)))
-        case Succeeded =>
       }
     }
+
+    monitor.beginTask("Compiling", dt.getDependencies().size)
     
-    monitor.beginTask("Compiling", done.size)
-    BuildManager.buildLoop(done.map(new BuildTaskImpl(_)))
+    var completed = Set[IPath]()
+    var candidates : Seq[IPath] = Seq()
+    do {
+      candidates.foreach(c => new BuildTask(c).run(
+          monitor.newChild(1, SubMonitor.SUPPRESS_NONE)))
+      completed ++= candidates
+      dt.resolveDependencies
+
+      candidates = dt.getResolved().filter(
+          a => !completed.contains(a)).partition(canBuild) match {
+        case (can, cannot) => can.partition(mustBuild) match {
+          case (need, needNot) =>
+            completed ++= needNot
+            monitor.worked(needNot.size)
+            need
+        }
+      }
+    } while (candidates.size != 0 && !isInterrupted && !monitor.isCanceled)
+
+    /* Create error markers for the files that never became build candidates */
+    for (i <- dt.getUnresolved;
+         j :: Nil <- Some(objectToSource(i));
+         f <- makePathRelative(j).map(getProject.getFile))
+      createResourceErrorMarker(f, "Unresolved dependencies: " +
+          dt.getDependencies(i).filter(_._3 == None).map(_._1).mkString(", "))
 
     /* Remove any unused output directories */
     cleanProject(coqProject.get)
@@ -194,40 +173,48 @@ class CoqBuilder extends IncrementalProjectBuilder {
   
   private def createResourceErrorMarker(r : IResource, s : String) = {
     import scala.collection.JavaConversions._
-    r.createMarker(ManifestIdentifiers.MARKER_PROBLEM).setAttributes(Map(
-        (IMarker.MESSAGE, s),
-        (IMarker.SEVERITY, IMarker.SEVERITY_ERROR)))
+    Option(r).filter(_.exists).foreach(
+        _.createMarker(ManifestIdentifiers.MARKER_PROBLEM).setAttributes(Map(
+            (IMarker.MESSAGE, s),
+            (IMarker.SEVERITY, IMarker.SEVERITY_ERROR))))
   }
   
   private def createLineErrorMarker(
       f : IFile, line : Int, s : String) = {
     import scala.collection.JavaConversions._
-    f.createMarker(ManifestIdentifiers.MARKER_PROBLEM).setAttributes(Map(
-        (IMarker.MESSAGE, s),
-        (IMarker.LOCATION, "line " + line),
-        (IMarker.LINE_NUMBER, line),
-        (IMarker.SEVERITY, IMarker.SEVERITY_ERROR)))
+    Option(f).filter(_.exists).foreach(
+        _.createMarker(ManifestIdentifiers.MARKER_PROBLEM).setAttributes(Map(
+            (IMarker.MESSAGE, s),
+            (IMarker.LOCATION, "line " + line),
+            (IMarker.LINE_NUMBER, line),
+            (IMarker.SEVERITY, IMarker.SEVERITY_ERROR))))
   }
     
   private def fullBuild(
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
-    val dt = new DependencyTracker
+    val dt = new DependencyTracker2
     deps = Some(dt)
     
     traverse[IFile](getProject,
         a => TryCast[IFile](a).flatMap(extensionFilter("v")),
-        a => dt.setDependencies(a.getLocation, generateDeps(a)))
+        a => sourceToObject(a.getLocation).foreach(
+            b => dt.setDependencies(b, generateDeps(a))))
     buildFiles(Set(), args, monitor)
   }
   
   override protected def clean(monitor : IProgressMonitor) = {
+    def deleteObjects(f : IFolder) =
+      traverse[IFile](f,
+          a => TryCast[IFile](a).flatMap(extensionFilter("vo")),
+          a => a.delete(IResource.NONE, monitor))
     deps = None
     getProject.deleteMarkers(
         ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_INFINITE)
-    traverse[IFile](getProject,
-        a => TryCast[IFile](a).flatMap(
-            extensionFilter("vo")).flatMap(derivedFilter(true)),
-        a => a.delete(IResource.NONE, monitor))
+    for (i <- coqProject.get.getLoadPathProviders) i match {
+      case SourceLoadPath(src, Some(bin)) => deleteObjects(bin)
+      case DefaultOutputLoadPath(bin) => deleteObjects(bin)
+      case _ =>
+    }
   }
   
   override protected def build(kind : Int, args_ : JMap[String, String],
@@ -298,33 +285,65 @@ class CoqBuilder extends IncrementalProjectBuilder {
           append(libname).addFileExtension("vo")
       val f = p.toFile
       if (!f.exists) {
-        if (possibleObjects.contains(p))
+        if (deps.get.hasDependencies(p)) {
           /* This object is the best candidate, but it doesn't exist yet,
            * so we should try it again later */
           return None
+        }
       } else return Some(p)
     }
     None
   }
 
-  private def generateDeps(file : IFile) : Set[DependencyTracker.Dep] = {
-    val deps = CoqBuilder.generateDeps(file).map(_ match {
-      case LoadRef(r) => (r, resolveLoad(_))
-      case RequireRef(r) => (r, resolveRequire(_))
-    })
-    /* In order to force files whose dependencies have been recalculated to be
-     * considered for compilation, every file starts with a synthetic,
-     * trivially-satisfiable dependency on itself */
-    val fakeDependency = ("!Dummy", (_ : String) => Some(file.getLocation()))
-    (deps :+ fakeDependency).map(a => (a, None)).toSet
-  }
+  private def generateDeps(file : IFile) : Seq[Dependency] =
+    ("(self)", (_ : String) => Some(file.getLocation), Option.empty[IPath]) +:
+        CoqBuilder.generateRefs(file).map(_ match {
+          case LoadRef(r) => (r, resolveLoad(_), Option.empty[IPath])
+          case RequireRef(r) => (r, resolveRequire(_), Option.empty[IPath])
+        })
   
   override def toString = "(CoqBuilder for " + getProject + ")"
-  
-  private def getFileForLocation(l : IPath) =
-    getProject.getWorkspace.getRoot.getFileForLocation(l)
 }
 object CoqBuilder {
+  def sourceToObject(project : ICoqProject)(location : IPath) : Option[IPath] = {
+    for (i <- project.getLoadPathProviders) i match {
+      case SourceLoadPath(src, bin)
+          if src.getLocation.isPrefixOf(location) =>
+        val base = location.removeFirstSegments(
+            src.getLocation.segmentCount).removeFileExtension
+        val output = bin.getOrElse(
+            project.getDefaultOutputLocation).getLocation
+        return Some(output.append(base).addFileExtension("vo"))
+      case _ =>
+    }
+    None
+  }
+  def objectToSourceRaw(project : ICoqProject)(location : IPath) : Seq[IPath] = {
+    var candidates : Seq[IPath] = Seq()
+    for (i <- project.getLoadPathProviders) i match {
+      case SourceLoadPath(src, bin_)
+          if bin_.getOrElse(project.getDefaultOutputLocation).
+              getLocation.isPrefixOf(location) =>
+        val bin = bin_.getOrElse(project.getDefaultOutputLocation)
+        val base = location.removeFirstSegments(
+            bin.getLocation.segmentCount).removeFileExtension
+        candidates :+= src.getLocation.append(base).addFileExtension("v")
+      case _ =>
+    }
+    candidates
+  }
+  def objectToSource(project : ICoqProject)(location : IPath) : Seq[IPath] = {
+    val handle = project.getCorrespondingResource.get
+    for (i <- objectToSourceRaw(project)(location);
+         j <- makePathRelative(handle.getLocation, i);
+         k <- Option(handle.findMember(j)))
+      yield i
+  }
+  def makePathRelative(base : IPath, path : IPath) : Option[IPath] =
+    if (base.isPrefixOf(path)) {
+      Some(path.setDevice(null).removeFirstSegments(base.segmentCount))
+    } else None
+
   private val Load = "^Load (.*)\\.$".r
   private val Require = "^Require (Import |Export |)(.*)\\.$".r
   private val CompilationError =
@@ -389,28 +408,12 @@ object CoqBuilder {
     
   def derivedFilter[A <: IResource](der : Boolean)(r : A) : Option[A] =
     Option(r).filter(_.isDerived == der)
-
-  def getLoadPathProviders(p : IProject) : Seq[ICoqLoadPathProvider] =
-    ICoqModel.toCoqProject(p).getLoadPathProviders
-  
-  def getCorrespondingObject(project : IProject)(s : IPath) : Option[IFile] = {
-    for (i <- getLoadPathProviders(project)) i match {
-      case SourceLoadPath(src, bin) if src.getLocation.isPrefixOf(s) =>
-        val p = s.removeFirstSegments(src.getLocation.segmentCount).
-          removeFileExtension.addFileExtension("vo")
-        val outputFolder = bin.getOrElse(
-          ICoqModel.toCoqProject(project).getDefaultOutputLocation)
-        return Some(outputFolder.getFile(p))
-      case _ =>
-    }
-    None
-  }
   
   sealed abstract class CoqReference
   case class LoadRef(value : String) extends CoqReference
   case class RequireRef(value : String) extends CoqReference
   
-  private def generateDeps(file : IFile) : Seq[CoqReference] = {
+  private def generateRefs(file : IFile) : Seq[CoqReference] = {
     var result = Seq.newBuilder[CoqReference]
     for (i <- sentences(
         FunctionIterator.lines(file.getContents).mkString("\n"))) {
@@ -455,47 +458,6 @@ object Substring {
     apply(base, start, base.length)
   def apply(base : CharSequence, start : Int, end : Int) : Substring =
     new Substring(base, start, end)
-}
-
-class DependencyTracker {
-  import DependencyTracker._
-
-  private var deps = Map[IPath, Set[Dep]]()
-
-  def addDependency(from : IPath, to : Dep) : Unit =
-    deps = deps + (from -> (getDependencies(from) + to))
-  def setDependencies(from : IPath, to : Set[Dep]) =
-    deps = deps + (from -> to)
-
-  def resolveDependencies(file : IPath, debug : Boolean = false) : Boolean = {
-    var resolution = false
-    setDependencies(file, getDependencies(file).map(_ match {
-      case d @ (_, Some(_)) => /* do nothing */ d
-      case (p @ (identifier, resolver), q) =>
-        val r = resolver(identifier)
-        if (r != q)
-          resolution = true
-        (p, r)
-    }))
-    resolution
-  }
-
-  def getDependencies(from : IPath) : Set[Dep] = deps.getOrElse(from, Set())
-
-  def allDependencies = deps.iterator
-  
-  override def toString = allDependencies.map(
-      a => (Seq(a._1.toPortableString) ++ a._2.map(depToString)).mkString("\n\t\t")).
-          mkString("DG\n\t", "\n\t", "")
-}
-object DependencyTracker {
-  type DepCallback = (String, String => Option[IPath])
-  type Dep = (DepCallback, Option[IPath])
-  
-  def depToString(d : Dep) : String = d match {
-    case ((ident, _), None) => "[X] " + ident
-    case (_, Some(p)) => "[O] " + p.toPortableString
-  }
 }
 
 class FunctionIterator[A](f : () => Option[A]) extends Iterator[A] {
