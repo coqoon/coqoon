@@ -162,7 +162,7 @@ private class Coq84Library extends AbstractLoadPathProvider {
       val libraryPath = new Path(libraryPath_)
       Seq(CoqLoadPath(libraryPath.append("theories"), Some("Coq")),
           CoqLoadPath(libraryPath.append("plugins"), Some("Coq")),
-          CoqLoadPath(libraryPath.append("user-theories"), None))
+          CoqLoadPath(libraryPath.append("user-contrib"), None))
     case _ => Nil
   }
 }
