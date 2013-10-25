@@ -1,3 +1,13 @@
+* Kopitiam 0.3.7 [25th October 2013]
+** Add more keyboard shortcuts to the display control menu
+** Add support for abstract and inter-project dependencies
+** Add a primitive UI for configuring a project's load path
+** Fix some UTF-8 encoding bugs on Windows and Mac OS X
+** Improve the way Coq editors react to load path changes
+** Improve the reliability of the Coq project builder
+** Remove the ability to manually compile proof scripts
+** Remove the ability to manually generate project makefiles
+** Remove the special treatment given to the Charge! load path
 * Kopitiam 0.3.6 [27th September 2013]
 ** Add keyboard shortcuts to the display control menu
 ** Add a handler for stopping the running Coq instance
