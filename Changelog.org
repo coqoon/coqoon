@@ -1,3 +1,5 @@
+* Kopitiam 0.3.7.1 [25th October 2013]
+** Fix an embarrassing bug causing the "user-contrib" folder to be ignored
 * Kopitiam 0.3.7 [25th October 2013]
 ** Add more keyboard shortcuts to the display control menu
 ** Add support for abstract and inter-project dependencies
