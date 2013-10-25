@@ -9,8 +9,8 @@ package dk.itu.sdg.kopitiam
 
 import org.eclipse.core.runtime._
 
-class DependencyTracker2 {
-  import DependencyTracker2._
+class DependencyTracker {
+  import DependencyTracker._
 
   private var dependencies : Map[IPath, Seq[Dependency]] = Map()
 
@@ -60,7 +60,7 @@ class DependencyTracker2 {
       a => (Seq(a._1.toPortableString) ++ a._2.map(dependencyToString)).
           mkString("\n\t\t")).mkString("DG\n\t", "\n\t", "")
 }
-object DependencyTracker2 {
+object DependencyTracker {
   type Identifier = String
   type Resolver = Identifier => Option[IPath]
   type Dependency = (Identifier, Resolver, Option[IPath])

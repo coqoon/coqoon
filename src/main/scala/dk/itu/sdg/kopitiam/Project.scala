@@ -18,7 +18,7 @@ import org.eclipse.core.resources.IProjectNature
 class CoqBuilder extends IncrementalProjectBuilder {
   import java.util.{Map => JMap}
   import CoqBuilder._
-  import DependencyTracker2._
+  import DependencyTracker._
   
   override protected def getRule(
       type_ : Int, args : JMap[String, String]) = getProject
@@ -27,7 +27,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     ICoqModel.toCoqProject(getProject)
   }
       
-  private var deps : Option[DependencyTracker2] = None
+  private var deps : Option[DependencyTracker] = None
   
   private def partBuild(
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
@@ -255,7 +255,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     
   private def fullBuild(
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
-    val dt = new DependencyTracker2
+    val dt = new DependencyTracker
     deps = Some(dt)
     
     traverse[IFile](getProject,
