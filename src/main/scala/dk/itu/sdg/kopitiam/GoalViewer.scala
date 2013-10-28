@@ -1,5 +1,7 @@
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.utilities.{TryCast, TryAdapt}
+
 import org.eclipse.swt.widgets.{Text, Control, Composite}
 
 trait GoalPresenter {

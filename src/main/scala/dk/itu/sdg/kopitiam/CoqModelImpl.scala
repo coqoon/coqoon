@@ -7,6 +7,8 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.utilities.TryCast
+
 import org.eclipse.core.runtime._
 import org.eclipse.core.resources._
 

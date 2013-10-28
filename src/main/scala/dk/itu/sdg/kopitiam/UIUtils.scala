@@ -7,6 +7,8 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.utilities.TryService
+
 object UIUtils {
   import org.eclipse.swt.widgets.Shell
 
@@ -75,18 +77,6 @@ object UIUtils {
   def refreshElements(commandIdentifier : String) : Unit =
     TryService[ICommandService](UIUtils.getWorkbench).foreach(
         _.refreshElements(commandIdentifier, null))
-}
-
-object TryAdapt {
-  import org.eclipse.core.runtime.IAdaptable
-  def apply[A](ad : IAdaptable)(implicit a0 : Manifest[A]) : Option[A] =
-    Option(ad).map(_.getAdapter(a0.runtimeClass)).flatMap(TryCast[A])
-}
-
-object TryService {
-  import org.eclipse.ui.services.IServiceLocator
-  def apply[A](sl : IServiceLocator)(implicit a0 : Manifest[A]) : Option[A] =
-    Option(sl).map(_.getService(a0.runtimeClass)).flatMap(TryCast[A])
 }
 
 class SupersedableTask(delay : Long) {

@@ -7,6 +7,8 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.utilities.TryCast
+
 import org.eclipse.jface.operation.IRunnableWithProgress
 import org.eclipse.core.resources.{IFile, IProject, IResource}
 import org.eclipse.core.runtime.IProgressMonitor

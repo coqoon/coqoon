@@ -7,6 +7,8 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.utilities.TryCast
+
 import org.eclipse.core.commands.operations.IUndoableOperation
 import org.eclipse.core.runtime.{IPath, Path, IProgressMonitor}
 import org.eclipse.core.runtime.jobs.{ISchedulingRule, MultiRule}

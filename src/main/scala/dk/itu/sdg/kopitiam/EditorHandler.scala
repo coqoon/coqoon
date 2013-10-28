@@ -7,6 +7,8 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.utilities.{TryCast, TryAdapt}
+
 import org.eclipse.ui.{ISources, IEditorPart}
 import org.eclipse.core.commands.AbstractHandler
 import org.eclipse.core.expressions.IEvaluationContext

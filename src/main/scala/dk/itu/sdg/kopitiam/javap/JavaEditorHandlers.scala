@@ -2,6 +2,9 @@
  * Copyright © 2013 Alexander Faithfull */
 
 package dk.itu.sdg.kopitiam.javap
+
+import dk.itu.ecloq.core.utilities.TryCast
+
 import dk.itu.sdg.kopitiam._
 
 import org.eclipse.jdt.core.dom.Statement

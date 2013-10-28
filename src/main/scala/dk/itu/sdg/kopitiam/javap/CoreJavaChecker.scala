@@ -1,6 +1,9 @@
 /* (c) 2013 Hannes Mehnert */
 
 package dk.itu.sdg.kopitiam.javap
+
+import dk.itu.ecloq.core.utilities.TryCast
+
 import dk.itu.sdg.kopitiam._
 
 object CoreJavaChecker {

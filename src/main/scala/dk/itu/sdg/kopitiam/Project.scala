@@ -7,6 +7,8 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.utilities.TryCast
+
 import org.eclipse.core.resources.IncrementalProjectBuilder
 import org.eclipse.core.resources.{IResourceDelta, IResourceDeltaVisitor}
 import org.eclipse.core.runtime.{IPath, Path, SubMonitor, IProgressMonitor}
@@ -543,10 +545,6 @@ class FolderCreationRunner(a : IResource) extends JobRunner[Unit] {
   
   override def doOperation(monitor : SubMonitor) : Unit =
     TryCast[IFolder](a.getParent).foreach(create)
-}
-
-object TryCast {
-  def apply[A](a : Any)(implicit a0 : Manifest[A]) = a0.unapply(a)
 }
 
 class CoqNature extends IProjectNature {

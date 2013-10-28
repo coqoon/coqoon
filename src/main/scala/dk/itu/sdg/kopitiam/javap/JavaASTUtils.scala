@@ -1,7 +1,10 @@
 /* (c) 2013 Hannes Mehnert */
 
 package dk.itu.sdg.kopitiam.javap
-import dk.itu.sdg.kopitiam._
+
+import dk.itu.ecloq.core.utilities.TryCast
+
+import dk.itu.sdg.kopitiam.Activator
 
 object JavaASTUtils {
 

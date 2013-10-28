@@ -1,7 +1,8 @@
 /* (c) 2012 Hannes Mehnert */
 
 package dk.itu.sdg.kopitiam.javap
-import dk.itu.sdg.kopitiam._
+
+import dk.itu.ecloq.core.utilities.TryCast
 
 object EclipseJavaASTProperties {
   import org.eclipse.jdt.core.dom._

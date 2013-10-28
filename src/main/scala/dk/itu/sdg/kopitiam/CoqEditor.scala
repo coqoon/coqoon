@@ -3,6 +3,8 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.utilities.{TryCast, TryAdapt}
+
 import org.eclipse.ui.IFileEditorInput
 import org.eclipse.ui.editors.text.TextEditor
 
