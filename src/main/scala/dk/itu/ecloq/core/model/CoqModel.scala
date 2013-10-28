@@ -5,7 +5,9 @@
  * You may use, modify, copy and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
-package dk.itu.sdg.kopitiam
+package dk.itu.ecloq.core.model
+
+import dk.itu.sdg.kopitiam.{Activator, ManifestIdentifiers}
 
 import dk.itu.ecloq.core.coqtop.CoqProgram
 import dk.itu.ecloq.core.utilities.TryCast

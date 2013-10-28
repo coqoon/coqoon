@@ -5,11 +5,11 @@
  * You may use, modify, copy and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
-package dk.itu.sdg.kopitiam
+package dk.itu.ecloq.core.model
 
 import dk.itu.ecloq.core.project.{
   CoqProjectFile, CoqProjectEntry, VariableEntry, RecursiveEntry}
-import dk.itu.ecloq.core.utilities.{TryCast, FunctionIterator}
+import dk.itu.ecloq.core.utilities.{TryCast, CacheSlot, FunctionIterator}
 
 import org.eclipse.core.runtime._
 import org.eclipse.core.resources._
@@ -23,7 +23,7 @@ private abstract class CoqElementImpl[
 
   override def getModel() : CoqModelImpl = getAncestor[CoqModelImpl].get
 
-  protected[kopitiam] def notifyListeners(ev : CoqElementChangeEvent) : Unit =
+  protected[model] def notifyListeners(ev : CoqElementChangeEvent) : Unit =
     getModel.notifyListeners(this, ev)
 }
 
@@ -33,23 +33,6 @@ private trait ICache {
   def update(ev : IResourceChangeEvent) = destroy
   /* Forget all information stored in the cache. */
   def destroy()
-}
-
-class CacheSlot[A](constructor : () => A) {
-  private val lock = new Object
-
-  private var slot : Option[A] = None
-  def test() = lock synchronized (slot != None)
-  def get() = lock synchronized slot match {
-    case Some(x) => x
-    case None =>
-      slot = Option(constructor()); slot.get
-  }
-  def set(value : Option[A]) = lock synchronized (slot = value)
-  def clear() = set(None)
-}
-object CacheSlot {
-  def apply[A](constructor : => A) = new CacheSlot(() => constructor)
 }
 
 private abstract class ParentImpl[
@@ -103,7 +86,7 @@ private case class CoqModelImpl(
   override def getChildren = getProjects
 
   private var cache = scala.collection.mutable.Map[ICoqElement, ICache]()
-  protected[kopitiam] def getCacheFor[A <: ICache](
+  protected[model] def getCacheFor[A <: ICache](
       element : ICoqElement, constructor : => A)(implicit a0 : Manifest[A]) =
     cache synchronized {
       cache.getOrElseUpdate(element, constructor).asInstanceOf[A]
@@ -114,7 +97,7 @@ private case class CoqModelImpl(
   override def addListener(l : CoqElementChangeListener) = (listeners += l)
   override def removeListener(l : CoqElementChangeListener) = (listeners -= l)
 
-  protected[kopitiam] def notifyListeners(
+  protected[model] def notifyListeners(
       source : ICoqElement, ev : CoqElementChangeEvent) : Unit = {
     for (i <- listeners)
       i.coqElementChanged(ev)

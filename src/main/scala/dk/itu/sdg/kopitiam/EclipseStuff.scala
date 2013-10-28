@@ -3,6 +3,7 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.model.ICoqModel
 import dk.itu.ecloq.core.coqtop.CoqProgram
 
 object EclipseConsole {

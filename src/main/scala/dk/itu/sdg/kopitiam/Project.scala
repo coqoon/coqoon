@@ -7,9 +7,11 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.model._
 import dk.itu.ecloq.core.coqtop.CoqProgram
 import dk.itu.ecloq.core.project.DependencyTracker
-import dk.itu.ecloq.core.utilities.{TryCast, Substring, FunctionIterator}
+import dk.itu.ecloq.core.utilities.{
+  TryCast, Substring, CacheSlot, FunctionIterator}
 
 import org.eclipse.core.resources.IncrementalProjectBuilder
 import org.eclipse.core.resources.{IResourceDelta, IResourceDeltaVisitor}

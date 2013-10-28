@@ -7,7 +7,8 @@
 
 package dk.itu.sdg.kopitiam
 
-import dk.itu.ecloq.core.utilities.TryCast
+import dk.itu.ecloq.core.model._
+import dk.itu.ecloq.core.utilities.{TryCast, CacheSlot}
 
 import org.eclipse.jface.operation.IRunnableWithProgress
 import org.eclipse.core.resources.{IFile, IProject, IResource}
