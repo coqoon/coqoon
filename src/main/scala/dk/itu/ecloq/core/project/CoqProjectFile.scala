@@ -5,13 +5,14 @@
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
-package dk.itu.sdg.kopitiam
+package dk.itu.ecloq.core.project
 
 import dk.itu.ecloq.core.utilities.Substring
 
 object CoqProjectFile {
   final val Backslash = "^\\\\".r.unanchored
   final val Whitespace = "^\\s".r.unanchored
+  final val QuotationMark = "^\"".r.unanchored
   
   type CoqProjectFile = Seq[CoqProjectEntry]
   def toString(f : CoqProjectFile) =
@@ -26,7 +27,7 @@ object CoqProjectFile {
     var token = List[Char]()
     var results = List[String]()
     while (i < s.length) Substring(s, i) match {
-      case q @ CoqEditorHandler.QuotationMark() =>
+      case q @ QuotationMark() =>
         inString = !inString
         content = true; i += 1
       case q @ Backslash() =>

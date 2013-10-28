@@ -7,6 +7,8 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.project.{
+  CoqProjectFile, CoqProjectEntry, VariableEntry, RecursiveEntry}
 import dk.itu.ecloq.core.utilities.{TryCast, FunctionIterator}
 
 import org.eclipse.core.runtime._

@@ -8,6 +8,7 @@
 package dk.itu.sdg.kopitiam
 
 import dk.itu.ecloq.core.coqtop.CoqProgram
+import dk.itu.ecloq.core.project.DependencyTracker
 import dk.itu.ecloq.core.utilities.{TryCast, Substring, FunctionIterator}
 
 import org.eclipse.core.resources.IncrementalProjectBuilder
