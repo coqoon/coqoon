@@ -7,8 +7,9 @@
 
 package dk.itu.ecloq.core.model
 
-import dk.itu.sdg.kopitiam.{Activator, ManifestIdentifiers}
+import dk.itu.sdg.kopitiam.Activator
 
+import dk.itu.ecloq.core.ManifestIdentifiers
 import dk.itu.ecloq.core.coqtop.CoqProgram
 import dk.itu.ecloq.core.utilities.TryCast
 
