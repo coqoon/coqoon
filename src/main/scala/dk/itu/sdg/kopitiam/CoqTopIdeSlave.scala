@@ -7,6 +7,8 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.utilities.FunctionIterator
+
 trait CoqProgram {
   def path : String
   def check : Boolean = new java.io.File(path).exists

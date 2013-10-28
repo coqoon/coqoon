@@ -7,6 +7,8 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.utilities.Substring
+
 object CoqProjectFile {
   final val Backslash = "^\\\\".r.unanchored
   final val Whitespace = "^\\s".r.unanchored
