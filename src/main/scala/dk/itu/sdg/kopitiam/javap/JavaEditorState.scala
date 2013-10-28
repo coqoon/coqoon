@@ -1,5 +1,6 @@
 package dk.itu.sdg.kopitiam.javap
 
+import dk.itu.ecloq.core.coqtop.CoqTopIdeSlave_v20120710
 import dk.itu.ecloq.core.utilities.{TryCast, TryService}
 
 import dk.itu.sdg.kopitiam._

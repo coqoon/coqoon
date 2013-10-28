@@ -1,5 +1,7 @@
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.coqtop.CoqTypes
+
 import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status, SubMonitor}
 
 class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {

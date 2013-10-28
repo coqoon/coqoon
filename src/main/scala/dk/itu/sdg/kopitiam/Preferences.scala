@@ -2,6 +2,8 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.coqtop.CoqProgram
+
 import org.eclipse.jface.preference.FieldEditorPreferencePage
 import org.eclipse.ui.IWorkbenchPreferencePage
 

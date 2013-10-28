@@ -3,6 +3,7 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.coqtop.CoqTopIdeSlave_v20120710
 import dk.itu.ecloq.core.utilities.{TryCast, TryAdapt}
 
 import org.eclipse.ui.IFileEditorInput
@@ -473,7 +474,7 @@ class CoqContentAssistantProcessor(
   def computeCompletionProposals (viewer : ITextViewer, documentOffset : Int) : Array[ICompletionProposal] = {
     val prefix = getPrefix(viewer.getDocument, documentOffset)
 
-    import dk.itu.sdg.kopitiam.CoqTypes._
+    import dk.itu.ecloq.core.coqtop.CoqTypes._
     
     val results =
       if (prefix.length > 1) {

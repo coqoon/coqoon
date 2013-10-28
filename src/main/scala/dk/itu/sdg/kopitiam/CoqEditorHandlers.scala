@@ -7,6 +7,7 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.coqtop.{CoqTypes, CoqTopIdeSlave_v20120710}
 import dk.itu.ecloq.core.utilities.{TryCast, Substring}
 
 abstract class CoqCommand(val text : String) {

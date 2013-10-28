@@ -7,6 +7,8 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.coqtop.CoqTypes
+
 import org.eclipse.core.runtime.{
   Status, IStatus, CoreException, IProgressMonitor}
 import org.eclipse.core.resources.{IMarker, IResource}

@@ -1,4 +1,4 @@
-package dk.itu.sdg.kopitiam
+package dk.itu.ecloq.core.coqtop
 
 object CoqTypes {
   /* This is just a Scala translation of lib/interface.mli */

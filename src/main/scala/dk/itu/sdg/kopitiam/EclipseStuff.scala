@@ -3,6 +3,8 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core.coqtop.CoqProgram
+
 object EclipseConsole {
   private val lock = new Object
   import org.eclipse.ui.console.{
