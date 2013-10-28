@@ -2,6 +2,7 @@ package dk.itu.sdg.kopitiam
 
 import dk.itu.ecloq.core.model.ICoqModel
 import dk.itu.ecloq.core.coqtop.CoqTypes
+import dk.itu.ecloq.core.utilities.JobRunner
 
 import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status, SubMonitor}
 

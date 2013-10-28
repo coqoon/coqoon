@@ -2,7 +2,7 @@ package dk.itu.sdg.kopitiam.javap
 
 import dk.itu.ecloq.core.model.ICoqModel
 import dk.itu.ecloq.core.coqtop.CoqTypes
-import dk.itu.ecloq.core.utilities.TryService
+import dk.itu.ecloq.core.utilities.{JobRunner, TryService}
 
 import dk.itu.sdg.kopitiam._
 

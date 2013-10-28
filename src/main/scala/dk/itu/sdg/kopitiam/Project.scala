@@ -12,7 +12,7 @@ import dk.itu.ecloq.core.coqtop.CoqProgram
 import dk.itu.ecloq.core.coqtop.CoqSentence._
 import dk.itu.ecloq.core.project.DependencyTracker
 import dk.itu.ecloq.core.utilities.{
-  TryCast, Substring, CacheSlot, FunctionIterator}
+  TryCast, JobRunner, Substring, CacheSlot, FunctionIterator}
 
 import org.eclipse.core.resources.IncrementalProjectBuilder
 import org.eclipse.core.resources.{IResourceDelta, IResourceDeltaVisitor}

@@ -5,6 +5,7 @@ package dk.itu.sdg.kopitiam
 
 import dk.itu.ecloq.core.model.ICoqModel
 import dk.itu.ecloq.core.coqtop.CoqProgram
+import dk.itu.ecloq.core.utilities.JobRunner
 
 object EclipseConsole {
   private val lock = new Object
