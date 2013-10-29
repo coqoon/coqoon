@@ -3,10 +3,6 @@
 
 package dk.itu.sdg.kopitiam
 
-import dk.itu.ecloq.core.model.ICoqModel
-import dk.itu.ecloq.core.coqtop.CoqProgram
-import dk.itu.ecloq.core.utilities.JobRunner
-
 object EclipseConsole {
   private val lock = new Object
   import org.eclipse.ui.console.{
@@ -54,72 +50,4 @@ object EclipseConsole {
   
   import org.eclipse.swt.graphics.Color
   private final val RED = new Color(UIUtils.getDisplay, 255, 0, 0)
-}
-
-import org.eclipse.core.resources.{IFile, IResource}
-import org.eclipse.core.runtime.jobs.Job
-import org.eclipse.core.runtime.{SubMonitor, IProgressMonitor}
-
-class CompileCoqRunner(
-    source : IFile, output : Option[IFile]) extends JobRunner[Unit] {
-  import org.eclipse.core.runtime.{Path, IStatus}
-  import java.io.{File, FileInputStream}
-  
-  private var ticker : Option[() => Boolean] = None
-  def setTicker(f : Option[() => Boolean]) = (ticker = f)
-  
-  override protected def doOperation(monitor : SubMonitor) : Unit = {
-    monitor.beginTask("Compiling " + source, 2)
-    
-    val location = source.getLocation.removeFileExtension
-    val outputFile = location.addFileExtension("vo").toFile
-    
-    val coqc = CoqProgram("coqtop")
-    if (coqc.check) {
-      val flp = ICoqModel.toCoqProject(
-          source.getProject).getLoadPath.flatMap(_.asArguments)
-      val coqcp =
-        coqc.run(flp ++ Seq("-noglob", "-compile", location.toOSString),
-            a => {
-              a.redirectErrorStream(true)
-              val process = a.start
-              ticker.foreach(w => {
-                val thread = new Thread() {
-                  setDaemon(true)
-                  private def isFinished = try {
-                    process.exitValue; true
-                  } catch {
-                    case e : IllegalThreadStateException => false
-                  }
-                  override def run = while (!isFinished) {
-                    if (!w())
-                      process.destroy
-                    Thread.sleep(200)
-                  }
-                }.start
-              })
-              process
-            })
-      
-      try {
-        coqcp.readAll match {
-          case (i, msgs) if i != 0 =>
-            fail(Activator.makeStatus(IStatus.ERROR, msgs))
-          case _ =>
-        }
-
-        monitor.worked(1)
-
-        output.foreach(output => {
-          val is = new FileInputStream(outputFile)
-          if (output.exists) {
-            output.setContents(is, IResource.NONE, monitor.newChild(1))
-          } else output.create(is, IResource.DERIVED, monitor.newChild(1))
-        })
-      } catch {
-        case e : java.io.IOException =>
-          fail(Activator.makeStatus(IStatus.ERROR, e.getLocalizedMessage, e))
-      } finally output.foreach(_ => outputFile.delete)
-    }
-  }
 }

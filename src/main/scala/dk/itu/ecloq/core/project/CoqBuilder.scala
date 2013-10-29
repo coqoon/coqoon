@@ -119,16 +119,23 @@ class CoqBuilder extends IncrementalProjectBuilder {
       import org.eclipse.core.runtime.CoreException
 
       def run(monitor : SubMonitor) = try {
-        import dk.itu.sdg.kopitiam.CompileCoqRunner
+        monitor.beginTask("Compiling " + out.lastSegment, 2)
         import org.eclipse.core.runtime.{Status, IStatus, CoreException}
         objectToSource(out) match {
           case in :: Nil =>
             val inF = makePathRelative(in).map(getProject.getFile)
             val outF = makePathRelative(out).map(getProject.getFile)
-            val runner = new CompileCoqRunner(inF.get, outF)
+            val runner = new CoqCompilerRunner(inF.get)
             runner.setTicker(
                 Some(() => !isInterrupted && !monitor.isCanceled))
-            runner.run(monitor)
+            runner.run(monitor.newChild(1)) match {
+              case s : CoqCompilerSuccess =>
+                outF.foreach(s.save(_, monitor.newChild(1)))
+              case CoqCompilerFailure(
+                  _, _, CompilationError(_, line, _, _, message)) =>
+                inF.foreach(createLineErrorMarker(_, line.toInt, message.trim))
+              case _ =>
+            }
           case Nil =>
             throw new CoreException(new Status(
                 IStatus.ERROR, ManifestIdentifiers.PLUGIN,
@@ -139,17 +146,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
                 "Too many source files for " + out))
         }
       } catch {
-        case e : CoreException
-            if isInterrupted || monitor.isCanceled => /* do nothing */
         case e : CoreException =>
           val f = objectToSource(out).flatMap(
               makePathRelative).map(getProject.getFile)
-          (f, e.getStatus.getMessage.trim) match {
-            case (f :: Nil, CompilationError(_, line, _, _, message)) =>
-              createLineErrorMarker(f, line.toInt,
-                message.replaceAll("\\s+", " ").trim)
-            case (f :: Nil, msg) => createResourceErrorMarker(f, msg)
-          }
+          f.foreach(createResourceErrorMarker(_, e.getStatus.getMessage.trim))
       }
     }
 
@@ -178,7 +178,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
         case (can, cannot) => can.partition(mustBuild) match {
           case (need, needNot) =>
             completed ++= needNot
-            monitor.worked(needNot.size)
+            monitor.setWorkRemaining(need.size + cannot.size)
             need
         }
       }
