@@ -9,7 +9,7 @@ package dk.itu.sdg.kopitiam
 
 import dk.itu.ecloq.core.model._
 import dk.itu.ecloq.core.coqtop.CoqProgram
-import dk.itu.ecloq.core.coqtop.CoqSentence._
+import dk.itu.ecloq.core.coqtop.CoqSentence
 import dk.itu.ecloq.core.project.DependencyTracker
 import dk.itu.ecloq.core.utilities.{
   TryCast, JobRunner, Substring, CacheSlot, FunctionIterator}
@@ -430,15 +430,15 @@ object CoqBuilder {
       dir.delete(IResource.NONE, null)
   }
 
-  private def sentences(content : String) : Seq[CoqStep] =
-    CoqEditorHandler.makeSteps(stripComments(content), 0, content.length)
+  private def sentences(content : String) =
+    CoqSentence.getNextSentences(stripComments(content), 0, content.length)
   private def stripComments(doc : String) : String = {
     var regions : List[Substring] = List()
     var i = 0
     var regionStart = 0
     var inString = false
     var commentDepth = 0
-    import CoqEditorHandler._
+    import CoqSentence._
     while (i < doc.length) Substring(doc, i) match {
       case CommentStart() if !inString =>
         if (commentDepth == 0)
@@ -479,22 +479,20 @@ object CoqBuilder {
   case class RequireRef(value : String) extends CoqReference
   
   private def generateRefs(file : IFile) : Seq[CoqReference] = {
-    var result = Seq.newBuilder[CoqReference]
-    for (i <- sentences(
-        FunctionIterator.lines(file.getContents).mkString("\n"))) {
-      i.text.trim match {
-        case Load(what) =>
-          result += LoadRef(what)
-        case Require(how, what) if what(0) == '"' =>
-          val filename = what.substring(1).split("\"", 2)(0)
-          result += RequireRef(filename)
-        case Require(how, what) =>
-          for (j <- what.split(" "))
-            result += RequireRef(j)
-        case _ =>
-      }
+    var refs = Seq.newBuilder[CoqReference]
+    val s = sentences(FunctionIterator.lines(file.getContents).mkString("\n"))
+    for ((text, synthetic) <- s if !synthetic) text.toString.trim match {
+      case Load(what) =>
+        refs += LoadRef(what)
+      case Require(how, what) if what(0) == '"' =>
+        val filename = what.substring(1).split("\"", 2)(0)
+        refs += RequireRef(filename)
+      case Require(how, what) =>
+        for (j <- what.split(" "))
+          refs += RequireRef(j)
+      case _ =>
     }
-    result.result
+    refs.result
   }
 }
 

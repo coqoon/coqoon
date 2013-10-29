@@ -8,7 +8,7 @@
 package dk.itu.sdg.kopitiam
 
 import dk.itu.ecloq.core.coqtop.{CoqTypes, CoqTopIdeSlave_v20120710}
-import dk.itu.ecloq.core.coqtop.CoqSentence.getNextSentence
+import dk.itu.ecloq.core.coqtop.CoqSentence
 import dk.itu.ecloq.core.utilities.{TryCast, Substring}
 
 abstract class CoqCommand(val text : String) {
@@ -33,23 +33,12 @@ abstract class CoqEditorHandler extends EditorHandler {
 }
 object CoqEditorHandler {
   def makeStep(doc : String, offset : Int) : Option[CoqStep] =
-    getNextSentence(doc, offset).map(s => CoqStep(offset, s._1.toString, s._2))
+    CoqSentence.getNextSentence(doc, offset).map(
+        s => CoqStep(s._1.start, s._1.toString, s._2))
   
-  def makeSteps(
-      doc : String, from : Int, to : Int) : List[CoqStep] = {
-    val steps = List.newBuilder[CoqStep]
-    var offset = from
-    while (offset <= to) {
-      makeStep(doc, offset) match {
-        case Some(step) =>
-          offset = step.offset + step.text.length()
-          if (offset <= to)
-            steps += step
-        case _ => offset = Int.MaxValue
-      }
-    }
-    steps.result
-  }
+  def makeSteps(doc : String, from : Int, to : Int) : Seq[CoqStep] =
+    CoqSentence.getNextSentences(doc, from, to).map(
+        s => CoqStep(s._1.start, s._1.toString, s._2))
   
   def getStepBackPair[A <: CoqCommand](
       steps : Stack[A], f : Stack[A] => Int) : (Int, Option[A]) = {

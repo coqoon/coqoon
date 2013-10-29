@@ -17,12 +17,14 @@ object CoqSentence {
   final val CurlyBracket = """^(\{|\})(\s|$)""".r.unanchored
   final val FullStop = """^\.(\s|$)""".r.unanchored
   final val Ellipsis = """^\.\.\.(\s|$)""".r.unanchored
-  
+
   final val DotRun = """^(\.+)(\s|$)""".r.unanchored
   final val WhitespaceRun = """^(\s+)""".r.unanchored
-  
+
+  type Sentence = (Substring, Boolean)
+
   def getNextSentence(
-      doc : String, offset : Int = 0) : Option[(Substring, Boolean)] = {
+      doc : CharSequence, offset : Int = 0) : Option[Sentence] = {
     var i = offset
     var commentDepth = 0
     var inString = false
@@ -58,5 +60,19 @@ object CoqSentence {
         i += 1
     }
     None
+  }
+
+  def getNextSentences(
+      doc : CharSequence, from : Int, to : Int) : Seq[Sentence] = {
+    val steps = Seq.newBuilder[Sentence]
+    var offset = from
+    while (offset <= to) getNextSentence(doc, offset) match {
+      case Some(s @ (text, synthetic)) =>
+        offset = text.end
+        if (offset <= to)
+          steps += s
+      case _ => offset = Int.MaxValue
+    }
+    steps.result
   }
 }

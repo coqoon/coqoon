@@ -1,6 +1,6 @@
 package dk.itu.ecloq.core.utilities
 
-class Substring(base : CharSequence, start : Int, end : Int)
+class Substring(val base : CharSequence, val start : Int, val end : Int)
     extends CharSequence with Seq[Char] {
   private class SubstringIterator extends Iterator[Char] {
     private var position = 0

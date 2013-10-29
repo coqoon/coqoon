@@ -108,12 +108,12 @@ class CoqStepBackRunner(editor : CoqEditor, stepCount : Int, reveal : Boolean)
   }
 }
 
-class CoqStepForwardJob(editor : CoqEditor, steps : List[CoqStep])
+class CoqStepForwardJob(editor : CoqEditor, steps : Seq[CoqStep])
     extends CoqEditorJob("Step forward",
         new CoqStepForwardRunner(editor, steps), editor)
 class CoqStepForwardRunner(
     editor : CoqEditor,
-    steps : List[CoqStep]) extends StepForwardRunner(editor, steps) {
+    steps : Seq[CoqStep]) extends StepForwardRunner(editor, steps) {
   override protected def finish = {
     import org.eclipse.core.resources.{IMarker, IResource}
 
