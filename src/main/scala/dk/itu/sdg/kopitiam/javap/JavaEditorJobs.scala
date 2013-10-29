@@ -29,10 +29,11 @@ class JavaProofInitialisationRunner(
       monitor.worked(1)
 
       monitor.subTask("Preparing model")
+      import org.eclipse.core.resources.IncrementalProjectBuilder
       val f = jes.file.get
-      val proj = f.getParent
+      val parent = f.getParent
       val basename = f.getName().dropRight(5)
-      val model = proj.getFile(new Path(basename + "_model.v"))
+      val model = parent.getFile(new Path(basename + "_model.v"))
       if (!model.exists) {
         UIUtils.exec {
           UIUtils.Dialog.warning("Model file missing",
@@ -40,7 +41,8 @@ class JavaProofInitialisationRunner(
               basename + "_model'.")
         }
         return
-      } else new CompileCoqRunner(model, None).run(monitor.newChild(1))
+      } else f.getProject.build(
+          IncrementalProjectBuilder.INCREMENTAL_BUILD, monitor.newChild(1))
       monitor.setWorkRemaining(2)
 
       monitor.subTask("Setting up definitions and specification")
