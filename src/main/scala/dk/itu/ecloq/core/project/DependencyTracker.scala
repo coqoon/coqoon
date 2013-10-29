@@ -7,7 +7,7 @@
 
 package dk.itu.ecloq.core.project
 
-import org.eclipse.core.runtime._
+import org.eclipse.core.runtime.IPath
 
 class DependencyTracker {
   import DependencyTracker._

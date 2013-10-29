@@ -7,7 +7,7 @@
 
 package dk.itu.ecloq.core.coqtop
 
-import dk.itu.sdg.kopitiam.Activator
+import dk.itu.ecloq.core.Activator
 import dk.itu.ecloq.core.utilities.FunctionIterator
 
 trait CoqProgram {

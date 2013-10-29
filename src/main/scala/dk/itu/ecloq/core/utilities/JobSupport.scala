@@ -1,6 +1,6 @@
 package dk.itu.ecloq.core.utilities
 
-import dk.itu.sdg.kopitiam.ManifestIdentifiers
+import dk.itu.ecloq.core.ManifestIdentifiers
 
 import org.eclipse.core.runtime.{
   Status, IStatus, SubMonitor, CoreException, IProgressMonitor}
