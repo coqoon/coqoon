@@ -1,16 +1,16 @@
-/* Project.scala
+/* CoqBuilder.scala
  * Coq project configuration managers and the Coq project builder
  * Copyright © 2013 Alexander Faithfull
- * 
+ *
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
-package dk.itu.sdg.kopitiam
+package dk.itu.ecloq.core.project
 
+import dk.itu.ecloq.core.ManifestIdentifiers
 import dk.itu.ecloq.core.model._
 import dk.itu.ecloq.core.coqtop.CoqProgram
 import dk.itu.ecloq.core.coqtop.CoqSentence
-import dk.itu.ecloq.core.project.DependencyTracker
 import dk.itu.ecloq.core.utilities.{
   TryCast, JobRunner, Substring, CacheSlot, FunctionIterator}
 
@@ -26,23 +26,23 @@ class CoqBuilder extends IncrementalProjectBuilder {
   import java.util.{Map => JMap}
   import CoqBuilder._
   import DependencyTracker._
-  
+
   override protected def getRule(
       type_ : Int, args : JMap[String, String]) = getProject
 
   private val coqProject = CacheSlot[ICoqProject] {
     ICoqModel.toCoqProject(getProject)
   }
-      
+
   private var deps : Option[DependencyTracker] = None
-  
+
   private def partBuild(
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
     if (deps == None)
       return fullBuild(args, monitor)
-    
+
     var changedFiles = Set[IFile]()
-      
+
     val delta = getDelta(getProject())
     delta.accept(new IResourceDeltaVisitor {
       override def visit(d : IResourceDelta) : Boolean = {
@@ -51,10 +51,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
         true
       }
     })
-    
+
     buildFiles(changedFiles, args, monitor)
   }
-  
+
   private def sourceToObject(s : IPath) =
     CoqBuilder.sourceToObject(coqProject.get)(s)
   private def objectToSource(o : IPath) =
@@ -63,7 +63,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     CoqBuilder.makePathRelative(getProject.getLocation, f)
 
   private var completeLoadPath : Seq[(Seq[String], java.io.File)] = Seq()
-  
+
   private def buildFiles(files : Set[IFile],
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
     if (!CoqProgram("coqtop").check) {
@@ -71,14 +71,14 @@ class CoqBuilder extends IncrementalProjectBuilder {
       return Array()
     }
     val dt = deps.get
-    
+
     /* Delete any objects in the output folders that don't have a corresponding
      * source file */
     traverse[IFile](getProject,
         a => TryCast[IFile](a).flatMap(extensionFilter("vo")).filter(
             f => objectToSource(f.getLocation).size == 0),
         a => a.delete(IResource.NONE, null))
-    
+
     /* Recalculate the dependencies for all of the files that have changed (if
      * those files are actually buildable in this project) */
     for (i <- files;
@@ -119,7 +119,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
       import org.eclipse.core.runtime.CoreException
 
       def run(monitor : SubMonitor) = try {
-        import org.eclipse.core.runtime.{IStatus, CoreException}
+        import dk.itu.sdg.kopitiam.CompileCoqRunner
+        import org.eclipse.core.runtime.{Status, IStatus, CoreException}
         objectToSource(out) match {
           case in :: Nil =>
             val inF = makePathRelative(in).map(getProject.getFile)
@@ -129,11 +130,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
                 Some(() => !isInterrupted && !monitor.isCanceled))
             runner.run(monitor)
           case Nil =>
-            throw new CoreException(Activator.makeStatus(
-                IStatus.ERROR, "Not enough source files for " + out))
+            throw new CoreException(new Status(
+                IStatus.ERROR, ManifestIdentifiers.PLUGIN,
+                "Not enough source files for " + out))
           case _ =>
-            throw new CoreException(Activator.makeStatus(
-                IStatus.ERROR, "Too many source files for " + out))
+            throw new CoreException(new Status(
+                IStatus.ERROR, ManifestIdentifiers.PLUGIN,
+                "Too many source files for " + out))
         }
       } catch {
         case e : CoreException
@@ -240,7 +243,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
       case pl : ProjectLoadPath => pl.project
     }.toArray
   }
-  
+
   private def createResourceErrorMarker(r : IResource, s : String) = {
     import scala.collection.JavaConversions._
     Option(r).filter(_.exists).foreach(
@@ -248,7 +251,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
             (IMarker.MESSAGE, s),
             (IMarker.SEVERITY, IMarker.SEVERITY_ERROR))))
   }
-  
+
   private def createLineErrorMarker(
       f : IFile, line : Int, s : String) = {
     import scala.collection.JavaConversions._
@@ -259,19 +262,19 @@ class CoqBuilder extends IncrementalProjectBuilder {
             (IMarker.LINE_NUMBER, line),
             (IMarker.SEVERITY, IMarker.SEVERITY_ERROR))))
   }
-    
+
   private def fullBuild(
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
     val dt = new DependencyTracker
     deps = Some(dt)
-    
+
     traverse[IFile](getProject,
         a => TryCast[IFile](a).flatMap(extensionFilter("v")),
         a => sourceToObject(a.getLocation).foreach(
             b => dt.setDependencies(b, generateDeps(a))))
     buildFiles(Set(), args, monitor)
   }
-  
+
   override protected def clean(monitor : IProgressMonitor) = {
     def deleteObjects(f : IFolder) = if (f.exists)
       traverse[IFile](f,
@@ -286,7 +289,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
       case _ =>
     }
   }
-  
+
   override protected def build(kind : Int, args_ : JMap[String, String],
       monitor_ : IProgressMonitor) : Array[IProject] = {
     /* Check that our project dependencies are in order */
@@ -324,7 +327,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
       monitor.done
     }
   }
-  
+
   private def resolveLoad(t : String) : Option[IPath] = {
     val dt = deps.get
     for ((_, location) <- completeLoadPath) {
@@ -342,13 +345,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
     return None
   }
-  
+
   private def resolveRequire(t : String) : Option[IPath] = {
     val (libdir, libname) = {
       val i = t.split('.').toSeq
       (i.init, i.last)
     }
-    
+
     for ((coqdir, location) <- completeLoadPath
         if coqdir.endsWith(libdir)) {
       val p = new Path(location.getAbsolutePath).
@@ -366,7 +369,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
           case LoadRef(r) => (r, resolveLoad(_), Option.empty[IPath])
           case RequireRef(r) => (r, resolveRequire(_), Option.empty[IPath])
         })
-  
+
   override def toString = "(CoqBuilder for " + getProject + ")"
 }
 object CoqBuilder {
@@ -459,7 +462,7 @@ object CoqBuilder {
     (regions :+ Substring(doc, regionStart, i)).
         mkString(" ").replaceAll("\\s+", " ").trim
   }
-  
+
   def traverse[A <: IResource](folder : IContainer,
       filter : IResource => Option[A], f : A => Unit) : Unit = {
     for (i <- folder.members(IContainer.INCLUDE_HIDDEN)) {
@@ -467,17 +470,17 @@ object CoqBuilder {
       TryCast[IContainer](i).foreach(traverse(_, filter, f))
     }
   }
-  
+
   def extensionFilter[A <: IResource](ext : String)(r : A) : Option[A] =
     Option(r).filter(_.getFileExtension == ext)
-    
+
   def derivedFilter[A <: IResource](der : Boolean)(r : A) : Option[A] =
     Option(r).filter(_.isDerived == der)
-  
+
   sealed abstract class CoqReference
   case class LoadRef(value : String) extends CoqReference
   case class RequireRef(value : String) extends CoqReference
-  
+
   private def generateRefs(file : IFile) : Seq[CoqReference] = {
     var refs = Seq.newBuilder[CoqReference]
     val s = sentences(FunctionIterator.lines(file.getContents).mkString("\n"))
@@ -503,27 +506,27 @@ class FolderCreationRunner(a : IResource) extends JobRunner[Unit] {
     TryCast[IFolder](a.getParent).foreach(create)
     a.create(IResource.NONE, true, null)
   }
-  
+
   override def doOperation(monitor : SubMonitor) : Unit =
     TryCast[IFolder](a.getParent).foreach(create)
 }
 
 class CoqNature extends IProjectNature {
   import org.eclipse.core.resources.ICommand
-  
+
   private var project : IProject = null
-  
+
   override def setProject(project : IProject) = {
     this.project = project
   }
-  
+
   override def getProject = project
-  
+
   override def configure = {
     project.setDescription(
         ICoqProject.configureDescription(project.getDescription), null)
   }
-  
+
   override def deconfigure = {
     project.setDescription(
         ICoqProject.deconfigureDescription(project.getDescription), null)

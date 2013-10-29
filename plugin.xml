@@ -652,7 +652,7 @@
       <builder
             hasNature="true">
          <run
-               class="dk.itu.sdg.kopitiam.CoqBuilder">
+               class="dk.itu.ecloq.core.project.CoqBuilder">
          </run>
       </builder>
    </extension>
@@ -662,7 +662,7 @@
          point="org.eclipse.core.resources.natures">
       <runtime>
          <run
-               class="dk.itu.sdg.kopitiam.CoqNature">
+               class="dk.itu.ecloq.core.project.CoqNature">
          </run>
       </runtime>
       <builder

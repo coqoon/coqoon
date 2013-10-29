@@ -1,5 +1,6 @@
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core
 import dk.itu.ecloq.core.model.ICoqModel
 import dk.itu.ecloq.core.coqtop.CoqTypes
 import dk.itu.ecloq.core.utilities.JobRunner
@@ -122,8 +123,8 @@ class CoqStepForwardRunner(
       editor.getViewer.revealRange(editor.completed, 0)
       for (
           f <- editor.file;
-          i <- f.findMarkers(
-              ManifestIdentifiers.MARKER_PROBLEM, false, IResource.DEPTH_ZERO)
+          i <- f.findMarkers(core.ManifestIdentifiers.MARKER_PROBLEM,
+              false, IResource.DEPTH_ZERO)
             if i.getAttribute(
                 IMarker.CHAR_END, Int.MaxValue) <= editor.completed)
         i.delete

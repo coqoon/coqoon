@@ -3,6 +3,7 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core
 import dk.itu.ecloq.core.model._
 import dk.itu.ecloq.core.coqtop.CoqTopIdeSlave_v20120710
 import dk.itu.ecloq.core.utilities.{TryCast, TryAdapt}
@@ -221,9 +222,9 @@ private class CoqProofReconcilingStrategy(
   
   override def reconcile(r : IRegion) : Unit = {
     editor.file.foreach(file => {
-      if (file.findMarkers(ManifestIdentifiers.MARKER_PROBLEM,
+      if (file.findMarkers(core.ManifestIdentifiers.MARKER_PROBLEM,
           true, IResource.DEPTH_ZERO).length > 0)
-        new DeleteMarkersJob(file, ManifestIdentifiers.MARKER_PROBLEM,
+        new DeleteMarkersJob(file, core.ManifestIdentifiers.MARKER_PROBLEM,
             true, IResource.DEPTH_ZERO).schedule
     })
 

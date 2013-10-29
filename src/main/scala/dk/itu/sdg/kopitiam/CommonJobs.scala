@@ -7,6 +7,7 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.ecloq.core
 import dk.itu.ecloq.core.coqtop.CoqTypes
 import dk.itu.ecloq.core.utilities.{
   JobBase, JobRunner, ObjectRule, JobUtilities}
@@ -71,8 +72,8 @@ class CreateMarkerJob(
 
 class CreateErrorMarkerJob(
     resource : IResource, region : (Int, Int), message : String)
-    extends CreateMarkerJob(resource, region,
-        message, ManifestIdentifiers.MARKER_PROBLEM, IMarker.SEVERITY_ERROR)
+    extends CreateMarkerJob(resource, region, message,
+        core.ManifestIdentifiers.MARKER_PROBLEM, IMarker.SEVERITY_ERROR)
 object CreateErrorMarkerJob {
   def apply(
       resource : IResource, step : CoqStep, ep : (CoqTypes.location, String)) : CreateErrorMarkerJob = {

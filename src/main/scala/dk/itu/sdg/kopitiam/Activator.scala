@@ -42,7 +42,6 @@ object ManifestIdentifiers {
   final val ANNOTATION_PROCESSED = "dk.itu.sdg.kopitiam.processed"
   final val ANNOTATION_PROCESSING = "dk.itu.sdg.kopitiam.processing"
   final val MARKER_PROVEN = "dk.itu.sdg.kopitiam.provenmarker"
-  final val MARKER_PROBLEM = "dk.itu.sdg.kopitiam.problemmarker"
   final val PLUGIN = "dk.itu.sdg.kopitiam"
   final val VIEW_GOAL_VIEWER = "kopitiam.GoalViewer"
   final val COMMAND_TOGGLE_COQ_FLAG = "Kopitiam.toggle_coq_flag"
