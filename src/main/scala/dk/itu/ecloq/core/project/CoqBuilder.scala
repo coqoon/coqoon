@@ -16,10 +16,9 @@ import dk.itu.ecloq.core.utilities.{
 
 import org.eclipse.core.resources.IncrementalProjectBuilder
 import org.eclipse.core.resources.{IResourceDelta, IResourceDeltaVisitor}
-import org.eclipse.core.runtime.{IPath, Path, SubMonitor, IProgressMonitor}
+import org.eclipse.core.runtime.{Path, IPath, SubMonitor, IProgressMonitor}
 import org.eclipse.core.resources.{IFile, IFolder, IMarker, IProject,
-  IResource, IContainer, IWorkspace, IWorkspaceRunnable, IProjectDescription}
-import org.eclipse.jface.operation.IRunnableWithProgress
+  IResource, IContainer, IWorkspace}
 import org.eclipse.core.resources.IProjectNature
 
 class CoqBuilder extends IncrementalProjectBuilder {
@@ -116,11 +115,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
 
     class BuildTask(val out : IPath) {
-      import org.eclipse.core.runtime.CoreException
+      import org.eclipse.core.runtime.{Status, IStatus, CoreException}
 
       def run(monitor : SubMonitor) = try {
         monitor.beginTask("Compiling " + out.lastSegment, 2)
-        import org.eclipse.core.runtime.{Status, IStatus, CoreException}
         objectToSource(out) match {
           case in :: Nil =>
             val inF = makePathRelative(in).map(getProject.getFile)

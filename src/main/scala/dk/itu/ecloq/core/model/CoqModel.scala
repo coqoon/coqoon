@@ -12,10 +12,9 @@ import dk.itu.ecloq.core.coqtop.CoqProgram
 import dk.itu.ecloq.core.utilities.TryCast
 
 import org.eclipse.core.runtime.{IPath, Path, IProgressMonitor}
-import org.eclipse.core.runtime.jobs.{ISchedulingRule, MultiRule}
 import org.eclipse.core.resources.{
   IResource, IProjectDescription, ICommand,
-  IFile, IFolder, IProject, IWorkspace, IWorkspaceRoot, IWorkspaceRunnable}
+  IFile, IFolder, IProject, IWorkspace, IWorkspaceRoot}
 
 trait IParent {
   def getChildren : Seq[ICoqElement]
@@ -173,7 +172,6 @@ private class Coq84Library extends AbstractLoadPathProvider {
 private class ChargeLibrary extends AbstractLoadPathProvider {
   override def getName = "Charge! for Java"
 
-  import org.eclipse.core.runtime.Path
   override def getLoadPath =
       Activator.getDefault.getPreferenceStore.getString("loadpath") match {
     case p if p.length > 0 => Seq(CoqLoadPath(new Path(p), None))

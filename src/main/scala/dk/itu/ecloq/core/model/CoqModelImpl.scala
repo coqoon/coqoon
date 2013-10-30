@@ -11,7 +11,7 @@ import dk.itu.ecloq.core.project.{
   CoqProjectFile, CoqProjectEntry, VariableEntry, RecursiveEntry}
 import dk.itu.ecloq.core.utilities.{TryCast, CacheSlot, FunctionIterator}
 
-import org.eclipse.core.runtime._
+import org.eclipse.core.runtime.{Path, IPath, IProgressMonitor}
 import org.eclipse.core.resources._
 
 private abstract class CoqElementImpl[

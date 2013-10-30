@@ -4,7 +4,7 @@ import dk.itu.ecloq.core.ManifestIdentifiers
 
 import org.eclipse.core.runtime.{
   Status, IStatus, SubMonitor, CoreException, IProgressMonitor}
-import org.eclipse.core.runtime.jobs.ISchedulingRule
+import org.eclipse.core.runtime.jobs.{Job, ISchedulingRule}
 
 trait JobRunner[A] {
   protected def preCheck : Option[A] = None
@@ -29,8 +29,6 @@ trait JobRunner[A] {
   protected def fail(status : IStatus) = throw new CoreException(status)
   protected def cancel = fail(Status.CANCEL_STATUS)
 }
-
-import org.eclipse.core.runtime.jobs.Job
 
 abstract class JobBase(
     name : String, runner : JobRunner[_]) extends Job(name) {

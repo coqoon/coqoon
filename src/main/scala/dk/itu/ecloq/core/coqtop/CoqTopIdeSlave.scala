@@ -63,7 +63,6 @@ private class CoqProgramInstanceImpl(argv : Seq[String],
     start : ProcessBuilder => Process) extends CoqProgramInstance {
   private val (in, out, pr) = {
     import java.io.{InputStreamReader, OutputStreamWriter}
-    import java.lang.{Process, ProcessBuilder}
     
     val pb = new ProcessBuilder(argv : _*)
     val pr = start(pb)
