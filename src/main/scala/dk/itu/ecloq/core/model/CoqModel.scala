@@ -11,7 +11,6 @@ import dk.itu.ecloq.core.{Activator, ManifestIdentifiers}
 import dk.itu.ecloq.core.coqtop.CoqProgram
 import dk.itu.ecloq.core.utilities.TryCast
 
-import org.eclipse.core.commands.operations.IUndoableOperation
 import org.eclipse.core.runtime.{IPath, Path, IProgressMonitor}
 import org.eclipse.core.runtime.jobs.{ISchedulingRule, MultiRule}
 import org.eclipse.core.resources.{
@@ -200,9 +199,6 @@ trait ICoqProject extends ICoqElement with IParent {
   def getPackageFragmentRoots : Seq[ICoqPackageFragmentRoot]
   def hasPackageFragmentRoots : Boolean = (!getPackageFragmentRoots.isEmpty)
   
-  def getCreateOperation : IUndoableOperation
-  def getDeleteOperation(deleteContent : Boolean) : IUndoableOperation
-  
   override def getChildren : Seq[ICoqPackageFragmentRoot]
 }
 object ICoqProject {
@@ -251,9 +247,6 @@ trait ICoqPackageFragmentRoot extends ICoqElement with IParent {
   def getPackageFragments : Seq[ICoqPackageFragment]
   def hasPackageFragments : Boolean = (!getPackageFragments.isEmpty)
   
-  def getCreateOperation : IUndoableOperation
-  def getDeleteOperation : IUndoableOperation
-  
   override def getChildren : Seq[ICoqPackageFragment]
 }
 
@@ -276,9 +269,6 @@ trait ICoqPackageFragment extends ICoqElement with IParent {
   def getNonCoqFiles : Seq[IFile]
   def hasNonCoqFiles : Boolean = (!getNonCoqFiles.isEmpty)
   
-  def getCreateOperation : IUndoableOperation
-  def getDeleteOperation : IUndoableOperation
-  
   override def getChildren : Seq[ICoqFile]
 }
 
@@ -293,8 +283,6 @@ trait ICoqVernacFile extends ICoqFile {
   override def getElementType = classOf[ICoqVernacFile]
   
   def setContents(is : InputStream, monitor : IProgressMonitor)
-  def getCreateOperation : IUndoableOperation
-  def getDeleteOperation : IUndoableOperation
 }
 object ICoqVernacFile {
   import org.eclipse.core.runtime.Platform

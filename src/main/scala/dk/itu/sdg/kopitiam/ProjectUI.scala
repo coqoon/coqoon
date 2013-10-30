@@ -43,7 +43,8 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
       extends IRunnableWithProgress {
     import org.eclipse.core.runtime.SubMonitor
     import org.eclipse.core.resources.{IWorkspace, IWorkspaceRunnable}
-    import org.eclipse.ui.ide.undo.WorkspaceUndoUtil
+    import org.eclipse.ui.ide.undo.{WorkspaceUndoUtil,
+      CreateFolderOperation, CreateProjectOperation}
     
     override def run(monitor_ : IProgressMonitor) = {
       val monitor = SubMonitor.convert(monitor_, 3)
@@ -51,11 +52,15 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
       monitor.beginTask("New Coq project", 3)
       import org.eclipse.core.runtime.Path
       val infoAdapter = WorkspaceUndoUtil.getUIInfoAdapter(getShell)
-      project.getCreateOperation.execute(monitor.newChild(1), infoAdapter)
-      val src = project.getPackageFragmentRoot(new Path("src"))
-      src.getCreateOperation.execute(monitor.newChild(1), infoAdapter)
-      val bin = project.getPackageFragmentRoot(new Path("bin"))
-      bin.getCreateOperation.execute(monitor.newChild(1), infoAdapter)
+
+      project.getCorrespondingResource.foreach(project => {
+        new CreateProjectOperation(ICoqProject.newDescription(project),
+            "New Coq project").execute(monitor.newChild(1), infoAdapter)
+        new CreateFolderOperation(project.getFolder("src"), null,
+            "New source folder").execute(monitor.newChild(1), infoAdapter)
+        new CreateFolderOperation(project.getFolder("bin"), null,
+            "New output folder").execute(monitor.newChild(1), infoAdapter)
+      })
     }
   }
   

@@ -108,8 +108,6 @@ private object CoqModelImpl {
     (a.isOpen && a.getDescription.getNatureIds.exists(ICoqProject.isCoqNature))
 }
 
-import org.eclipse.ui.ide.undo.DeleteResourcesOperation
-
 private case class CoqProjectImpl(
     private val res : IProject,
     private val parent : ICoqModel)
@@ -208,18 +206,6 @@ private case class CoqProjectImpl(
   }
   private def getCache() = getModel.getCacheFor(this, new Cache)
 
-  import org.eclipse.ui.ide.undo.CreateProjectOperation
-
-  override def getCreateOperation = {
-    new CreateProjectOperation(
-        ICoqProject.newDescription(res), "New Coq project")
-  }
-
-  override def getDeleteOperation(deleteContent : Boolean) = {
-    new DeleteResourcesOperation(
-        Array(res), "Delete Coq project", deleteContent)
-  }
-
   import CoqProjectFile._
   import java.io.ByteArrayInputStream
   private def setProjectConfiguration(
@@ -311,17 +297,6 @@ private case class CoqPackageFragmentRootImpl(
     extends ParentImpl(res, parent) with ICoqPackageFragmentRoot {
   import CoqPackageFragmentRootImpl._
 
-  import org.eclipse.ui.ide.undo.CreateFolderOperation
-
-  override def getCreateOperation = {
-    new CreateFolderOperation(res, null, "New package fragment root")
-  }
-
-  override def getDeleteOperation = {
-    new DeleteResourcesOperation(
-        Array(res), "Delete package fragment root", false)
-  }
-
   private def gpfRecurse(res : IFolder) : List[ICoqPackageFragment] = {
     var results = List[ICoqPackageFragment]()
     if (!res.members.collect(CoqPackageFragmentImpl.fileCollector).isEmpty)
@@ -348,14 +323,6 @@ private case class CoqPackageFragmentImpl(
     private val parent : ICoqPackageFragmentRoot)
     extends ParentImpl(res, parent) with ICoqPackageFragment {
   import CoqPackageFragmentImpl._
-
-  import org.eclipse.ui.ide.undo.CreateFolderOperation
-
-  override def getCreateOperation =
-    new CreateFolderOperation(res, null, "New package fragment")
-
-  override def getDeleteOperation =
-    new DeleteResourcesOperation(Array(res), "Delete package fragment", false)
 
   override def getVernacFile(file : IPath) =
     new CoqVernacFileImpl(res.getFile(file), this)
@@ -409,16 +376,8 @@ private case class CoqVernacFileImpl(
   if (!res.getName.endsWith(".v"))
     throw new IllegalArgumentException(res.getName)
 
-  import org.eclipse.ui.ide.undo.CreateFileOperation
-
   override def setContents(is : InputStream, monitor : IProgressMonitor) =
     res.setContents(is, IResource.NONE, monitor)
-
-  override def getCreateOperation =
-    new CreateFileOperation(res, null, EmptyInputStream, "New Vernac file")
-
-  override def getDeleteOperation =
-    new DeleteResourcesOperation(Array(res), "Delete Vernac file", false)
 }
 
 private case class CoqObjectFileImpl(
