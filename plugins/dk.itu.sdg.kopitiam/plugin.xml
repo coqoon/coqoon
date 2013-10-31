@@ -174,12 +174,18 @@
    <extension
          point="org.eclipse.ui.preferencePages">
       <page
+            class="dk.itu.coqoon.core.CoqoonPreferencesPage"
+            id="dk.itu.coqoon.core.pref"
+            name="Coqoon">
+      </page>
+      <page
+            category="dk.itu.coqoon.core.pref"
             class="dk.itu.sdg.kopitiam.KopitiamPreferencePage"
             id="Kopitiam.settings"
             name="Kopitiam">
       </page>
       <page
-            category="Kopitiam.settings"
+            category="dk.itu.coqoon.core.pref"
             class="dk.itu.sdg.kopitiam.KopitiamColorPreferencePage"
             id="Kopitiam.colorSettings"
             name="Color Settings">

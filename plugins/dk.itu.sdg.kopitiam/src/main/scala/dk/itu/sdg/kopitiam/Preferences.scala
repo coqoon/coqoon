@@ -16,18 +16,9 @@ class KopitiamPreferencePage extends FieldEditorPreferencePage with IWorkbenchPr
 
   import org.eclipse.jface.preference.{BooleanFieldEditor, DirectoryFieldEditor}
   override def createFieldEditors () : Unit = {
-    addField(new DirectoryFieldEditor("coqpath", "Path to Coq", getFieldEditorParent))
-    addField(new DirectoryFieldEditor("loadpath", "Path to Load", getFieldEditorParent))
+    addField(new DirectoryFieldEditor("loadpath", "Path to Charge!", getFieldEditorParent))
     addField(new BooleanFieldEditor("implicit", "Implicitly generate 'forward' proof script for each statement", getFieldEditorParent))
     addField(new BooleanFieldEditor("smartcompilation", "'Smart' compile vernacular when stepped to the end", getFieldEditorParent))
-  }
-
-  import java.io.File
-  override def performOk () : Boolean = {
-    super.performOk()
-    if (!CoqProgram("coqtop").check)
-      setErrorMessage("couldn't find coqtop in the specified path")
-    true
   }
 }
 
