@@ -1,14 +1,14 @@
 /* ProjectUI.scala
  * User interfaces for Coq project creation and manipulation
  * Copyright © 2013 Alexander Faithfull
- * 
+ *
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
 package dk.itu.sdg.kopitiam
 
-import dk.itu.ecloq.core.model._
-import dk.itu.ecloq.core.utilities.{TryCast, CacheSlot}
+import dk.itu.coqoon.core.model._
+import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot}
 
 import org.eclipse.jface.operation.IRunnableWithProgress
 import org.eclipse.core.resources.{IFile, IProject, IResource}
@@ -18,12 +18,12 @@ import org.eclipse.ui.INewWizard
 import org.eclipse.jface.wizard.Wizard
 class NewCoqProjectWizard extends Wizard with INewWizard {
   import org.eclipse.ui.dialogs.WizardNewProjectCreationPage
-  
+
   class NewCoqProjectCreationPage
       extends WizardNewProjectCreationPage("Coq project") {
-    
+
   }
-  
+
   import org.eclipse.ui.IWorkbench
   import org.eclipse.jface.viewers.IStructuredSelection
   private var workbench : IWorkbench = null
@@ -32,23 +32,23 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
     workbench = w
     selection = s
   }
-  
+
   private val creationPage = new NewCoqProjectCreationPage()
-  
+
   override def addPages = {
     addPage(creationPage)
   }
-  
+
   class ProjectCreator(private val project : ICoqProject)
       extends IRunnableWithProgress {
     import org.eclipse.core.runtime.SubMonitor
     import org.eclipse.core.resources.{IWorkspace, IWorkspaceRunnable}
     import org.eclipse.ui.ide.undo.{WorkspaceUndoUtil,
       CreateFolderOperation, CreateProjectOperation}
-    
+
     override def run(monitor_ : IProgressMonitor) = {
       val monitor = SubMonitor.convert(monitor_, 3)
-      
+
       monitor.beginTask("New Coq project", 3)
       import org.eclipse.core.runtime.Path
       val infoAdapter = WorkspaceUndoUtil.getUIInfoAdapter(getShell)
@@ -63,7 +63,7 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
       })
     }
   }
-  
+
   def createProject : IProject = {
     val project = creationPage.getProjectHandle()
     if (!project.exists()) {
@@ -73,9 +73,9 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
     }
     return project
   }
-  
+
   import org.eclipse.ui.PlatformUI
-  
+
   override def performFinish = {
     val project = createProject
     PlatformUI.getWorkbench().getWorkingSetManager().addToWorkingSets(
@@ -98,10 +98,10 @@ private class LoadPathLabelProvider extends LabelProvider {
 private class LoadPathContentProvider(
     filter : ICoqLoadPathProvider => Boolean) extends ITreeContentProvider {
   override def dispose = ()
-  
+
   override def inputChanged(viewer : Viewer, oldInput : Any, newInput : Any) =
     viewer.refresh
-  
+
   override def getElements(input : Any) = input match {
     case c : CacheSlot[_] => getElements(c.get)
     case a : Seq[_] => a.flatMap(_ match {
@@ -110,12 +110,12 @@ private class LoadPathContentProvider(
     }).toArray
     case _ => Array()
   }
-  
+
   override def getChildren(parent : Any) = parent match {
     case a : ICoqLoadPathProvider => a.getLoadPath.toArray
     case _ => Array()
   }
-  
+
   override def getParent(child : Any) = null
   override def hasChildren(parent : Any) =
     (TryCast[ICoqLoadPathProvider](parent) != None)

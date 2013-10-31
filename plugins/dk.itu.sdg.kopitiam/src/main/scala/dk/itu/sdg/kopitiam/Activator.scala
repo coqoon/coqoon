@@ -7,7 +7,7 @@ class Activator extends AbstractUIPlugin {
   System.setProperty("sun.jnu.encoding", "UTF-8")
 
   import org.osgi.framework.BundleContext
-  
+
   override def start(context : BundleContext) = {
     super.start(context)
     Activator.single = this
@@ -31,7 +31,7 @@ class Activator extends AbstractUIPlugin {
 object Activator {
   private var single : Activator = null
   def getDefault() = single
-  
+
   import org.eclipse.core.runtime.{Status, IStatus}
   def makeStatus(severity : Int,
       message : String, exception : Throwable = null) : IStatus =

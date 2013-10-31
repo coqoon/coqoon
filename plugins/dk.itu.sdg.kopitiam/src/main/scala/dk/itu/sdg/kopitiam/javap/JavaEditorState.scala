@@ -1,8 +1,8 @@
 package dk.itu.sdg.kopitiam.javap
 
-import dk.itu.ecloq.core
-import dk.itu.ecloq.core.coqtop.CoqTopIdeSlave_v20120710
-import dk.itu.ecloq.core.utilities.{TryCast, TryService}
+import dk.itu.coqoon.core
+import dk.itu.coqoon.core.coqtop.CoqTopIdeSlave_v20120710
+import dk.itu.coqoon.core.utilities.{TryCast, TryService}
 
 import dk.itu.sdg.kopitiam._
 
@@ -11,23 +11,23 @@ import org.eclipse.core.commands.{IHandler, ExecutionEvent}
 
 class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
   type ForbiddenJavaEditor = org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
-  
+
   import org.eclipse.jdt.core.dom._
-  
+
   import scala.collection.mutable.Stack
   private val stepsV : Stack[JavaStep] = Stack[JavaStep]()
   def steps = stepsV
-  
+
   import org.eclipse.ui.handlers.IHandlerService
   def getHandlerService = TryService[IHandlerService](UIUtils.getWorkbench).get
-    
+
   private var coqTopV : CoqTopIdeSlave_v20120710 = null
   def coqTop = {
     if (coqTopV == null)
       coqTopV = CoqTopIdeSlave_v20120710().orNull
     coqTopV
   }
-  
+
   private var m : Option[MethodDeclaration] = None
   def method : Option[MethodDeclaration] = m
   def setMethod(a : Option[MethodDeclaration]) = {
@@ -38,18 +38,18 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
       deactivateHandlers
     }
   }
-    
+
   private var cu : Option[CompilationUnit] = None
   def compilationUnit : Option[CompilationUnit] = cu
   def setCompilationUnit (a : Option[CompilationUnit]) = cu = a
-  
+
   private var completeV : Option[ASTNode] = None
   def complete : Option[ASTNode] = completeV
   def setComplete(a : Option[ASTNode]) = {
     completeV = a
     addAnnotations(complete, underway)
   }
-  
+
   private var underwayV : Option[ASTNode] = None
   def underway : Option[ASTNode] = underwayV
   def setUnderway(a : Option[ASTNode]) = {
@@ -63,15 +63,15 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
     }
     addAnnotations(complete, underway)
   }
-  
+
   override protected def invalidate() =
     TryCast[ForbiddenJavaEditor](editor).foreach(
         _.getViewer.invalidateTextPresentation) /* XXX */
-  
+
   private def addAnnotations(
       complete : Option[ASTNode], underway : Option[ASTNode]) : Unit =
     doConnectedToAnnotationModel { addAnnotations(complete, underway, _) }
-  
+
   import org.eclipse.jface.text.source.IAnnotationModel
   private def addAnnotations(
       complete : Option[ASTNode], underway : Option[ASTNode],
@@ -92,11 +92,11 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
         complete.map(a => a.getStartPosition + a.getLength),
         underway.map(a => a.getStartPosition + a.getLength)), model)
   }
-  
+
   import org.eclipse.core.resources.IMarker
-  
+
   var completedMethods : List[MethodDeclaration] = List()
-  
+
   def markCompletedMethods : Unit = {
     import org.eclipse.ui.IFileEditorInput
     import org.eclipse.core.resources.IResource
@@ -109,22 +109,22 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
           "Proven:\n\n" + JavaEditorState.getProofScript(a).mkString("\n"),
           ManifestIdentifiers.MARKER_PROVEN, IMarker.SEVERITY_ERROR).schedule)
   }
-  
+
   import org.eclipse.ui.handlers.IHandlerActivation
   private var handlerActivations : List[IHandlerActivation] = List()
-  
+
   def activateHandler(id : String, handler : IHandler) = {
     val activation = getHandlerService.activateHandler(id, handler)
     handlerActivations :+= activation
     activation
   }
-  
+
   def deactivateHandlers = {
     import scala.collection.JavaConversions._
     getHandlerService.deactivateHandlers(handlerActivations)
     handlerActivations = List()
   }
-  
+
   def updateASTifValid (off : Int) = {
     val prov = editor.getDocumentProvider
     val doc = prov.getDocument(editor.getEditorInput)
@@ -158,14 +158,14 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
     	}
       }
     }
-  }  
-  
+  }
+
   import org.eclipse.jface.text.reconciler.MonoReconciler
   private val reconciler =
     new MonoReconciler(new JavaEditorReconcilingStrategy(this), true)
   reconciler.setDelay(1)
   reconciler.install(editor.asInstanceOf[ForbiddenJavaEditor].getViewer)
-  
+
   def createCertificate =
     JavaEditorState.createCertificate(compilationUnit.get)
 }
@@ -174,7 +174,7 @@ object JavaEditorState {
     scala.collection.mutable.HashMap[ITextEditor, JavaEditorState]()
   def requireStateFor(part : ITextEditor) =
     states.getOrElseUpdate(part, { new JavaEditorState(part) })
-  
+
   import org.eclipse.jdt.core.dom.CompilationUnit
   def createCertificate(cu : CompilationUnit) = {
     import EclipseJavaASTProperties._
@@ -182,7 +182,7 @@ object JavaEditorState {
         (JavaASTUtils.traverseCU(cu, getProofScript).flatten) :+
         getEnd(cu).get).mkString("\n")
   }
-  
+
   import org.eclipse.jdt.core.dom.MethodDeclaration
   def getProofScript(m : MethodDeclaration) =
     EclipseJavaASTProperties.getProof(m).get ++ JavaASTUtils.traverseAST(
@@ -205,14 +205,14 @@ private class JavaEditorReconcilingStrategy(
     jes : JavaEditorState) extends IReconcilingStrategy {
   import org.eclipse.jface.text.{IRegion, Region, IDocument}
   import org.eclipse.jface.text.reconciler.DirtyRegion
-  
+
   import org.eclipse.ui.IFileEditorInput
   import org.eclipse.core.resources.{IMarker,IResource}
-  
+
   override def reconcile(r : IRegion) : Unit = {
     if (jes.method == None)
       return
-    
+
     jes.file.foreach(file => {
       if (file.findMarkers(core.ManifestIdentifiers.MARKER_PROBLEM,
           true, IResource.DEPTH_ZERO).length > 0)
@@ -243,7 +243,7 @@ private class JavaEditorReconcilingStrategy(
         }
 
         jes.updateASTifValid(off)
-        
+
       case _ =>
         UIUtils.exec {
           jes.coqTop.kill /* XXX: can't use a step back job (goal update) */
@@ -253,8 +253,8 @@ private class JavaEditorReconcilingStrategy(
         }
     }
   }
-  
+
   override def reconcile(dr : DirtyRegion, r : IRegion) = reconcile(r)
-  
+
   override def setDocument(newDocument : IDocument) = ()
 }

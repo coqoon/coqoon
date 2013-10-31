@@ -5,11 +5,11 @@
  * You may use, modify, copy and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
-package dk.itu.ecloq.core.model
+package dk.itu.coqoon.core.model
 
-import dk.itu.ecloq.core.project.{
+import dk.itu.coqoon.core.project.{
   CoqProjectFile, CoqProjectEntry, VariableEntry, RecursiveEntry}
-import dk.itu.ecloq.core.utilities.{TryCast, CacheSlot, FunctionIterator}
+import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot, FunctionIterator}
 
 import org.eclipse.core.runtime.{Path, IPath, IProgressMonitor}
 import org.eclipse.core.resources._

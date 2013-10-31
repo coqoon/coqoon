@@ -22,9 +22,9 @@ object VisitingAST {
 
   class ReportingVisitor(jes : JavaEditorState) extends Visitor {
     private var success = true
-    
+
     def getSuccess = success
-    
+
     import org.eclipse.jdt.core.dom.ASTNode
     def reportError(e : String, s : ASTNode) : Unit = {
       success = false
@@ -32,7 +32,7 @@ object VisitingAST {
           (s.getStartPosition, s.getStartPosition + s.getLength), e).schedule)
     }
   }
-  
+
   //beware of the boilerplate. nothing interesting to see below.
   import org.eclipse.jdt.core.dom.ASTVisitor
 

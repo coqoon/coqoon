@@ -1,4 +1,4 @@
-package dk.itu.ecloq.core.coqtop
+package dk.itu.coqoon.core.coqtop
 
 object CoqTypes {
   /* This is just a Scala translation of lib/interface.mli */
@@ -66,20 +66,20 @@ object CoqTypes {
     protocol_version : String,
     release_date : String,
     compile_date : String)
-  
+
   abstract class message_level
   case class Debug(value : String) extends message_level
   case class Info() extends message_level
   case class Notice() extends message_level
   case class Warning() extends message_level
   case class Error() extends message_level
-  
+
   case class message(
     message_level : message_level,
     message_content : String)
-  
+
   type location = Option[Pair[Int, Int]]
-  
+
   abstract class value[A]
   case class Good[A](value : A) extends value[A]
   case class Unsafe[A](value : A) extends value[A]

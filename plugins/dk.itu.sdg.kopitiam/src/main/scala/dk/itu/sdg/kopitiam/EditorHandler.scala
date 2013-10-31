@@ -1,14 +1,14 @@
 /* EditorHandler.scala
  * Command handler base classes and common command handlers
  * Copyright © 2013 Alexander Faithfull
- * 
+ *
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
 package dk.itu.sdg.kopitiam
 
-import dk.itu.ecloq.core.coqtop.{CoqTypes, CoqTopIdeSlave_v20120710}
-import dk.itu.ecloq.core.utilities.{TryCast, TryAdapt}
+import dk.itu.coqoon.core.coqtop.{CoqTypes, CoqTopIdeSlave_v20120710}
+import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
 
 import org.eclipse.ui.{ISources, IEditorPart}
 import org.eclipse.core.commands.AbstractHandler
@@ -16,10 +16,10 @@ import org.eclipse.core.expressions.IEvaluationContext
 
 abstract class EditorHandler extends AbstractHandler {
   setBaseEnabled(false)
-  
+
   private var editorV : IEditorPart = null
   protected def editor = editorV
-  
+
   override protected def setEnabled(evaluationContext : Object) = {
     val activeEditor = TryCast[IEvaluationContext](evaluationContext) match {
       case Some(e) => e.getVariable(ISources.ACTIVE_EDITOR_NAME)
@@ -36,19 +36,19 @@ abstract class EditorHandler extends AbstractHandler {
   protected def editorChanged(o : IEditorPart, n : IEditorPart) = ()
 
   protected def getCoqTopContainer = TryAdapt[CoqTopContainer](editor).orNull
-  
+
   import org.eclipse.core.runtime.jobs.Job
   protected def scheduleJob(j : Job) = {
     getCoqTopContainer.setBusy(true)
     j.schedule
   }
-  
+
   def calculateEnabled : Boolean = true
 }
 
 trait CoqTopContainer {
   private val lock = new Object
-  
+
   def coqTop : CoqTopIdeSlave_v20120710
 
   private var goals_ : Option[CoqTypes.goals] = None
@@ -57,21 +57,21 @@ trait CoqTopContainer {
     lock synchronized { goals_ = g }
     fireChange(CoqTopContainer.PROPERTY_GOALS)
   }
-  
+
   import org.eclipse.ui.IPropertyListener
   private var listeners = Set[IPropertyListener]()
   def addListener(l : IPropertyListener) = lock synchronized (listeners += l)
   def removeListener(l : IPropertyListener) = lock synchronized (listeners -= l)
   def fireChange(propertyID : Int) : Unit =
     lock synchronized { listeners }.map(_.propertyChanged(this, propertyID))
-  
+
   private var busy_ : Boolean = false
   def busy : Boolean = lock synchronized { busy_ }
   def setBusy(b : Boolean) : Unit = {
     lock synchronized { busy_ = b }
     fireChange(CoqTopContainer.PROPERTY_BUSY)
   }
-  
+
   private var flags = Set[String]()
   def setFlag(name : String) = lock synchronized { flags += name }
   def clearFlag(name : String) = lock synchronized { flags -= name }
@@ -89,7 +89,7 @@ trait CoqTopEditorContainer extends CoqTopContainer {
     Annotation, IAnnotationModel, IAnnotationModelExtension}
   import org.eclipse.ui.IFileEditorInput
   import org.eclipse.ui.texteditor.ITextEditor
-  
+
   def file = TryCast[IFileEditorInput](editor.getEditorInput).map(_.getFile)
   def editor : ITextEditor
   def document : IDocument =
@@ -109,9 +109,9 @@ trait CoqTopEditorContainer extends CoqTopContainer {
       invalidate()
     })
   }
-  
+
   protected def invalidate()
-  
+
   var underwayA : Option[Annotation] = None
   var completeA : Option[Annotation] = None
 
@@ -163,7 +163,7 @@ class InterruptCoqHandler extends EditorHandler {
       getCoqTopContainer.coqTop.interrupt
     null
   }
-  
+
   override def calculateEnabled =
     (getCoqTopContainer != null && getCoqTopContainer.busy)
 }

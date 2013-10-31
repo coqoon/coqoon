@@ -5,13 +5,13 @@
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
-package dk.itu.ecloq.core.project
+package dk.itu.coqoon.core.project
 
-import dk.itu.ecloq.core.ManifestIdentifiers
-import dk.itu.ecloq.core.model._
-import dk.itu.ecloq.core.coqtop.CoqProgram
-import dk.itu.ecloq.core.coqtop.CoqSentence
-import dk.itu.ecloq.core.utilities.{
+import dk.itu.coqoon.core.ManifestIdentifiers
+import dk.itu.coqoon.core.model._
+import dk.itu.coqoon.core.coqtop.CoqProgram
+import dk.itu.coqoon.core.coqtop.CoqSentence
+import dk.itu.coqoon.core.utilities.{
   TryCast, JobRunner, Substring, CacheSlot, FunctionIterator}
 
 import org.eclipse.core.resources.IncrementalProjectBuilder

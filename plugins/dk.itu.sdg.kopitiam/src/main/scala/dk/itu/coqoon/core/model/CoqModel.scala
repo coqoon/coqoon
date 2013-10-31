@@ -1,15 +1,15 @@
 /* CoqModel.scala
  * An abstraction layer between Eclipse resources and Coq concepts
  * Copyright © 2013 Alexander Faithfull
- * 
+ *
  * You may use, modify, copy and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
-package dk.itu.ecloq.core.model
+package dk.itu.coqoon.core.model
 
-import dk.itu.ecloq.core.{Activator, ManifestIdentifiers}
-import dk.itu.ecloq.core.coqtop.CoqProgram
-import dk.itu.ecloq.core.utilities.TryCast
+import dk.itu.coqoon.core.{Activator, ManifestIdentifiers}
+import dk.itu.coqoon.core.coqtop.CoqProgram
+import dk.itu.coqoon.core.utilities.TryCast
 
 import org.eclipse.core.runtime.{IPath, Path, IProgressMonitor}
 import org.eclipse.core.resources.{
@@ -38,10 +38,10 @@ trait ICoqElement {
 
 trait ICoqModel extends ICoqElement with IParent {
   override def getElementType = classOf[ICoqModel]
-  
+
   override def getParent = None
   override def getCorrespondingResource : Option[IWorkspaceRoot]
-  
+
   def getProject(name : String) : ICoqProject
   def getProjects : Seq[ICoqProject]
   def hasProjects : Boolean = (!getProjects.isEmpty)
@@ -53,11 +53,11 @@ trait ICoqModel extends ICoqElement with IParent {
 }
 object ICoqModel {
   def create(root : IWorkspaceRoot) : ICoqModel = new CoqModelImpl(root)
-  
+
   private val instance = new CoqModelImpl(
       org.eclipse.core.resources.ResourcesPlugin.getWorkspace.getRoot)
   def getInstance : ICoqModel = instance
-  
+
   def toCoqProject(project : IProject) : ICoqProject =
     getInstance.toCoqElement(project).flatMap(TryCast[ICoqProject]).orNull
 }
@@ -181,35 +181,35 @@ private class ChargeLibrary extends AbstractLoadPathProvider {
 
 trait ICoqProject extends ICoqElement with IParent {
   override def getElementType = classOf[ICoqProject]
-  
+
   override def getParent : Option[ICoqModel]
   override def getCorrespondingResource : Option[IProject]
-  
+
   def getLoadPath() : Seq[CoqLoadPath]
 
   def getLoadPathProviders() : Seq[ICoqLoadPathProvider]
   def setLoadPathProviders(
       lp : Seq[ICoqLoadPathProvider], monitor : IProgressMonitor)
-  
+
   def getDefaultOutputLocation : IFolder
-  
+
   def getPackageFragmentRoot(folder : IPath) : ICoqPackageFragmentRoot
   def getPackageFragmentRoots : Seq[ICoqPackageFragmentRoot]
   def hasPackageFragmentRoots : Boolean = (!getPackageFragmentRoots.isEmpty)
-  
+
   override def getChildren : Seq[ICoqPackageFragmentRoot]
 }
 object ICoqProject {
   def isCoqNature(a : String) = (ManifestIdentifiers.NATURE_COQ == a)
   def isCoqBuilder(a : ICommand) =
     (ManifestIdentifiers.BUILDER_COQ == a.getBuilderName)
-    
+
   def newDescription(ws : IWorkspace, name : String) : IProjectDescription =
       configureDescription(ws.newProjectDescription(name))
-  
+
   def newDescription(proj : IProject) : IProjectDescription =
       newDescription(proj.getWorkspace, proj.getName)
-  
+
   def configureDescription(d : IProjectDescription) :
       IProjectDescription = {
     val bs = d.getBuildSpec
@@ -220,14 +220,14 @@ object ICoqProject {
       d.setNatureIds(ns :+ ManifestIdentifiers.NATURE_COQ)
     d
   }
-  
+
   def deconfigureDescription(d : IProjectDescription) :
       IProjectDescription = {
     d.setBuildSpec(d.getBuildSpec.filterNot(isCoqBuilder))
     d.setNatureIds(d.getNatureIds.filterNot(isCoqNature))
     d
   }
-  
+
   def makeBuilderCommand(d : IProjectDescription) = {
     val c = d.newCommand()
     c.setBuilderName(ManifestIdentifiers.BUILDER_COQ)
@@ -238,35 +238,35 @@ object ICoqProject {
 trait ICoqPackageFragmentRoot extends ICoqElement with IParent {
   override def getCorrespondingResource : Option[IFolder]
   override def getParent : Option[ICoqProject]
-  
+
   override def getElementType = classOf[ICoqPackageFragmentRoot]
-  
+
   def getPackageFragment(folder : IPath) : ICoqPackageFragment
   def getPackageFragments : Seq[ICoqPackageFragment]
   def hasPackageFragments : Boolean = (!getPackageFragments.isEmpty)
-  
+
   override def getChildren : Seq[ICoqPackageFragment]
 }
 
 trait ICoqPackageFragment extends ICoqElement with IParent {
   override def getCorrespondingResource : Option[IFolder]
   override def getParent : Option[ICoqPackageFragmentRoot]
-  
+
   override def getElementType = classOf[ICoqPackageFragment]
-  
+
   def getVernacFile(file : IPath) : ICoqVernacFile
   def getVernacFiles : Seq[ICoqVernacFile]
   def hasVernacFiles : Boolean = (!getVernacFiles.isEmpty)
-  
+
   def getObjectFile(file : IPath) : ICoqObjectFile
   def getObjectFiles : Seq[ICoqObjectFile]
   def hasObjectFiles : Boolean = (!getObjectFiles.isEmpty)
-  
+
   def hasCoqFiles : Boolean = (hasVernacFiles || hasObjectFiles)
-  
+
   def getNonCoqFiles : Seq[IFile]
   def hasNonCoqFiles : Boolean = (!getNonCoqFiles.isEmpty)
-  
+
   override def getChildren : Seq[ICoqFile]
 }
 
@@ -279,7 +279,7 @@ import java.io.InputStream
 
 trait ICoqVernacFile extends ICoqFile {
   override def getElementType = classOf[ICoqVernacFile]
-  
+
   def setContents(is : InputStream, monitor : IProgressMonitor)
 }
 object ICoqVernacFile {
@@ -290,7 +290,7 @@ object ICoqVernacFile {
 
 trait ICoqObjectFile extends ICoqFile {
   override def getElementType = classOf[ICoqObjectFile]
-  
+
   def getVernacFile : Option[ICoqVernacFile]
 }
 object ICoqObjectFile {

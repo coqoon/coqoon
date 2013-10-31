@@ -3,7 +3,7 @@
 
 package dk.itu.sdg.kopitiam.javap
 
-import dk.itu.ecloq.core.utilities.TryCast
+import dk.itu.coqoon.core.utilities.TryCast
 
 import dk.itu.sdg.kopitiam._
 
@@ -18,7 +18,7 @@ case class JavaStep(
 
 abstract class JavaEditorHandler extends EditorHandler {
   override def editor : ITextEditor = TryCast[ITextEditor](super.editor).orNull
-  
+
   override def calculateEnabled : Boolean = {
     if (editor == null)
       return false
@@ -27,7 +27,7 @@ abstract class JavaEditorHandler extends EditorHandler {
       return false
     return true
   }
-  
+
   protected def getState = JavaEditorState.requireStateFor(editor)
 }
 object JavaEditorHandler {
@@ -127,7 +127,7 @@ class SaveProofCertificateHandler extends JavaEditorHandler {
     }
     null
   }
-  
+
   override def calculateEnabled = if (super.calculateEnabled) {
     val state = getState
     val cu = state.compilationUnit
@@ -162,7 +162,7 @@ object JavaStepForwardHandler {
       List[JavaStep] =
     collectProofScript(jes.method.get, multiple,
         jes.complete.map { _.getStartPosition }, limit)
-  
+
   import org.eclipse.jdt.core.dom.MethodDeclaration
   def collectProofScript(
       method : MethodDeclaration, multiple : Boolean,
@@ -182,7 +182,7 @@ object JavaStepForwardHandler {
       if (captureP(x)) {
         JavaASTUtils.printProofScript(x).map(a => JavaStep(x, a))
       } else None
-    
+
     JavaASTUtils.traverseAST(method, true, !multiple, print)
   }
 }
@@ -232,7 +232,7 @@ class JavaStepBackHandler extends JavaEditorHandler {
       JavaEditorHandler.doStepBack(getState, a => if (a.length > 0) 1 else 0)
     null
   }
-  
+
   override def calculateEnabled =
     super.calculateEnabled && (getState.steps.length > 0)
 }
@@ -243,7 +243,7 @@ class JavaRetractAllHandler extends JavaEditorHandler {
       JavaEditorHandler.doStepBack(getState, _.length)
     null
   }
-  
+
   override def calculateEnabled =
     super.calculateEnabled && (getState.steps.length > 0)
 }

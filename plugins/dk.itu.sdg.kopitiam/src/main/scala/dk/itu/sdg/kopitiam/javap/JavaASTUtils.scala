@@ -2,7 +2,7 @@
 
 package dk.itu.sdg.kopitiam.javap
 
-import dk.itu.ecloq.core.utilities.TryCast
+import dk.itu.coqoon.core.utilities.TryCast
 
 import dk.itu.sdg.kopitiam.Activator
 

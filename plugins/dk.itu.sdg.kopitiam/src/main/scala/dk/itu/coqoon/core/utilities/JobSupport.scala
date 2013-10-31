@@ -1,6 +1,6 @@
-package dk.itu.ecloq.core.utilities
+package dk.itu.coqoon.core.utilities
 
-import dk.itu.ecloq.core.ManifestIdentifiers
+import dk.itu.coqoon.core.ManifestIdentifiers
 
 import org.eclipse.core.runtime.{
   Status, IStatus, SubMonitor, CoreException, IProgressMonitor}
@@ -10,7 +10,7 @@ trait JobRunner[A] {
   protected def preCheck : Option[A] = None
   protected def finish : Unit = ()
   protected def doOperation(monitor : SubMonitor) : A
-  
+
   def run(monitor_ : IProgressMonitor) : A = {
     preCheck.foreach(a => return a)
     val monitor = SubMonitor.convert(monitor_)
@@ -25,7 +25,7 @@ trait JobRunner[A] {
       monitor.done
     }
   }
-  
+
   protected def fail(status : IStatus) = throw new CoreException(status)
   protected def cancel = fail(Status.CANCEL_STATUS)
 }
@@ -53,7 +53,7 @@ case class ObjectRule(obj : AnyRef) extends ISchedulingRule {
 object JobUtilities {
   import org.eclipse.core.resources.ResourcesPlugin
   def getRuleFactory = ResourcesPlugin.getWorkspace().getRuleFactory()
-  
+
   object MultiRule {
     def apply(a : ISchedulingRule*) =
       org.eclipse.core.runtime.jobs.MultiRule.combine(a.toArray)

@@ -1,8 +1,8 @@
 package dk.itu.sdg.kopitiam.javap
 
-import dk.itu.ecloq.core.model.ICoqModel
-import dk.itu.ecloq.core.coqtop.CoqTypes
-import dk.itu.ecloq.core.utilities.{JobRunner, TryService}
+import dk.itu.coqoon.core.model.ICoqModel
+import dk.itu.coqoon.core.coqtop.CoqTypes
+import dk.itu.coqoon.core.utilities.{JobRunner, TryService}
 
 import dk.itu.sdg.kopitiam._
 
@@ -18,7 +18,7 @@ class JavaProofInitialisationRunner(
     jes : JavaEditorState) extends JobRunner[Unit] {
   override def doOperation(monitor : SubMonitor) : Unit = {
     monitor.beginTask("Initialising Java proof mode", 4)
-    
+
     jes.coqTop.transaction[Unit](ct => {
       monitor.subTask("Performing custom Coq initialisation")
 
@@ -108,7 +108,7 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
     jes.steps.synchronized { jes.steps.push(step) }
     UIUtils.asyncExec { jes.setComplete(Some(step.node)) }
   }
-  
+
   override protected def onFail(
       step : JavaStep, result : CoqTypes.Fail[String]) = {
     import org.eclipse.ui.IFileEditorInput
@@ -125,7 +125,7 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
     }
     jes.file.foreach(file => CreateErrorMarkerJob(file, range, ep._2).schedule)
   }
-  
+
   override def finish = updateGoals.foreach(goals => {
     if (goals.fg_goals.isEmpty && goals.bg_goals.isEmpty)
       jes.coqTop.interp(false, false, "Qed.") match {
@@ -163,7 +163,7 @@ class JavaStepBackRunner(jes : JavaEditorState, stepCount : Int)
   override protected def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
     monitor.beginTask("Stepping back", 2)
-    
+
     val steps = jes.steps.synchronized { jes.steps.take(stepCount) }
     val rewindCount = steps.size /* XXX: synthetic steps? */
     jes.coqTop.rewind(rewindCount) match {
@@ -172,7 +172,7 @@ class JavaStepBackRunner(jes : JavaEditorState, stepCount : Int)
         jes.steps.synchronized {
           for (step <- steps)
             jes.steps.pop
-          
+
           if (extra > 0) {
             // XXX: synthetic steps
             var redoSteps = jes.steps.take(extra).toList.reverse

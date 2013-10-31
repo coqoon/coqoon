@@ -1,4 +1,4 @@
-package dk.itu.ecloq.core
+package dk.itu.coqoon.core
 
 import dk.itu.sdg.kopitiam
 

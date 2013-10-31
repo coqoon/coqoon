@@ -1,15 +1,15 @@
 /* CommonJobs.scala
  * Base classes, utility objects and helpers for jobs, and some shared jobs
  * Copyright © 2013 Alexander Faithfull
- * 
+ *
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
 package dk.itu.sdg.kopitiam
 
-import dk.itu.ecloq.core
-import dk.itu.ecloq.core.coqtop.CoqTypes
-import dk.itu.ecloq.core.utilities.{
+import dk.itu.coqoon.core
+import dk.itu.coqoon.core.coqtop.CoqTypes
+import dk.itu.coqoon.core.utilities.{
   JobBase, JobRunner, ObjectRule, JobUtilities}
 
 import org.eclipse.core.runtime.{
@@ -23,9 +23,9 @@ abstract class ResourceJob(name : String, resource : IResource,
     ruleProvider : IResource => ISchedulingRule) extends WorkspaceJob(name) {
   setRule(ruleProvider(resource))
   setSystem(true) /* Don't show this job in the UI */
-  
+
   protected def doOperation(monitor : IProgressMonitor)
-  
+
   override def runInWorkspace(monitor : IProgressMonitor) =
     JobBase.wrap { doOperation(monitor) }
 }
@@ -53,7 +53,7 @@ abstract class MarkerJob(resource : IResource) extends ResourceJob(
 class DeleteMarkersJob(
     resource : IResource, type_ : String,
     includeSubtypes : Boolean, depth : Int) extends MarkerJob(resource) {
-  override protected def doOperation(monitor : IProgressMonitor) = 
+  override protected def doOperation(monitor : IProgressMonitor) =
     resource.deleteMarkers(type_, includeSubtypes, depth)
 }
 
@@ -83,7 +83,7 @@ object CreateErrorMarkerJob {
     }
     CreateErrorMarkerJob(resource, offsets, ep._2)
   }
-  
+
   def apply(
       resource : IResource, region : (Int, Int), message : String) : CreateErrorMarkerJob =
     new CreateErrorMarkerJob(resource, region, message)
@@ -92,7 +92,7 @@ object CreateErrorMarkerJob {
 abstract class ContainerJobBase(name : String, runner : JobRunner[_],
     container : CoqTopContainer) extends JobBase(name, runner) {
   setRule(ObjectRule(container))
-  
+
   override def run(monitor_ : IProgressMonitor) : IStatus =
     try {
       super.run(monitor_)
@@ -111,7 +111,7 @@ abstract class StepRunner[A](container : CoqTopContainer)
     }
     goals
   }
-  
+
   override protected def finish = updateGoals
 }
 
@@ -123,7 +123,7 @@ abstract class StepForwardRunner[A <: CoqCommand](
   protected def onUnsafe(step : A, result : CoqTypes.Unsafe[String]) =
     onGood(step, CoqTypes.Good[String](result.value))
   protected def initialise = ()
-  
+
   private def perhapsPrint(
       s : org.eclipse.ui.console.MessageConsoleStream, msg_ : String) = {
     if (msg_ != null) {
@@ -132,7 +132,7 @@ abstract class StepForwardRunner[A <: CoqCommand](
         s.println(msg)
     }
   }
-      
+
   override def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
     monitor.beginTask("Stepping forward", steps.length)

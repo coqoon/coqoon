@@ -2,7 +2,7 @@
 
 package dk.itu.sdg.kopitiam.javap
 
-import dk.itu.ecloq.core.utilities.TryCast
+import dk.itu.coqoon.core.utilities.TryCast
 
 import dk.itu.sdg.kopitiam._
 
@@ -147,7 +147,7 @@ object CoreJavaChecker {
       }
 
     import scala.collection.JavaConversions.asScalaBuffer
-    
+
     //currently we only support empty constructors
     def isClassInstanceCreationGood (node : ClassInstanceCreation) : Boolean =
       asScalaBuffer(node.arguments).flatMap(TryCast[Expression]).toList.length == 0

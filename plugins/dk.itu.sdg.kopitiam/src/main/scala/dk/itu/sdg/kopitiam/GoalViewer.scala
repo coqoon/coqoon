@@ -1,7 +1,7 @@
 package dk.itu.sdg.kopitiam
 
-import dk.itu.ecloq.core.coqtop.CoqTypes
-import dk.itu.ecloq.core.utilities.{TryCast, TryAdapt}
+import dk.itu.coqoon.core.coqtop.CoqTypes
+import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
 
 import org.eclipse.swt.widgets.{Text, Control, Composite}
 
@@ -153,7 +153,7 @@ class TabularGoalPresenter extends SashGoalPresenter {
     ta.setLinesVisible(true)
     ta.setHeaderVisible(true)
   }
-  
+
   override protected def makeTabBottom(parent : Composite) =
     new Text(parent,
       SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)

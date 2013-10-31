@@ -5,21 +5,21 @@
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
-package dk.itu.ecloq.core.project
+package dk.itu.coqoon.core.project
 
-import dk.itu.ecloq.core.utilities.Substring
+import dk.itu.coqoon.core.utilities.Substring
 
 object CoqProjectFile {
   final val Backslash = "^\\\\".r.unanchored
   final val Whitespace = "^\\s".r.unanchored
   final val QuotationMark = "^\"".r.unanchored
-  
+
   type CoqProjectFile = Seq[CoqProjectEntry]
   def toString(f : CoqProjectFile) =
     f.map(_.toTokens).map(_.mkString(" ")).mkString("\n")
   def fromString(s : String) : CoqProjectFile =
     CoqProjectEntry.fromTokens(shellTokenise(s))
-  
+
   def shellTokenise(s : CharSequence) : Seq[String] = {
     var i = 0
     var inString = false
@@ -51,7 +51,7 @@ sealed abstract class CoqProjectEntry {
 }
 object CoqProjectEntry {
   private final val ESCAPE = "(\\s|\"|\\\\)".r.unanchored
-  
+
   def fromTokens(t : Seq[String]) : Seq[CoqProjectEntry] = t match {
     case "-custom" :: command :: deps :: target :: tail =>
       CustomEntry(command, deps, target) +: fromTokens(tail)

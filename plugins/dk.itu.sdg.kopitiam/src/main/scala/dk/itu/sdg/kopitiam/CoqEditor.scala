@@ -3,10 +3,10 @@
 
 package dk.itu.sdg.kopitiam
 
-import dk.itu.ecloq.core
-import dk.itu.ecloq.core.model._
-import dk.itu.ecloq.core.coqtop.CoqTopIdeSlave_v20120710
-import dk.itu.ecloq.core.utilities.{TryCast, TryAdapt}
+import dk.itu.coqoon.core
+import dk.itu.coqoon.core.model._
+import dk.itu.coqoon.core.coqtop.CoqTopIdeSlave_v20120710
+import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
 
 import org.eclipse.ui.IFileEditorInput
 import org.eclipse.ui.editors.text.TextEditor
@@ -23,15 +23,15 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
   ICoqModel.getInstance.addListener(ModelListener)
 
   private val lock = new Object
-  
+
   override def editor = this
-  
+
   import scala.collection.mutable.Stack
   private var stepsV : Stack[CoqStep] = Stack[CoqStep]()
   def steps = stepsV
-  
+
   private val annotateTask = new SupersedableTask(50)
-  
+
   private var underwayV : Int = 0
   def underway = lock synchronized { underwayV }
   def setUnderway(offset : Int) = lock synchronized {
@@ -42,7 +42,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
       UIUtils.asyncExec { addAnnotations(completed, underway) }
     }
   }
-  
+
   private var completedV : Int = 0
   def completed = lock synchronized { completedV }
   def setCompleted(offset : Int) = lock synchronized {
@@ -51,19 +51,19 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
       UIUtils.asyncExec { addAnnotations(completed, underway) }
     }
   }
-  
+
   private var coqTopV : CoqTopIdeSlave_v20120710 = null
   override def coqTop = {
     if (coqTopV == null)
       coqTopV = CoqTopIdeSlave_v20120710().orNull
     coqTopV
   }
-  
+
   import org.eclipse.jface.text.reconciler.MonoReconciler
   private val reconciler =
     new MonoReconciler(new CoqProofReconcilingStrategy(this), true)
   reconciler.setDelay(1)
-  
+
   override def dispose = {
     if (coqTopV != null) {
       coqTopV.kill
@@ -129,9 +129,9 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     reconciler.install(viewer)
     viewer
   }
-  
+
   private def addAnnotations (first : Int, second : Int) : Unit =
-    doConnectedToAnnotationModel(model => 
+    doConnectedToAnnotationModel(model =>
         doSplitAnnotations(CoqTopEditorContainer.getSplitAnnotationRanges(
             Some(0), Some(first), Some(second)), model))
 
@@ -199,7 +199,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     case NoLengthPosition => new Position(0)
     case RegionPosition(off, len) => new Position(off, len)
   }
-  
+
   private def foldingAnnotations(region : VernacularRegion, document : IDocument) : Stream[(Position, ProjectionAnnotation)] = {
     //println("Collapsable " + region.outlineName + region.outlineNameExtra)
     if (region.pos.hasPosition && document.get(region.pos.offset, region.pos.length).count(_=='\n') >= 2)
@@ -217,9 +217,9 @@ private class CoqProofReconcilingStrategy(
     editor : CoqEditor) extends IReconcilingStrategy {
   import org.eclipse.jface.text.{IRegion, Region, IDocument}
   import org.eclipse.jface.text.reconciler.DirtyRegion
-  
+
   import org.eclipse.core.resources.{IMarker,IResource}
-  
+
   override def reconcile(r : IRegion) : Unit = {
     editor.file.foreach(file => {
       if (file.findMarkers(core.ManifestIdentifiers.MARKER_PROBLEM,
@@ -240,9 +240,9 @@ private class CoqProofReconcilingStrategy(
         }
     }
   }
-  
+
   override def reconcile(dr : DirtyRegion, r : IRegion) = reconcile(dr)
-  
+
   override def setDocument(newDocument : IDocument) = ()
 }
 
@@ -433,9 +433,9 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
     pr.setRepairer(ddr, IDocument.DEFAULT_CONTENT_TYPE)
     pr
   }
-  
+
   import org.eclipse.jface.text.quickassist.QuickAssistAssistant
-  
+
   override def getQuickAssistAssistant(v : ISourceViewer) = {
     val qa = new QuickAssistAssistant
     qa.setQuickAssistProcessor(new CoqQuickAssistProcessor)
@@ -476,8 +476,8 @@ class CoqContentAssistantProcessor(
   def computeCompletionProposals (viewer : ITextViewer, documentOffset : Int) : Array[ICompletionProposal] = {
     val prefix = getPrefix(viewer.getDocument, documentOffset)
 
-    import dk.itu.ecloq.core.coqtop.CoqTypes._
-    
+    import dk.itu.coqoon.core.coqtop.CoqTypes._
+
     val results =
       if (prefix.length > 1) {
     	editor.coqTop.search(List(
@@ -492,7 +492,7 @@ class CoqContentAssistantProcessor(
       } else List()
 
     val tst : String => Boolean = prefix.length == 0 || _.startsWith(prefix)
-    
+
     val filteredStatic = staticCompletions.filter(tst)
     val proposals = new Array[ICompletionProposal](filteredStatic.size + results.size)
     val mid = filteredStatic.length
@@ -516,7 +516,7 @@ import org.eclipse.jface.text.quickassist.IQuickAssistProcessor
 class CoqQuickAssistProcessor extends IQuickAssistProcessor {
   import org.eclipse.jface.text.source.Annotation
   import org.eclipse.jface.text.quickassist.IQuickAssistInvocationContext
-  
+
   override def canAssist(context : IQuickAssistInvocationContext) = false
   override def canFix(i : Annotation) = false
   override def computeQuickAssistProposals(
@@ -613,7 +613,7 @@ import org.eclipse.ui.dialogs.WizardNewFileCreationPage
 class NewCoqFileWizardPage (selection: IStructuredSelection) extends WizardNewFileCreationPage("NewCoqFileWizardPage", selection) {
   setTitle("Coq File")
   setDescription("Creates a new Coq file")
-  setFileExtension("v") 
+  setFileExtension("v")
 }
 
 import org.eclipse.jface.wizard.Wizard

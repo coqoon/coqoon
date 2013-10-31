@@ -7,11 +7,11 @@ object EclipseConsole {
   private val lock = new Object
   import org.eclipse.ui.console.{
     MessageConsole,MessageConsoleStream,ConsolePlugin}
-  
+
   private var console_ : Option[MessageConsole] = None
   private var out_ : Option[MessageConsoleStream] = None
   private var err_ : Option[MessageConsoleStream] = None
-  
+
   private def console : MessageConsole = lock synchronized {
     console_ match {
       case Some(a) => a
@@ -22,7 +22,7 @@ object EclipseConsole {
         console_.get
     }
   }
-  
+
   def out : MessageConsoleStream = lock synchronized {
     out_ match {
       case Some(a) => a
@@ -32,7 +32,7 @@ object EclipseConsole {
         out_.get
     }
   }
-  
+
   def err : MessageConsoleStream = lock synchronized {
     err_ match {
       case Some(a) => a
@@ -47,7 +47,7 @@ object EclipseConsole {
         err_.get
     }
   }
-  
+
   import org.eclipse.swt.graphics.Color
   private final val RED = new Color(UIUtils.getDisplay, 255, 0, 0)
 }

@@ -1,15 +1,15 @@
 /* IdeSlaveActions.scala
  * Eclipse Action wrappers for coqtop functionality
  * Copyright © 2013 Alexander Faithfull
- * 
+ *
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
 package dk.itu.sdg.kopitiam
 
-import dk.itu.ecloq.core.coqtop.{CoqTypes, CoqTopIdeSlave_v20120710}
-import dk.itu.ecloq.core.coqtop.CoqSentence
-import dk.itu.ecloq.core.utilities.{TryCast, Substring}
+import dk.itu.coqoon.core.coqtop.{CoqTypes, CoqTopIdeSlave_v20120710}
+import dk.itu.coqoon.core.coqtop.CoqSentence
+import dk.itu.coqoon.core.utilities.{TryCast, Substring}
 
 abstract class CoqCommand(val text : String) {
   def run(coqTop : CoqTopIdeSlave_v20120710) : CoqTypes.value[String] =
@@ -35,11 +35,11 @@ object CoqEditorHandler {
   def makeStep(doc : String, offset : Int) : Option[CoqStep] =
     CoqSentence.getNextSentence(doc, offset).map(
         s => CoqStep(s._1.start, s._1.toString, s._2))
-  
+
   def makeSteps(doc : String, from : Int, to : Int) : Seq[CoqStep] =
     CoqSentence.getNextSentences(doc, from, to).map(
         s => CoqStep(s._1.start, s._1.toString, s._2))
-  
+
   def getStepBackPair[A <: CoqCommand](
       steps : Stack[A], f : Stack[A] => Int) : (Int, Option[A]) = {
     var count : Int = 0
@@ -51,7 +51,7 @@ object CoqEditorHandler {
     }
     (count, mostRecent)
   }
-  
+
   def doStepBack(
       editor : CoqEditor, f : Stack[CoqStep] => Int, reveal : Boolean = true) = {
     val p = getStepBackPair(editor.steps, f)
@@ -71,7 +71,7 @@ import org.eclipse.core.commands.ExecutionEvent
 class CoqStepForwardHandler extends CoqEditorHandler {
   /* Don't check whether the editor's coqtop instance is busy */
   override def isEnabled = (editor != null)
-  
+
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled())
       CoqEditorHandler.makeStep(editor.document.get, editor.underway).foreach(
@@ -125,7 +125,7 @@ class CoqStepBackHandler extends CoqEditorHandler {
       CoqEditorHandler.doStepBack(editor, a => if (a.length > 0) 1 else 0)
     null
   }
-  
+
   override def calculateEnabled =
     super.calculateEnabled && (editor.steps.length > 0)
 }
@@ -136,7 +136,7 @@ class CoqRetractAllHandler extends CoqEditorHandler {
       CoqEditorHandler.doStepBack(editor, _.length)
     null
   }
-  
+
   override def calculateEnabled =
     super.calculateEnabled && (editor.steps.length > 0)
 }

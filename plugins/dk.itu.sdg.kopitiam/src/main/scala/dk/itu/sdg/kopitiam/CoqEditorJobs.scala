@@ -1,16 +1,16 @@
 package dk.itu.sdg.kopitiam
 
-import dk.itu.ecloq.core
-import dk.itu.ecloq.core.model.ICoqModel
-import dk.itu.ecloq.core.coqtop.CoqTypes
-import dk.itu.ecloq.core.utilities.JobRunner
+import dk.itu.coqoon.core
+import dk.itu.coqoon.core.model.ICoqModel
+import dk.itu.coqoon.core.coqtop.CoqTypes
+import dk.itu.coqoon.core.utilities.JobRunner
 
 import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status, SubMonitor}
 
 class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
   override def doOperation(monitor : SubMonitor) = {
     monitor.beginTask("Initialising Coq", 1)
-    
+
     editor.coqTop.transaction[Unit](ct => {
       monitor.subTask("Adding project loadpath entries")
 
@@ -39,7 +39,7 @@ abstract class CoqEditorJob(name : String, runner : JobRunner[_],
 class StopCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
   override protected def doOperation(monitor : SubMonitor) = {
     monitor.beginTask("Stopping Coq", 2)
-    
+
     monitor.subTask("Clearing state")
     editor.steps.synchronized { editor.steps.clear }
     editor.setUnderway(0)
@@ -66,11 +66,11 @@ class CoqStepBackRunner(editor : CoqEditor, stepCount : Int, reveal : Boolean)
       }
     }
   }
-  
+
   override protected def doOperation(
       monitor : SubMonitor) : CoqTypes.value[String] = {
     monitor.beginTask("Stepping back", 2)
-    
+
     val steps = editor.steps.synchronized { editor.steps.take(stepCount) }
     val rewindCount = steps.count(_.synthetic == false)
     editor.coqTop.rewind(rewindCount) match {
@@ -79,7 +79,7 @@ class CoqStepBackRunner(editor : CoqEditor, stepCount : Int, reveal : Boolean)
         editor.steps.synchronized {
           for (step <- steps)
             editor.steps.pop
-          
+
           if (extra > 0) {
             var i = 0
             var redoSteps = editor.steps.takeWhile(a => {
@@ -130,7 +130,7 @@ class CoqStepForwardRunner(
         i.delete
     }
   }
-  
+
   override protected def preCheck =
     if (editor.completed != steps.head.offset) {
       /* We seem to have missed a step somewhere, which means that something's
@@ -138,13 +138,13 @@ class CoqStepForwardRunner(
        * immediately */
       Some(CoqTypes.Fail((None, "(missing step)")))
     } else None
-  
+
   override protected def onGood(
       step : CoqStep, result : CoqTypes.Good[String]) = {
     editor.steps.synchronized { editor.steps.push(step) }
     editor.setCompleted(step.offset + step.text.length)
   }
-  
+
   override protected def onFail(
       step : CoqStep, result : CoqTypes.Fail[String]) = {
     /* We might have failed because the user stopped Coq. If that's the case,
@@ -155,7 +155,7 @@ class CoqStepForwardRunner(
       editor.setUnderway(editor.completed)
     }
   }
-  
+
   override protected def initialise = {
     super.initialise
     if (!editor.testFlag(CoqEditor.FLAG_INITIALISED))

@@ -1,4 +1,4 @@
-package dk.itu.ecloq.core.utilities
+package dk.itu.coqoon.core.utilities
 
 object TryCast {
   def apply[A](a : Any)(implicit a0 : Manifest[A]) = a0.unapply(a)

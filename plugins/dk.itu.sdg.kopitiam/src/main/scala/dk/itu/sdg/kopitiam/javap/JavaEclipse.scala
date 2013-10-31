@@ -2,34 +2,34 @@
 
 package dk.itu.sdg.kopitiam.javap
 
-import dk.itu.ecloq.core.utilities.TryCast
+import dk.itu.coqoon.core.utilities.TryCast
 
 object EclipseJavaASTProperties {
   import org.eclipse.jdt.core.dom._
   private val coqDefinition : String = "dk.itu.sdg.kopitiam.coqDefinition"
-  def getDefinition(a : ASTNode) : Option[List[String]] = 
+  def getDefinition(a : ASTNode) : Option[List[String]] =
     TryCast[List[String]](a.getProperty(coqDefinition))
   def setDefinition(a : ASTNode, p : Option[List[String]]) =
     a.setProperty(coqDefinition, p.orNull)
-    
+
   private val coqSpecification : String = "dk.itu.sdg.kopitiam.coqSpecification"
   def getSpecification(a : ASTNode) : Option[List[String]] =
     TryCast[List[String]](a.getProperty(coqSpecification))
   def setSpecification(a : ASTNode, p : Option[List[String]]) =
     a.setProperty(coqSpecification, p.orNull)
-  
+
   private val coqProof : String = "dk.itu.sdg.kopitiam.coqProof"
   def getProof(a : ASTNode) : Option[List[String]] =
     TryCast[List[String]](a.getProperty(coqProof))
   def setProof(a : ASTNode, p : Option[List[String]]) =
     a.setProperty(coqProof, p.orNull)
-  
+
   private val coqEnd : String = "dk.itu.sdg.kopitiam.coqEnd"
   def getEnd(a : ASTNode) : Option[String] =
     TryCast[String](a.getProperty(coqEnd))
   def setEnd(a : ASTNode, p : Option[String]) =
     a.setProperty(coqEnd, p.orNull)
-  
+
   private val method : String = "dk.itu.sdg.kopitiam.method"
   def getMethod(a : ASTNode) : Option[MethodDeclaration] =
     TryCast[MethodDeclaration](a.getProperty(method))
@@ -53,14 +53,14 @@ object EclipseJavaASTProperties {
     TryCast[Initializer](a.getProperty(quantification))
   def setQuantification(a : ASTNode, p : Option[Initializer]) =
     a.setProperty(quantification, p.orNull)
-  
+
   val coqOffset : String = "dk.itu.sdg.kopitiam.coqOffset"
   val specOffset : String = "dk.itu.sdg.kopitiam.specOffset"
 }
 
 object EclipseJavaHelper {
   import scala.collection.JavaConversions.asScalaBuffer
-  
+
   import org.eclipse.jdt.core.ITypeRoot
   import org.eclipse.jdt.ui.JavaUI
   import org.eclipse.ui.IEditorInput

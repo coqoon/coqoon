@@ -1,9 +1,9 @@
-package dk.itu.ecloq.core.project
+package dk.itu.coqoon.core.project
 
-import dk.itu.ecloq.core.ManifestIdentifiers
-import dk.itu.ecloq.core.model.ICoqModel
-import dk.itu.ecloq.core.coqtop.CoqProgram
-import dk.itu.ecloq.core.utilities.{CacheSlot, JobRunner}
+import dk.itu.coqoon.core.ManifestIdentifiers
+import dk.itu.coqoon.core.model.ICoqModel
+import dk.itu.coqoon.core.coqtop.CoqProgram
+import dk.itu.coqoon.core.utilities.{CacheSlot, JobRunner}
 
 import org.eclipse.core.runtime.{Status, IStatus, SubMonitor, IProgressMonitor}
 import org.eclipse.core.resources.{IFile, IResource}
