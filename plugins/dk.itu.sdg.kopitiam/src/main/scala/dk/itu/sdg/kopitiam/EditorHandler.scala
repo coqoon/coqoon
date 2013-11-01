@@ -7,6 +7,7 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.coqoon.ui
 import dk.itu.coqoon.core.coqtop.{CoqTypes, CoqTopIdeSlave_v20120710}
 import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
 
@@ -132,9 +133,9 @@ trait CoqTopEditorContainer extends CoqTopContainer {
         None
     }
     completeA = _do(r._1, completeA,
-        ManifestIdentifiers.ANNOTATION_PROCESSED, "Processed Proof")
+        ui.ManifestIdentifiers.ANNOTATION_PROCESSED, "Processed Proof")
     underwayA = _do(r._2, underwayA,
-        ManifestIdentifiers.ANNOTATION_PROCESSING, "Processing Proof")
+        ui.ManifestIdentifiers.ANNOTATION_PROCESSING, "Processing Proof")
   }
 }
 object CoqTopEditorContainer {
@@ -177,7 +178,7 @@ class ToggleCoqFlagHandler extends EditorHandler with IElementUpdater {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
       val name = ev.getParameter(
-          ManifestIdentifiers.COMMAND_PARAMETER_TOGGLE_COQ_FLAG_NAME).
+          ui.ManifestIdentifiers.COMMAND_PARAMETER_TOGGLE_COQ_FLAG_NAME).
               split(" ").toList
       getCoqTopContainer.coqTop.getOptionValue(name) match {
         case Some(BoolValue(v)) => scheduleJob(
@@ -192,12 +193,12 @@ class ToggleCoqFlagHandler extends EditorHandler with IElementUpdater {
    * whenever the active editor changes */
   override protected def editorChanged(o : IEditorPart, n : IEditorPart) =
     TryAdapt[CoqTopContainer](n).foreach(_ => UIUtils.refreshElements(
-        ManifestIdentifiers.COMMAND_TOGGLE_COQ_FLAG))
+        ui.ManifestIdentifiers.COMMAND_TOGGLE_COQ_FLAG))
 
   override def updateElement(
       element : UIElement, map : java.util.Map[_, _]) = {
     TryCast[String](map.get(
-        ManifestIdentifiers.COMMAND_PARAMETER_TOGGLE_COQ_FLAG_NAME)) match {
+        ui.ManifestIdentifiers.COMMAND_PARAMETER_TOGGLE_COQ_FLAG_NAME)) match {
       case Some(name_) =>
         val name = name_.split(" ").toList
         getCoqTopContainer.coqTop.getOptionValue(name) match {

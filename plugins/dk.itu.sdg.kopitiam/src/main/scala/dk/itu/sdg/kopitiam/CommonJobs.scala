@@ -7,6 +7,7 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.coqoon.ui
 import dk.itu.coqoon.core
 import dk.itu.coqoon.core.coqtop.CoqTypes
 import dk.itu.coqoon.core.utilities.{
@@ -169,7 +170,7 @@ class SetCoqOptionRunner(name : option_name, value : option_value,
   override def finish = {
     super.finish
     UIUtils.asyncExec {
-      UIUtils.refreshElements(ManifestIdentifiers.COMMAND_TOGGLE_COQ_FLAG)
+      UIUtils.refreshElements(ui.ManifestIdentifiers.COMMAND_TOGGLE_COQ_FLAG)
     }
   }
 

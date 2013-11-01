@@ -7,6 +7,8 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.coqoon.ui
+
 import org.eclipse.ui.IPerspectiveFactory
 
 class CoqPerspectiveFactory extends IPerspectiveFactory {
@@ -24,7 +26,7 @@ class CoqPerspectiveFactory extends IPerspectiveFactory {
 
     leftA.addView(IPageLayout.ID_PROJECT_EXPLORER)
 
-    rightA.addView(ManifestIdentifiers.VIEW_GOAL_VIEWER)
+    rightA.addView(ui.ManifestIdentifiers.VIEW_GOAL_VIEWER)
     rightA.addView(IPageLayout.ID_OUTLINE)
 
     bottomA.addView(IConsoleConstants.ID_CONSOLE_VIEW)
