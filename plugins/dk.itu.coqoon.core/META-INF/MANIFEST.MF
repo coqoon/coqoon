@@ -1,0 +1,18 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Coqoon core
+Bundle-SymbolicName: dk.itu.coqoon.core;singleton:=true
+Bundle-Version: 1.0
+Bundle-Activator: dk.itu.coqoon.core.Activator
+Bundle-Vendor: IT University of Copenhagen
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ org.scala-ide.scala.library,
+ org.eclipse.core.resources;bundle-version="3.6.0"
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-ActivationPolicy: lazy
+Export-Package: dk.itu.coqoon.core,
+ dk.itu.coqoon.core.coqtop,
+ dk.itu.coqoon.core.model,
+ dk.itu.coqoon.core.project,
+ dk.itu.coqoon.core.utilities

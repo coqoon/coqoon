@@ -140,7 +140,7 @@
             id="kopitiam.CoqEditor"
             name="Coq Editor">
          <contentTypeBinding
-               contentTypeId="dk.itu.sdg.kopitiam.CoqFile">
+               contentTypeId="dk.itu.coqoon.core.CoqFile">
          </contentTypeBinding>
       </editor>
    </extension>
@@ -173,11 +173,6 @@
    </extension>
    <extension
          point="org.eclipse.ui.preferencePages">
-      <page
-            class="dk.itu.coqoon.core.CoqoonPreferencesPage"
-            id="dk.itu.coqoon.core.pref"
-            name="Coqoon">
-      </page>
       <page
             category="dk.itu.coqoon.core.pref"
             class="dk.itu.sdg.kopitiam.KopitiamPreferencePage"
@@ -624,23 +619,6 @@
             verticalRulerPreferenceKey="processingIndicationInVerticalRuler"
             verticalRulerPreferenceValue="true">
       </specification>
-   </extension>
-   <extension
-         point="org.eclipse.core.contenttype.contentTypes">
-      <content-type
-            base-type="org.eclipse.core.runtime.text"
-            default-charset="UTF-8"
-            file-extensions="v"
-            id="dk.itu.sdg.kopitiam.CoqFile"
-            name="Coq file"
-            priority="normal">
-      </content-type>
-      <content-type
-            file-extensions="vo"
-            id="dk.itu.sdg.kopitiam.CoqObjectFile"
-            name="Coq object file"
-            priority="normal">
-      </content-type>
    </extension>
    <extension
          point="org.eclipse.ui.perspectives">

@@ -1,6 +1,5 @@
 package dk.itu.coqoon.core
 
-import dk.itu.sdg.kopitiam.{Activator => KActivator}
 import dk.itu.coqoon.core.coqtop.CoqProgram
 
 import org.eclipse.ui.{IWorkbench, IWorkbenchPreferencePage}
@@ -9,7 +8,7 @@ import org.eclipse.jface.preference.{FieldEditorPreferencePage => FEPP}
 class CoqoonPreferencesPage
     extends FEPP(FEPP.GRID) with IWorkbenchPreferencePage {
   override def init(w : IWorkbench) =
-    setPreferenceStore(KActivator.getDefault.getPreferenceStore)
+    setPreferenceStore(Activator.getDefault.getPreferenceStore)
 
   import org.eclipse.jface.preference.DirectoryFieldEditor
   override def createFieldEditors =
