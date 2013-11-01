@@ -378,8 +378,8 @@ class NoOutputFoldersFilter extends ViewerFilter {
   override def select(viewer : Viewer,
       parent : AnyRef, element : AnyRef) : Boolean = element match {
     case f : IFolder =>
-      val project = ICoqModel.toCoqProject(f.getProject)
-      for (i <- project.getLoadPathProviders) i match {
+      for (project <- Option(ICoqModel.toCoqProject(f.getProject));
+           i <- project.getLoadPathProviders) i match {
         case DefaultOutputLoadPath(out) if f == out =>
           return false
         case SourceLoadPath(_, out) if f == out =>
