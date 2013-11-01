@@ -11,7 +11,7 @@ import dk.itu.coqoon.ui
 import dk.itu.coqoon.ui.CoqTopContainer
 import dk.itu.coqoon.ui.utilities.{UIUtils, EclipseConsole}
 import dk.itu.coqoon.core
-import dk.itu.coqoon.core.coqtop.CoqTypes
+import dk.itu.coqoon.core.coqtop.{CoqTypes, CoqTopIdeSlave_v20120710}
 import dk.itu.coqoon.core.utilities.{
   JobBase, JobRunner, ObjectRule, JobUtilities}
 
@@ -21,6 +21,20 @@ import org.eclipse.core.resources.{IMarker, IResource}
 import org.eclipse.core.runtime.jobs.ISchedulingRule
 
 import org.eclipse.core.resources.WorkspaceJob
+
+abstract class CoqCommand(val text : String) {
+  def run(coqTop : CoqTopIdeSlave_v20120710) : CoqTypes.value[String] =
+    coqTop.interp(false, true, text)
+}
+
+case class CoqStep(
+    val offset : Int,
+    override val text : String,
+    val synthetic : Boolean) extends CoqCommand(text) {
+  override def run(coqTop : CoqTopIdeSlave_v20120710) = if (!synthetic) {
+    super.run(coqTop)
+  } else CoqTypes.Good("")
+}
 
 abstract class ResourceJob(name : String, resource : IResource,
     ruleProvider : IResource => ISchedulingRule) extends WorkspaceJob(name) {

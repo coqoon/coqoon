@@ -7,23 +7,8 @@
 
 package dk.itu.sdg.kopitiam
 
-import dk.itu.coqoon.core.coqtop.{CoqTypes, CoqTopIdeSlave_v20120710}
 import dk.itu.coqoon.core.coqtop.CoqSentence
 import dk.itu.coqoon.core.utilities.{TryCast, Substring}
-
-abstract class CoqCommand(val text : String) {
-  def run(coqTop : CoqTopIdeSlave_v20120710) : CoqTypes.value[String] =
-    coqTop.interp(false, true, text)
-}
-
-case class CoqStep(
-    val offset : Int,
-    override val text : String,
-    val synthetic : Boolean) extends CoqCommand(text) {
-  override def run(coqTop : CoqTopIdeSlave_v20120710) = if (!synthetic) {
-    super.run(coqTop)
-  } else CoqTypes.Good("")
-}
 
 import scala.collection.mutable.Stack
 
