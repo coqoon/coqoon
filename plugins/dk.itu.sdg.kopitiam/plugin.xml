@@ -508,7 +508,7 @@
                <with
                      variable="activeEditor">
                   <adapt
-                        type="dk.itu.sdg.kopitiam.CoqTopContainer">
+                        type="dk.itu.coqoon.ui.CoqTopContainer">
                   </adapt>
                </with>
             </visibleWhen>
@@ -677,7 +677,7 @@
             adaptableType="org.eclipse.jdt.internal.ui.javaeditor.JavaEditor"
             class="dk.itu.sdg.kopitiam.javap.JavaEditorStateFactory">
          <adapter
-               type="dk.itu.sdg.kopitiam.CoqTopContainer">
+               type="dk.itu.coqoon.ui.CoqTopContainer">
          </adapter>
       </factory>
    </extension>
@@ -781,7 +781,7 @@
          <with
                variable="activeEditor">
             <adapt
-                  type="dk.itu.sdg.kopitiam.CoqTopContainer">
+                  type="dk.itu.coqoon.ui.CoqTopContainer">
                <instanceof
                      value="dk.itu.sdg.kopitiam.CoqEditor">
                </instanceof>
@@ -793,7 +793,7 @@
          <with
                variable="activeEditor">
             <adapt
-                  type="dk.itu.sdg.kopitiam.CoqTopContainer">
+                  type="dk.itu.coqoon.ui.CoqTopContainer">
                <instanceof
                      value="dk.itu.sdg.kopitiam.javap.JavaEditorState">
                </instanceof>
@@ -805,7 +805,7 @@
          <with
                variable="activeEditor">
             <adapt
-                  type="dk.itu.sdg.kopitiam.CoqTopContainer">
+                  type="dk.itu.coqoon.ui.CoqTopContainer">
             </adapt>
          </with>
       </definition>
