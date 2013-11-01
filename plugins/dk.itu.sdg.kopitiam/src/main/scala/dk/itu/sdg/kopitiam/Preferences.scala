@@ -18,7 +18,6 @@ class KopitiamPreferencePage extends FieldEditorPreferencePage with IWorkbenchPr
   override def createFieldEditors () : Unit = {
     addField(new DirectoryFieldEditor("loadpath", "Path to Charge!", getFieldEditorParent))
     addField(new BooleanFieldEditor("implicit", "Implicitly generate 'forward' proof script for each statement", getFieldEditorParent))
-    addField(new BooleanFieldEditor("smartcompilation", "'Smart' compile vernacular when stepped to the end", getFieldEditorParent))
   }
 }
 
