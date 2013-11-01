@@ -153,7 +153,7 @@
       <view
             allowMultiple="false"
             category="Kopitiam"
-            class="dk.itu.sdg.kopitiam.GoalViewer"
+            class="dk.itu.coqoon.ui.GoalViewer"
             icon="icons/coqide.png"
             id="kopitiam.GoalViewer"
             name="Goal Viewer">

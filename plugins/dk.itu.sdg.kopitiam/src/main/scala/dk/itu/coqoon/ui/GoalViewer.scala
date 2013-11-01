@@ -1,6 +1,5 @@
-package dk.itu.sdg.kopitiam
+package dk.itu.coqoon.ui
 
-import dk.itu.coqoon.ui.CoqTopContainer
 import dk.itu.coqoon.core.coqtop.CoqTypes
 import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
 
