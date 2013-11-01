@@ -11,6 +11,7 @@ class Activator extends AbstractUIPlugin {
   override def start(context : BundleContext) = {
     super.start(context)
     Activator.single = this
+    javap.ChargeLibrary.register
   }
 
   override def stop(context : BundleContext) = {
