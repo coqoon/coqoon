@@ -34,98 +34,98 @@
             sequence="Ctrl+B">
       </key>
       <key
-            commandId="Kopitiam.interrupt"
+            commandId="dk.itu.coqoon.ui.commands.interrupt_coq"
             contextId="Kopitiam.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="Ctrl+C">
       </key>
       <key
-            commandId="Kopitiam.toggle_coq_flag"
+            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
             contextId="Kopitiam.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+I">
          <parameter
-               id="Kopitiam.toggle_coq_flag.name"
+               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                value="Printing Implicit">
          </parameter>
       </key>
       <key
-            commandId="Kopitiam.toggle_coq_flag"
+            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
             contextId="Kopitiam.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+C">
          <parameter
-               id="Kopitiam.toggle_coq_flag.name"
+               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                value="Printing Coercions">
          </parameter>
       </key>
       <key
-            commandId="Kopitiam.toggle_coq_flag"
+            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
             contextId="Kopitiam.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+M">
          <parameter
-               id="Kopitiam.toggle_coq_flag.name"
+               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                value="Printing Matching">
          </parameter>
       </key>
       <key
-            commandId="Kopitiam.toggle_coq_flag"
+            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
             contextId="Kopitiam.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+S">
          <parameter
-               id="Kopitiam.toggle_coq_flag.name"
+               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                value="Printing Synth">
          </parameter>
       </key>
       <key
-            commandId="Kopitiam.toggle_coq_flag"
+            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
             contextId="Kopitiam.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+N">
          <parameter
-               id="Kopitiam.toggle_coq_flag.name"
+               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                value="Printing Notations">
          </parameter>
       </key>
       <key
-            commandId="Kopitiam.toggle_coq_flag"
+            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
             contextId="Kopitiam.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+A">
          <parameter
-               id="Kopitiam.toggle_coq_flag.name"
+               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                value="Printing All">
          </parameter>
       </key>
       <key
-            commandId="Kopitiam.toggle_coq_flag"
+            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
             contextId="Kopitiam.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+R">
          <parameter
-               id="Kopitiam.toggle_coq_flag.name"
+               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                value="Printing Records">
          </parameter>
       </key>
       <key
-            commandId="Kopitiam.toggle_coq_flag"
+            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
             contextId="Kopitiam.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+E">
          <parameter
-               id="Kopitiam.toggle_coq_flag.name"
+               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                value="Printing Existential Instances">
          </parameter>
       </key>
       <key
-            commandId="Kopitiam.toggle_coq_flag"
+            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
             contextId="Kopitiam.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+U">
          <parameter
-               id="Kopitiam.toggle_coq_flag.name"
+               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                value="Printing Universes">
          </parameter>
       </key>
@@ -224,7 +224,7 @@
       </command>
       <command
             categoryId="Kopitiam.category"
-            id="Kopitiam.interrupt"
+            id="dk.itu.coqoon.ui.commands.interrupt_coq"
             name="Interrupt Coq command">
       </command>
       <command
@@ -240,10 +240,10 @@
       <command
             categoryId="Kopitiam.category"
             description="Toggle a Coq flag"
-            id="Kopitiam.toggle_coq_flag"
+            id="dk.itu.coqoon.ui.commands.toggle_coq_flag"
             name="Toggle Coq flag command">
          <commandParameter
-               id="Kopitiam.toggle_coq_flag.name"
+               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                name="Flag"
                optional="false">
          </commandParameter>
@@ -309,7 +309,7 @@
                   tooltip="Stop Coq">
             </command>
             <command
-                  commandId="Kopitiam.interrupt"
+                  commandId="dk.itu.coqoon.ui.commands.interrupt_coq"
                   icon="icons/stop.gif"
                   label="Interrupt Coq"
                   style="push"
@@ -385,7 +385,7 @@
                   tooltip="Stop Coq">
             </command>
             <command
-                  commandId="Kopitiam.interrupt"
+                  commandId="dk.itu.coqoon.ui.commands.interrupt_coq"
                   icon="icons/stop.gif"
                   label="Interrupt Coq"
                   style="push"
@@ -399,83 +399,83 @@
                   id="Kopitiam.coqMenu.setPrinting"
                   label="Set Printing">
                <command
-                     commandId="Kopitiam.toggle_coq_flag"
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
                      label="Implicit"
                      style="toggle">
                   <parameter
-                        name="Kopitiam.toggle_coq_flag.name"
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                         value="Printing Implicit">
                   </parameter>
                </command>
                <command
-                     commandId="Kopitiam.toggle_coq_flag"
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
                      label="Coercions"
                      style="toggle">
                   <parameter
-                        name="Kopitiam.toggle_coq_flag.name"
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                         value="Printing Coercions">
                   </parameter>
                </command>
                <command
-                     commandId="Kopitiam.toggle_coq_flag"
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
                      label="Matching"
                      style="toggle">
                   <parameter
-                        name="Kopitiam.toggle_coq_flag.name"
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                         value="Printing Matching">
                   </parameter>
                </command>
                <command
-                     commandId="Kopitiam.toggle_coq_flag"
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
                      label="Synth"
                      style="toggle">
                   <parameter
-                        name="Kopitiam.toggle_coq_flag.name"
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                         value="Printing Synth">
                   </parameter>
                </command>
                <command
-                     commandId="Kopitiam.toggle_coq_flag"
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
                      label="Notations"
                      style="toggle">
                   <parameter
-                        name="Kopitiam.toggle_coq_flag.name"
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                         value="Printing Notations">
                   </parameter>
                </command>
                <command
-                     commandId="Kopitiam.toggle_coq_flag"
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
                      label="All"
                      style="toggle">
                   <parameter
-                        name="Kopitiam.toggle_coq_flag.name"
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                         value="Printing All">
                   </parameter>
                </command>
                <command
-                     commandId="Kopitiam.toggle_coq_flag"
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
                      label="Records"
                      style="toggle">
                   <parameter
-                        name="Kopitiam.toggle_coq_flag.name"
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                         value="Printing Records">
                   </parameter>
                </command>
                <command
-                     commandId="Kopitiam.toggle_coq_flag"
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
                      label="Existential Instances"
                      style="toggle">
                   <parameter
-                        name="Kopitiam.toggle_coq_flag.name"
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                         value="Printing Existential Instances">
                   </parameter>
                </command>
                <command
-                     commandId="Kopitiam.toggle_coq_flag"
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
                      label="Universes"
                      style="toggle">
                   <parameter
-                        name="Kopitiam.toggle_coq_flag.name"
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
                         value="Printing Universes">
                   </parameter>
                </command>
@@ -738,8 +738,8 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.sdg.kopitiam.InterruptCoqHandler"
-            commandId="Kopitiam.interrupt">
+            class="dk.itu.coqoon.ui.InterruptCoqHandler"
+            commandId="dk.itu.coqoon.ui.commands.interrupt_coq">
          <activeWhen>
             <reference
                   definitionId="Kopitiam.activeEditorIsCoq">
@@ -765,8 +765,8 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.sdg.kopitiam.ToggleCoqFlagHandler"
-            commandId="Kopitiam.toggle_coq_flag">
+            class="dk.itu.coqoon.ui.ToggleCoqFlagHandler"
+            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag">
          <activeWhen>
             <reference
                   definitionId="Kopitiam.activeEditorHasCoq">

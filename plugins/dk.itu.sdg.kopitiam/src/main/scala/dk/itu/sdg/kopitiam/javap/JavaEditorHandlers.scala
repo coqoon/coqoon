@@ -3,7 +3,7 @@
 
 package dk.itu.sdg.kopitiam.javap
 
-import dk.itu.coqoon.ui.{CoqCommand, ResourceJob}
+import dk.itu.coqoon.ui.{CoqCommand, ResourceJob, EditorHandler}
 import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core.utilities.TryCast
 

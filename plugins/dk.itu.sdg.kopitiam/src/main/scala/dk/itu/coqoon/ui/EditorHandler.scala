@@ -5,10 +5,8 @@
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
-package dk.itu.sdg.kopitiam
+package dk.itu.coqoon.ui
 
-import dk.itu.coqoon.ui
-import dk.itu.coqoon.ui.{CoqTopContainer, SetCoqOptionJob}
 import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core.coqtop.{CoqTypes, CoqTopIdeSlave_v20120710}
 import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
@@ -71,7 +69,7 @@ class ToggleCoqFlagHandler extends EditorHandler with IElementUpdater {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
       val name = ev.getParameter(
-          ui.ManifestIdentifiers.COMMAND_PARAMETER_TOGGLE_COQ_FLAG_NAME).
+          ManifestIdentifiers.COMMAND_PARAMETER_TOGGLE_COQ_FLAG_NAME).
               split(" ").toList
       getCoqTopContainer.coqTop.getOptionValue(name) match {
         case Some(BoolValue(v)) => scheduleJob(
@@ -86,12 +84,12 @@ class ToggleCoqFlagHandler extends EditorHandler with IElementUpdater {
    * whenever the active editor changes */
   override protected def editorChanged(o : IEditorPart, n : IEditorPart) =
     TryAdapt[CoqTopContainer](n).foreach(_ => UIUtils.refreshElements(
-        ui.ManifestIdentifiers.COMMAND_TOGGLE_COQ_FLAG))
+        ManifestIdentifiers.COMMAND_TOGGLE_COQ_FLAG))
 
   override def updateElement(
       element : UIElement, map : java.util.Map[_, _]) = {
     TryCast[String](map.get(
-        ui.ManifestIdentifiers.COMMAND_PARAMETER_TOGGLE_COQ_FLAG_NAME)) match {
+        ManifestIdentifiers.COMMAND_PARAMETER_TOGGLE_COQ_FLAG_NAME)) match {
       case Some(name_) =>
         val name = name_.split(" ").toList
         getCoqTopContainer.coqTop.getOptionValue(name) match {
