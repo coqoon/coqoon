@@ -8,7 +8,7 @@
 package dk.itu.sdg.kopitiam
 
 import dk.itu.coqoon.ui
-import dk.itu.coqoon.ui.CoqTopContainer
+import dk.itu.coqoon.ui.{CoqTopContainer, SetCoqOptionJob}
 import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core.coqtop.{CoqTypes, CoqTopIdeSlave_v20120710}
 import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}

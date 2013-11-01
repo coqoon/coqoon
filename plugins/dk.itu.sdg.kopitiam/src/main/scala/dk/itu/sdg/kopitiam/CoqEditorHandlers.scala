@@ -7,6 +7,7 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.coqoon.ui.{CoqStep, CoqCommand}
 import dk.itu.coqoon.core.coqtop.CoqSentence
 import dk.itu.coqoon.core.utilities.{TryCast, Substring}
 

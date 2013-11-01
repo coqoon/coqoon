@@ -5,10 +5,8 @@
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
-package dk.itu.sdg.kopitiam
+package dk.itu.coqoon.ui
 
-import dk.itu.coqoon.ui
-import dk.itu.coqoon.ui.CoqTopContainer
 import dk.itu.coqoon.ui.utilities.{UIUtils, EclipseConsole}
 import dk.itu.coqoon.core
 import dk.itu.coqoon.core.coqtop.{CoqTypes, CoqTopIdeSlave_v20120710}
@@ -186,7 +184,7 @@ class SetCoqOptionRunner(name : option_name, value : option_value,
   override def finish = {
     super.finish
     UIUtils.asyncExec {
-      UIUtils.refreshElements(ui.ManifestIdentifiers.COMMAND_TOGGLE_COQ_FLAG)
+      UIUtils.refreshElements(ManifestIdentifiers.COMMAND_TOGGLE_COQ_FLAG)
     }
   }
 

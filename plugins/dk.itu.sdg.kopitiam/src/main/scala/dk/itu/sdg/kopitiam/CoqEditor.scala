@@ -3,7 +3,7 @@
 
 package dk.itu.sdg.kopitiam
 
-import dk.itu.coqoon.ui.CoqTopEditorContainer
+import dk.itu.coqoon.ui.{CoqStep, DeleteMarkersJob, CoqTopEditorContainer}
 import dk.itu.coqoon.ui.utilities.{UIUtils, SupersedableTask}
 import dk.itu.coqoon.core
 import dk.itu.coqoon.core.model._

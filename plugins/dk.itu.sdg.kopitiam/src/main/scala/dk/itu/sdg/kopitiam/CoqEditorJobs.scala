@@ -1,5 +1,7 @@
 package dk.itu.sdg.kopitiam
 
+import dk.itu.coqoon.ui.{CoqStep, CoqCommand,
+  StepRunner, ContainerJobBase, StepForwardRunner, CreateErrorMarkerJob}
 import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core
 import dk.itu.coqoon.core.model.ICoqModel
