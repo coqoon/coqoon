@@ -1,5 +1,6 @@
 package dk.itu.sdg.kopitiam.javap
 
+import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core
 import dk.itu.coqoon.core.coqtop.CoqTopIdeSlave_v20120710
 import dk.itu.coqoon.core.utilities.{TryCast, TryService}

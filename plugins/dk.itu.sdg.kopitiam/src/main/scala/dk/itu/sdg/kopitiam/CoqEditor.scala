@@ -3,6 +3,7 @@
 
 package dk.itu.sdg.kopitiam
 
+import dk.itu.coqoon.ui.utilities.{UIUtils, SupersedableTask}
 import dk.itu.coqoon.core
 import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.coqtop.CoqTopIdeSlave_v20120710

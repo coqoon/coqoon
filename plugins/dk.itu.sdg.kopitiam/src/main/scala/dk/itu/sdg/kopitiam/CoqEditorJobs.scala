@@ -1,5 +1,6 @@
 package dk.itu.sdg.kopitiam
 
+import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core
 import dk.itu.coqoon.core.model.ICoqModel
 import dk.itu.coqoon.core.coqtop.CoqTypes

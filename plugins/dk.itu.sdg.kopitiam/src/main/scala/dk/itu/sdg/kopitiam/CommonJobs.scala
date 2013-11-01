@@ -8,6 +8,7 @@
 package dk.itu.sdg.kopitiam
 
 import dk.itu.coqoon.ui
+import dk.itu.coqoon.ui.utilities.{UIUtils, EclipseConsole}
 import dk.itu.coqoon.core
 import dk.itu.coqoon.core.coqtop.CoqTypes
 import dk.itu.coqoon.core.utilities.{

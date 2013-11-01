@@ -1,7 +1,7 @@
 /* (c) 2010-2012 Hannes Mehnert and David Christiansen
  * Copyright © 2013 Alexander Faithfull */
 
-package dk.itu.sdg.kopitiam
+package dk.itu.coqoon.ui.utilities
 
 object EclipseConsole {
   private val lock = new Object
