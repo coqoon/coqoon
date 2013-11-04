@@ -20,7 +20,8 @@ Require-Bundle: org.scala-ide.scala.library,
  org.eclipse.ui.views;bundle-version="3.5.0",
  dk.itu.sdg.kopitiamaspects;bundle-version="0.0.5",
  org.eclipse.ui.navigator,
- dk.itu.coqoon.core;bundle-version="1.0.0"
+ dk.itu.coqoon.core;bundle-version="1.0.0",
+ dk.itu.coqoon.ui;bundle-version="1.0.0"
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ClassPath: .
