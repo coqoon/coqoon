@@ -526,7 +526,7 @@
       </wizard>
       <wizard
             category="Kopitiam.coq"
-            class="dk.itu.sdg.kopitiam.NewCoqProjectWizard"
+            class="dk.itu.coqoon.ui.NewCoqProjectWizard"
             finalPerspective="dk.itu.sdg.kopitiam.CoqPerspective"
             icon="icons/coqide.png"
             id="Kopitiam.newCoqProjectWizard"
@@ -623,7 +623,7 @@
    <extension
          point="org.eclipse.ui.perspectives">
       <perspective
-            class="dk.itu.sdg.kopitiam.CoqPerspectiveFactory"
+            class="dk.itu.coqoon.ui.CoqPerspectiveFactory"
             icon="icons/coqide.png"
             id="dk.itu.sdg.kopitiam.CoqPerspective"
             name="Coq">
@@ -656,7 +656,7 @@
    <extension
          point="org.eclipse.ui.propertyPages">
       <page
-            class="dk.itu.sdg.kopitiam.LoadPathConfigurationPage"
+            class="dk.itu.coqoon.ui.LoadPathConfigurationPage"
             icon="icons/coqide.png"
             id="dk.itu.sdg.kopitiam.propertyPages.CoqLoadPath"
             name="Coq Load Path">
@@ -832,7 +832,7 @@
          point="org.eclipse.ui.navigator.navigatorContent">
       <commonFilter
             activeByDefault="true"
-            class="dk.itu.sdg.kopitiam.NoOutputFoldersFilter"
+            class="dk.itu.coqoon.ui.NoOutputFoldersFilter"
             description="Hides Coq output folders."
             id="dk.itu.sdg.kopitiam.commonFilter.OutputFolderFilter"
             name="Coq output folders"

@@ -5,9 +5,7 @@
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
-package dk.itu.sdg.kopitiam
-
-import dk.itu.coqoon.ui
+package dk.itu.coqoon.ui
 
 import org.eclipse.ui.IPerspectiveFactory
 
@@ -26,7 +24,7 @@ class CoqPerspectiveFactory extends IPerspectiveFactory {
 
     leftA.addView(IPageLayout.ID_PROJECT_EXPLORER)
 
-    rightA.addView(ui.ManifestIdentifiers.VIEW_GOAL_VIEWER)
+    rightA.addView(ManifestIdentifiers.VIEW_GOAL_VIEWER)
     rightA.addView(IPageLayout.ID_OUTLINE)
 
     bottomA.addView(IConsoleConstants.ID_CONSOLE_VIEW)

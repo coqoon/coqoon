@@ -5,7 +5,7 @@
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
-package dk.itu.sdg.kopitiam
+package dk.itu.coqoon.ui
 
 import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core.model._
@@ -455,14 +455,14 @@ object MultiFilter {
 import org.eclipse.ui.dialogs.ISelectionStatusValidator
 
 abstract class SelectionValidator extends ISelectionStatusValidator {
-  import org.eclipse.core.runtime.IStatus
+  import org.eclipse.core.runtime.{Status, IStatus}
 
   def check(selection : Object) : Option[String]
 
   override def validate(selection : Array[Object]) : IStatus = {
     for (i <- selection;
          j <- check(i))
-      return Activator.makeStatus(IStatus.ERROR, j)
-    Activator.makeStatus(IStatus.OK, "")
+      return new Status(IStatus.ERROR, ManifestIdentifiers.PLUGIN, j)
+    Status.OK_STATUS
   }
 }
