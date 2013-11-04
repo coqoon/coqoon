@@ -1,7 +1,5 @@
-package dk.itu.sdg.kopitiam
+package dk.itu.coqoon.ui
 
-import dk.itu.coqoon.ui.{CoqStep, CoqCommand,
-  StepRunner, ContainerJobBase, StepForwardRunner, CreateErrorMarkerJob}
 import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core
 import dk.itu.coqoon.core.model.ICoqModel
@@ -29,7 +27,7 @@ class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
     }) match {
       case CoqTypes.Fail((_, message)) =>
         editor.clearFlag(CoqEditor.FLAG_INITIALISED)
-        fail(Activator.makeStatus(IStatus.ERROR, message))
+        fail(new Status(IStatus.ERROR, ManifestIdentifiers.PLUGIN, message))
       case _ =>
         editor.setFlag(CoqEditor.FLAG_INITIALISED)
     }

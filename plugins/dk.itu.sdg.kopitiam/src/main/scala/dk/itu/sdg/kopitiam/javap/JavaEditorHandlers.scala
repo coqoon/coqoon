@@ -3,11 +3,10 @@
 
 package dk.itu.sdg.kopitiam.javap
 
-import dk.itu.coqoon.ui.{CoqCommand, ResourceJob, EditorHandler}
+import dk.itu.coqoon.ui.{
+  CoqCommand, CoqEditorHandler, ResourceJob, EditorHandler}
 import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core.utilities.TryCast
-
-import dk.itu.sdg.kopitiam._
 
 import org.eclipse.jdt.core.dom.Statement
 import org.eclipse.ui.texteditor.ITextEditor

@@ -133,7 +133,7 @@
    <extension
          point="org.eclipse.ui.editors">
       <editor
-            class="dk.itu.sdg.kopitiam.CoqEditor"
+            class="dk.itu.coqoon.ui.CoqEditor"
             contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
             extensions="v"
             icon="icons/coqfile_obj.gif"
@@ -519,7 +519,7 @@
          point="org.eclipse.ui.newWizards">
       <wizard
             category="Kopitiam.coq"
-            class="dk.itu.sdg.kopitiam.NewCoqFileWizard"
+            class="dk.itu.coqoon.ui.NewCoqFileWizard"
             icon="icons/coqide.png"
             id="Kopitiam.newCoqFileWizard"
             name="Coq File">
@@ -684,7 +684,7 @@
    <extension
          point="org.eclipse.ui.handlers">
       <handler
-            class="dk.itu.sdg.kopitiam.CoqStepForwardHandler"
+            class="dk.itu.coqoon.ui.CoqStepForwardHandler"
             commandId="Kopitiam.step_forward">
          <activeWhen>
             <reference
@@ -693,7 +693,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.sdg.kopitiam.CoqStepBackHandler"
+            class="dk.itu.coqoon.ui.CoqStepBackHandler"
             commandId="Kopitiam.step_backward">
          <activeWhen>
             <reference
@@ -702,7 +702,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.sdg.kopitiam.CoqStepToCursorHandler"
+            class="dk.itu.coqoon.ui.CoqStepToCursorHandler"
             commandId="Kopitiam.step_cursor">
          <activeWhen>
             <reference
@@ -711,7 +711,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.sdg.kopitiam.CoqStepAllHandler"
+            class="dk.itu.coqoon.ui.CoqStepAllHandler"
             commandId="Kopitiam.step_all">
          <activeWhen>
             <reference
@@ -720,7 +720,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.sdg.kopitiam.CoqRetractAllHandler"
+            class="dk.itu.coqoon.ui.CoqRetractAllHandler"
             commandId="Kopitiam.retract">
          <activeWhen>
             <reference
@@ -729,7 +729,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.sdg.kopitiam.StopCoqHandler"
+            class="dk.itu.coqoon.ui.StopCoqHandler"
             commandId="Kopitiam.stop_coq">
          <activeWhen>
             <reference
@@ -783,7 +783,7 @@
             <adapt
                   type="dk.itu.coqoon.ui.CoqTopContainer">
                <instanceof
-                     value="dk.itu.sdg.kopitiam.CoqEditor">
+                     value="dk.itu.coqoon.ui.CoqEditor">
                </instanceof>
             </adapt>
          </with>

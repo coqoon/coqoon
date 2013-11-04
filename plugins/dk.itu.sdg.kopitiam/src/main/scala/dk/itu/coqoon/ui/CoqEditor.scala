@@ -1,9 +1,8 @@
 /* (c) 2010-2011 Hannes Mehnert and David Christiansen
  * Copyright © 2013 Alexander Faithfull */
 
-package dk.itu.sdg.kopitiam
+package dk.itu.coqoon.ui
 
-import dk.itu.coqoon.ui.{CoqStep, DeleteMarkersJob, CoqTopEditorContainer}
 import dk.itu.coqoon.ui.utilities.{UIUtils, SupersedableTask}
 import dk.itu.coqoon.core
 import dk.itu.coqoon.core.model._
