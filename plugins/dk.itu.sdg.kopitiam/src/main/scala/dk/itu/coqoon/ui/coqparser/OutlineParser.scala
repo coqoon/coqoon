@@ -1,6 +1,6 @@
-package dk.itu.sdg.coqparser
+package dk.itu.coqoon.ui.coqparser
 
-import dk.itu.sdg.parsing._
+import dk.itu.coqoon.ui.parsing._
 
 import scala.annotation.tailrec
 

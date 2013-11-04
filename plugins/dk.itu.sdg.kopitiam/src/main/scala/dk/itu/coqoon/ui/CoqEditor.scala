@@ -77,7 +77,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
 
   final def getViewer = super.getSourceViewer
 
-  import dk.itu.sdg.coqparser.VernacularRegion
+  import coqparser.VernacularRegion
   import org.eclipse.jface.text.source.{Annotation, ISourceViewer, IVerticalRuler}
   import org.eclipse.jface.text.{IDocument, Position}
   import org.eclipse.swt.widgets.Composite
@@ -194,7 +194,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     //Console.println("Updated folding " + annotations.toList)
   }
 
-  import dk.itu.sdg.parsing.{NoLengthPosition, LengthPosition, RegionPosition}
+  import parsing.{NoLengthPosition, LengthPosition, RegionPosition}
 
   private def pos2eclipsePos (pos : LengthPosition) : Position = pos match {
     case NoLengthPosition => new Position(0)
@@ -249,9 +249,9 @@ private class CoqProofReconcilingStrategy(
 
 import org.eclipse.jface.viewers.ITreeContentProvider
 protected class CoqContentProvider extends ITreeContentProvider {
-  import dk.itu.sdg.coqparser.VernacularRegion
-  import dk.itu.sdg.coqparser.OutlineVernacular
-  import dk.itu.sdg.coqparser.OutlineBuilder
+  import coqparser.VernacularRegion
+  import coqparser.OutlineVernacular
+  import coqparser.OutlineBuilder
   import org.eclipse.jface.text.IDocument
   import org.eclipse.jface.viewers.Viewer
   import org.eclipse.ui.texteditor.IDocumentProvider
@@ -309,7 +309,7 @@ object CoqDocumentProvider extends TextFileDocumentProvider {
   override def getDefaultEncoding () : String = "UTF-8"
 
   // The model of Coq code, used for outline view etc.
-  import dk.itu.sdg.coqparser.VernacularRegion
+  import coqparser.VernacularRegion
   private val contentProviders : collection.mutable.Map[IDocument, CoqContentProvider] =
     collection.mutable.Map.empty
   def getOutline (doc : IDocument) : Option[CoqContentProvider] = {
@@ -337,7 +337,7 @@ object CoqWordDetector extends IWordDetector {
 }
 
 import org.eclipse.jface.text.rules.RuleBasedScanner
-import dk.itu.sdg.coqparser.VernacularReserved
+import coqparser.VernacularReserved
 
 object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
   import org.eclipse.jface.text.rules.{IToken, MultiLineRule, SingleLineRule, Token, WordRule}
@@ -371,7 +371,7 @@ object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
 import org.eclipse.jface.text.IDocument
 class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor) extends IReconcilingStrategy {
-  import dk.itu.sdg.coqparser.VernacularRegion
+  import coqparser.VernacularRegion
   import org.eclipse.jface.text.{IDocument, IRegion, Position}
   import org.eclipse.jface.text.reconciler._
   import org.eclipse.ui.views.contentoutline.IContentOutlinePage
@@ -530,7 +530,7 @@ class CoqQuickAssistProcessor extends IQuickAssistProcessor {
 import org.eclipse.ui.views.contentoutline.ContentOutlinePage
 
 class CoqContentOutlinePage extends ContentOutlinePage {
-  import dk.itu.sdg.coqparser.VernacularRegion
+  import coqparser.VernacularRegion
   import org.eclipse.jface.text.{IDocument, DocumentEvent}
   import org.eclipse.jface.viewers.{ITreeContentProvider, LabelProvider, TreeViewer, Viewer, SelectionChangedEvent, StructuredSelection}
   import org.eclipse.swt.widgets.{Composite, Control}
@@ -570,7 +570,7 @@ class CoqContentOutlinePage extends ContentOutlinePage {
   }
 
   override def selectionChanged(event : SelectionChangedEvent) : Unit = {
-    import dk.itu.sdg.parsing.{LengthPosition, NoLengthPosition, RegionPosition}
+    import parsing.{LengthPosition, NoLengthPosition, RegionPosition}
 
     super.selectionChanged(event)
 

@@ -1,4 +1,4 @@
-package dk.itu.sdg.parsing
+package dk.itu.coqoon.ui.parsing
 
 import scala.util.parsing.combinator._
 

@@ -1,8 +1,8 @@
 /* (c) 2010-2011 Hannes Mehnert and David Christiansen */
 
-package dk.itu.sdg.coqparser
+package dk.itu.coqoon.ui.coqparser
 
-import dk.itu.sdg.parsing._
+import dk.itu.coqoon.ui.parsing._
 
 trait VernacularRegion extends LengthPositional with Product {
   val outline = false
