@@ -22,10 +22,6 @@ class Activator extends AbstractUIPlugin {
   import org.eclipse.jface.preference.{IPreferenceStore, PreferenceConverter}
   override protected def initializeDefaultPreferences(
       store : IPreferenceStore) = {
-    import org.eclipse.swt.graphics.RGB
-    PreferenceConverter.setDefault(store, "coqSentBg", new RGB(118, 255, 133))
-    PreferenceConverter.setDefault(store, "coqSentProcessBg", new RGB(244, 255, 200))
-    PreferenceConverter.setDefault(store, "coqKeywordFg", new RGB(127, 6, 101))
     store.setDefault("implicit", true)
   }
 }
