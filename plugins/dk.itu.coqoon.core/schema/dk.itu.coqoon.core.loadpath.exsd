@@ -1,0 +1,102 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Schema file written by PDE -->
+<schema targetNamespace="dk.itu.coqoon.core" xmlns="http://www.w3.org/2001/XMLSchema">
+<annotation>
+      <appinfo>
+         <meta.schema plugin="dk.itu.coqoon.core" id="dk.itu.coqoon.core.loadpath" name="Abstract load path providers"/>
+      </appinfo>
+      <documentation>
+         Coqoon represents a Coq project&apos;s load path as a number of &lt;em&gt;load path providers&lt;/em&gt;; each of these knows how to convert something, like an Eclipse workspace resource or an external path, into one (or more) components of a normal Coq load path. One of the possible types of load path provider is an &lt;em&gt;abstract load path provider&lt;/em&gt;, which can do whatever it likes in order to produce load path components.
+
+&lt;p&gt;Abstract load path providers are normally used to represent complex dependencies in a portable way &amp;mdash; for example, Coqoon itself provides an abstract load path provider called &lt;code&gt;Coq84Library&lt;/code&gt;, which finds the local path to the Coq 8.4 standard library by asking the &lt;code&gt;coqtop&lt;/code&gt; program.
+
+&lt;p&gt;This extension point allows plugins to contribute abstract load path providers to Coqoon.
+      </documentation>
+   </annotation>
+
+   <element name="extension">
+      <annotation>
+         <appinfo>
+            <meta.element />
+         </appinfo>
+      </annotation>
+      <complexType>
+         <choice minOccurs="1" maxOccurs="unbounded">
+            <element ref="provider"/>
+         </choice>
+         <attribute name="point" type="string" use="required">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+            </annotation>
+         </attribute>
+         <attribute name="id" type="string">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+            </annotation>
+         </attribute>
+         <attribute name="name" type="string">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+               <appinfo>
+                  <meta.attribute translatable="true"/>
+               </appinfo>
+            </annotation>
+         </attribute>
+      </complexType>
+   </element>
+
+   <element name="provider">
+      <annotation>
+         <documentation>
+            Each &lt;code&gt;provider&lt;/code&gt; element represents a single load path provider.
+         </documentation>
+      </annotation>
+      <complexType>
+         <attribute name="id" type="string" use="required">
+            <annotation>
+               <documentation>
+                  The identifier of this load path provider. Projects which want to use this provider will use this identifier to find it at runtime. (This identifier should be globally unique.)
+               </documentation>
+            </annotation>
+         </attribute>
+         <attribute name="provider" type="string" use="required">
+            <annotation>
+               <documentation>
+                  The class (implementing the &lt;code&gt;dk.itu.coqoon.core.model.AbstractLoadPathProvider&lt;/code&gt; trait) which provides the implementation of this load path provider.
+               </documentation>
+               <appinfo>
+                  <meta.attribute kind="java" basedOn=":dk.itu.coqoon.core.model.AbstractLoadPathProvider"/>
+               </appinfo>
+            </annotation>
+         </attribute>
+      </complexType>
+   </element>
+
+   <annotation>
+      <appinfo>
+         <meta.section type="since"/>
+      </appinfo>
+      <documentation>
+         Coqoon 1.0.0.
+      </documentation>
+   </annotation>
+
+
+
+
+   <annotation>
+      <appinfo>
+         <meta.section type="copyright"/>
+      </appinfo>
+      <documentation>
+         Copyright © 2013 Alexander Faithfull.
+      </documentation>
+   </annotation>
+
+</schema>

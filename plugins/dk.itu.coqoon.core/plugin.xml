@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?eclipse version="3.4"?>
 <plugin>
+   <extension-point id="dk.itu.coqoon.core.loadpath" name="Abstract load path providers" schema="schema/dk.itu.coqoon.core.loadpath.exsd"/>
    <extension
          id="dk.itu.sdg.kopitiam.CoqBuilder"
          name="Coq Builder"
