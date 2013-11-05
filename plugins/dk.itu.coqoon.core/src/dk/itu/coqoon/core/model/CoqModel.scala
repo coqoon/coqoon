@@ -147,6 +147,24 @@ class AbstractLoadPathManager {
 object AbstractLoadPathManager {
   private final val instance = new AbstractLoadPathManager
   def getInstance() : AbstractLoadPathManager = instance
+
+  import org.eclipse.core.runtime.{CoreException, RegistryFactory}
+
+  for (ice <- RegistryFactory.getRegistry.getConfigurationElementsFor(
+           ManifestIdentifiers.EXTENSION_POINT_LOADPATH)
+         if ice.getName == "provider") {
+    val ex = try {
+      TryCast[AbstractLoadPathProvider](
+          ice.createExecutableExtension("provider"))
+    } catch {
+      case e : CoreException => None
+    }
+    (Option(ice.getAttribute("id")), ex) match {
+      case (Some(id), Some(provider)) =>
+        getInstance.setProviderFor(id, provider)
+      case _ =>
+    }
+  }
 }
 
 class Coq84Library extends AbstractLoadPathProvider {
