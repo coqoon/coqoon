@@ -32,49 +32,49 @@
                label="Kopitiam toolbar">
             <command
                   commandId="Kopitiam.step_backward"
-                  icon="icons/up.gif"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/up.gif"
                   label="Undo"
                   style="push"
                   tooltip="Undo">
             </command>
             <command
                   commandId="Kopitiam.retract"
-                  icon="icons/uptoo.gif"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/uptoo.gif"
                   label="Retract"
                   style="push"
                   tooltip="Retract">
             </command>
             <command
                   commandId="Kopitiam.step_forward"
-                  icon="icons/down.gif"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/down.gif"
                   label="Step"
                   style="push"
                   tooltip="Step">
             </command>
             <command
                   commandId="Kopitiam.step_cursor"
-                  icon="icons/icon_lego.gif"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/icon_lego.gif"
                   label="Step Until Cursor"
                   style="push"
                   tooltip="Step Until Cursor">
             </command>
             <command
                   commandId="Kopitiam.step_all"
-                  icon="icons/downtoo.gif"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/downtoo.gif"
                   label="Step All"
                   style="push"
                   tooltip="Step All">
             </command>
             <command
                   commandId="Kopitiam.stop_coq"
-                  icon="icons/dead.gif"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/dead.gif"
                   label="Stop Coq"
                   style="push"
                   tooltip="Stop Coq">
             </command>
             <command
                   commandId="dk.itu.coqoon.ui.commands.interrupt_coq"
-                  icon="icons/stop.gif"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/stop.gif"
                   label="Interrupt Coq"
                   style="push"
                   tooltip="Interrupt Coq">
@@ -86,7 +86,7 @@
             locationURI="popup:org.eclipse.jdt.ui.CompilationUnitEditor.EditorContext">
          <command
                commandId="Kopitiam.verify_method"
-               icon="icons/icon_lego.gif"
+               icon="platform:/plugin/dk.itu.coqoon.ui/icons/icon_lego.gif"
                id="dk.itu.sdg.kopitiam.popupContribution"
                label="Verify method"
                style="push"
@@ -94,7 +94,7 @@
          </command>
          <command
                commandId="Kopitiam.save_proof_certificate"
-               icon="icons/checkmark.gif"
+               icon="platform:/plugin/dk.itu.coqoon.ui/icons/checkmark.gif"
                label="Save proof certificate"
                style="push"
                tooltip="Save proof certificate">
@@ -108,49 +108,49 @@
                label="Coq">
             <command
                   commandId="Kopitiam.step_backward"
-                  icon="icons/up.gif"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/up.gif"
                   label="Undo"
                   style="push"
                   tooltip="Undo">
             </command>
             <command
                   commandId="Kopitiam.retract"
-                  icon="icons/uptoo.gif"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/uptoo.gif"
                   label="Retract"
                   style="push"
                   tooltip="Retract">
             </command>
             <command
                   commandId="Kopitiam.step_forward"
-                  icon="icons/down.gif"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/down.gif"
                   label="Step"
                   style="push"
                   tooltip="Step">
             </command>
             <command
                   commandId="Kopitiam.step_cursor"
-                  icon="icons/icon_lego.gif"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/icon_lego.gif"
                   label="Step Until Cursor"
                   style="push"
                   tooltip="Step Until Cursor">
             </command>
             <command
                   commandId="Kopitiam.step_all"
-                  icon="icons/downtoo.gif"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/downtoo.gif"
                   label="Step All"
                   style="push"
                   tooltip="Step All">
             </command>
             <command
                   commandId="Kopitiam.stop_coq"
-                  icon="icons/dead.gif"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/dead.gif"
                   label="Stop Coq"
                   style="push"
                   tooltip="Stop Coq">
             </command>
             <command
                   commandId="dk.itu.coqoon.ui.commands.interrupt_coq"
-                  icon="icons/stop.gif"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/stop.gif"
                   label="Interrupt Coq"
                   style="push"
                   tooltip="Interrupt Coq">
@@ -253,7 +253,7 @@
                   label="Java">
                <command
                      commandId="Kopitiam.verify_method"
-                     icon="icons/icon_lego.gif"
+                     icon="platform:/plugin/dk.itu.coqoon.ui/icons/icon_lego.gif"
                      id="dk.itu.sdg.kopitiam.popupContribution"
                      label="Verify method"
                      style="push"
@@ -261,7 +261,7 @@
                </command>
                <command
                      commandId="Kopitiam.save_proof_certificate"
-                     icon="icons/checkmark.gif"
+                     icon="platform:/plugin/dk.itu.coqoon.ui/icons/checkmark.gif"
                      label="Save proof certificate"
                      style="push"
                      tooltip="Save proof certificate">
