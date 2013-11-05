@@ -6,7 +6,7 @@ import dk.itu.coqoon.core.model.{
 
 import org.eclipse.core.runtime.Path
 
-private[kopitiam] class ChargeLibrary extends AbstractLoadPathProvider {
+class ChargeLibrary extends AbstractLoadPathProvider {
   override def getName = "Charge! for Java"
 
   override def getLoadPath =
@@ -15,9 +15,6 @@ private[kopitiam] class ChargeLibrary extends AbstractLoadPathProvider {
     case p => Nil
   }
 }
-private[kopitiam] object ChargeLibrary {
-  def register() = AbstractLoadPathManager.getInstance().setProviderFor(
-      CHARGE_0_1, new ChargeLibrary())
-
-  final val CHARGE_0_1 = "dk.itu.sdg.kopitiam/lp/charge/0.1"
+object ChargeLibrary {
+  final val ID = "dk.itu.sdg.kopitiam/lp/charge/0.1"
 }

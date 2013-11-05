@@ -194,7 +194,7 @@ private case class CoqProjectImpl(
         case Nil => List(
           new SourceLoadPath(res.getFolder("src")),
           new DefaultOutputLoadPath(res.getFolder("bin")),
-          new AbstractLoadPath(AbstractLoadPathManager.COQ_8_4))
+          new AbstractLoadPath(Coq84Library.ID))
         case pc => _util(pc)
       }
     }

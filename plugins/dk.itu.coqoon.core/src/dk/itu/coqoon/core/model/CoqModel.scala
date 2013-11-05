@@ -147,13 +147,9 @@ class AbstractLoadPathManager {
 object AbstractLoadPathManager {
   private final val instance = new AbstractLoadPathManager
   def getInstance() : AbstractLoadPathManager = instance
-
-  getInstance().setProviderFor(COQ_8_4, new Coq84Library())
-
-  final val COQ_8_4 = "dk.itu.sdg.kopitiam/lp/coq/8.4"
 }
 
-private class Coq84Library extends AbstractLoadPathProvider {
+class Coq84Library extends AbstractLoadPathProvider {
   override def getName = "Coq 8.4 standard library"
 
   override def getLoadPath =
@@ -165,6 +161,9 @@ private class Coq84Library extends AbstractLoadPathProvider {
           CoqLoadPath(libraryPath.append("user-contrib"), None))
     case _ => Nil
   }
+}
+object Coq84Library {
+  final val ID = "dk.itu.sdg.kopitiam/lp/coq/8.4"
 }
 
 trait ICoqProject extends ICoqElement with IParent {
