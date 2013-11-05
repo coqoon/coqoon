@@ -2,164 +2,6 @@
 <?eclipse version="3.4"?>
 <plugin>
    <extension
-         point="org.eclipse.ui.bindings">
-      <key
-            commandId="Kopitiam.step_forward"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="Ctrl+N">
-      </key>
-      <key
-            commandId="Kopitiam.step_cursor"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="Ctrl+Enter">
-      </key>
-      <key
-            commandId="Kopitiam.step_backward"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="Ctrl+U">
-      </key>
-      <key
-            commandId="Kopitiam.retract"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="Ctrl+R">
-      </key>
-      <key
-            commandId="Kopitiam.step_all"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="Ctrl+B">
-      </key>
-      <key
-            commandId="dk.itu.coqoon.ui.commands.interrupt_coq"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="Ctrl+C">
-      </key>
-      <key
-            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="M1+M3+I">
-         <parameter
-               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-               value="Printing Implicit">
-         </parameter>
-      </key>
-      <key
-            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="M1+M3+C">
-         <parameter
-               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-               value="Printing Coercions">
-         </parameter>
-      </key>
-      <key
-            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="M1+M3+M">
-         <parameter
-               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-               value="Printing Matching">
-         </parameter>
-      </key>
-      <key
-            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="M1+M3+S">
-         <parameter
-               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-               value="Printing Synth">
-         </parameter>
-      </key>
-      <key
-            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="M1+M3+N">
-         <parameter
-               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-               value="Printing Notations">
-         </parameter>
-      </key>
-      <key
-            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="M1+M3+A">
-         <parameter
-               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-               value="Printing All">
-         </parameter>
-      </key>
-      <key
-            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="M1+M3+R">
-         <parameter
-               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-               value="Printing Records">
-         </parameter>
-      </key>
-      <key
-            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="M1+M3+E">
-         <parameter
-               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-               value="Printing Existential Instances">
-         </parameter>
-      </key>
-      <key
-            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
-            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="M1+M3+U">
-         <parameter
-               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-               value="Printing Universes">
-         </parameter>
-      </key>
-   </extension>
-   <extension
-         point="org.eclipse.ui.editors">
-      <editor
-            class="dk.itu.coqoon.ui.CoqEditor"
-            contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
-            extensions="v"
-            icon="icons/coqfile_obj.gif"
-            id="kopitiam.CoqEditor"
-            name="Coq Editor">
-         <contentTypeBinding
-               contentTypeId="dk.itu.coqoon.core.CoqFile">
-         </contentTypeBinding>
-      </editor>
-   </extension>
-   <extension
-         point="org.eclipse.ui.views">
-      <category
-            id="Kopitiam"
-            name="Coq Views">
-      </category>
-      <view
-            allowMultiple="false"
-            category="Kopitiam"
-            class="dk.itu.coqoon.ui.GoalViewer"
-            icon="icons/coqide.png"
-            id="kopitiam.GoalViewer"
-            name="Goal Viewer">
-      </view>
-   </extension>
-   <extension
          point="org.eclipse.ui.perspectiveExtensions">
       <perspectiveExtension
             targetID="org.eclipse.jdt.ui.JavaPerspective">
@@ -179,78 +21,6 @@
             id="Kopitiam.settings"
             name="Kopitiam">
       </page>
-   </extension>
-   <extension
-         point="org.eclipse.ui.commands">
-      <category
-            id="Kopitiam.category"
-            name="Kopitiam">
-      </category>
-      <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.step_forward"
-            name="Step forward command">
-      </command>
-      <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.step_backward"
-            name="Step backward command">
-      </command>
-      <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.step_cursor"
-            name="Step to cursor command">
-      </command>
-      <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.step_all"
-            name="Step all command">
-      </command>
-      <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.retract"
-            name="Retract all command">
-      </command>
-      <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.stop_coq"
-            name="Stop Coq command">
-      </command>
-      <command
-            categoryId="Kopitiam.category"
-            id="dk.itu.coqoon.ui.commands.interrupt_coq"
-            name="Interrupt Coq command">
-      </command>
-      <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.verify_method"
-            name="Verify Java method command">
-      </command>
-      <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.save_proof_certificate"
-            name="Save Java proof certificate command">
-      </command>
-      <command
-            categoryId="Kopitiam.category"
-            description="Toggle a Coq flag"
-            id="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            name="Toggle Coq flag command">
-         <commandParameter
-               id="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-               name="Flag"
-               optional="false">
-         </commandParameter>
-      </command>
-   </extension>
-   <extension
-         point="org.eclipse.ui.contexts">
-      <context
-            description="Context for Kopitiam files"
-            id="Kopitiam.context"
-            name="In Kopitiam"
-            parentId="org.eclipse.ui.textEditorScope">
-      </context>
    </extension>
    <extension
          point="org.eclipse.ui.menus">
@@ -510,31 +280,6 @@
       </menuContribution>
    </extension>
    <extension
-         point="org.eclipse.ui.newWizards">
-      <wizard
-            category="Kopitiam.coq"
-            class="dk.itu.coqoon.ui.NewCoqFileWizard"
-            icon="icons/coqide.png"
-            id="Kopitiam.newCoqFileWizard"
-            name="Coq File">
-      </wizard>
-      <wizard
-            category="Kopitiam.coq"
-            class="dk.itu.coqoon.ui.NewCoqProjectWizard"
-            finalPerspective="dk.itu.sdg.kopitiam.CoqPerspective"
-            icon="icons/coqide.png"
-            id="Kopitiam.newCoqProjectWizard"
-            name="Coq Project"
-            preferredPerspectives="dk.itu.sdg.kopitiam.CoqPerspective"
-            project="true">
-      </wizard>
-      <category
-            id="Kopitiam.coq"
-            name="Coq">
-      </category>
-   </extension>
-
-   <extension
          point="org.eclipse.ui.editors.annotationTypes">
       <type
             name="dk.itu.sdg.kopitiam.processed">
@@ -615,57 +360,6 @@
       </specification>
    </extension>
    <extension
-         point="org.eclipse.ui.perspectives">
-      <perspective
-            class="dk.itu.coqoon.ui.CoqPerspectiveFactory"
-            icon="icons/coqide.png"
-            id="dk.itu.sdg.kopitiam.CoqPerspective"
-            name="Coq">
-      </perspective>
-   </extension>
-   <extension
-         id="dk.itu.sdg.kopitiam.CoqBuilder"
-         name="Coq Builder"
-         point="org.eclipse.core.resources.builders">
-      <builder
-            hasNature="true">
-         <run
-               class="dk.itu.coqoon.core.project.CoqBuilder">
-         </run>
-      </builder>
-   </extension>
-   <extension
-         id="dk.itu.sdg.kopitiam.CoqNature"
-         name="Coq Project Nature"
-         point="org.eclipse.core.resources.natures">
-      <runtime>
-         <run
-               class="dk.itu.coqoon.core.project.CoqNature">
-         </run>
-      </runtime>
-      <builder
-            id="dk.itu.sdg.kopitiam.CoqBuilder">
-      </builder>
-   </extension>
-   <extension
-         point="org.eclipse.ui.propertyPages">
-      <page
-            class="dk.itu.coqoon.ui.LoadPathConfigurationPage"
-            icon="icons/coqide.png"
-            id="dk.itu.sdg.kopitiam.propertyPages.CoqLoadPath"
-            name="Coq Load Path">
-         <enabledWhen>
-            <adapt
-                  type="org.eclipse.core.resources.IProject">
-               <test
-                     property="org.eclipse.core.resources.projectNature"
-                     value="dk.itu.sdg.kopitiam.CoqNature">
-               </test>
-            </adapt>
-         </enabledWhen>
-      </page>
-   </extension>
-   <extension
          point="org.eclipse.core.runtime.adapters">
       <factory
             adaptableType="org.eclipse.jdt.internal.ui.javaeditor.JavaEditor"
@@ -677,69 +371,6 @@
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
-      <handler
-            class="dk.itu.coqoon.ui.CoqStepForwardHandler"
-            commandId="Kopitiam.step_forward">
-         <activeWhen>
-            <reference
-                  definitionId="Kopitiam.activeEditorIsCoq">
-            </reference>
-         </activeWhen>
-      </handler>
-      <handler
-            class="dk.itu.coqoon.ui.CoqStepBackHandler"
-            commandId="Kopitiam.step_backward">
-         <activeWhen>
-            <reference
-                  definitionId="Kopitiam.activeEditorIsCoq">
-            </reference>
-         </activeWhen>
-      </handler>
-      <handler
-            class="dk.itu.coqoon.ui.CoqStepToCursorHandler"
-            commandId="Kopitiam.step_cursor">
-         <activeWhen>
-            <reference
-                  definitionId="Kopitiam.activeEditorIsCoq">
-            </reference>
-         </activeWhen>
-      </handler>
-      <handler
-            class="dk.itu.coqoon.ui.CoqStepAllHandler"
-            commandId="Kopitiam.step_all">
-         <activeWhen>
-            <reference
-                  definitionId="Kopitiam.activeEditorIsCoq">
-            </reference>
-         </activeWhen>
-      </handler>
-      <handler
-            class="dk.itu.coqoon.ui.CoqRetractAllHandler"
-            commandId="Kopitiam.retract">
-         <activeWhen>
-            <reference
-                  definitionId="Kopitiam.activeEditorIsCoq">
-            </reference>
-         </activeWhen>
-      </handler>
-      <handler
-            class="dk.itu.coqoon.ui.StopCoqHandler"
-            commandId="Kopitiam.stop_coq">
-         <activeWhen>
-            <reference
-                  definitionId="Kopitiam.activeEditorIsCoq">
-            </reference>
-         </activeWhen>
-      </handler>
-      <handler
-            class="dk.itu.coqoon.ui.InterruptCoqHandler"
-            commandId="dk.itu.coqoon.ui.commands.interrupt_coq">
-         <activeWhen>
-            <reference
-                  definitionId="Kopitiam.activeEditorIsCoq">
-            </reference>
-         </activeWhen>
-      </handler>
       <handler
             class="dk.itu.sdg.kopitiam.javap.VerifyMethodHandler"
             commandId="Kopitiam.verify_method">
@@ -755,15 +386,6 @@
          <activeWhen>
             <reference
                   definitionId="Kopitiam.activeEditorIsJava">
-            </reference>
-         </activeWhen>
-      </handler>
-      <handler
-            class="dk.itu.coqoon.ui.ToggleCoqFlagHandler"
-            commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag">
-         <activeWhen>
-            <reference
-                  definitionId="Kopitiam.activeEditorHasCoq">
             </reference>
          </activeWhen>
       </handler>
@@ -803,17 +425,6 @@
             </adapt>
          </with>
       </definition>
-   </extension>
-   <extension
-         id="dk.itu.sdg.kopitiam.problemmarker"
-         name="Kopitiam problem"
-         point="org.eclipse.core.resources.markers">
-      <persistent
-            value="true">
-      </persistent>
-      <super
-            type="org.eclipse.core.resources.problemmarker">
-      </super>
    </extension>
    <extension
          point="org.eclipse.ui.ide.markerResolution">

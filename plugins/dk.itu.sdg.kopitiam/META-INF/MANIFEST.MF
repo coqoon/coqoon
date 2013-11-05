@@ -22,7 +22,6 @@ Require-Bundle: org.scala-ide.scala.library,
  org.eclipse.ui.navigator,
  dk.itu.coqoon.core;bundle-version="1.0.0",
  dk.itu.coqoon.ui;bundle-version="1.0.0"
-Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ClassPath: .
 Export-Package-Alarming-Disclaimer: 
@@ -30,3 +29,4 @@ Export-Package-Alarming-Disclaimer:
  plugin, which are only exported to enable certain experiments and which are
  neither intended nor designed for general use
 Export-Package: dk.itu.sdg.kopitiam
+Bundle-ActivationPolicy: lazy
