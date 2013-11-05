@@ -455,5 +455,11 @@
          </includes>
       </viewerContentBinding>
    </extension>
-
+   <extension
+         point="dk.itu.coqoon.core.loadpath">
+      <provider
+            id="dk.itu.sdg.kopitiam/lp/charge/0.1"
+            provider="dk.itu.sdg.kopitiam.javap.ChargeLibrary">
+      </provider>
+   </extension>
 </plugin>
