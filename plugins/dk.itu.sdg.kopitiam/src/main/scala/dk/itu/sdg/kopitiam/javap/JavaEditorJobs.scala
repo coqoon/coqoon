@@ -5,7 +5,7 @@ import dk.itu.coqoon.ui.{
 import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core.model.ICoqModel
 import dk.itu.coqoon.core.coqtop.CoqTypes
-import dk.itu.coqoon.core.utilities.{JobRunner, TryService}
+import dk.itu.coqoon.core.utilities.{JobRunner, ObjectRule, TryService}
 
 import dk.itu.sdg.kopitiam._
 
@@ -16,7 +16,10 @@ import org.eclipse.core.runtime.jobs.Job
 
 class JavaProofInitialisationJob(jes : JavaEditorState)
     extends ContainerJobBase("Initialising Java proof mode",
-        new JavaProofInitialisationRunner(jes), jes)
+        new JavaProofInitialisationRunner(jes), jes) {
+  import dk.itu.coqoon.core.utilities.JobUtilities._
+  setRule(MultiRule(ObjectRule(jes), getRuleFactory.buildRule))
+}
 class JavaProofInitialisationRunner(
     jes : JavaEditorState) extends JobRunner[Unit] {
   override def doOperation(monitor : SubMonitor) : Unit = {
