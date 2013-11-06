@@ -16,7 +16,7 @@
 
 package dk.itu.coqoon.core.coqtop
 
-import dk.itu.coqoon.core.Activator
+import dk.itu.coqoon.core.{Activator, CoqoonPreferences}
 import dk.itu.coqoon.core.utilities.FunctionIterator
 
 trait CoqProgram {
@@ -26,13 +26,9 @@ trait CoqProgram {
       start : ProcessBuilder => Process = (a => a.start)) : CoqProgramInstance
 }
 object CoqProgram {
-  protected def getCoqPath = Option(Activator.getDefault).map(
-      _.getPreferenceStore.getString("coqpath"))
-
   private class ProgramImpl(name : String) extends CoqProgram {
-    override def path : String = getCoqPath.map(_.trim) match {
-      case Some(path) if path.length > 0 =>
-        path + java.io.File.separator + name
+    override def path : String = CoqoonPreferences.getCoqPath match {
+      case Some(path) => path + java.io.File.separator + name
       case _ => name
     }
     override def run(args : Seq[String],

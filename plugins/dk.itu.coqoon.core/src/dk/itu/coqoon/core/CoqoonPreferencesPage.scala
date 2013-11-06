@@ -39,3 +39,10 @@ class CoqoonPreferencesPage
     } else true
   }
 }
+
+object CoqoonPreferences {
+  import org.eclipse.core.runtime.{Path, IPath}
+  def getCoqPath() : Option[IPath] =
+    Option(Activator.getDefault.getPreferenceStore.getString("coqpath")).
+        map(_.trim).filter(_.length != 0).map(p => new Path(p))
+}
