@@ -1,5 +1,5 @@
-TODO: Kopitiam/Coq
-------------------
+TODO: Coqoon
+------------
 
 * Implement a model for Coq
 
@@ -61,22 +61,21 @@ TODO: Kopitiam/Coq
   Using Coq's "Write State" and "Restore State" commands should allow the user
   to save and reload a previous Coq session.
   
-  (Obviously this isn't quite enough -- in particular, Kopitiam's own internal
+  (Obviously this isn't quite enough -- in particular, Coqoon's own internal
   state should also be saved somewhere.)
   
-* Handle Coq commands which conflict with Kopitiam specially?
+* Handle Coq commands which conflict with Coqoon specially?
 
-  Some Coq proof script commands are deprecated inside Kopitiam -- for example,
+  Some Coq proof script commands are deprecated inside Coqoon -- for example,
   the project configuration page should always be used instead of the "Add
   LoadPath" command, and the extraction commands should probably be wrapped in
   a wizard to avoid filling the workspace with unsynchronised resources.
   
-  Should Kopitiam do something when it encounters these commands? Should it
-  warn the user, or perhaps even prevent the commands from being passed to
-  coqtop?
+  Should Coqoon do something when it encounters these commands? Should it warn
+  the user, or perhaps even prevent the commands from being passed to coqtop?
 
-TODO: Kopitiam/Java
--------------------
+TODO: Kopitiam
+--------------
 
 * Multiple commands in an antiquote
 
