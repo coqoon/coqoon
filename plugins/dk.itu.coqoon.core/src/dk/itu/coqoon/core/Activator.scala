@@ -44,4 +44,5 @@ object ManifestIdentifiers {
   final val CONTENT_TYPE_COQOBJECTFILE = "dk.itu.coqoon.core.CoqObjectFile"
   final val MARKER_PROBLEM = "dk.itu.sdg.kopitiam.problemmarker"
   final val NATURE_COQ = "dk.itu.sdg.kopitiam.CoqNature"
+  final val PREFERENCE_PAGE_COQOON = "dk.itu.coqoon.core.pref"
 }
