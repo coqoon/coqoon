@@ -6,3 +6,4 @@
 *.pdf
 bin/
 .cache
+*.jar
