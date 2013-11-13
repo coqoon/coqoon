@@ -94,7 +94,9 @@ object CreateErrorMarkerJob {
       resource : IResource, step : CoqStep, ep : (CoqTypes.location, String)) : CreateErrorMarkerJob = {
     val offsets = ep._1 match {
       case Some((begin, end)) => (step.offset + begin, step.offset + end)
-      case None => (step.offset, step.offset + step.text.length)
+      case None =>
+        val padding = step.text.takeWhile(_.isWhitespace).length
+        (step.offset + padding, step.offset + step.text.length)
     }
     CreateErrorMarkerJob(resource, offsets, ep._2)
   }
