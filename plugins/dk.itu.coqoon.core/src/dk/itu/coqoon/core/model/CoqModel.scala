@@ -295,11 +295,20 @@ trait ICoqVernacFile extends ICoqFile with IParent {
   override def getElementType = classOf[ICoqVernacFile]
 
   def setContents(is : InputStream, monitor : IProgressMonitor)
+
+  def getSentences() : Seq[ICoqSentence]
 }
 object ICoqVernacFile {
   import org.eclipse.core.runtime.Platform
   final def CONTENT_TYPE = Platform.getContentTypeManager.getContentType(
       ManifestIdentifiers.CONTENT_TYPE_COQFILE)
+}
+
+trait ICoqSentence extends ICoqElement {
+  override def getElementType = classOf[ICoqSentence]
+
+  def getText() : CharSequence
+  def isSynthetic() : Boolean
 }
 
 trait ICoqObjectFile extends ICoqFile {

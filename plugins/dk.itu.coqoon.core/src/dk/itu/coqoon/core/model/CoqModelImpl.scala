@@ -403,6 +403,19 @@ private case class CoqVernacFileImpl(
     private val res : IFile,
     private val parent : ICoqPackageFragment)
     extends CoqElementImpl(res, parent) with ICoqVernacFile {
+  private class Cache extends ICache {
+    override def destroy = Seq(sentences).map(_.clear)
+
+    import dk.itu.coqoon.core.coqtop.CoqSentence
+    private[CoqVernacFileImpl] final val sentences =
+        CacheSlot[Seq[ICoqSentence]] {
+      val content = FunctionIterator.lines(res.getContents).mkString("\n")
+      CoqSentence.getNextSentences(content, 0, content.length).map(a =>
+          new CoqSentenceImpl(CoqVernacFileImpl.this, a._1, a._2))
+    }
+  }
+  private def getCache() = getModel.getCacheFor(this, new Cache)
+
   import java.io.InputStream
 
   if (!res.getName.endsWith(".v"))
@@ -411,7 +424,15 @@ private case class CoqVernacFileImpl(
   override def setContents(is : InputStream, monitor : IProgressMonitor) =
     res.setContents(is, IResource.NONE, monitor)
 
-  override def getChildren = Seq()
+  override def getChildren = getSentences
+  override def getSentences = getCache.sentences.get
+}
+
+private case class CoqSentenceImpl(private val parent : ICoqVernacFile,
+    private val text : CharSequence, private val synthetic : Boolean)
+    extends CoqElementImpl(null, parent) with ICoqSentence {
+  override def getText = text
+  override def isSynthetic = synthetic
 }
 
 private case class CoqObjectFileImpl(
