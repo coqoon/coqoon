@@ -291,7 +291,7 @@ trait ICoqFile extends ICoqElement {
 
 import java.io.InputStream
 
-trait ICoqVernacFile extends ICoqFile {
+trait ICoqVernacFile extends ICoqFile with IParent {
   override def getElementType = classOf[ICoqVernacFile]
 
   def setContents(is : InputStream, monitor : IProgressMonitor)

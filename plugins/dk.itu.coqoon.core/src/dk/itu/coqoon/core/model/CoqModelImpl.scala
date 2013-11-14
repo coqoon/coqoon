@@ -387,6 +387,8 @@ private case class CoqVernacFileImpl(
 
   override def setContents(is : InputStream, monitor : IProgressMonitor) =
     res.setContents(is, IResource.NONE, monitor)
+
+  override def getChildren = Seq()
 }
 
 private case class CoqObjectFileImpl(
