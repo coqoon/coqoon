@@ -82,13 +82,36 @@ private case class CoqModelImpl(
   override def getProjects = res.getProjects.filter(hasNature).map(
       a => new CoqProjectImpl(a, this))
 
-  override def toCoqElement(resource : IResource) = resource match {
+  override def toCoqElement(resource : IResource) : Option[ICoqElement] =
+      resource match {
     case p : IProject if hasNature(p) =>
       Some(getProject(p.getName))
     case f : IFolder if hasNature(f.getProject) =>
-      None /* XXX: convert into an ICoqPackageFragment(Root) */
+      val project = getProject(f.getProject.getName)
+      for (i <- project.getLoadPathProviders) i match {
+        case SourceLoadPath(src, bin) if src == f =>
+          return Some(new CoqPackageFragmentRootImpl(f, project))
+        case SourceLoadPath(src, Some(bin)) if bin == f =>
+          return Some(new CoqPackageFragmentRootImpl(f, project))
+        case DefaultOutputLoadPath(bin) if bin == f =>
+          return Some(new CoqPackageFragmentRootImpl(f, project))
+
+        case SourceLoadPath(src, bin) if src.contains(f) =>
+          return Some(new CoqPackageFragmentImpl(f,
+              new CoqPackageFragmentRootImpl(src, project)))
+        case SourceLoadPath(src, Some(bin)) if bin.contains(f) =>
+          return Some(new CoqPackageFragmentImpl(f,
+              new CoqPackageFragmentRootImpl(bin, project)))
+        case DefaultOutputLoadPath(bin) if bin.contains(f) =>
+          return Some(new CoqPackageFragmentImpl(f,
+              new CoqPackageFragmentRootImpl(bin, project)))
+
+        case _ =>
+      }
+      None
     case f : IFile if hasNature(f.getProject) =>
-      None /* XXX: convert into an ICoq(Object|Vernac)File */
+      toCoqElement(f.getParent).flatMap(TryCast[CoqPackageFragmentImpl]).map(
+          fragment => new CoqVernacFileImpl(f, fragment))
     case _ => None
   }
 
