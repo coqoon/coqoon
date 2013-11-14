@@ -440,36 +440,6 @@ object CoqBuilder {
       dir.delete(IResource.NONE, null)
   }
 
-  private def sentences(content : String) =
-    CoqSentence.getNextSentences(stripComments(content), 0, content.length)
-  private def stripComments(doc : String) : String = {
-    var regions : List[Substring] = List()
-    var i = 0
-    var regionStart = 0
-    var inString = false
-    var commentDepth = 0
-    import CoqSentence._
-    while (i < doc.length) Substring(doc, i) match {
-      case CommentStart() if !inString =>
-        if (commentDepth == 0)
-          regions :+= Substring(doc, regionStart, i)
-        commentDepth += 1
-        i += 2
-      case CommentEnd() if !inString && commentDepth > 0 =>
-        commentDepth -= 1
-        if (commentDepth == 0)
-          regionStart = i + 2
-        i += 2
-      case QuotationMark() =>
-        inString = !inString
-        i += 1
-      case _ =>
-        i += 1
-    }
-    (regions :+ Substring(doc, regionStart, i)).
-        mkString(" ").replaceAll("\\s+", " ").trim
-  }
-
   def traverse[A <: IResource](folder : IContainer,
       filter : IResource => Option[A], f : A => Unit) : Unit = {
     for (i <- folder.members(IContainer.INCLUDE_HIDDEN)) {
@@ -490,7 +460,8 @@ object CoqBuilder {
 
   private def generateRefs(file : IFile) : Seq[CoqReference] = {
     var refs = Seq.newBuilder[CoqReference]
-    val s = sentences(FunctionIterator.lines(file.getContents).mkString("\n"))
+    val content = FunctionIterator.lines(file.getContents).mkString("\n")
+    val s = CoqSentence.getNextSentences(content, 0, content.length)
     for ((text, synthetic) <- s if !synthetic) text.toString.trim match {
       case Load(what) =>
         refs += LoadRef(what)
