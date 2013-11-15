@@ -158,6 +158,14 @@
             id="kopitiam.GoalViewer"
             name="Goal Viewer">
       </view>
+      <view
+            category="Kopitiam"
+            class="dk.itu.coqoon.ui.ModelExplorer"
+            icon="icons/compile.gif"
+            id="dk.itu.coqoon.ui.views.ModelExplorer"
+            name="Model Explorer"
+            restorable="true">
+      </view>
    </extension>
    <extension
          point="org.eclipse.ui.preferencePages">
