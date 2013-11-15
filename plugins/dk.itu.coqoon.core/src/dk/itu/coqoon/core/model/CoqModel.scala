@@ -321,7 +321,7 @@ trait ICoqScriptGroup extends ICoqScriptElement with IParent {
   override def getChildren() : Seq[ICoqScriptElement]
 }
 
-sealed abstract class CoqScriptGroupDisposition
+abstract class CoqScriptGroupDisposition
 case class CoqProofGroup(val name : String) extends CoqScriptGroupDisposition
 
 trait ICoqObjectFile extends ICoqFile {
