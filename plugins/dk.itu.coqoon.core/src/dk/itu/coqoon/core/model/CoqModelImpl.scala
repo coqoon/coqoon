@@ -408,10 +408,10 @@ private case class CoqVernacFileImpl(
 
     import dk.itu.coqoon.core.coqtop.CoqSentence
     private[CoqVernacFileImpl] final val sentences =
-        CacheSlot[Seq[ICoqSentence]] {
+        CacheSlot[Seq[ICoqScriptElement]] {
       val content = FunctionIterator.lines(res.getContents).mkString("\n")
       CoqSentence.getNextSentences(content, 0, content.length).map(a =>
-          new CoqSentenceImpl(CoqVernacFileImpl.this, a._1, a._2))
+          new CoqScriptSentenceImpl(a._1, a._2, CoqVernacFileImpl.this))
     }
   }
   private def getCache() = getModel.getCacheFor(this, new Cache)
@@ -424,15 +424,27 @@ private case class CoqVernacFileImpl(
   override def setContents(is : InputStream, monitor : IProgressMonitor) =
     res.setContents(is, IResource.NONE, monitor)
 
-  override def getChildren = getSentences
-  override def getSentences = getCache.sentences.get
+  override def getChildren = getCache.sentences.get
 }
 
-private case class CoqSentenceImpl(private val parent : ICoqVernacFile,
-    private val text : CharSequence, private val synthetic : Boolean)
-    extends CoqElementImpl(null, parent) with ICoqSentence {
+private case class CoqScriptSentenceImpl(
+    private val text : CharSequence,
+    private val synthetic : Boolean,
+    private val parent : ICoqElement with IParent)
+    extends CoqElementImpl(null, parent) with ICoqScriptSentence {
   override def getText = text
   override def isSynthetic = synthetic
+
+  override def toString = "" + text
+}
+
+private case class CoqScriptGroupImpl(
+    private val disposition : CoqScriptGroupDisposition,
+    private val elements : Seq[ICoqScriptElement],
+    private val parent : ICoqElement with IParent)
+    extends ParentImpl(null, parent) with ICoqScriptGroup {
+  override def getDisposition = disposition
+  override def getChildren = elements
 }
 
 private case class CoqObjectFileImpl(

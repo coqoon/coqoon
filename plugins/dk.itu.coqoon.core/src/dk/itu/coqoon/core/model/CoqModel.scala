@@ -296,7 +296,7 @@ trait ICoqVernacFile extends ICoqFile with IParent {
 
   def setContents(is : InputStream, monitor : IProgressMonitor)
 
-  def getSentences() : Seq[ICoqSentence]
+  override def getChildren() : Seq[ICoqScriptElement]
 }
 object ICoqVernacFile {
   import org.eclipse.core.runtime.Platform
@@ -304,12 +304,25 @@ object ICoqVernacFile {
       ManifestIdentifiers.CONTENT_TYPE_COQFILE)
 }
 
-trait ICoqSentence extends ICoqElement {
-  override def getElementType = classOf[ICoqSentence]
+sealed trait ICoqScriptElement extends ICoqElement
+
+trait ICoqScriptSentence extends ICoqScriptElement {
+  override def getElementType = classOf[ICoqScriptSentence]
 
   def getText() : CharSequence
   def isSynthetic() : Boolean
 }
+
+trait ICoqScriptGroup extends ICoqScriptElement with IParent {
+  override def getElementType = classOf[ICoqScriptGroup]
+
+  def getDisposition() : CoqScriptGroupDisposition
+
+  override def getChildren() : Seq[ICoqScriptElement]
+}
+
+sealed abstract class CoqScriptGroupDisposition
+case class CoqProofGroup(val name : String) extends CoqScriptGroupDisposition
 
 trait ICoqObjectFile extends ICoqFile {
   override def getElementType = classOf[ICoqObjectFile]
