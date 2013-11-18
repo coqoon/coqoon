@@ -4,44 +4,44 @@
    <extension
          point="org.eclipse.ui.bindings">
       <key
-            commandId="Kopitiam.step_forward"
-            contextId="Kopitiam.context"
+            commandId="dk.itu.coqoon.ui.commands.step_forward"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="Ctrl+N">
       </key>
       <key
-            commandId="Kopitiam.step_cursor"
-            contextId="Kopitiam.context"
+            commandId="dk.itu.coqoon.ui.commands.step_cursor"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="Ctrl+Enter">
       </key>
       <key
-            commandId="Kopitiam.step_backward"
-            contextId="Kopitiam.context"
+            commandId="dk.itu.coqoon.ui.commands.step_backward"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="Ctrl+U">
       </key>
       <key
-            commandId="Kopitiam.retract"
-            contextId="Kopitiam.context"
+            commandId="dk.itu.coqoon.ui.commands.retract"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="Ctrl+R">
       </key>
       <key
-            commandId="Kopitiam.step_all"
-            contextId="Kopitiam.context"
+            commandId="dk.itu.coqoon.ui.commands.step_all"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="Ctrl+B">
       </key>
       <key
             commandId="dk.itu.coqoon.ui.commands.interrupt_coq"
-            contextId="Kopitiam.context"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="Ctrl+C">
       </key>
       <key
             commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+I">
          <parameter
@@ -51,7 +51,7 @@
       </key>
       <key
             commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+C">
          <parameter
@@ -61,7 +61,7 @@
       </key>
       <key
             commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+M">
          <parameter
@@ -71,7 +71,7 @@
       </key>
       <key
             commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+S">
          <parameter
@@ -81,7 +81,7 @@
       </key>
       <key
             commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+N">
          <parameter
@@ -91,7 +91,7 @@
       </key>
       <key
             commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+A">
          <parameter
@@ -101,7 +101,7 @@
       </key>
       <key
             commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+R">
          <parameter
@@ -111,7 +111,7 @@
       </key>
       <key
             commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+E">
          <parameter
@@ -121,7 +121,7 @@
       </key>
       <key
             commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-            contextId="Kopitiam.context"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+U">
          <parameter
@@ -147,19 +147,19 @@
    <extension
          point="org.eclipse.ui.views">
       <category
-            id="Kopitiam"
+            id="dk.itu.coqoon.ui.views.coq"
             name="Coq Views">
       </category>
       <view
             allowMultiple="false"
-            category="Kopitiam"
+            category="dk.itu.coqoon.ui.views.coq"
             class="dk.itu.coqoon.ui.GoalViewer"
             icon="icons/coqide.png"
             id="kopitiam.GoalViewer"
             name="Goal Viewer">
       </view>
       <view
-            category="Kopitiam"
+            category="dk.itu.coqoon.ui.views.coq"
             class="dk.itu.coqoon.ui.ModelExplorer"
             icon="icons/compile.gif"
             id="dk.itu.coqoon.ui.views.ModelExplorer"
@@ -179,56 +179,46 @@
    <extension
          point="org.eclipse.ui.commands">
       <category
-            id="Kopitiam.category"
-            name="Kopitiam">
+            id="dk.itu.coqoon.ui.commands.category"
+            name="Coqoon">
       </category>
       <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.step_forward"
+            categoryId="dk.itu.coqoon.ui.commands.category"
+            id="dk.itu.coqoon.ui.commands.step_forward"
             name="Step forward command">
       </command>
       <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.step_backward"
+            categoryId="dk.itu.coqoon.ui.commands.category"
+            id="dk.itu.coqoon.ui.commands.step_backward"
             name="Step backward command">
       </command>
       <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.step_cursor"
+            categoryId="dk.itu.coqoon.ui.commands.category"
+            id="dk.itu.coqoon.ui.commands.step_cursor"
             name="Step to cursor command">
       </command>
       <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.step_all"
+            categoryId="dk.itu.coqoon.ui.commands.category"
+            id="dk.itu.coqoon.ui.commands.step_all"
             name="Step all command">
       </command>
       <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.retract"
+            categoryId="dk.itu.coqoon.ui.commands.category"
+            id="dk.itu.coqoon.ui.commands.retract"
             name="Retract all command">
       </command>
       <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.stop_coq"
+            categoryId="dk.itu.coqoon.ui.commands.category"
+            id="dk.itu.coqoon.ui.commands.stop_coq"
             name="Stop Coq command">
       </command>
       <command
-            categoryId="Kopitiam.category"
+            categoryId="dk.itu.coqoon.ui.commands.category"
             id="dk.itu.coqoon.ui.commands.interrupt_coq"
             name="Interrupt Coq command">
       </command>
       <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.verify_method"
-            name="Verify Java method command">
-      </command>
-      <command
-            categoryId="Kopitiam.category"
-            id="Kopitiam.save_proof_certificate"
-            name="Save Java proof certificate command">
-      </command>
-      <command
-            categoryId="Kopitiam.category"
+            categoryId="dk.itu.coqoon.ui.commands.category"
             description="Toggle a Coq flag"
             id="dk.itu.coqoon.ui.commands.toggle_coq_flag"
             name="Toggle Coq flag command">
@@ -240,25 +230,71 @@
       </command>
    </extension>
    <extension
+         point="org.eclipse.ui.editors.annotationTypes">
+      <type
+            name="dk.itu.coqoon.ui.annotationTypes.processed">
+      </type>
+      <type
+            name="dk.itu.coqoon.ui.annotationTypes.processing">
+      </type>
+   </extension>
+   <extension
+         point="org.eclipse.ui.editors.markerAnnotationSpecification">
+      <specification
+            annotationType="dk.itu.coqoon.ui.annotationTypes.processed"
+            colorPreferenceKey="coqSentBg"
+            colorPreferenceValue="118,255,133"
+            highlightPreferenceKey="dk.itu.sdg.kopitiam.processed.mycolorbackgroundhighlightkey"
+            highlightPreferenceValue="true"
+            includeOnPreferencePage="true"
+            label="Coq Processed"
+            overviewRulerPreferenceKey="dk.itu.sdg.kopitiam.processed.overviewrulerkey"
+            overviewRulerPreferenceValue="true"
+            textPreferenceKey="processedIndicationInText"
+            textPreferenceValue="true"
+            textStylePreferenceKey="dk.itu.sdg.kopitiam.processed.textStyle"
+            textStylePreferenceValue="BOX"
+            verticalRulerPreferenceKey="processedIndicationInVerticalRuler"
+            verticalRulerPreferenceValue="true">
+      </specification>
+      <specification
+            annotationType="dk.itu.coqoon.ui.annotationTypes.processing"
+            colorPreferenceKey="coqSentProcessBg"
+            colorPreferenceValue="255,241,117"
+            highlightPreferenceKey="dk.itu.sdg.kopitiam.processing.mycolorbackgroundhighlightkey"
+            highlightPreferenceValue="true"
+            includeOnPreferencePage="true"
+            label="Coq Processing"
+            overviewRulerPreferenceKey="dk.itu.sdg.kopitiam.processing.overviewrulerkey"
+            overviewRulerPreferenceValue="true"
+            textPreferenceKey="processingIndicationInText"
+            textPreferenceValue="true"
+            textStylePreferenceKey="dk.itu.sdg.kopitiam.processing.textStyle"
+            textStylePreferenceValue="BOX"
+            verticalRulerPreferenceKey="processingIndicationInVerticalRuler"
+            verticalRulerPreferenceValue="true">
+      </specification>
+   </extension>
+   <extension
          point="org.eclipse.ui.contexts">
       <context
-            description="Context for Kopitiam files"
-            id="Kopitiam.context"
-            name="In Kopitiam"
+            description="Context for Coq proof scripts"
+            id="dk.itu.coqoon.ui.contexts.coq"
+            name="Coq editor context"
             parentId="org.eclipse.ui.textEditorScope">
       </context>
    </extension>
    <extension
          point="org.eclipse.ui.newWizards">
       <wizard
-            category="Kopitiam.coq"
+            category="dk.itu.coqoon.ui.newWizards.coq"
             class="dk.itu.coqoon.ui.NewCoqFileWizard"
             icon="icons/coqide.png"
             id="Kopitiam.newCoqFileWizard"
             name="Coq File">
       </wizard>
       <wizard
-            category="Kopitiam.coq"
+            category="dk.itu.coqoon.ui.newWizards.coq"
             class="dk.itu.coqoon.ui.NewCoqProjectWizard"
             finalPerspective="dk.itu.sdg.kopitiam.CoqPerspective"
             icon="icons/coqide.png"
@@ -268,7 +304,7 @@
             project="true">
       </wizard>
       <category
-            id="Kopitiam.coq"
+            id="dk.itu.coqoon.ui.newWizards.coq"
             name="Coq">
       </category>
    </extension>
@@ -303,55 +339,55 @@
          point="org.eclipse.ui.handlers">
       <handler
             class="dk.itu.coqoon.ui.CoqStepForwardHandler"
-            commandId="Kopitiam.step_forward">
+            commandId="dk.itu.coqoon.ui.commands.step_forward">
          <activeWhen>
             <reference
-                  definitionId="Kopitiam.activeEditorIsCoq">
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
             </reference>
          </activeWhen>
       </handler>
       <handler
             class="dk.itu.coqoon.ui.CoqStepBackHandler"
-            commandId="Kopitiam.step_backward">
+            commandId="dk.itu.coqoon.ui.commands.step_backward">
          <activeWhen>
             <reference
-                  definitionId="Kopitiam.activeEditorIsCoq">
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
             </reference>
          </activeWhen>
       </handler>
       <handler
             class="dk.itu.coqoon.ui.CoqStepToCursorHandler"
-            commandId="Kopitiam.step_cursor">
+            commandId="dk.itu.coqoon.ui.commands.step_cursor">
          <activeWhen>
             <reference
-                  definitionId="Kopitiam.activeEditorIsCoq">
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
             </reference>
          </activeWhen>
       </handler>
       <handler
             class="dk.itu.coqoon.ui.CoqStepAllHandler"
-            commandId="Kopitiam.step_all">
+            commandId="dk.itu.coqoon.ui.commands.step_all">
          <activeWhen>
             <reference
-                  definitionId="Kopitiam.activeEditorIsCoq">
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
             </reference>
          </activeWhen>
       </handler>
       <handler
             class="dk.itu.coqoon.ui.CoqRetractAllHandler"
-            commandId="Kopitiam.retract">
+            commandId="dk.itu.coqoon.ui.commands.retract">
          <activeWhen>
             <reference
-                  definitionId="Kopitiam.activeEditorIsCoq">
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
             </reference>
          </activeWhen>
       </handler>
       <handler
             class="dk.itu.coqoon.ui.StopCoqHandler"
-            commandId="Kopitiam.stop_coq">
+            commandId="dk.itu.coqoon.ui.commands.stop_coq">
          <activeWhen>
             <reference
-                  definitionId="Kopitiam.activeEditorIsCoq">
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
             </reference>
          </activeWhen>
       </handler>
@@ -360,7 +396,7 @@
             commandId="dk.itu.coqoon.ui.commands.interrupt_coq">
          <activeWhen>
             <reference
-                  definitionId="Kopitiam.activeEditorIsCoq">
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
             </reference>
          </activeWhen>
       </handler>
@@ -369,7 +405,7 @@
             commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag">
          <activeWhen>
             <reference
-                  definitionId="Kopitiam.activeEditorHasCoq">
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorHasCoq">
             </reference>
          </activeWhen>
       </handler>
@@ -395,5 +431,240 @@
             </contentExtension>
          </includes>
       </viewerContentBinding>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:org.eclipse.ui.main.toolbar">
+         <toolbar
+               id="dk.itu.coqoon.ui.menus.coqToolbar"
+               label="Coqoon toolbar">
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.step_backward"
+                  icon="icons/up.gif"
+                  label="Undo"
+                  style="push"
+                  tooltip="Undo">
+            </command>
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.retract"
+                  icon="icons/uptoo.gif"
+                  label="Retract"
+                  style="push"
+                  tooltip="Retract">
+            </command>
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.step_forward"
+                  icon="icons/down.gif"
+                  label="Step"
+                  style="push"
+                  tooltip="Step">
+            </command>
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.step_cursor"
+                  icon="icons/icon_lego.gif"
+                  label="Step Until Cursor"
+                  style="push"
+                  tooltip="Step Until Cursor">
+            </command>
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.step_all"
+                  icon="icons/downtoo.gif"
+                  label="Step All"
+                  style="push"
+                  tooltip="Step All">
+            </command>
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.stop_coq"
+                  icon="icons/dead.gif"
+                  label="Stop Coq"
+                  style="push"
+                  tooltip="Stop Coq">
+            </command>
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.interrupt_coq"
+                  icon="icons/stop.gif"
+                  label="Interrupt Coq"
+                  style="push"
+                  tooltip="Interrupt Coq">
+            </command>
+         </toolbar>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="menu:org.eclipse.ui.main.menu">
+         <menu
+               id="dk.itu.coqoon.ui.menus.coq"
+               label="Coq">
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.step_backward"
+                  icon="icons/up.gif"
+                  label="Undo"
+                  style="push"
+                  tooltip="Undo">
+            </command>
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.retract"
+                  icon="icons/uptoo.gif"
+                  label="Retract"
+                  style="push"
+                  tooltip="Retract">
+            </command>
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.step_forward"
+                  icon="icons/down.gif"
+                  label="Step"
+                  style="push"
+                  tooltip="Step">
+            </command>
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.step_cursor"
+                  icon="icons/icon_lego.gif"
+                  label="Step Until Cursor"
+                  style="push"
+                  tooltip="Step Until Cursor">
+            </command>
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.step_all"
+                  icon="icons/downtoo.gif"
+                  label="Step All"
+                  style="push"
+                  tooltip="Step All">
+            </command>
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.stop_coq"
+                  icon="icons/dead.gif"
+                  label="Stop Coq"
+                  style="push"
+                  tooltip="Stop Coq">
+            </command>
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.interrupt_coq"
+                  icon="icons/stop.gif"
+                  label="Interrupt Coq"
+                  style="push"
+                  tooltip="Interrupt Coq">
+            </command>
+            <separator
+                  name="dk.itu.coqoon.ui.menus.coq.separator1"
+                  visible="true">
+            </separator>
+            <menu
+                  id="dk.itu.coqoon.ui.menus.coq.setPrinting"
+                  label="Set Printing">
+               <command
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
+                     label="Implicit"
+                     style="toggle">
+                  <parameter
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
+                        value="Printing Implicit">
+                  </parameter>
+               </command>
+               <command
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
+                     label="Coercions"
+                     style="toggle">
+                  <parameter
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
+                        value="Printing Coercions">
+                  </parameter>
+               </command>
+               <command
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
+                     label="Matching"
+                     style="toggle">
+                  <parameter
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
+                        value="Printing Matching">
+                  </parameter>
+               </command>
+               <command
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
+                     label="Synth"
+                     style="toggle">
+                  <parameter
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
+                        value="Printing Synth">
+                  </parameter>
+               </command>
+               <command
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
+                     label="Notations"
+                     style="toggle">
+                  <parameter
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
+                        value="Printing Notations">
+                  </parameter>
+               </command>
+               <command
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
+                     label="All"
+                     style="toggle">
+                  <parameter
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
+                        value="Printing All">
+                  </parameter>
+               </command>
+               <command
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
+                     label="Records"
+                     style="toggle">
+                  <parameter
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
+                        value="Printing Records">
+                  </parameter>
+               </command>
+               <command
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
+                     label="Existential Instances"
+                     style="toggle">
+                  <parameter
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
+                        value="Printing Existential Instances">
+                  </parameter>
+               </command>
+               <command
+                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
+                     label="Universes"
+                     style="toggle">
+                  <parameter
+                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
+                        value="Printing Universes">
+                  </parameter>
+               </command>
+            </menu>
+            <visibleWhen
+                  checkEnabled="false">
+               <reference
+                     definitionId="dk.itu.coqoon.ui.expressions.activeEditorHasCoq" />
+            </visibleWhen>
+         </menu>
+      </menuContribution>
+   </extension>
+   <extension
+         point="org.eclipse.core.expressions.definitions">
+      <definition
+            id="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
+         <with
+               variable="activeEditor">
+            <adapt
+                  type="dk.itu.coqoon.ui.CoqTopContainer">
+               <instanceof
+                     value="dk.itu.coqoon.ui.CoqEditor">
+               </instanceof>
+            </adapt>
+         </with>
+      </definition>
+      <definition
+            id="dk.itu.coqoon.ui.expressions.activeEditorHasCoq">
+         <with
+               variable="activeEditor">
+            <adapt
+                  type="dk.itu.coqoon.ui.CoqTopContainer">
+            </adapt>
+         </with>
+      </definition>
    </extension>
 </plugin>

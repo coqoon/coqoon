@@ -23,270 +23,7 @@
       </page>
    </extension>
    <extension
-         point="org.eclipse.ui.menus">
-      <menuContribution
-            allPopups="false"
-            locationURI="toolbar:org.eclipse.ui.main.toolbar">
-         <toolbar
-               id="Kopitiam.coqToolbar"
-               label="Kopitiam toolbar">
-            <command
-                  commandId="Kopitiam.step_backward"
-                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/up.gif"
-                  label="Undo"
-                  style="push"
-                  tooltip="Undo">
-            </command>
-            <command
-                  commandId="Kopitiam.retract"
-                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/uptoo.gif"
-                  label="Retract"
-                  style="push"
-                  tooltip="Retract">
-            </command>
-            <command
-                  commandId="Kopitiam.step_forward"
-                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/down.gif"
-                  label="Step"
-                  style="push"
-                  tooltip="Step">
-            </command>
-            <command
-                  commandId="Kopitiam.step_cursor"
-                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/icon_lego.gif"
-                  label="Step Until Cursor"
-                  style="push"
-                  tooltip="Step Until Cursor">
-            </command>
-            <command
-                  commandId="Kopitiam.step_all"
-                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/downtoo.gif"
-                  label="Step All"
-                  style="push"
-                  tooltip="Step All">
-            </command>
-            <command
-                  commandId="Kopitiam.stop_coq"
-                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/dead.gif"
-                  label="Stop Coq"
-                  style="push"
-                  tooltip="Stop Coq">
-            </command>
-            <command
-                  commandId="dk.itu.coqoon.ui.commands.interrupt_coq"
-                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/stop.gif"
-                  label="Interrupt Coq"
-                  style="push"
-                  tooltip="Interrupt Coq">
-            </command>
-         </toolbar>
-      </menuContribution>
-      <menuContribution
-            allPopups="true"
-            locationURI="popup:org.eclipse.jdt.ui.CompilationUnitEditor.EditorContext">
-         <command
-               commandId="Kopitiam.verify_method"
-               icon="platform:/plugin/dk.itu.coqoon.ui/icons/icon_lego.gif"
-               id="dk.itu.sdg.kopitiam.popupContribution"
-               label="Verify method"
-               style="push"
-               tooltip="Verify method">
-         </command>
-         <command
-               commandId="Kopitiam.save_proof_certificate"
-               icon="platform:/plugin/dk.itu.coqoon.ui/icons/checkmark.gif"
-               label="Save proof certificate"
-               style="push"
-               tooltip="Save proof certificate">
-         </command>
-      </menuContribution>
-      <menuContribution
-            allPopups="false"
-            locationURI="menu:org.eclipse.ui.main.menu">
-         <menu
-               id="Kopitiam.coqMenu"
-               label="Coq">
-            <command
-                  commandId="Kopitiam.step_backward"
-                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/up.gif"
-                  label="Undo"
-                  style="push"
-                  tooltip="Undo">
-            </command>
-            <command
-                  commandId="Kopitiam.retract"
-                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/uptoo.gif"
-                  label="Retract"
-                  style="push"
-                  tooltip="Retract">
-            </command>
-            <command
-                  commandId="Kopitiam.step_forward"
-                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/down.gif"
-                  label="Step"
-                  style="push"
-                  tooltip="Step">
-            </command>
-            <command
-                  commandId="Kopitiam.step_cursor"
-                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/icon_lego.gif"
-                  label="Step Until Cursor"
-                  style="push"
-                  tooltip="Step Until Cursor">
-            </command>
-            <command
-                  commandId="Kopitiam.step_all"
-                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/downtoo.gif"
-                  label="Step All"
-                  style="push"
-                  tooltip="Step All">
-            </command>
-            <command
-                  commandId="Kopitiam.stop_coq"
-                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/dead.gif"
-                  label="Stop Coq"
-                  style="push"
-                  tooltip="Stop Coq">
-            </command>
-            <command
-                  commandId="dk.itu.coqoon.ui.commands.interrupt_coq"
-                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/stop.gif"
-                  label="Interrupt Coq"
-                  style="push"
-                  tooltip="Interrupt Coq">
-            </command>
-            <separator
-                  name="Kopitiam.coqMenu.separator1"
-                  visible="true">
-            </separator>
-            <menu
-                  id="Kopitiam.coqMenu.setPrinting"
-                  label="Set Printing">
-               <command
-                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-                     label="Implicit"
-                     style="toggle">
-                  <parameter
-                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-                        value="Printing Implicit">
-                  </parameter>
-               </command>
-               <command
-                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-                     label="Coercions"
-                     style="toggle">
-                  <parameter
-                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-                        value="Printing Coercions">
-                  </parameter>
-               </command>
-               <command
-                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-                     label="Matching"
-                     style="toggle">
-                  <parameter
-                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-                        value="Printing Matching">
-                  </parameter>
-               </command>
-               <command
-                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-                     label="Synth"
-                     style="toggle">
-                  <parameter
-                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-                        value="Printing Synth">
-                  </parameter>
-               </command>
-               <command
-                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-                     label="Notations"
-                     style="toggle">
-                  <parameter
-                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-                        value="Printing Notations">
-                  </parameter>
-               </command>
-               <command
-                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-                     label="All"
-                     style="toggle">
-                  <parameter
-                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-                        value="Printing All">
-                  </parameter>
-               </command>
-               <command
-                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-                     label="Records"
-                     style="toggle">
-                  <parameter
-                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-                        value="Printing Records">
-                  </parameter>
-               </command>
-               <command
-                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-                     label="Existential Instances"
-                     style="toggle">
-                  <parameter
-                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-                        value="Printing Existential Instances">
-                  </parameter>
-               </command>
-               <command
-                     commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag"
-                     label="Universes"
-                     style="toggle">
-                  <parameter
-                        name="dk.itu.coqoon.ui.commands.toggle_coq_flag.name"
-                        value="Printing Universes">
-                  </parameter>
-               </command>
-            </menu>
-            <separator
-                  name="Kopitiam.coqMenu.separator2"
-                  visible="true">
-            </separator>
-            <menu
-                  id="Kopitiam.coqMenu.javaMenu"
-                  label="Java">
-               <command
-                     commandId="Kopitiam.verify_method"
-                     icon="platform:/plugin/dk.itu.coqoon.ui/icons/icon_lego.gif"
-                     id="dk.itu.sdg.kopitiam.popupContribution"
-                     label="Verify method"
-                     style="push"
-                     tooltip="Verify method">
-               </command>
-               <command
-                     commandId="Kopitiam.save_proof_certificate"
-                     icon="platform:/plugin/dk.itu.coqoon.ui/icons/checkmark.gif"
-                     label="Save proof certificate"
-                     style="push"
-                     tooltip="Save proof certificate">
-               </command>
-            </menu>
-            <visibleWhen
-                  checkEnabled="false">
-               <with
-                     variable="activeEditor">
-                  <adapt
-                        type="dk.itu.coqoon.ui.CoqTopContainer">
-                  </adapt>
-               </with>
-            </visibleWhen>
-         </menu>
-      </menuContribution>
-   </extension>
-   <extension
          point="org.eclipse.ui.editors.annotationTypes">
-      <type
-            name="dk.itu.sdg.kopitiam.processed">
-      </type>
-      <type
-            name="dk.itu.sdg.kopitiam.processing">
-      </type>
       <type
             markerSeverity="2"
             markerType="dk.itu.sdg.kopitiam.provenmarker"
@@ -324,40 +61,6 @@
             verticalRulerPreferenceKey="provenmarkerIndicationInVerticalRuler"
             verticalRulerPreferenceValue="true">
       </specification>
-      <specification
-            annotationType="dk.itu.sdg.kopitiam.processed"
-            colorPreferenceKey="coqSentBg"
-            colorPreferenceValue="118,255,133"
-            highlightPreferenceKey="dk.itu.sdg.kopitiam.processed.mycolorbackgroundhighlightkey"
-            highlightPreferenceValue="true"
-            includeOnPreferencePage="true"
-            label="Coq Processed"
-            overviewRulerPreferenceKey="dk.itu.sdg.kopitiam.processed.overviewrulerkey"
-            overviewRulerPreferenceValue="true"
-            textPreferenceKey="processedIndicationInText"
-            textPreferenceValue="true"
-            textStylePreferenceKey="dk.itu.sdg.kopitiam.processed.textStyle"
-            textStylePreferenceValue="BOX"
-            verticalRulerPreferenceKey="processedIndicationInVerticalRuler"
-            verticalRulerPreferenceValue="true">
-      </specification>
-      <specification
-            annotationType="dk.itu.sdg.kopitiam.processing"
-            colorPreferenceKey="coqSentProcessBg"
-            colorPreferenceValue="255,241,117"
-            highlightPreferenceKey="dk.itu.sdg.kopitiam.processing.mycolorbackgroundhighlightkey"
-            highlightPreferenceValue="true"
-            includeOnPreferencePage="true"
-            label="Coq Processing"
-            overviewRulerPreferenceKey="dk.itu.sdg.kopitiam.processing.overviewrulerkey"
-            overviewRulerPreferenceValue="true"
-            textPreferenceKey="processingIndicationInText"
-            textPreferenceValue="true"
-            textStylePreferenceKey="dk.itu.sdg.kopitiam.processing.textStyle"
-            textStylePreferenceValue="BOX"
-            verticalRulerPreferenceKey="processingIndicationInVerticalRuler"
-            verticalRulerPreferenceValue="true">
-      </specification>
    </extension>
    <extension
          point="org.eclipse.core.runtime.adapters">
@@ -393,18 +96,6 @@
    <extension
          point="org.eclipse.core.expressions.definitions">
       <definition
-            id="Kopitiam.activeEditorIsCoq">
-         <with
-               variable="activeEditor">
-            <adapt
-                  type="dk.itu.coqoon.ui.CoqTopContainer">
-               <instanceof
-                     value="dk.itu.coqoon.ui.CoqEditor">
-               </instanceof>
-            </adapt>
-         </with>
-      </definition>
-      <definition
             id="Kopitiam.activeEditorIsJava">
          <with
                variable="activeEditor">
@@ -416,15 +107,72 @@
             </adapt>
          </with>
       </definition>
-      <definition
-            id="Kopitiam.activeEditorHasCoq">
-         <with
-               variable="activeEditor">
-            <adapt
-                  type="dk.itu.coqoon.ui.CoqTopContainer">
-            </adapt>
-         </with>
-      </definition>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commands">
+      <category
+            id="Kopitiam.category"
+            name="Kopitiam">
+      </category>
+      <command
+            categoryId="Kopitiam.category"
+            id="Kopitiam.verify_method"
+            name="Verify Java method command">
+      </command>
+      <command
+            categoryId="Kopitiam.category"
+            id="Kopitiam.save_proof_certificate"
+            name="Save Java proof certificate command">
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="true"
+            locationURI="popup:org.eclipse.jdt.ui.CompilationUnitEditor.EditorContext">
+         <command
+               commandId="Kopitiam.verify_method"
+               icon="platform:/plugin/dk.itu.coqoon.ui/icons/icon_lego.gif"
+               id="dk.itu.sdg.kopitiam.popupContribution"
+               label="Verify method"
+               style="push"
+               tooltip="Verify method">
+         </command>
+         <command
+               commandId="Kopitiam.save_proof_certificate"
+               icon="platform:/plugin/dk.itu.coqoon.ui/icons/checkmark.gif"
+               label="Save proof certificate"
+               style="push"
+               tooltip="Save proof certificate">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="menu:dk.itu.coqoon.ui.menus.coq">
+         <separator
+               name="dk.itu.sdg.kopitiam.menus.coq.separator"
+               visible="true">
+         </separator>
+         <menu
+               id="dk.itu.sdg.kopitiam.menus.coq.java"
+               label="Java">
+            <command
+                  commandId="Kopitiam.verify_method"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/icon_lego.gif"
+                  id="dk.itu.sdg.kopitiam.popupContribution"
+                  label="Verify method"
+                  style="push"
+                  tooltip="Verify method">
+            </command>
+            <command
+                  commandId="Kopitiam.save_proof_certificate"
+                  icon="platform:/plugin/dk.itu.coqoon.ui/icons/checkmark.gif"
+                  label="Save proof certificate"
+                  style="push"
+                  tooltip="Save proof certificate">
+            </command>
+         </menu>
+      </menuContribution>
    </extension>
    <extension
          point="org.eclipse.ui.ide.markerResolution">

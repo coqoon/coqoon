@@ -91,11 +91,16 @@ class JavaProofInitialisationRunner(
         jes.setGoals(goals)
       }
       //register handlers!
-      jes.activateHandler("Kopitiam.step_forward", new JavaStepForwardHandler)
-      jes.activateHandler("Kopitiam.step_all", new JavaStepAllHandler)
-      jes.activateHandler("Kopitiam.step_cursor", new JavaStepToCursorHandler)
-      jes.activateHandler("Kopitiam.step_backward", new JavaStepBackHandler)
-      jes.activateHandler("Kopitiam.retract", new JavaRetractAllHandler)
+      jes.activateHandler(
+          "dk.itu.coqoon.ui.commands.step_forward", new JavaStepForwardHandler)
+      jes.activateHandler(
+          "dk.itu.coqoon.ui.commands.step_all", new JavaStepAllHandler)
+      jes.activateHandler(
+          "dk.itu.coqoon.ui.commands.step_cursor", new JavaStepToCursorHandler)
+      jes.activateHandler(
+          "dk.itu.coqoon.ui.commands.step_backward", new JavaStepBackHandler)
+      jes.activateHandler(
+          "dk.itu.coqoon.ui.commands.retract", new JavaRetractAllHandler)
     }) match {
       case CoqTypes.Fail((_, message)) => fail(
           Activator.makeStatus(IStatus.ERROR, message))

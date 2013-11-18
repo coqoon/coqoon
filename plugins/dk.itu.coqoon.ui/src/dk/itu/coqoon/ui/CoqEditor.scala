@@ -140,9 +140,8 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     getSourceViewer.invalidateTextPresentation
   }
 
-  override def initializeKeyBindingScopes () : Unit = {
-    setKeyBindingScopes(List("Kopitiam.context").toArray)
-  }
+  override def initializeKeyBindingScopes =
+    setKeyBindingScopes(Array("dk.itu.coqoon.ui.contexts.coq"))
 
   // Support getting outline pages
   var outlinePage : Option[CoqContentOutlinePage] = None
