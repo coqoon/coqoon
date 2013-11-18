@@ -434,28 +434,6 @@
       </markerResolutionGenerator>
    </extension>
    <extension
-         point="org.eclipse.ui.navigator.navigatorContent">
-      <commonFilter
-            activeByDefault="true"
-            class="dk.itu.coqoon.ui.NoOutputFoldersFilter"
-            description="Hides Coq output folders."
-            id="dk.itu.sdg.kopitiam.commonFilter.OutputFolderFilter"
-            name="Coq output folders"
-            visibleInUI="true">
-      </commonFilter>
-   </extension>
-   <extension
-         point="org.eclipse.ui.navigator.viewer">
-      <viewerContentBinding
-            viewerId="org.eclipse.ui.navigator.ProjectExplorer">
-         <includes>
-            <contentExtension
-                  pattern="dk.itu.sdg.kopitiam.commonFilter.*">
-            </contentExtension>
-         </includes>
-      </viewerContentBinding>
-   </extension>
-   <extension
          point="dk.itu.coqoon.core.loadpath">
       <provider
             id="dk.itu.sdg.kopitiam/lp/charge/0.1"

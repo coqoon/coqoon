@@ -374,4 +374,26 @@
          </activeWhen>
       </handler>
    </extension>
+   <extension
+         point="org.eclipse.ui.navigator.navigatorContent">
+      <commonFilter
+            activeByDefault="true"
+            class="dk.itu.coqoon.ui.NoOutputFoldersFilter"
+            description="Hides Coq output folders."
+            id="dk.itu.coqoon.ui.commonFilter.OutputFolderFilter"
+            name="Coq output folders"
+            visibleInUI="true">
+      </commonFilter>
+   </extension>
+   <extension
+         point="org.eclipse.ui.navigator.viewer">
+      <viewerContentBinding
+            viewerId="org.eclipse.ui.navigator.ProjectExplorer">
+         <includes>
+            <contentExtension
+                  pattern="dk.itu.coqoon.ui.commonFilter.*">
+            </contentExtension>
+         </includes>
+      </viewerContentBinding>
+   </extension>
 </plugin>
