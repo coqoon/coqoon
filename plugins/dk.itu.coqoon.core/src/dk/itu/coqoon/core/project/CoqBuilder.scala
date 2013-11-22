@@ -379,6 +379,20 @@ class CoqBuilder extends IncrementalProjectBuilder {
       return Array()
     }
 
+    /* Make sure that the output directories are marked as derived (XXX: when,
+     * if ever, should the derived flag be cleared?) */
+    for (i <- coqProject.get.getLoadPathProviders) i match {
+      case DefaultOutputLoadPath(bin) =>
+        if (!bin.exists()) {
+          bin.create(IResource.DERIVED, true, null)
+        } else bin.setDerived(true, null)
+      case SourceLoadPath(_, Some(bin)) =>
+        if (!bin.exists()) {
+          bin.create(IResource.DERIVED, true, null)
+        } else bin.setDerived(true, null)
+      case _ =>
+    }
+
     getProject.deleteMarkers(
         ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_ZERO)
     val monitor = SubMonitor.convert(monitor_, "Building", 1)
