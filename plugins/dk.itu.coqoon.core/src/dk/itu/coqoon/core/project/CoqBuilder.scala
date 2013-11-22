@@ -123,50 +123,79 @@ class CoqBuilder extends IncrementalProjectBuilder {
       dt.getDependencies(path).flatMap(_._3).exists(_.toFile.lastModified > lm)
     }
 
-    class BuildTask(val out : IPath) {
+    val taskMonitor = new Object
+
+    class BuildTask(val out : IPath) extends Thread {
+      import BuildTask._
       import org.eclipse.core.runtime.{Status, IStatus, CoreException}
 
-      def run(monitor : SubMonitor) = try {
-        monitor.beginTask("Compiling " + out.lastSegment, 2)
+      private var result_ : Result = Waiting
+      def getResult() = taskMonitor synchronized { result_ }
+      def setResult(r : Result) = taskMonitor synchronized {
+        result_ = r
+        taskMonitor.notifyAll
+      }
+
+      override def run() = setResult(try {
         objectToSource(out) match {
           case in :: Nil =>
             val inF = makePathRelative(in).map(getProject.getFile)
-            val outF = makePathRelative(out).map(getProject.getFile)
             val runner = new CoqCompilerRunner(inF.get)
             runner.setTicker(
-                Some(() => !isInterrupted && !monitor.isCanceled))
-            runner.run(monitor.newChild(1)) match {
-              case s : CoqCompilerSuccess =>
-                outF.foreach(s.save(_, monitor.newChild(1)))
-              case CoqCompilerFailure(
-                  _, _, CompilationError(_, line, _, _, message)) =>
-                inF.foreach(createLineErrorMarker(_, line.toInt, message.trim))
-              case _ =>
-            }
-          case Nil =>
-            throw new CoreException(new Status(
-                IStatus.ERROR, ManifestIdentifiers.PLUGIN,
-                "Not enough source files for " + out))
-          case _ =>
-            throw new CoreException(new Status(
-                IStatus.ERROR, ManifestIdentifiers.PLUGIN,
-                "Too many source files for " + out))
+              Some(() => !isInterrupted && !monitor.isCanceled))
+            CompilerDone(runner.run(null))
+          case Nil => Error("Not enough source files for " + out)
+          case _ => Error("Too many source files for " + out)
         }
       } catch {
-        case e : CoreException =>
-          val f = objectToSource(out).flatMap(
-              makePathRelative).map(getProject.getFile)
-          f.foreach(createResourceErrorMarker(_, e.getStatus.getMessage.trim))
-      }
+        case e : CoreException => Error(e.getStatus.getMessage.trim)
+      })
+    }
+    object BuildTask {
+      sealed abstract class Result
+      case object Waiting extends Result
+      case class CompilerDone(val r : CoqCompilerResult) extends Result
+      case class Error(val s : String) extends Result
     }
 
-    monitor.beginTask("Compiling", dt.getDependencies().size)
+    monitor.beginTask(
+        "Building " + getProject.getName, dt.getDependencies().size)
 
     var completed = Set[IPath]()
     var candidates : Seq[IPath] = Seq()
     do {
-      candidates.foreach(c => new BuildTask(c).run(
-          monitor.newChild(1, SubMonitor.SUPPRESS_NONE)))
+      taskMonitor synchronized {
+        import BuildTask._
+
+        val tasks = candidates.map(a => new BuildTask(a))
+        tasks.foreach(_.start)
+
+        var last = tasks.count(a => a.getResult == Waiting)
+        while (tasks.exists(a => a.getResult == Waiting)) {
+          monitor.subTask(
+              "Compiling " + tasks.filter(a => a.getResult == Waiting).map(
+                  _.out.lastSegment).mkString(", "))
+          taskMonitor.wait
+          val now = tasks.count(a => a.getResult == Waiting)
+          monitor.worked(last - now)
+          last = now
+        }
+
+        for (i <- tasks; j <- Some(i.getResult)) j match {
+          case CompilerDone(s : CoqCompilerSuccess) =>
+            makePathRelative(i.out).map(
+                getProject.getFile).foreach(p => s.save(p, null))
+          case CompilerDone(CoqCompilerFailure(
+              _, _, CompilationError(_, line, _, _, message))) =>
+            objectToSource(i.out).flatMap(
+                makePathRelative).map(getProject.getFile).foreach(
+                    createLineErrorMarker(_, line.toInt, message.trim))
+          case Error(text) =>
+            objectToSource(i.out).flatMap(
+                makePathRelative).map(getProject.getFile).foreach(
+                    createResourceErrorMarker(_, text.trim))
+        }
+      }
       completed ++= candidates
       dt.resolveDependencies
 
@@ -186,7 +215,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
           case (need, needNot) =>
             completed ++= needNot
             monitor.setWorkRemaining(need.size + cannot.size)
-            need
+            need.take(2)
         }
       }
     } while (candidates.size != 0 && !isInterrupted && !monitor.isCanceled)
@@ -352,8 +381,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
 
     getProject.deleteMarkers(
         ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_ZERO)
-    val monitor = SubMonitor.convert(
-        monitor_, "Building " + getProject.getName, 1)
+    val monitor = SubMonitor.convert(monitor_, "Building", 1)
     val args = scala.collection.JavaConversions.mapAsScalaMap(args_).toMap
     try {
       val delta = getDelta(getProject())
