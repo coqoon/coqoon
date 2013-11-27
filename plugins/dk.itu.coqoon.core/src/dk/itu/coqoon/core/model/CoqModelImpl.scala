@@ -413,6 +413,20 @@ private case class CoqVernacFileImpl(
       val s = new ParserStack[ICoqScriptElement, CoqScriptGroupDisposition]()
       import CoqSentence.Classifier._
       for ((text, synthetic) <- sentences) text match {
+        case SectionStartSentence(identifier) =>
+          s.pushContext(CoqSectionGroup(identifier))
+          s.push(CoqScriptSentenceImpl(
+              text, synthetic, CoqVernacFileImpl.this))
+        case SectionEndSentence(identifier) =>
+          s.push(CoqScriptSentenceImpl(
+              text, synthetic, CoqVernacFileImpl.this))
+          val (tag, body) = s.popContext(CoqSectionGroup(identifier))
+          s.push(CoqScriptGroupImpl(tag, body.reverse, CoqVernacFileImpl.this))
+
+        case DefinitionSentence(_, _, _, _) =>
+          s.push(CoqScriptSentenceImpl(
+              text, synthetic, CoqVernacFileImpl.this))
+
         case AssertionSentence(keyword, identifier, body) =>
           s.pushContext(CoqProofGroup(identifier))
           s.push(CoqScriptSentenceImpl(
