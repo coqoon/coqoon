@@ -406,12 +406,30 @@ private case class CoqVernacFileImpl(
   private class Cache extends ICache {
     override def destroy = Seq(sentences).map(_.clear)
 
-    import dk.itu.coqoon.core.coqtop.CoqSentence
+    import dk.itu.coqoon.core.coqtop.{CoqSentence, ParserStack}
     private[CoqVernacFileImpl] final val sentences =
         CacheSlot[Seq[ICoqScriptElement]] {
       val content = FunctionIterator.lines(res.getContents).mkString("\n")
-      CoqSentence.getNextSentences(content, 0, content.length).map(a =>
-          new CoqScriptSentenceImpl(a._1, a._2, CoqVernacFileImpl.this))
+      val sentences = CoqSentence.getNextSentences(content, 0, content.length)
+
+      val s = new ParserStack[ICoqScriptElement, CoqScriptGroupDisposition]()
+      import CoqSentence.Classifier._
+      for ((text, synthetic) <- sentences) text match {
+        case AssertionSentence(keyword, identifier, body) =>
+          s.pushContext(CoqProofGroup(identifier))
+          s.push(CoqScriptSentenceImpl(
+              text, synthetic, CoqVernacFileImpl.this))
+        case ProofEndSentence(keyword) =>
+          s.push(CoqScriptSentenceImpl(
+              text, synthetic, CoqVernacFileImpl.this))
+          val (tag, body) = s.popContext(f => f.isInstanceOf[CoqProofGroup])
+          s.push(CoqScriptGroupImpl(tag, body.reverse, CoqVernacFileImpl.this))
+        case i =>
+          s.push(CoqScriptSentenceImpl(
+              text, synthetic, CoqVernacFileImpl.this))
+      }
+
+      s.getStack.reverse
     }
   }
   private def getCache() = getModel.getCacheFor(this, new Cache)
@@ -445,6 +463,8 @@ private case class CoqScriptGroupImpl(
     extends ParentImpl(null, parent) with ICoqScriptGroup {
   override def getDisposition = disposition
   override def getChildren = elements
+
+  override def toString = "(" + disposition + ")"
 }
 
 private case class CoqObjectFileImpl(
