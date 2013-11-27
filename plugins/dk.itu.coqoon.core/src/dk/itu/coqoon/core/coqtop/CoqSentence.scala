@@ -84,4 +84,70 @@ object CoqSentence {
     }
     steps.result
   }
+
+  object Classifier {
+    sealed abstract class Classification
+
+    case class Assertion(
+        keyword : String, identifier : String, body : String)
+            extends Classification
+    object AssertionSentence {
+      val expr =
+        ("^\\s*(Theorem|Lemma|Remark|Fact|Corollary|" +
+         "Proposition|Definition|Example)\\s+([a-zA-Z0-9_]+)(?s)(.*)\\.$").r
+      def unapply(input : CharSequence) = input match {
+        case expr(keyword, identifier, body) =>
+          Some((keyword, identifier, body))
+        case _ => None
+      }
+    }
+
+    case class Fixpoint(
+        keyword : String, identifier : String, body : String)
+            extends Classification
+    object FixpointSentence {
+      val expr =
+        ("^\\s*(Fixpoint|CoFixpoint)\\s+([a-zA-Z0-9_]+)(?s)(.*)\\.$").r
+      def unapply(input : CharSequence) = input match {
+        case expr(keyword, identifier, body) =>
+          Some((keyword, identifier, body))
+        case _ => None
+      }
+    }
+
+    case class Inductive(
+        keyword : String, identifier : String, body : String)
+            extends Classification
+    object InductiveSentence {
+      val expr =
+        ("^\\s*(Inductive|CoInductive)\\s+([a-zA-Z0-9_]+)(?s)(.*)\\.$").r
+      def unapply(input : CharSequence) = input match {
+        case expr(keyword, identifier, body) =>
+          Some((keyword, identifier, body))
+        case _ => None
+      }
+    }
+
+    case class Definition(
+        keyword : String, identifier : String, binders : String, body : String)
+            extends Classification
+    object DefinitionSentence {
+      val expr =
+        ("^\\s*(Definition|Let)\\s+([a-zA-Z0-9_]+)(?s)(.*):=(.*)\\.$").r
+      def unapply(input : CharSequence) = input match {
+        case expr(keyword, identifier, binders, body) =>
+          Some((keyword, identifier, binders, body))
+        case _ => None
+      }
+    }
+
+    case class ProofEnd(keyword : String) extends Classification
+    object ProofEndSentence {
+      val expr = ("^\\s*(Qed|Defined|Admitted)\\s*\\.$").r
+      def unapply(input : CharSequence) = input match {
+        case expr(keyword) => Some((keyword))
+        case _ => None
+      }
+    }
+  }
 }
