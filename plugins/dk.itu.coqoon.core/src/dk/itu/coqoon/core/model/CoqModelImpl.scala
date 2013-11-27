@@ -382,15 +382,13 @@ private object CoqPackageFragmentImpl {
     case a : IFile => a
   }
 
-  val vernacFilter = (a : IFile) => {
-    a.getContentDescription.getContentType.isKindOf(
-        ICoqVernacFile.CONTENT_TYPE)
-  }
+  val vernacFilter = (a : IFile) =>
+    Option(a.getContentDescription).map(_.getContentType).map(_.isKindOf(
+        ICoqVernacFile.CONTENT_TYPE)).getOrElse(false)
 
-  val objectFilter = (a : IFile) => {
-    a.getContentDescription.getContentType.isKindOf(
-        ICoqObjectFile.CONTENT_TYPE)
-  }
+  val objectFilter = (a : IFile) =>
+    Option(a.getContentDescription).map(_.getContentType).map(_.isKindOf(
+        ICoqObjectFile.CONTENT_TYPE)).getOrElse(false)
 }
 
 import java.io.InputStream
