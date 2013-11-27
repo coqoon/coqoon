@@ -183,6 +183,8 @@ class ParserStack[A, B] {
     (tag, prefix.map(_.left.get))
   }
 
+  def getInnermostContext() : Option[B] =
+    stack.find(_.isRight).flatMap(_.right.toOption)
   def getStack() : Seq[A] = stack.flatMap(_.left.toSeq)
   def isComplete() = stack.forall(p => p.isLeft)
 }
