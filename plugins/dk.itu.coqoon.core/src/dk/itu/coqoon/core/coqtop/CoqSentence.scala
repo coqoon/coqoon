@@ -86,11 +86,26 @@ object CoqSentence {
   }
 
   object Classifier {
-    sealed abstract class Classification
+    object SectionStartSentence {
+      val expr =
+        ("^\\s*Section\\s+([a-zA-Z0-9_]+)\\s*\\.$").r
+      def unapply(input : CharSequence) = input match {
+        case expr(identifier) =>
+          Some(identifier)
+        case _ => None
+      }
+    }
 
-    case class Assertion(
-        keyword : String, identifier : String, body : String)
-            extends Classification
+    object SectionEndSentence {
+      val expr =
+        ("^\\s*End\\s+([a-zA-Z0-9_]+)\\s*\\.$").r
+      def unapply(input : CharSequence) = input match {
+        case expr(identifier) =>
+          Some(identifier)
+        case _ => None
+      }
+    }
+
     object AssertionSentence {
       val expr =
         ("^\\s*(Theorem|Lemma|Remark|Fact|Corollary|" +
@@ -102,9 +117,6 @@ object CoqSentence {
       }
     }
 
-    case class Fixpoint(
-        keyword : String, identifier : String, body : String)
-            extends Classification
     object FixpointSentence {
       val expr =
         ("^\\s*(Fixpoint|CoFixpoint)\\s+([a-zA-Z0-9_]+)(?s)(.*)\\.$").r
@@ -115,9 +127,6 @@ object CoqSentence {
       }
     }
 
-    case class Inductive(
-        keyword : String, identifier : String, body : String)
-            extends Classification
     object InductiveSentence {
       val expr =
         ("^\\s*(Inductive|CoInductive)\\s+([a-zA-Z0-9_]+)(?s)(.*)\\.$").r
@@ -128,9 +137,6 @@ object CoqSentence {
       }
     }
 
-    case class Definition(
-        keyword : String, identifier : String, binders : String, body : String)
-            extends Classification
     object DefinitionSentence {
       val expr =
         ("^\\s*(Definition|Let)\\s+([a-zA-Z0-9_]+)(?s)(.*):=(.*)\\.$").r
@@ -141,7 +147,6 @@ object CoqSentence {
       }
     }
 
-    case class ProofEnd(keyword : String) extends Classification
     object ProofEndSentence {
       val expr = ("^\\s*(Qed|Defined|Admitted)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
