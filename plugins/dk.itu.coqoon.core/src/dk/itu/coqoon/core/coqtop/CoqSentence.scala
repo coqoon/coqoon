@@ -151,3 +151,33 @@ object CoqSentence {
     }
   }
 }
+
+class ParserStack[A, B] {
+  import dk.itu.coqoon.core.utilities.TryCast
+
+  var stack = List[Either[A, B]]()
+
+  def push(value : A) = stack +:= Left(value)
+  def pushContext(value : B) = stack +:= Right(value)
+
+  def popContext(value : B) : (B, Seq[A]) = popContext(a => value == a)
+  def popContext(f : B => Boolean) : (B, Seq[A]) = {
+    var (prefix, remainder) = stack.span {
+      case Right(v) if f(v) => false
+      case Right(v) =>
+        throw new Exception(
+            "Innermost context " + v + " not accepted by comparator")
+      case _ => true
+    }
+    if (remainder.headOption.flatMap(_.right.toOption).map(f) != Some(true))
+      throw new Exception(
+          "" + remainder.headOption + " not acceptable to comparator")
+    val tag = remainder.head.right.get
+    stack = remainder.tail
+    /* prefix can only contain Lefts at this point */
+    (tag, prefix.map(_.left.get))
+  }
+
+  def getStack() : Seq[A] = stack.flatMap(_.left.toSeq)
+  def isComplete() = stack.forall(p => p.isLeft)
+}
