@@ -82,63 +82,14 @@ object OutlineVernacular {
 object SentenceFinder {
   private val whitespace = Set(' ', '\r', '\n', '\t')
 
-  def findCommands(script : String, offset : Int = 0) : List[(Int, Int)] = {
-    if (offset >= script.length) Nil
-    else if (whitespace contains script(offset)) findCommands(script, offset + 1)
-    else {
-      (for (end <- getCommand(script, offset))
-       yield (offset, end - offset + 1) :: findCommands(script, end + 1)) getOrElse Nil
-    }
-  }
-
-  @tailrec
-  private def skipString(script : String, offset : Int) : Option[Int] = {
-    if (offset >= script.length) None
-    else {
-      script(offset) match {
-        case '\\' => skipString(script, offset + 2)
-        case '"' => Some(offset + 1)
-        case _ => skipString(script, offset + 1)
-      }
-    }
-  }
-
-  @tailrec
-  private def skipComment(script : String, offset : Int, level : Int = 0) : Option[Int] =
-    if (offset + 1 >= script.length) None
-    else if (script(offset) == '*' && script(offset + 1) == ')') {
-      if (level <= 1) Some(offset + 1)
-      else skipComment(script, offset + 1, level - 1)
-    } else if (script(offset) == '(' && script(offset + 1) == '*') {
-      skipComment(script, offset + 1, level + 1)
-    } else skipComment(script, offset + 1, level)
-
-  private def isCommandEnd(script : String, pos : Int) : Boolean =
-    pos + 1 < script.length &&
-    script(pos) == '.' &&
-    (whitespace contains script(pos + 1))
-
-  private def getCommand(script : String, ptr : Int) : Option[Int] = {
-    if (ptr >= script.length) None // Overshot the end somehow
-    else if (ptr == script.length - 1) { // Reached end of proof script
-      if (script(ptr) == '.') Some(ptr)
-      else None
-    }
-    else script(ptr) match {
-      case '"' =>
-        for {
-          stringEnd <- skipString(script, ptr + 1)
-          cmd <- getCommand(script, stringEnd)
-        } yield cmd
-      case '(' if script(ptr + 1) == '*' =>
-        for {
-          commentEnd <- skipComment(script, ptr)
-          cmd <- getCommand(script, commentEnd)
-        } yield cmd
-      case '.' if whitespace contains script(ptr + 1) => Some(ptr)
-      case _ => getCommand(script, ptr + 1)
-    }
-  }
+  import dk.itu.coqoon.core.coqtop.CoqSentence
+  def findCommands(script : String, offset : Int = 0) : List[(Int, Int)] =
+    CoqSentence.getNextSentences(script, offset, script.length).
+        filter(a => !a._2).
+        map(a => {
+          val leadingWhitespace = a._1.takeWhile(whitespace.contains).length
+          (a._1.start + leadingWhitespace, a._1.length - leadingWhitespace)
+        }).toList
 }
 // End pass 1
 
