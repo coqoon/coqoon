@@ -434,8 +434,13 @@ private case class CoqVernacFileImpl(
         case ProofEndSentence(keyword) =>
           s.push(CoqScriptSentenceImpl(
               text, synthetic, CoqVernacFileImpl.this))
-          val (tag, body) = s.popContext(f => f.isInstanceOf[CoqProofGroup])
-          s.push(CoqScriptGroupImpl(tag, body.reverse, CoqVernacFileImpl.this))
+          s.getInnermostContext match {
+            case Some(q @ CoqProofGroup(identifier)) =>
+              val (tag, body) = s.popContext(q)
+              s.push(CoqScriptGroupImpl(
+                  tag, body.reverse, CoqVernacFileImpl.this))
+            case _ =>
+          }
         case i =>
           s.push(CoqScriptSentenceImpl(
               text, synthetic, CoqVernacFileImpl.this))
