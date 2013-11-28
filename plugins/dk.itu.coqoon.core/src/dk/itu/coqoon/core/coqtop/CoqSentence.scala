@@ -147,6 +147,14 @@ object CoqSentence {
       }
     }
 
+    object ProofStartSentence {
+      val expr = ("^\\s*(Proof|Next Obligation)\\s*\\.$").r
+      def unapply(input : CharSequence) = input match {
+        case expr(keyword) => Some((keyword))
+        case _ => None
+      }
+    }
+
     object ProofEndSentence {
       val expr = ("^\\s*(Qed|Defined|Admitted)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
