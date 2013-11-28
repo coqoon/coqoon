@@ -408,45 +408,70 @@ private case class CoqVernacFileImpl(
     private[CoqVernacFileImpl] final val sentences =
         CacheSlot[Seq[ICoqScriptElement]] {
       val content = FunctionIterator.lines(res.getContents).mkString("\n")
-      val sentences = CoqSentence.getNextSentences(content, 0, content.length)
+      var sentences = CoqSentence.getNextSentences(content, 0, content.length)
 
-      val s = new ParserStack[ICoqScriptElement, CoqScriptGroupDisposition]()
-      import CoqSentence.Classifier._
-      for ((text, synthetic) <- sentences) text match {
-        case SectionStartSentence(identifier) =>
-          s.pushContext(CoqSectionGroup(identifier))
-          s.push(CoqScriptSentenceImpl(
-              text, synthetic, CoqVernacFileImpl.this))
-        case SectionEndSentence(identifier) =>
-          s.push(CoqScriptSentenceImpl(
-              text, synthetic, CoqVernacFileImpl.this))
-          val (tag, body) = s.popContext(CoqSectionGroup(identifier))
-          s.push(CoqScriptGroupImpl(tag, body.reverse, CoqVernacFileImpl.this))
+      val stack = new ParserStack[
+        ICoqScriptElement, CoqScriptGroupDisposition]()
 
-        case DefinitionSentence(_, _, _, _) =>
-          s.push(CoqScriptSentenceImpl(
-              text, synthetic, CoqVernacFileImpl.this))
+      import dk.itu.coqoon.core.utilities.Substring
+      def pushSentence(ss : (Substring, Boolean)*) =
+        ss.foreach(v => stack.push(CoqScriptSentenceImpl(
+            v._1, v._2, CoqVernacFileImpl.this)))
 
-        case AssertionSentence(keyword, identifier, body) =>
-          s.pushContext(CoqProofGroup(identifier))
-          s.push(CoqScriptSentenceImpl(
-              text, synthetic, CoqVernacFileImpl.this))
-        case ProofEndSentence(keyword) =>
-          s.push(CoqScriptSentenceImpl(
-              text, synthetic, CoqVernacFileImpl.this))
-          s.getInnermostContext match {
-            case Some(q @ CoqProofGroup(identifier)) =>
-              val (tag, body) = s.popContext(q)
-              s.push(CoqScriptGroupImpl(
-                  tag, body.reverse, CoqVernacFileImpl.this))
-            case _ =>
-          }
-        case i =>
-          s.push(CoqScriptSentenceImpl(
-              text, synthetic, CoqVernacFileImpl.this))
+      while (sentences != Nil) {
+        import CoqSentence.Classifier._
+        sentences = sentences match {
+          case (h @ (SectionStartSentence(identifier), _)) :: tail =>
+            stack.pushContext(CoqSectionGroup(identifier))
+            pushSentence(h)
+            tail
+          case (h @ (SectionEndSentence(identifier), _)) :: tail =>
+            pushSentence(h)
+            val (tag, body) = stack.popContext(CoqSectionGroup(identifier))
+            stack.push(CoqScriptGroupImpl(
+                tag, body.reverse, CoqVernacFileImpl.this))
+            tail
+
+          case (h @ (DefinitionSentence(_, _, _, _), _)) :: tail =>
+            pushSentence(h)
+            tail
+
+          case (h @ (AssertionSentence(_, identifier, _), _)) :: tail =>
+            stack.pushContext(CoqProofGroup(identifier))
+            pushSentence(h)
+            tail
+          case (h @ (ProofEndSentence(_), _)) ::
+               (i @ (ProofStartSentence(_), _)) :: tail =>
+            /* This isn't really the end of a proof (perhaps Program is being
+             * used?) */
+            pushSentence(h, i)
+            tail
+          case (h @ (ProofEndSentence(_), _)) :: tail =>
+            pushSentence(h)
+            stack.getInnermostContext match {
+              case Some(q @ CoqProofGroup(identifier)) =>
+                val (tag, body) = stack.popContext(q)
+                stack.push(CoqScriptGroupImpl(
+                    tag, body.reverse, CoqVernacFileImpl.this))
+              case _ =>
+            }
+            tail
+
+          case h :: (i @ (ProofStartSentence(), _)) :: tail =>
+            /* XXX: scan "h" for a proof identifier */
+            stack.pushContext(CoqProofGroup("(unknown)"))
+            pushSentence(h, i)
+            tail
+
+          case h :: tail =>
+            pushSentence(h)
+            tail
+          case Nil =>
+            Nil
+        }
       }
 
-      s.getStack.reverse
+      stack.getStack.reverse
     }
   }
   private def getCache() = getModel.getCacheFor(this, new Cache)
