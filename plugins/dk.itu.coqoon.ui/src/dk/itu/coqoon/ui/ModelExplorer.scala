@@ -18,7 +18,10 @@ class ModelExplorer extends ViewPart {
 
   override def createPartControl(parent : Composite) = {
     tree = new TreeViewer(parent)
-    tree.setLabelProvider(new LabelProvider)
+    tree.setLabelProvider(new LabelProvider {
+      override def getText(a : Any) =
+        Option(a).map(_.toString.trim).getOrElse("null")
+    })
     tree.setContentProvider(new ModelContentProvider)
     tree.setInput(ICoqModel.getInstance)
   }
