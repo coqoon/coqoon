@@ -110,8 +110,14 @@ private case class CoqModelImpl(
       }
       None
     case f : IFile if hasNature(f.getProject) =>
-      toCoqElement(f.getParent).flatMap(TryCast[CoqPackageFragmentImpl]).map(
-          fragment => new CoqVernacFileImpl(f, fragment))
+      toCoqElement(f.getParent).flatMap(
+          TryCast[CoqPackageFragmentImpl]).flatMap(
+        fragment =>
+          if (CoqPackageFragmentImpl.vernacFilter(f)) {
+            Some(new CoqVernacFileImpl(f, fragment))
+          } else if (CoqPackageFragmentImpl.objectFilter(f)) {
+            Some(new CoqObjectFileImpl(f, fragment))
+          } else None)
     case _ => None
   }
 
