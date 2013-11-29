@@ -238,6 +238,12 @@ class CoqBuilder extends IncrementalProjectBuilder {
            """mkdir -p "`dirname "$@"`" && """ +
            """$(COQC) $(COQFLAGS) "$<" && mv "$<o" "$@"""" + "\n\n"
 
+    if (cp.getLoadPathProviders.exists(
+        a => a.isInstanceOf[ProjectLoadPath] ||
+             a.isInstanceOf[ExternalLoadPath] ||
+             a.isInstanceOf[AbstractLoadPath]))
+      sb ++= "include CoqoonMakefile.vars\n\n"
+
     def getFirstIdent(base_ : String, predicate : String => Boolean) = {
       val base = base_.toUpperCase.replaceAll("[^a-zA-Z0-9]+", "_")
       var name = base
@@ -269,7 +275,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
           val name = getFirstIdent(coqdir.getOrElse("external") + "_path",
               n => identifiers.contains(n))
           identifiers += name
-          sb ++= "override COQFLAGS += -R $(" + name + ")" +
+          sb ++= "override COQFLAGS += -R $(" + name + ") " +
               CoqProjectEntry.escape(coqdir.getOrElse(""))
         case AbstractLoadPath(identifier) =>
           val name = getFirstIdent(identifier + "_flags",
