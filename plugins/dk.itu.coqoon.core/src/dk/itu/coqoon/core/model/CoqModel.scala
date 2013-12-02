@@ -309,7 +309,8 @@ sealed trait ICoqScriptElement extends ICoqElement
 trait ICoqScriptSentence extends ICoqScriptElement {
   override def getElementType = classOf[ICoqScriptSentence]
 
-  def getText() : CharSequence
+  import dk.itu.coqoon.core.utilities.Substring
+  def getText() : Substring
   def isSynthetic() : Boolean
 }
 

@@ -493,8 +493,9 @@ private case class CoqVernacFileImpl(
   override def getChildren = getCache.sentences.get
 }
 
+import dk.itu.coqoon.core.utilities.Substring
 private case class CoqScriptSentenceImpl(
-    private val text : CharSequence,
+    private val text : Substring,
     private val synthetic : Boolean,
     private val parent : ICoqElement with IParent)
     extends CoqElementImpl(null, parent) with ICoqScriptSentence {
