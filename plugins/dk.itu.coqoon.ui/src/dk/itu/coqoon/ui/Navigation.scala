@@ -10,7 +10,7 @@ import dk.itu.coqoon.core.coqtop.CoqSentence
 
 class OpenDeclarationHandler extends EditorHandler {
   override def execute(ev : ExecutionEvent) : AnyRef = {
-    val editor = TryAdapt[CoqEditor](UIUtils.getWorkbench.
+    val editor = TryCast[CoqEditor](UIUtils.getWorkbench.
         getActiveWorkbenchWindow.getActivePage.getActiveEditor)
     editor match {
       case Some(editor) =>
@@ -28,8 +28,9 @@ class OpenDeclarationHandler extends EditorHandler {
                   Option[ICoqScriptGroup] = f match {
                 case e : ICoqScriptSentence => None
                 case e : ICoqScriptGroup => e.getDisposition match {
-                  case CoqProofGroup(id) if id == identifier =>
-                    Some(e)
+                  case CoqLtacGroup(id) if id == identifier => Some(e)
+                  case CoqProofGroup(id) if id == identifier => Some(e)
+                  case CoqDefinitionGroup(id) if id == identifier => Some(e)
                   case _ =>
                     for (i <- e.getChildren;
                          j <- findIdentifier(i))
