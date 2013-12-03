@@ -129,6 +129,12 @@
                value="Printing Universes">
          </parameter>
       </key>
+      <key
+            commandId="dk.itu.coqoon.ui.commands.open_declaration"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="F3">
+      </key>
    </extension>
    <extension
          point="org.eclipse.ui.editors">
@@ -227,6 +233,11 @@
                name="Flag"
                optional="false">
          </commandParameter>
+      </command>
+      <command
+            categoryId="dk.itu.coqoon.ui.commands.category"
+            id="dk.itu.coqoon.ui.commands.open_declaration"
+            name="Open declaration command">
       </command>
    </extension>
    <extension
@@ -406,6 +417,15 @@
          <activeWhen>
             <reference
                   definitionId="dk.itu.coqoon.ui.expressions.activeEditorHasCoq">
+            </reference>
+         </activeWhen>
+      </handler>
+      <handler
+            class="dk.itu.coqoon.ui.OpenDeclarationHandler"
+            commandId="dk.itu.coqoon.ui.commands.open_declaration">
+         <activeWhen>
+            <reference
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
             </reference>
          </activeWhen>
       </handler>
@@ -635,10 +655,21 @@
                   </parameter>
                </command>
             </menu>
+            <separator
+                  name="dk.itu.coqoon.ui.menus.coq.separator2"
+                  visible="true">
+            </separator>
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.open_declaration"
+                  label="Open Declaration"
+                  style="push"
+                  tooltip="Open Declaration">
+            </command>
             <visibleWhen
                   checkEnabled="false">
                <reference
-                     definitionId="dk.itu.coqoon.ui.expressions.activeEditorHasCoq" />
+                     definitionId="dk.itu.coqoon.ui.expressions.activeEditorHasCoq">
+               </reference>
             </visibleWhen>
          </menu>
       </menuContribution>
