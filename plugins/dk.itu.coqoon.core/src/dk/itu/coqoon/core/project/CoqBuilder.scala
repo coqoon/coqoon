@@ -21,7 +21,7 @@ import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.coqtop.CoqProgram
 import dk.itu.coqoon.core.coqtop.CoqSentence
 import dk.itu.coqoon.core.utilities.{
-  TryCast, JobRunner, Substring, CacheSlot, FunctionIterator}
+  TryCast, JobRunner, Substring, CacheSlot, TotalReader}
 
 import org.eclipse.core.resources.IncrementalProjectBuilder
 import org.eclipse.core.resources.{IResourceDelta, IResourceDeltaVisitor}
@@ -543,7 +543,7 @@ object CoqBuilder {
 
   private def generateRefs(file : IFile) : Seq[CoqReference] = {
     var refs = Seq.newBuilder[CoqReference]
-    val content = FunctionIterator.lines(file.getContents).mkString("\n")
+    val content = TotalReader.read(file.getContents)
     val s = CoqSentence.getNextSentences(content, 0, content.length)
     for ((text, synthetic) <- s if !synthetic) text.toString.trim match {
       case Load(what) =>

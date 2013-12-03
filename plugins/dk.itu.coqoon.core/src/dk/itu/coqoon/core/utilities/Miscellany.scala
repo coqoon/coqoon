@@ -43,19 +43,20 @@ object Substring {
     new Substring(base, start, end)
 }
 
-class FunctionIterator[A](f : () => Option[A]) extends Iterator[A] {
-  private var cache : Option[A] = None
-  private def prepare() : Unit = cache = cache.orElse { f() }
-  override def next() = { prepare(); try cache.get finally cache = None }
-  override def hasNext() = { prepare(); (cache != None) }
-}
-object FunctionIterator {
-  def apply[A](f : () => A) = new FunctionIterator(() => Option(f()))
+object TotalReader {
   import java.io.{Reader, InputStream, BufferedReader, InputStreamReader}
-  def lines(i : InputStream) : FunctionIterator[String] =
-    lines(new InputStreamReader(i))
-  def lines(i : Reader) : FunctionIterator[String] =
-    apply(new BufferedReader(i).readLine)
+  def read(is : InputStream) : String = read(new InputStreamReader(is))
+  def read(r : Reader) : String = _read(new BufferedReader(r))
+  private def _read(reader : BufferedReader) = {
+    val builder = new StringBuilder
+    val buf = new Array[Char](8192)
+    var count = 0
+    do {
+      builder ++= buf.toSeq.take(count)
+      count = reader.read(buf)
+    } while (count != -1)
+    builder.result
+  }
 }
 
 class CacheSlot[A](constructor : () => A) {

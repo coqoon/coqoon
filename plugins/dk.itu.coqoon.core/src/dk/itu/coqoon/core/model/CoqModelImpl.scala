@@ -18,7 +18,7 @@ package dk.itu.coqoon.core.model
 
 import dk.itu.coqoon.core.project.{
   CoqProjectFile, CoqProjectEntry, VariableEntry, RecursiveEntry}
-import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot, FunctionIterator}
+import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot, TotalReader}
 
 import org.eclipse.core.runtime.{Path, IPath, IProgressMonitor}
 import org.eclipse.core.resources._
@@ -193,8 +193,7 @@ private case class CoqProjectImpl(
         CacheSlot[CoqProjectFile] {
       val f = res.getFile("_CoqProject")
       if (f.exists) {
-        CoqProjectFile.fromString(
-            FunctionIterator.lines(f.getContents).mkString("\n"))
+        CoqProjectFile.fromString(TotalReader.read(f.getContents))
       } else Seq()
     }
 
@@ -413,7 +412,7 @@ private case class CoqVernacFileImpl(
     import dk.itu.coqoon.core.coqtop.{CoqSentence, ParserStack}
     private[CoqVernacFileImpl] final val sentences =
         CacheSlot[Seq[ICoqScriptElement]] {
-      val content = FunctionIterator.lines(res.getContents).mkString("\n")
+      val content = TotalReader.read(res.getContents)
       var sentences = CoqSentence.getNextSentences(content, 0, content.length)
 
       val stack = new ParserStack[

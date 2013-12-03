@@ -17,7 +17,7 @@
 package dk.itu.coqoon.core.coqtop
 
 import dk.itu.coqoon.core.{Activator, CoqoonPreferences}
-import dk.itu.coqoon.core.utilities.FunctionIterator
+import dk.itu.coqoon.core.utilities.TotalReader
 
 trait CoqProgram {
   def path : String
@@ -55,7 +55,7 @@ trait CoqProgramInstance {
   def stdin : Writer
   def stdout : Reader
   def readAll : (Int, String) = {
-    val r = FunctionIterator.lines(stdout).mkString("\n")
+    val r = TotalReader.read(stdout)
     (waitFor, r)
   }
 
