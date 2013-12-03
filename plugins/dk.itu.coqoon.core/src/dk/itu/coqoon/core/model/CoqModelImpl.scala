@@ -411,9 +411,10 @@ private case class CoqVernacFileImpl(
         ICoqScriptElement, CoqScriptGroupDisposition]()
 
       import dk.itu.coqoon.core.utilities.Substring
+      def wrapSentence(ss : (Substring, Boolean)*) =
+        ss.map(v => CoqScriptSentenceImpl(v._1, v._2, CoqVernacFileImpl.this))
       def pushSentence(ss : (Substring, Boolean)*) =
-        ss.foreach(v => stack.push(CoqScriptSentenceImpl(
-            v._1, v._2, CoqVernacFileImpl.this)))
+        wrapSentence(ss : _*).foreach(stack.push)
 
       while (sentences != Nil) {
         import CoqSentence.Classifier._
@@ -429,8 +430,13 @@ private case class CoqVernacFileImpl(
                 tag, body.reverse, CoqVernacFileImpl.this))
             tail
 
-          case (h @ (DefinitionSentence(_, _, _, _), _)) :: tail =>
-            pushSentence(h)
+          case (h @ (DefinitionSentence(_, identifier, _, _), _)) :: tail =>
+            stack.push(CoqScriptGroupImpl(CoqDefinitionGroup(identifier),
+                wrapSentence(h), CoqVernacFileImpl.this))
+            tail
+          case (h @ (LtacSentence(identifier, _), _)) :: tail =>
+            stack.push(CoqScriptGroupImpl(CoqLtacGroup(identifier),
+                wrapSentence(h), CoqVernacFileImpl.this))
             tail
 
           case (h @ (AssertionSentence(_, identifier, _), _)) :: tail =>

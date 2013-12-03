@@ -323,8 +323,11 @@ trait ICoqScriptGroup extends ICoqScriptElement with IParent {
 }
 
 abstract class CoqScriptGroupDisposition
+case class CoqLtacGroup(val name : String) extends CoqScriptGroupDisposition
 case class CoqProofGroup(val name : String) extends CoqScriptGroupDisposition
 case class CoqSectionGroup(val name : String) extends CoqScriptGroupDisposition
+case class CoqDefinitionGroup(
+    val name : String) extends CoqScriptGroupDisposition
 
 trait ICoqObjectFile extends ICoqFile {
   override def getElementType = classOf[ICoqObjectFile]
