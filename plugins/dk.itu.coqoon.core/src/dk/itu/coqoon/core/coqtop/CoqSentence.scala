@@ -86,6 +86,16 @@ object CoqSentence {
   }
 
   object Classifier {
+    object LtacSentence {
+      val expr =
+        ("^\\s*Ltac\\s+([a-zA-Z0-9_]+)(?s)(.*)\\.$").r
+      def unapply(input : CharSequence) = input match {
+        case expr(identifier, body) =>
+          Some(identifier, body)
+        case _ => None
+      }
+    }
+
     object SectionStartSentence {
       val expr =
         ("^\\s*Section\\s+([a-zA-Z0-9_]+)\\s*\\.$").r
