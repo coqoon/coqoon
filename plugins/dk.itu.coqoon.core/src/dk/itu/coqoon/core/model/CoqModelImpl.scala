@@ -89,13 +89,6 @@ private case class CoqModelImpl(
     case f : IFolder if hasNature(f.getProject) =>
       val project = getProject(f.getProject.getName)
       for (i <- project.getLoadPathProviders) i match {
-        case SourceLoadPath(src, bin) if src == f =>
-          return Some(new CoqPackageFragmentRootImpl(f, project))
-        case SourceLoadPath(src, Some(bin)) if bin == f =>
-          return Some(new CoqPackageFragmentRootImpl(f, project))
-        case DefaultOutputLoadPath(bin) if bin == f =>
-          return Some(new CoqPackageFragmentRootImpl(f, project))
-
         case SourceLoadPath(src, bin) if src.contains(f) =>
           return Some(new CoqPackageFragmentImpl(f,
               new CoqPackageFragmentRootImpl(src, project)))
@@ -105,7 +98,6 @@ private case class CoqModelImpl(
         case DefaultOutputLoadPath(bin) if bin.contains(f) =>
           return Some(new CoqPackageFragmentImpl(f,
               new CoqPackageFragmentRootImpl(bin, project)))
-
         case _ =>
       }
       None
