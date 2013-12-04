@@ -43,6 +43,8 @@ trait ICoqElement {
   def getContainingResource : Option[IResource] =
     getCorrespondingResource.orElse(getParent.flatMap(_.getContainingResource))
   def getModel : ICoqModel = getAncestor[ICoqModel].get
+
+  def accept(f : ICoqElement => Boolean)
 }
 
 trait ICoqModel extends ICoqElement with IParent {

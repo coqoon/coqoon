@@ -34,6 +34,8 @@ private abstract class CoqElementImpl[
 
   protected[model] def notifyListeners(ev : CoqElementChangeEvent) : Unit =
     getModel.notifyListeners(this, ev)
+
+  override def accept(f : ICoqElement => Boolean) = f(this)
 }
 
 private trait ICache {
@@ -47,7 +49,11 @@ private trait ICache {
 private abstract class ParentImpl[
     A <: IResource, B <: ICoqElement with IParent](
     private val res : A, private val parent : B)
-    extends CoqElementImpl(res, parent) with IParent
+    extends CoqElementImpl(res, parent) with IParent {
+  override def accept(f : ICoqElement => Boolean) =
+    if (f(this))
+      getChildren.foreach(_.accept(f))
+}
 
 private case class CoqModelImpl(
     private val res : IWorkspaceRoot)
@@ -397,7 +403,7 @@ private object EmptyInputStream extends InputStream {
 private case class CoqVernacFileImpl(
     private val res : IFile,
     private val parent : ICoqPackageFragment)
-    extends CoqElementImpl(res, parent) with ICoqVernacFile {
+    extends ParentImpl(res, parent) with ICoqVernacFile {
   private class Cache extends ICache {
     override def destroy = Seq(sentences).map(_.clear)
 
