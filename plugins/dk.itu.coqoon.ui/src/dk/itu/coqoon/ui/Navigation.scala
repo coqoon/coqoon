@@ -9,6 +9,9 @@ import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
 import dk.itu.coqoon.core.coqtop.CoqSentence
 
 class OpenDeclarationHandler extends EditorHandler {
+  def isCoqIdentifierCharacter(c : Char) =
+    c.isLetterOrDigit || c == '_' || c == '\''
+
   override def execute(ev : ExecutionEvent) : AnyRef = {
     val editor = TryCast[CoqEditor](UIUtils.getWorkbench.
         getActiveWorkbenchWindow.getActivePage.getActiveEditor)
@@ -17,9 +20,9 @@ class OpenDeclarationHandler extends EditorHandler {
         editor.file.flatMap(ICoqModel.getInstance.toCoqElement) match {
           case Some(f : ICoqVernacFile) =>
             var (start, end) = (editor.cursorPosition, editor.cursorPosition)
-            while (editor.document.getChar(start - 1).isLetterOrDigit)
+            while (isCoqIdentifierCharacter(editor.document.getChar(start - 1)))
               start -= 1
-            while (editor.document.getChar(end).isLetterOrDigit)
+            while (isCoqIdentifierCharacter(editor.document.getChar(end)))
               end += 1
             if (start != end) {
               val identifier = editor.document.get(start, end - start)
