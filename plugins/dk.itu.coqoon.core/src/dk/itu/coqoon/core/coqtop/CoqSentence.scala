@@ -193,22 +193,16 @@ class ParserStack[A, B] {
   def push(value : A) = stack +:= Left(value)
   def pushContext(value : B) = stack +:= Right(value)
 
-  def popContext(value : B) : (B, Seq[A]) = popContext(a => value == a)
-  def popContext(f : B => Boolean) : (B, Seq[A]) = {
+  def popContext() : (B, Seq[A]) = {
     var (prefix, remainder) = stack.span {
-      case Right(v) if f(v) => false
-      case Right(v) =>
-        throw new Exception(
-            "Innermost context " + v + " not accepted by comparator")
+      case Right(v) => false
       case _ => true
     }
-    if (remainder.headOption.flatMap(_.right.toOption).map(f) != Some(true))
-      throw new Exception(
-          "" + remainder.headOption + " not acceptable to comparator")
+    if (remainder == Nil)
+      throw new Exception("No active context")
     val tag = remainder.head.right.get
     stack = remainder.tail
-    /* prefix can only contain Lefts at this point */
-    (tag, prefix.map(_.left.get))
+    (tag, prefix.flatMap(_.left.toOption))
   }
 
   def getInnermostContext() : Option[B] =

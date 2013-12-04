@@ -426,7 +426,7 @@ private case class CoqVernacFileImpl(
           case (h @ (IdentifiedEndSentence(id), _)) :: tail
               if stack.getInnermostContext == Some(CoqSectionGroup(id)) =>
             pushSentence(h)
-            val (tag, body) = stack.popContext(CoqSectionGroup(id))
+            val (tag, body) = stack.popContext
             stack.push(CoqScriptGroupImpl(
                 tag, body.reverse, CoqVernacFileImpl.this))
             tail
@@ -438,7 +438,7 @@ private case class CoqVernacFileImpl(
           case (h @ (IdentifiedEndSentence(id), _)) :: tail
               if stack.getInnermostContext == Some(CoqModuleGroup(id)) =>
             pushSentence(h)
-            val (tag, body) = stack.popContext(CoqModuleGroup(id))
+            val (tag, body) = stack.popContext
             stack.push(CoqScriptGroupImpl(
                 tag, body.reverse, CoqVernacFileImpl.this))
             tail
@@ -470,15 +470,12 @@ private case class CoqVernacFileImpl(
              * used?) */
             pushSentence(h, i)
             tail
-          case (h @ (ProofEndSentence(_), _)) :: tail =>
-            pushSentence(h)
-            stack.getInnermostContext match {
-              case Some(q @ CoqProofGroup(identifier)) =>
-                val (tag, body) = stack.popContext(q)
-                stack.push(CoqScriptGroupImpl(
-                    tag, body.reverse, CoqVernacFileImpl.this))
-              case _ =>
-            }
+          case (h @ (ProofEndSentence(_), _)) :: tail
+              if stack.getInnermostContext.exists(
+                  _.isInstanceOf[CoqProofGroup]) =>
+            val (tag, body) = stack.popContext
+            stack.push(CoqScriptGroupImpl(
+                tag, body.reverse, CoqVernacFileImpl.this))
             tail
 
           case h :: (i @ (ProofStartSentence(), _)) :: tail =>
