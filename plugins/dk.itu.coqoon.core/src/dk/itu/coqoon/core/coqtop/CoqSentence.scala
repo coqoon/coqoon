@@ -88,7 +88,7 @@ object CoqSentence {
   object Classifier {
     object LtacSentence {
       val expr =
-        ("^\\s*Ltac\\s+([a-zA-Z0-9_]+)(?s)(.*)\\.$").r
+        ("^\\s*Ltac\\s+([a-zA-Z0-9_']+)(?s)(.*)\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(identifier, body) =>
           Some(identifier, body)
@@ -98,7 +98,7 @@ object CoqSentence {
 
     object ModuleStartSentence {
       val expr =
-        ("^\\s*Module\\s+([a-zA-Z0-9_]+)\\s*\\.$").r
+        ("^\\s*Module\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(identifier) =>
           Some(identifier)
@@ -108,7 +108,7 @@ object CoqSentence {
 
     object SectionStartSentence {
       val expr =
-        ("^\\s*Section\\s+([a-zA-Z0-9_]+)\\s*\\.$").r
+        ("^\\s*Section\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(identifier) =>
           Some(identifier)
@@ -118,7 +118,7 @@ object CoqSentence {
 
     object IdentifiedEndSentence {
       val expr =
-        ("^\\s*End\\s+([a-zA-Z0-9_]+)\\s*\\.$").r
+        ("^\\s*End\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(identifier) =>
           Some(identifier)
@@ -129,7 +129,7 @@ object CoqSentence {
     object AssertionSentence {
       val expr =
         ("^\\s*(Theorem|Lemma|Remark|Fact|Corollary|" +
-         "Proposition|Definition|Example)\\s+([a-zA-Z0-9_]+)(?s)(.*)\\.$").r
+         "Proposition|Definition|Example)\\s+([a-zA-Z0-9_']+)(?s)(.*)\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(keyword, identifier, body) =>
           Some((keyword, identifier, body))
@@ -139,7 +139,7 @@ object CoqSentence {
 
     object FixpointSentence {
       val expr =
-        ("^\\s*(Fixpoint|CoFixpoint)\\s+([a-zA-Z0-9_]+)(?s)(.*)\\.$").r
+        ("^\\s*(Fixpoint|CoFixpoint)\\s+([a-zA-Z0-9_']+)(?s)(.*)\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(keyword, identifier, body) =>
           Some((keyword, identifier, body))
@@ -149,7 +149,7 @@ object CoqSentence {
 
     object InductiveSentence {
       val expr =
-        ("^\\s*(Inductive|CoInductive)\\s+([a-zA-Z0-9_]+)(?s)(.*)\\.$").r
+        ("^\\s*(Inductive|CoInductive)\\s+([a-zA-Z0-9_']+)(?s)(.*)\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(keyword, identifier, body) =>
           Some((keyword, identifier, body))
@@ -159,7 +159,7 @@ object CoqSentence {
 
     object DefinitionSentence {
       val expr =
-        ("^\\s*(Definition|Let)\\s+([a-zA-Z0-9_]+)(?s)(.*):=(.*)\\.$").r
+        ("^\\s*(Definition|Let)\\s+([a-zA-Z0-9_']+)(?s)(.*):=(.*)\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(keyword, identifier, binders, body) =>
           Some((keyword, identifier, binders, body))
