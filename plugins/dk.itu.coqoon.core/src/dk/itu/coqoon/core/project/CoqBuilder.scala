@@ -586,22 +586,30 @@ object CoqBuilder {
   case class LoadRef(value : String) extends CoqReference
   case class RequireRef(value : String) extends CoqReference
 
-  private def generateRefs(file : IFile) : Seq[CoqReference] = {
-    var refs = Seq.newBuilder[CoqReference]
-    val content = TotalReader.read(file.getContents)
-    val s = CoqSentence.getNextSentences(content, 0, content.length)
-    for ((text, synthetic) <- s if !synthetic) text.toString.trim match {
-      case Load(what) =>
-        refs += LoadRef(what)
-      case Require(how, what) if what(0) == '"' =>
-        val filename = what.substring(1).split("\"", 2)(0)
-        refs += RequireRef(filename)
-      case Require(how, what) =>
-        for (j <- what.split(" "))
-          refs += RequireRef(j)
-      case _ =>
-    }
-    refs.result
+  private def generateRefs(file : IFile) : Seq[CoqReference] =
+      ICoqModel.getInstance.toCoqElement(file) match {
+    case Some(f : ICoqVernacFile) =>
+      var refs = Seq.newBuilder[CoqReference]
+      def traverse(f : ICoqScriptElement) : Unit = f match {
+        case e : ICoqScriptSentence
+            if !e.isSynthetic => e.getText.toString.trim match {
+          case Load(what) =>
+            refs += LoadRef(what)
+          case Require(how, what) if what(0) == '"' =>
+            val filename = what.substring(1).split("\"", 2)(0)
+            refs += RequireRef(filename)
+          case Require(how, what) =>
+            for (j <- what.split(" "))
+              refs += RequireRef(j)
+          case _ =>
+        }
+        case e : ICoqScriptGroup =>
+          e.getChildren.foreach(traverse)
+        case _ =>
+      }
+      f.getChildren.foreach(traverse)
+      refs.result
+    case _ => Nil
   }
 }
 
