@@ -325,6 +325,18 @@ trait ICoqScriptGroup extends ICoqScriptElement with IParent {
 }
 
 abstract class CoqScriptGroupDisposition
+object NamedCoqGroup {
+  def unapply(p : Any) = p match {
+    case CoqLtacGroup(name) => Some(name)
+    case CoqProofGroup(name) => Some(name)
+    case CoqModuleGroup(name) => Some(name)
+    case CoqSectionGroup(name) => Some(name)
+    case CoqFixpointGroup(name) => Some(name)
+    case CoqInductiveGroup(name) => Some(name)
+    case CoqDefinitionGroup(name) => Some(name)
+    case _ => None
+  }
+}
 case class CoqLtacGroup(val name : String) extends CoqScriptGroupDisposition
 case class CoqProofGroup(val name : String) extends CoqScriptGroupDisposition
 case class CoqModuleGroup(val name : String) extends CoqScriptGroupDisposition
