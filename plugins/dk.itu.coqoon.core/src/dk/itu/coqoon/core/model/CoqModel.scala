@@ -327,6 +327,10 @@ case class CoqLtacGroup(val name : String) extends CoqScriptGroupDisposition
 case class CoqProofGroup(val name : String) extends CoqScriptGroupDisposition
 case class CoqModuleGroup(val name : String) extends CoqScriptGroupDisposition
 case class CoqSectionGroup(val name : String) extends CoqScriptGroupDisposition
+case class CoqFixpointGroup(
+    val name : String) extends CoqScriptGroupDisposition
+case class CoqInductiveGroup(
+    val name : String) extends CoqScriptGroupDisposition
 case class CoqDefinitionGroup(
     val name : String) extends CoqScriptGroupDisposition
 

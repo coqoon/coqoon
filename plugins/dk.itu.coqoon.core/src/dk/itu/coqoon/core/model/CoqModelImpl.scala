@@ -451,6 +451,14 @@ private case class CoqVernacFileImpl(
             stack.push(CoqScriptGroupImpl(CoqLtacGroup(identifier),
                 wrapSentence(h), CoqVernacFileImpl.this))
             tail
+          case (h @ (FixpointSentence(_, identifier, _), _)) :: tail =>
+            stack.push(CoqScriptGroupImpl(CoqFixpointGroup(identifier),
+                wrapSentence(h), CoqVernacFileImpl.this))
+            tail
+          case (h @ (InductiveSentence(_, identifier, _), _)) :: tail =>
+            stack.push(CoqScriptGroupImpl(CoqInductiveGroup(identifier),
+                wrapSentence(h), CoqVernacFileImpl.this))
+            tail
 
           case (h @ (AssertionSentence(_, identifier, _), _)) :: tail =>
             stack.pushContext(CoqProofGroup(identifier))
