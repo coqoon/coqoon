@@ -116,7 +116,7 @@ object CoqSentence {
       }
     }
 
-    object SectionEndSentence {
+    object IdentifiedEndSentence {
       val expr =
         ("^\\s*End\\s+([a-zA-Z0-9_]+)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {

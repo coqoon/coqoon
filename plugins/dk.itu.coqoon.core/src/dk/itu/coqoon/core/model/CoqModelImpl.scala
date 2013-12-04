@@ -423,9 +423,22 @@ private case class CoqVernacFileImpl(
             stack.pushContext(CoqSectionGroup(identifier))
             pushSentence(h)
             tail
-          case (h @ (SectionEndSentence(identifier), _)) :: tail =>
+          case (h @ (IdentifiedEndSentence(id), _)) :: tail
+              if stack.getInnermostContext == Some(CoqSectionGroup(id)) =>
             pushSentence(h)
-            val (tag, body) = stack.popContext(CoqSectionGroup(identifier))
+            val (tag, body) = stack.popContext(CoqSectionGroup(id))
+            stack.push(CoqScriptGroupImpl(
+                tag, body.reverse, CoqVernacFileImpl.this))
+            tail
+
+          case (h @ (ModuleStartSentence(identifier), _)) :: tail =>
+            stack.pushContext(CoqModuleGroup(identifier))
+            pushSentence(h)
+            tail
+          case (h @ (IdentifiedEndSentence(id), _)) :: tail
+              if stack.getInnermostContext == Some(CoqModuleGroup(id)) =>
+            pushSentence(h)
+            val (tag, body) = stack.popContext(CoqModuleGroup(id))
             stack.push(CoqScriptGroupImpl(
                 tag, body.reverse, CoqVernacFileImpl.this))
             tail
