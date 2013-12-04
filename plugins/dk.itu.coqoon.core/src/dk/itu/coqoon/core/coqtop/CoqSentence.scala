@@ -96,6 +96,16 @@ object CoqSentence {
       }
     }
 
+    object ModuleStartSentence {
+      val expr =
+        ("^\\s*Module\\s+([a-zA-Z0-9_]+)\\s*\\.$").r
+      def unapply(input : CharSequence) = input match {
+        case expr(identifier) =>
+          Some(identifier)
+        case _ => None
+      }
+    }
+
     object SectionStartSentence {
       val expr =
         ("^\\s*Section\\s+([a-zA-Z0-9_]+)\\s*\\.$").r
