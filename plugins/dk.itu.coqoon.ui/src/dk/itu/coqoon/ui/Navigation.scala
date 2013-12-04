@@ -28,28 +28,40 @@ class OpenDeclarationHandler extends EditorHandler {
               val identifier = editor.document.get(start, end - start)
               import dk.itu.coqoon.core.model._
               var result : Option[ICoqScriptGroup] = None
-              f.accept(_ match {
-                case e : ICoqVernacFile if result == None => true
+              f.getAncestor[ICoqProject].foreach(_.accept(_ match {
                 case e : ICoqScriptGroup if result == None =>
                   e.getDisposition match {
                     case NamedCoqGroup(id) if id == identifier =>
                       result = Some(e); false
                     case _ => true
                   }
+                case p : IParent if result == None => true
                 case _ => false
-              })
+              }))
               import dk.itu.coqoon.core.utilities.TryCast
+              import org.eclipse.ui.ide.IDE
+              import org.eclipse.core.resources.IFile
               for (j <- result;
                    k <- j.getChildren.headOption;
                    l <- TryCast[ICoqScriptSentence](k)) {
                 val t = l.getText
 
-                val padding = t.takeWhile(_.isWhitespace).length
-                val (start, length) = (t.start + padding, t.length - padding)
-                editor.getViewer.revealRange(start, length)
-                editor.getViewer.setSelectedRange(start, length)
+                val resource =
+                  j.getContainingResource.flatMap(TryCast[IFile]).get
+                val page =
+                  UIUtils.getWorkbench.getActiveWorkbenchWindow.getActivePage
+                val editor =
+                  TryCast[CoqEditor](IDE.openEditor(page, resource, false))
 
-                return null
+                editor match {
+                  case Some(editor) =>
+                    val padding = t.takeWhile(_.isWhitespace).length
+                    val (start, length) =
+                      (t.start + padding, t.length - padding)
+                    editor.getViewer.revealRange(start, length)
+                    editor.getViewer.setSelectedRange(start, length)
+                  case None =>
+                }
               }
             }
           case _ =>
