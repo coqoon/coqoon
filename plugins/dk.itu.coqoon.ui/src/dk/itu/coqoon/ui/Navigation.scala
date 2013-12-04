@@ -30,6 +30,10 @@ class OpenDeclarationHandler extends EditorHandler {
                 case e : ICoqScriptGroup => e.getDisposition match {
                   case CoqLtacGroup(id) if id == identifier => Some(e)
                   case CoqProofGroup(id) if id == identifier => Some(e)
+                  case CoqModuleGroup(id) if id == identifier => Some(e)
+                  case CoqSectionGroup(id) if id == identifier => Some(e)
+                  case CoqFixpointGroup(id) if id == identifier => Some(e)
+                  case CoqInductiveGroup(id) if id == identifier => Some(e)
                   case CoqDefinitionGroup(id) if id == identifier => Some(e)
                   case _ =>
                     for (i <- e.getChildren;
