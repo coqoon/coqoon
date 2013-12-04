@@ -27,27 +27,19 @@ class OpenDeclarationHandler extends EditorHandler {
             if (start != end) {
               val identifier = editor.document.get(start, end - start)
               import dk.itu.coqoon.core.model._
-              def findIdentifier(f : ICoqScriptElement) :
-                  Option[ICoqScriptGroup] = f match {
-                case e : ICoqScriptSentence => None
-                case e : ICoqScriptGroup => e.getDisposition match {
-                  case CoqLtacGroup(id) if id == identifier => Some(e)
-                  case CoqProofGroup(id) if id == identifier => Some(e)
-                  case CoqModuleGroup(id) if id == identifier => Some(e)
-                  case CoqSectionGroup(id) if id == identifier => Some(e)
-                  case CoqFixpointGroup(id) if id == identifier => Some(e)
-                  case CoqInductiveGroup(id) if id == identifier => Some(e)
-                  case CoqDefinitionGroup(id) if id == identifier => Some(e)
-                  case _ =>
-                    for (i <- e.getChildren;
-                         j <- findIdentifier(i))
-                      return Some(j)
-                    None
-                }
-              }
-              import dk.itu.coqoon.core.utilities.{TryCast, Substring}
-              for (i <- f.getChildren;
-                   j <- findIdentifier(i);
+              var result : Option[ICoqScriptGroup] = None
+              f.accept(_ match {
+                case e : ICoqVernacFile if result == None => true
+                case e : ICoqScriptGroup if result == None =>
+                  e.getDisposition match {
+                    case NamedCoqGroup(id) if id == identifier =>
+                      result = Some(e); false
+                    case _ => true
+                  }
+                case _ => false
+              })
+              import dk.itu.coqoon.core.utilities.TryCast
+              for (j <- result;
                    k <- j.getChildren.headOption;
                    l <- TryCast[ICoqScriptSentence](k)) {
                 val t = l.getText
