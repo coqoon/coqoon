@@ -176,7 +176,7 @@ object CoqSentence {
     }
 
     object ProofEndSentence {
-      val expr = ("^\\s*(Qed|Defined|Admitted)\\s*\\.$").r
+      val expr = ("^\\s*(Qed|Defined|Admitted|Abort)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(keyword) => Some((keyword))
         case _ => None
