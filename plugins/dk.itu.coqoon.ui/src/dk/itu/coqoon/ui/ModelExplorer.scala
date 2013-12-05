@@ -18,6 +18,20 @@ class ModelExplorer extends ViewPart {
 
   override def createPartControl(parent : Composite) = {
     tree = new TreeViewer(parent)
+    tree.addOpenListener(new IOpenListener {
+      import dk.itu.coqoon.ui.utilities.UIUtils
+      import org.eclipse.ui.ide.IDE
+      override def open(ev : OpenEvent) = ev.getSelection match {
+        case s : IStructuredSelection => s.getFirstElement match {
+          case f : ICoqVernacFile =>
+            OpenDeclarationHandler.openEditorOn(f)
+          case s : ICoqScriptSentence =>
+            OpenDeclarationHandler.highlightSentence(s)
+          case _ =>
+        }
+        case _ =>
+      }
+    })
     tree.setLabelProvider(new LabelProvider {
       override def getText(a : Any) =
         Option(a).map(_.toString.trim).getOrElse("null")
