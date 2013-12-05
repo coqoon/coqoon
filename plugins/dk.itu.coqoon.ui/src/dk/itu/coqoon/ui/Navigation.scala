@@ -2,9 +2,9 @@ package dk.itu.coqoon.ui
 
 import org.eclipse.ui.part.FileEditorInput
 import org.eclipse.core.commands.ExecutionEvent
-import dk.itu.coqoon.ui.utilities.UIUtils
 
-import dk.itu.coqoon.core.model.{ICoqModel, ICoqVernacFile}
+import dk.itu.coqoon.ui.utilities.UIUtils
+import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
 import dk.itu.coqoon.core.coqtop.CoqSentence
 
@@ -26,7 +26,6 @@ class OpenDeclarationHandler extends EditorHandler {
               end += 1
             if (start != end) {
               val identifier = editor.document.get(start, end - start)
-              import dk.itu.coqoon.core.model._
               var result : Option[ICoqScriptGroup] = None
               f.getAncestor[ICoqProject].foreach(_.accept(_ match {
                 case e : ICoqScriptGroup if result == None =>
@@ -38,31 +37,10 @@ class OpenDeclarationHandler extends EditorHandler {
                 case p : IParent if result == None => true
                 case _ => false
               }))
-              import dk.itu.coqoon.core.utilities.TryCast
-              import org.eclipse.ui.ide.IDE
-              import org.eclipse.core.resources.IFile
               for (j <- result;
                    k <- j.getChildren.headOption;
-                   l <- TryCast[ICoqScriptSentence](k)) {
-                val t = l.getText
-
-                val resource =
-                  j.getContainingResource.flatMap(TryCast[IFile]).get
-                val page =
-                  UIUtils.getWorkbench.getActiveWorkbenchWindow.getActivePage
-                val editor =
-                  TryCast[CoqEditor](IDE.openEditor(page, resource, false))
-
-                editor match {
-                  case Some(editor) =>
-                    val padding = t.takeWhile(_.isWhitespace).length
-                    val (start, length) =
-                      (t.start + padding, t.length - padding)
-                    editor.getViewer.revealRange(start, length)
-                    editor.getViewer.setSelectedRange(start, length)
-                  case None =>
-                }
-              }
+                   l <- TryCast[ICoqScriptSentence](k))
+                OpenDeclarationHandler.highlightSentence(l)
             }
           case _ =>
         }
@@ -70,4 +48,22 @@ class OpenDeclarationHandler extends EditorHandler {
     }
     null
   }
+}
+object OpenDeclarationHandler {
+  import org.eclipse.core.resources.IFile
+  def openEditorOn(e : ICoqElement) =
+      e.getContainingResource.flatMap(TryCast[IFile]).flatMap(resource => {
+    val page = UIUtils.getWorkbench.getActiveWorkbenchWindow.getActivePage
+    Option(org.eclipse.ui.ide.IDE.openEditor(page, resource, false))
+  })
+
+  def highlightSentence(s : ICoqScriptSentence) =
+      openEditorOn(s).flatMap(TryCast[CoqEditor]).foreach(editor => {
+    val t = s.getText
+    val padding = t.takeWhile(_.isWhitespace).length
+    val (start, length) =
+      (t.start + padding, t.length - padding)
+    editor.getViewer.revealRange(start, length)
+    editor.getViewer.setSelectedRange(start, length)
+  })
 }
