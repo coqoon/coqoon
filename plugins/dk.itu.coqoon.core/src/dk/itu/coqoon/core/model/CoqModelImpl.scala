@@ -479,6 +479,7 @@ private case class CoqVernacFileImpl(
           case (h @ (ProofEndSentence(_), _)) :: tail
               if stack.getInnermostContext.exists(
                   _.isInstanceOf[CoqProofGroup]) =>
+            pushSentence(h)
             val (tag, body) = stack.popContext
             stack.push(CoqScriptGroupImpl(
                 tag, body.reverse, CoqVernacFileImpl.this))
