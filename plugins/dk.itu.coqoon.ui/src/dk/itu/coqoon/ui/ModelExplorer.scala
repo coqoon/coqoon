@@ -79,24 +79,20 @@ class ModelLabelProvider extends LabelProvider {
 
 class ModelContentProvider
     extends ITreeContentProvider with CoqElementChangeListener {
-  private var viewer : Viewer = null
-  private var input : ICoqModel = null
+  private var viewer : Option[Viewer] = None
+  private var input : Option[ICoqModel] = None
 
-  override def dispose = Option(input).foreach(_.removeListener(this))
+  override def dispose = input.foreach(_.removeListener(this))
   override def inputChanged(v : Viewer, o : Any, n : Any) = {
-    viewer = v
-    Option(input).foreach(_.removeListener(this))
-    n match {
-      case m : ICoqModel =>
-        input = m
-        m.addListener(this)
-      case _ =>
-        input = null
-    }
+    viewer = Option(v)
+    input.foreach(_.removeListener(this))
+    input = TryCast[ICoqModel](n)
+    input.foreach(_.addListener(this))
+    viewer.foreach(_.refresh)
   }
 
   override def coqElementChanged(ev : CoqElementChangeEvent) =
-    Option(viewer).foreach(_.refresh)
+    viewer.foreach(_.refresh)
 
   private def toCE(o : Any) = Option(o).flatMap(TryCast[ICoqElement])
   override def getChildren(o : Any) = toCE(o).flatMap(
