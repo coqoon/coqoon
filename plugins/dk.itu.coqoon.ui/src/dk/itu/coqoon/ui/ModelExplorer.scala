@@ -32,15 +32,49 @@ class ModelExplorer extends ViewPart {
         case _ =>
       }
     })
-    tree.setLabelProvider(new LabelProvider {
-      override def getText(a : Any) =
-        Option(a).map(_.toString.trim).getOrElse("null")
-    })
+    tree.setLabelProvider(new ModelLabelProvider)
     tree.setContentProvider(new ModelContentProvider)
     tree.setInput(ICoqModel.getInstance)
   }
 
   override def setFocus() = Option(tree).foreach(_.getControl.setFocus)
+}
+
+class ModelLabelProvider extends LabelProvider {
+  import org.eclipse.ui.model.WorkbenchLabelProvider
+  private val workbenchProvider = new WorkbenchLabelProvider
+
+  override def dispose = {
+    super.dispose
+    workbenchProvider.dispose
+  }
+
+  override def getImage(a : Any) = a match {
+    case p : ICoqPackageFragment =>
+      Activator.getDefault.getImageRegistry.get(
+          ManifestIdentifiers.Images.PACKAGE_FRAGMENT)
+    case p : ICoqPackageFragmentRoot =>
+      Activator.getDefault.getImageRegistry.get(
+          ManifestIdentifiers.Images.PACKAGE_FRAGMENT_ROOT)
+    case p : ICoqElement if p.getCorrespondingResource != None =>
+      workbenchProvider.getImage(p.getCorrespondingResource.get)
+    case a => null
+  }
+  override def getText(a : Any) = a match {
+    case p : ICoqPackageFragment =>
+      val myPath = p.getCorrespondingResource.get.getFullPath
+      val parentPath =
+        p.getParent.flatMap(_.getCorrespondingResource).get.getFullPath
+      val packageName =
+        myPath.removeFirstSegments(parentPath.segmentCount).segments
+      if (packageName.length == 0) {
+        "(default package)"
+      } else packageName.mkString(".")
+    case p : ICoqElement if p.getCorrespondingResource != None =>
+      p.getCorrespondingResource.get.getName
+    case a =>
+      Option(a).map(_.toString.trim).getOrElse("null")
+  }
 }
 
 class ModelContentProvider
