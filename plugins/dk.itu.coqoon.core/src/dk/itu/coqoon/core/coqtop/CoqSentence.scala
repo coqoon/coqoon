@@ -195,14 +195,15 @@ class ParserStack[A, B] {
 
   def popContext() : (B, Seq[A]) = {
     var (prefix, remainder) = stack.span {
-      case Right(v) => false
+      case Right(_) => false
       case _ => true
     }
     if (remainder == Nil)
       throw new Exception("No active context")
     val tag = remainder.head.right.get
     stack = remainder.tail
-    (tag, prefix.flatMap(_.left.toOption))
+    /* prefix can only contain Lefts at this point */
+    (tag, prefix.map(_.left.get))
   }
 
   def getInnermostContext() : Option[B] =

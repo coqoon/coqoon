@@ -499,6 +499,14 @@ private case class CoqVernacFileImpl(
         }
       }
 
+      /* Close any remaining contexts (XXX: should we also create error markers
+       * here?) */
+      while (stack.getInnermostContext != None) {
+        val (tag, body) = stack.popContext
+        stack.push(CoqScriptGroupImpl(
+            tag, body.reverse, CoqVernacFileImpl.this))
+      }
+
       stack.getStack.reverse
     }
   }
