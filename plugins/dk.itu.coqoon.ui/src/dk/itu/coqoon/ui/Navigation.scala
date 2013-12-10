@@ -9,9 +9,7 @@ import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
 import dk.itu.coqoon.core.coqtop.CoqSentence
 
 class OpenDeclarationHandler extends EditorHandler {
-  def isCoqIdentifierCharacter(c : Char) =
-    c.isLetterOrDigit || c == '_' || c == '\''
-
+  import OpenDeclarationHandler._
   override def execute(ev : ExecutionEvent) : AnyRef = {
     val editor = TryCast[CoqEditor](UIUtils.getWorkbench.
         getActiveWorkbenchWindow.getActivePage.getActiveEditor)
@@ -37,10 +35,8 @@ class OpenDeclarationHandler extends EditorHandler {
                 case p : IParent if result == None => true
                 case _ => false
               }))
-              for (j <- result;
-                   k <- j.getChildren.headOption;
-                   l <- TryCast[ICoqScriptSentence](k))
-                OpenDeclarationHandler.highlightSentence(l)
+              result.flatMap(_.getChildren.headOption).flatMap(
+                  TryCast[ICoqScriptSentence]).foreach(highlightSentence)
             }
           case _ =>
         }
@@ -50,6 +46,9 @@ class OpenDeclarationHandler extends EditorHandler {
   }
 }
 object OpenDeclarationHandler {
+  def isCoqIdentifierCharacter(c : Char) =
+    c.isLetterOrDigit || c == '_' || c == '\''
+
   import org.eclipse.core.resources.IFile
   def openEditorOn(e : ICoqElement) =
       e.getContainingResource.flatMap(TryCast[IFile]).flatMap(resource => {
