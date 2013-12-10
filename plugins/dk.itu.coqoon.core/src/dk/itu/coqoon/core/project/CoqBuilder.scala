@@ -181,19 +181,24 @@ class CoqBuilder extends IncrementalProjectBuilder {
           last = now
         }
 
-        for (i <- tasks; j <- Some(i.getResult)) j match {
-          case CompilerDone(s : CoqCompilerSuccess) =>
-            makePathRelative(i.out).map(
-                getProject.getFile).foreach(p => s.save(p, null))
-          case CompilerDone(CoqCompilerFailure(
-              _, _, CompilationError(_, line, _, _, message))) =>
-            objectToSource(i.out).flatMap(
-                makePathRelative).map(getProject.getFile).foreach(
-                    createLineErrorMarker(_, line.toInt, message.trim))
-          case Error(text) =>
-            objectToSource(i.out).flatMap(
-                makePathRelative).map(getProject.getFile).foreach(
-                    createResourceErrorMarker(_, text.trim))
+        for (i <- tasks) {
+          val source = objectToSource(i.out).flatMap(
+              makePathRelative).map(getProject.getFile)
+          i.getResult match {
+            case CompilerDone(s : CoqCompilerSuccess) =>
+              makePathRelative(i.out).map(
+                  getProject.getFile).foreach(p => s.save(p, null))
+            case CompilerDone(CoqCompilerFailure(
+                _, _, CompilationError(_, line, _, _, message))) =>
+              source.foreach(
+                createLineErrorMarker(_, line.toInt, message.trim))
+            case CompilerDone(CoqCompilerFailure(_, _, GeneralError(text))) =>
+              source.foreach(createResourceErrorMarker(_, text.trim))
+            case CompilerDone(CoqCompilerFailure(_, _, text)) =>
+              source.foreach(createResourceErrorMarker(_, text.trim))
+            case Error(text) =>
+              source.foreach(createResourceErrorMarker(_, text.trim))
+          }
         }
       }
       completed ++= candidates
@@ -549,9 +554,10 @@ object CoqBuilder {
 
   private val Load = "^Load (.*)\\.$".r
   private val Require = "^Require (Import |Export |)(.*)\\.$".r
+  private val GeneralError = """(?ms)Error: (.*)$""".r.unanchored
   private val CompilationError =
-    """(?s)File "(.*)", line (\d+), characters (\d+)-(\d+):(.*)$""".
-        r.unanchored
+    ("""(?s)File "(.*)", line (\d+), characters (\d+)-(\d+):""" +
+     """\s+Error: (.*)$""").r.unanchored
 
   private def cleanProject(project : ICoqProject) : Unit =
     for (i <- project.getLoadPathProviders) i match {
