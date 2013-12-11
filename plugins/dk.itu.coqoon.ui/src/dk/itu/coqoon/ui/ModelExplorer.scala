@@ -52,7 +52,9 @@ class ModelLabelProvider extends LabelProvider {
   override def getImage(a : Any) = a match {
     case p : ICoqPackageFragment =>
       Activator.getDefault.getImageRegistry.get(
-          ManifestIdentifiers.Images.PACKAGE_FRAGMENT)
+          if (p.hasCoqFiles) {
+            ManifestIdentifiers.Images.PACKAGE_FRAGMENT
+          } else ManifestIdentifiers.Images.EMPTY_PACKAGE_FRAGMENT)
     case p : ICoqPackageFragmentRoot =>
       Activator.getDefault.getImageRegistry.get(
           ManifestIdentifiers.Images.PACKAGE_FRAGMENT_ROOT)
