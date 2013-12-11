@@ -411,6 +411,9 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
   import org.eclipse.jface.text.source.ISourceViewer
   import org.eclipse.jface.text.contentassist.{IContentAssistant,ContentAssistant}
 
+  override def getAutoEditStrategies(v : ISourceViewer, ct : String) =
+    Array(new CoqAutoEditStrategy)
+
   override def getContentAssistant(v : ISourceViewer) : IContentAssistant = {
     val assistant= new ContentAssistant
     val assistantProcessor = new CoqContentAssistantProcessor(editor)
