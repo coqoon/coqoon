@@ -81,20 +81,26 @@ class ModelLabelProvider extends LabelProvider {
 
 class ModelContentProvider
     extends ITreeContentProvider with CoqElementChangeListener {
-  private var viewer : Option[Viewer] = None
+  private var viewer : Option[StructuredViewer] = None
   private var input : Option[ICoqModel] = None
 
   override def dispose = input.foreach(_.removeListener(this))
   override def inputChanged(v : Viewer, o : Any, n : Any) = {
-    viewer = Option(v)
+    viewer = TryCast[StructuredViewer](v)
     input.foreach(_.removeListener(this))
     input = TryCast[ICoqModel](n)
     input.foreach(_.addListener(this))
     viewer.foreach(_.refresh)
   }
 
+  import dk.itu.coqoon.ui.utilities.UIUtils
   override def coqElementChanged(ev : CoqElementChangeEvent) =
-    viewer.foreach(_.refresh)
+    UIUtils.asyncExec {
+      viewer.foreach(v => {
+        v.refresh(ev.element)
+        ev.element.getParent.foreach(v.refresh)
+      })
+    }
 
   private def toCE(o : Any) = Option(o).flatMap(TryCast[ICoqElement])
   override def getChildren(o : Any) = toCE(o).flatMap(
