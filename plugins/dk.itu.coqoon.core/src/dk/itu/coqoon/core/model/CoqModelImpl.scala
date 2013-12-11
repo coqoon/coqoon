@@ -332,10 +332,11 @@ private case class CoqPackageFragmentRootImpl(
 
   private def gpfRecurse(res : IFolder) : List[ICoqPackageFragment] = {
     var results = List[ICoqPackageFragment]()
-    if (!res.members.collect(CoqPackageFragmentImpl.fileCollector).isEmpty)
+    if (res.exists) {
       results = results :+ new CoqPackageFragmentImpl(res, this)
-    for (i <- res.members.collect(folderCollector))
-      results = results ++ gpfRecurse(i)
+      for (i <- res.members; j <- TryCast[IFolder](i))
+        results = results ++ gpfRecurse(j)
+    }
     results
   }
 
@@ -344,11 +345,6 @@ private case class CoqPackageFragmentRootImpl(
   override def getPackageFragments = gpfRecurse(res)
 
   override def getChildren = getPackageFragments
-}
-private object CoqPackageFragmentRootImpl {
-  def folderCollector : PartialFunction[AnyRef, IFolder] = {
-    case a : IFolder => a
-  }
 }
 
 private case class CoqPackageFragmentImpl(
