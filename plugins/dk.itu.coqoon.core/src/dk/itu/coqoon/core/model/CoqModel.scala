@@ -77,10 +77,10 @@ trait CoqElementChangeListener {
   def coqElementChanged(ev : CoqElementChangeEvent)
 }
 
-trait CoqElementChangeEvent
+abstract class CoqElementChangeEvent(val element : ICoqElement)
 
 case class CoqLoadPathChangeEvent(
-    project : ICoqProject) extends CoqElementChangeEvent
+    override val element : ICoqProject) extends CoqElementChangeEvent(element)
 
 final case class CoqLoadPath(path : IPath, coqdir : Option[String]) {
   def asCommand : String =

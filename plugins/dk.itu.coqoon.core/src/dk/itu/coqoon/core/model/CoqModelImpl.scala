@@ -33,7 +33,7 @@ private abstract class CoqElementImpl[
   override def getModel() : CoqModelImpl = getAncestor[CoqModelImpl].get
 
   protected[model] def notifyListeners(ev : CoqElementChangeEvent) : Unit =
-    getModel.notifyListeners(this, ev)
+    getModel.notifyListeners(ev)
 
   override def accept(f : ICoqElement => Boolean) = f(this)
 }
@@ -133,11 +133,9 @@ private case class CoqModelImpl(
   override def addListener(l : CoqElementChangeListener) = (listeners += l)
   override def removeListener(l : CoqElementChangeListener) = (listeners -= l)
 
-  protected[model] def notifyListeners(
-      source : ICoqElement, ev : CoqElementChangeEvent) : Unit = {
-    for (i <- listeners)
-      i.coqElementChanged(ev)
-  }
+  override protected[model] def notifyListeners(
+      ev : CoqElementChangeEvent) : Unit =
+    listeners.foreach(_.coqElementChanged(ev))
 }
 private object CoqModelImpl {
   def hasNature(a : IProject) =
