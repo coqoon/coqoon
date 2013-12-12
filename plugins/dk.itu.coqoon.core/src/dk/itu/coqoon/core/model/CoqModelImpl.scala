@@ -60,28 +60,34 @@ private case class CoqModelImpl(
     extends ParentImpl(res, null) with ICoqModel {
   import CoqModelImpl._
 
-  import org.eclipse.core.resources
-  object WorkspaceListener extends resources.IResourceChangeListener {
-    class DeltaVisitor(ev : resources.IResourceChangeEvent)
-        extends resources.IResourceDeltaVisitor {
-      override def visit(d : resources.IResourceDelta) = {
-        toCoqElement(d.getResource).foreach(el => {
-          val entry = cache synchronized { cache.get(el) }
-          entry.foreach(_.update(ev))
+  object WorkspaceListener extends IResourceChangeListener {
+    class DeltaVisitor(ev : IResourceChangeEvent)
+        extends IResourceDeltaVisitor {
+      override def visit(d : IResourceDelta) = {
+        toCoqElement(d.getResource).foreach(el => d.getKind match {
+          case IResourceDelta.ADDED =>
+            notifyListeners(CoqElementAddedEvent(el))
+          case IResourceDelta.REMOVED =>
+            val entry = cache synchronized { cache.get(el) }
+            entry.foreach(_.destroy)
+            notifyListeners(CoqElementRemovedEvent(el))
+          case _ =>
+            val entry = cache synchronized { cache.get(el) }
+            entry.foreach(_.update(ev))
         })
         true
       }
     }
 
-    override def resourceChanged(ev : resources.IResourceChangeEvent) =
+    override def resourceChanged(ev : IResourceChangeEvent) =
         ev.getType() match {
-      case resources.IResourceChangeEvent.PRE_BUILD =>
+      case IResourceChangeEvent.PRE_BUILD =>
         ev.getDelta().accept(new DeltaVisitor(ev))
       case _ =>
     }
   }
   res.getWorkspace.addResourceChangeListener(
-      WorkspaceListener, resources.IResourceChangeEvent.PRE_BUILD)
+      WorkspaceListener, IResourceChangeEvent.PRE_BUILD)
 
   override def getProject(name : String) =
     new CoqProjectImpl(res.getProject(name), this)
