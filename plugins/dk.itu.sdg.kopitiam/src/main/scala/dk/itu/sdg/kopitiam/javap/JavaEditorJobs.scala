@@ -3,7 +3,7 @@ package dk.itu.sdg.kopitiam.javap
 import dk.itu.coqoon.ui.{
   StepRunner, ContainerJobBase, StepForwardRunner, CreateErrorMarkerJob}
 import dk.itu.coqoon.ui.utilities.UIUtils
-import dk.itu.coqoon.core.model.ICoqModel
+import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.coqtop.CoqTypes
 import dk.itu.coqoon.core.utilities.{JobRunner, ObjectRule, TryService}
 
@@ -18,7 +18,9 @@ class JavaProofInitialisationJob(jes : JavaEditorState)
     extends ContainerJobBase("Initialising Java proof mode",
         new JavaProofInitialisationRunner(jes), jes) {
   import dk.itu.coqoon.core.utilities.JobUtilities._
-  setRule(MultiRule(ObjectRule(jes), getRuleFactory.buildRule))
+  import org.eclipse.core.resources.ResourcesPlugin
+  setRule(MultiRule(ObjectRule(jes),
+      getRuleFactory.buildRule, ResourcesPlugin.getWorkspace.getRoot))
 }
 class JavaProofInitialisationRunner(
     jes : JavaEditorState) extends JobRunner[Unit] {
@@ -28,17 +30,41 @@ class JavaProofInitialisationRunner(
     jes.coqTop.transaction[Unit](ct => {
       monitor.subTask("Performing custom Coq initialisation")
 
-      jes.file.foreach(f => {
-        val cp = ICoqModel.toCoqProject(f.getProject)
-        cp.getLoadPath.foreach(lpe => ct.interp(false, false, lpe.asCommand))
-      })
+      import dk.itu.coqoon.core.{ManifestIdentifiers => CMI}
+
+      val file = jes.file.get
+      val project = file.getProject
+      val description = project.getDescription
+
+      /* Configure the project with the Coq nature (if necessary) */
+      if (!description.hasNature(CMI.NATURE_COQ)) {
+        val r = UIUtils.exec {
+          UIUtils.Dialog.question("Coq support missing",
+              "Support for Coq must be added to this Java project " +
+              "before you can use Kopitiam with it.\n\n" +
+              "Add Coq support now?")
+        }
+        if (r) {
+          import org.eclipse.core.resources.IResource
+
+          ICoqProject.configureDescription(description)
+          project.setDescription(description, IResource.NONE, null)
+        } else return
+      }
+
+      /* Add Charge! to the project's load path (if necessary) */
+      val cp = ICoqModel.toCoqProject(file.getProject)
+      val clp = AbstractLoadPath(ChargeLibrary.ID)
+      val clpp = cp.getLoadPathProviders
+      if (!cp.getLoadPathProviders.contains(clp))
+        cp.setLoadPathProviders(clpp :+ clp, null)
+      cp.getLoadPath.foreach(lpe => ct.interp(false, false, lpe.asCommand))
       monitor.worked(1)
 
       monitor.subTask("Preparing model")
       import org.eclipse.core.resources.IncrementalProjectBuilder
-      val f = jes.file.get
-      val parent = f.getParent
-      val basename = f.getName().dropRight(5)
+      val parent = file.getParent
+      val basename = file.getName().dropRight(5)
       val model = parent.getFile(new Path(basename + "_model.v"))
       if (!model.exists) {
         UIUtils.exec {
@@ -47,7 +73,7 @@ class JavaProofInitialisationRunner(
               basename + "_model'.")
         }
         return
-      } else f.getProject.build(
+      } else project.build(
           IncrementalProjectBuilder.INCREMENTAL_BUILD, monitor.newChild(1))
       monitor.setWorkRemaining(2)
 
