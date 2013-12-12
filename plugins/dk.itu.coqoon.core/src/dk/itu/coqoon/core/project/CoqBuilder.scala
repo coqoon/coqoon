@@ -561,16 +561,17 @@ object CoqBuilder {
 
   private def cleanProject(project : ICoqProject) : Unit =
     for (i <- project.getLoadPathProviders) i match {
-      case SourceLoadPath(_, Some(output)) => cleanHierarchy(output)
-      case DefaultOutputLoadPath(output) => cleanHierarchy(output)
+      case SourceLoadPath(_, Some(output)) => cleanHierarchy(output, true)
+      case DefaultOutputLoadPath(output) => cleanHierarchy(output, true)
       case _ =>
     }
 
-  private def cleanHierarchy(dir : IContainer) : Unit = if (dir.exists) {
+  private def cleanHierarchy(
+      dir : IContainer, exempt : Boolean) : Unit = if (dir.exists) {
     for (i <- dir.members;
          j <- TryCast[IContainer](i))
-      cleanHierarchy(j)
-    if (dir.members().length == 0)
+      cleanHierarchy(j, false)
+    if (dir.members().length == 0 && !exempt)
       dir.delete(IResource.NONE, null)
   }
 
