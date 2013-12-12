@@ -81,13 +81,13 @@ private case class CoqModelImpl(
 
     override def resourceChanged(ev : IResourceChangeEvent) =
         ev.getType() match {
-      case IResourceChangeEvent.PRE_BUILD =>
+      case IResourceChangeEvent.POST_CHANGE =>
         ev.getDelta().accept(new DeltaVisitor(ev))
       case _ =>
     }
   }
   res.getWorkspace.addResourceChangeListener(
-      WorkspaceListener, IResourceChangeEvent.PRE_BUILD)
+      WorkspaceListener, IResourceChangeEvent.POST_CHANGE)
 
   override def getProject(name : String) =
     new CoqProjectImpl(res.getProject(name), this)
