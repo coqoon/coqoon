@@ -79,6 +79,11 @@ trait CoqElementChangeListener {
 
 abstract class CoqElementChangeEvent(val element : ICoqElement)
 
+case class CoqElementAddedEvent(
+    override val element : ICoqElement) extends CoqElementChangeEvent(element)
+case class CoqElementRemovedEvent(
+    override val element : ICoqElement) extends CoqElementChangeEvent(element)
+
 case class CoqLoadPathChangeEvent(
     override val element : ICoqProject) extends CoqElementChangeEvent(element)
 
