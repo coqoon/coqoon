@@ -67,8 +67,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
     CoqBuilder.sourceToObject(coqProject.get)(s)
   private def objectToSource(o : IPath) =
     CoqBuilder.objectToSource(coqProject.get)(o)
+
   private def makePathRelative(f : IPath) =
     CoqBuilder.makePathRelative(getProject.getLocation, f)
+  private def makePathRelativeFile(f : IPath) =
+    makePathRelative(f).map(getProject.getFile)
 
   private var completeLoadPath : Seq[(Seq[String], java.io.File)] = Seq()
 
@@ -100,7 +103,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     /* Pre-create all of the possible output directories so that the complete
      * load path is actually complete */
     for ((path, _) <- dt.getDependencies;
-         file <- makePathRelative(path).map(getProject.getFile))
+         file <- makePathRelativeFile(path))
       new FolderCreationRunner(file).run(null)
     completeLoadPath = coqProject.get.getLoadPath.flatMap(_.expand)
 
@@ -139,7 +142,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
       override def run() = setResult(try {
         objectToSource(out) match {
           case in :: Nil =>
-            val inF = makePathRelative(in).map(getProject.getFile)
+            val inF = makePathRelativeFile(in)
             val runner = new CoqCompilerRunner(inF.get)
             runner.setTicker(
               Some(() => !isInterrupted && !monitor.isCanceled))
@@ -182,12 +185,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
         }
 
         for (i <- tasks) {
-          val source = objectToSource(i.out).flatMap(
-              makePathRelative).map(getProject.getFile)
+          val source = objectToSource(i.out).flatMap(makePathRelativeFile)
           i.getResult match {
             case CompilerDone(s : CoqCompilerSuccess) =>
-              makePathRelative(i.out).map(
-                  getProject.getFile).foreach(p => s.save(p, null))
+              makePathRelativeFile(i.out).foreach(p => s.save(p, null))
             case CompilerDone(CoqCompilerFailure(
                 _, _, CompilationError(_, line, _, _, message))) =>
               source.foreach(
@@ -218,6 +219,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
           Nil
         case (can, cannot) => can.partition(mustBuild) match {
           case (need, needNot) =>
+            need.flatMap(makePathRelativeFile).foreach(
+                _.delete(IResource.NONE, null))
             completed ++= needNot
             monitor.setWorkRemaining(need.size + cannot.size)
             need.take(2)
@@ -228,7 +231,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     /* Create error markers for the files that never became build candidates */
     for (i <- dt.getUnresolved;
          j :: Nil <- Some(objectToSource(i));
-         f <- makePathRelative(j).map(getProject.getFile))
+         f <- makePathRelativeFile(j))
       createResourceErrorMarker(f, "Unresolved dependencies: " +
           dt.getDependencies(i).filter(_._3 == None).map(_._1).mkString(", "))
 
