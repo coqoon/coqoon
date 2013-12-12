@@ -117,9 +117,9 @@ private case class CoqModelImpl(
       toCoqElement(f.getParent).flatMap(
           TryCast[CoqPackageFragmentImpl]).flatMap(
         fragment =>
-          if (CoqPackageFragmentImpl.vernacFilter(f)) {
+          if (CoqPackageFragmentImpl.isVernacFile(f)) {
             Some(new CoqVernacFileImpl(f, fragment))
-          } else if (CoqPackageFragmentImpl.objectFilter(f)) {
+          } else if (CoqPackageFragmentImpl.isObjectFile(f)) {
             Some(new CoqObjectFileImpl(f, fragment))
           } else None)
     case _ => None
@@ -361,22 +361,19 @@ private case class CoqPackageFragmentImpl(
 
   override def getVernacFile(file : IPath) =
     new CoqVernacFileImpl(res.getFile(file), this)
-  override def getVernacFiles = {
-    res.members.collect(fileCollector).filter(vernacFilter).map(
+  override def getVernacFiles =
+    res.members.collect(fileCollector).filter(isVernacFile).map(
         new CoqVernacFileImpl(_, this))
-  }
 
   override def getObjectFile(file : IPath) =
     new CoqObjectFileImpl(res.getFile(file), this)
-  override def getObjectFiles = {
-    res.members.collect(fileCollector).filter(objectFilter).map(
+  override def getObjectFiles =
+    res.members.collect(fileCollector).filter(isObjectFile).map(
         new CoqObjectFileImpl(_, this))
-  }
 
-  override def getNonCoqFiles = {
-    res.members.collect(fileCollector).filterNot(vernacFilter).
-        filterNot(objectFilter)
-  }
+  override def getNonCoqFiles =
+    res.members.collect(fileCollector).filterNot(
+        f => isVernacFile(f) || isObjectFile(f))
 
   override def getChildren = getVernacFiles ++ getObjectFiles
 }
@@ -385,13 +382,11 @@ private object CoqPackageFragmentImpl {
     case a : IFile => a
   }
 
-  val vernacFilter = (a : IFile) =>
-    Option(a.getContentDescription).map(_.getContentType).map(_.isKindOf(
-        ICoqVernacFile.CONTENT_TYPE)).getOrElse(false)
+  def isVernacFile(a : IFile) = Option(a).map(_.getProjectRelativePath).map(
+      _.getFileExtension == "v").getOrElse(false)
 
-  val objectFilter = (a : IFile) =>
-    Option(a.getContentDescription).map(_.getContentType).map(_.isKindOf(
-        ICoqObjectFile.CONTENT_TYPE)).getOrElse(false)
+  def isObjectFile(a : IFile) = Option(a).map(_.getProjectRelativePath).map(
+      _.getFileExtension == "vo").getOrElse(false)
 }
 
 import java.io.InputStream
