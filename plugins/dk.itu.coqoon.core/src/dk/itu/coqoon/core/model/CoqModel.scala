@@ -33,9 +33,9 @@ trait IParent {
 trait ICoqElement {
   def exists : Boolean
   def getAncestor[A]()(implicit a0 : Manifest[A]) : Option[A] =
-    getParent.flatMap(TryCast[A]) match {
-      case q @ Some(_) => q
-      case None => getParent.flatMap(_.getAncestor[A])
+    this match {
+      case q : A => Some(q)
+      case _ => getParent.flatMap(_.getAncestor[A])
     }
   def getParent : Option[ICoqElement with IParent]
   def getElementType : Class[_ <: ICoqElement]
