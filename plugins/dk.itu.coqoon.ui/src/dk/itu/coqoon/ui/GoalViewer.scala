@@ -178,7 +178,61 @@ class TabularGoalPresenter extends SashGoalPresenter {
 import org.eclipse.ui.part.ViewPart
 import org.eclipse.ui.{IPropertyListener, IPartListener2}
 
-class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
+abstract class AttentiveViewPart[A](
+    implicit arg0 : Manifest[A]) extends ViewPart with IPartListener2 {
+  import org.eclipse.ui.IViewSite
+  override def init (site : IViewSite) = {
+    super.init(site)
+    site.getWorkbenchWindow.getPartService.addPartListener(this)
+  }
+
+  override def dispose = {
+    getSite.getWorkbenchWindow.getPartService.removePartListener(this)
+    super.dispose
+  }
+
+  import org.eclipse.ui.{IEditorPart, IWorkbenchPart}
+
+  protected def attach(part : A)
+  protected def detach(part : A)
+
+  private var activePart : Option[A] = None
+  private def setActivePart(e : IWorkbenchPart) = {
+    activePart.foreach(detach)
+    activePart = TryAdapt[A](e)
+    activePart.foreach(attach)
+  }
+
+  protected def getActivePart() : Option[A] = activePart
+
+  import org.eclipse.ui.IWorkbenchPartReference
+  override def partOpened(ref : IWorkbenchPartReference) = {
+    val part = ref.getPart(false)
+    if (part == this)
+      setActivePart(getSite.getWorkbenchWindow.getActivePage.getActiveEditor)
+  }
+
+  override def partClosed(ref : IWorkbenchPartReference) = {
+    val part = ref.getPart(false)
+    if (this == part || TryAdapt[A](part) == activePart)
+      setActivePart(null)
+  }
+
+  override def partActivated (ref : IWorkbenchPartReference) = {
+    val p = ref.getPart(false)
+    if (p.isInstanceOf[IEditorPart] && TryAdapt[A](p) != activePart)
+      setActivePart(p)
+  }
+
+  override def partHidden(r : IWorkbenchPartReference) = ()
+  override def partVisible(r : IWorkbenchPartReference) = ()
+  override def partDeactivated(r : IWorkbenchPartReference) = ()
+  override def partBroughtToTop(r : IWorkbenchPartReference) = ()
+  override def partInputChanged(r : IWorkbenchPartReference) = ()
+}
+
+class GoalViewer
+    extends AttentiveViewPart[CoqTopContainer] with IPropertyListener {
   import org.eclipse.swt.layout.{FormData,FormLayout,FormAttachment}
 
   override def propertyChanged (source : Object, propID : Int) = {
@@ -187,62 +241,20 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
       writeGoal(source.asInstanceOf[CoqTopContainer].goals)
   }
 
-  import org.eclipse.ui.IViewSite
-  override def init (site : IViewSite) = {
-    super.init(site)
-    site.getWorkbenchWindow().getPartService().addPartListener(this)
-  }
-
   override def dispose = {
     setPresenter(null)
-    getSite.getWorkbenchWindow().getPartService().removePartListener(this)
     super.dispose
   }
 
-  import org.eclipse.ui.{IEditorPart, IWorkbenchPart}
-  private var activeContainer : Option[CoqTopContainer] = None
-  private def setActiveContainer(e : IWorkbenchPart) = {
-    activeContainer match {
-      case Some(ed) => ed.removeListener(this)
-      case None =>
-    }
-    activeContainer = TryAdapt[CoqTopContainer](e)
-    activeContainer match {
-      case Some(c) =>
-        c.addListener(this)
-        writeGoal(c.goals)
-      case None =>
-        writeGoal(None)
-    }
+  override protected def detach(part : CoqTopContainer) = {
+    part.removeListener(this)
+    writeGoal(None)
   }
 
-  import org.eclipse.ui.IWorkbenchPartReference
-  override def partOpened (ref : IWorkbenchPartReference) = {
-    val p = ref.getPart(false)
-    if (p == this)
-      setActiveContainer(
-          getSite.getWorkbenchWindow().getActivePage().getActiveEditor())
+  override protected def attach(part : CoqTopContainer) = {
+    part.addListener(this)
+    writeGoal(part.goals)
   }
-
-  override def partClosed (ref : IWorkbenchPartReference) = {
-    val p = ref.getPart(false)
-    if (this == p || TryAdapt[CoqTopContainer](p) == activeContainer)
-      setActiveContainer(null)
-  }
-
-  override def partActivated (ref : IWorkbenchPartReference) = {
-    val p = ref.getPart(false)
-    if (p.isInstanceOf[IEditorPart] &&
-        TryAdapt[CoqTopContainer](p) != activeContainer)
-      setActiveContainer(p)
-  }
-
-  override def partDeactivated (ref : IWorkbenchPartReference) = ()
-
-  override def partBroughtToTop (part : IWorkbenchPartReference) : Unit = { }
-  override def partHidden (part : IWorkbenchPartReference) : Unit = { }
-  override def partInputChanged (part : IWorkbenchPartReference) : Unit = { }
-  override def partVisible (part : IWorkbenchPartReference) : Unit = { }
 
   private var presenter : GoalPresenter = null
 
@@ -280,7 +292,7 @@ class GoalViewer extends ViewPart with IPropertyListener with IPartListener2 {
     presenter = gp
     if (presenter != null) {
       presenter.init(comp)
-      writeGoal(activeContainer.flatMap(_.goals))
+      writeGoal(getActivePart.flatMap(_.goals))
     }
   }
 
