@@ -512,9 +512,6 @@ private case class CoqVernacFileImpl(
   if (!res.getName.endsWith(".v"))
     throw new IllegalArgumentException(res.getName)
 
-  override def setContents(is : InputStream, monitor : IProgressMonitor) =
-    res.setContents(is, IResource.NONE, monitor)
-
   override def getChildren = getCache.sentences.get
 }
 

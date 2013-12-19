@@ -301,8 +301,6 @@ import java.io.InputStream
 trait ICoqVernacFile extends ICoqFile with IParent {
   override def getElementType = classOf[ICoqVernacFile]
 
-  def setContents(is : InputStream, monitor : IProgressMonitor)
-
   override def getChildren() : Seq[ICoqScriptElement]
 }
 object ICoqVernacFile {
