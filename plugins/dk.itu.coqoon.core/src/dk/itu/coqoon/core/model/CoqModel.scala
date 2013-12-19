@@ -86,6 +86,8 @@ case class CoqElementRemovedEvent(
 
 abstract class CoqElementChangedEvent(
     override val element : ICoqElement) extends CoqElementEvent(element)
+case class CoqFileContentChangedEvent(
+    override val element : ICoqFile) extends CoqElementChangedEvent(element)
 case class CoqProjectLoadPathChangedEvent(
     override val element : ICoqProject) extends CoqElementChangedEvent(element)
 

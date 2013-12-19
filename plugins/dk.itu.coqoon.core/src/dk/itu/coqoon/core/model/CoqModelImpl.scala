@@ -400,6 +400,11 @@ private case class CoqVernacFileImpl(
   private class Cache extends ICache {
     override def destroy = Seq(sentences).map(_.clear)
 
+    override def update(ev : IResourceChangeEvent) = {
+      destroy
+      notifyListeners(CoqFileContentChangedEvent(CoqVernacFileImpl.this))
+    }
+
     import dk.itu.coqoon.core.coqtop.{CoqSentence, ParserStack}
     private[CoqVernacFileImpl] final val sentences =
         CacheSlot[Seq[ICoqScriptElement]] {
