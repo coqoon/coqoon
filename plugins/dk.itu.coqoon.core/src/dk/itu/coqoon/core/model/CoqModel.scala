@@ -74,18 +74,20 @@ object ICoqModel {
 }
 
 trait CoqElementChangeListener {
-  def coqElementChanged(ev : CoqElementChangeEvent)
+  def coqElementChanged(ev : CoqElementEvent)
 }
 
-abstract class CoqElementChangeEvent(val element : ICoqElement)
+abstract class CoqElementEvent(val element : ICoqElement)
 
 case class CoqElementAddedEvent(
-    override val element : ICoqElement) extends CoqElementChangeEvent(element)
+    override val element : ICoqElement) extends CoqElementEvent(element)
 case class CoqElementRemovedEvent(
-    override val element : ICoqElement) extends CoqElementChangeEvent(element)
+    override val element : ICoqElement) extends CoqElementEvent(element)
 
-case class CoqLoadPathChangeEvent(
-    override val element : ICoqProject) extends CoqElementChangeEvent(element)
+abstract class CoqElementChangedEvent(
+    override val element : ICoqElement) extends CoqElementEvent(element)
+case class CoqProjectLoadPathChangedEvent(
+    override val element : ICoqProject) extends CoqElementChangedEvent(element)
 
 final case class CoqLoadPath(path : IPath, coqdir : Option[String]) {
   def asCommand : String =

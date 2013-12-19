@@ -14,8 +14,8 @@ import org.eclipse.ui.editors.text.TextEditor
 
 class CoqEditor extends TextEditor with CoqTopEditorContainer {
   private object ModelListener extends CoqElementChangeListener {
-    override def coqElementChanged(ev : CoqElementChangeEvent) = ev match {
-      case CoqLoadPathChangeEvent(project)
+    override def coqElementChanged(ev : CoqElementEvent) = ev match {
+      case CoqProjectLoadPathChangedEvent(project)
           if project.getCorrespondingResource == file.map(_.getProject) =>
         clearFlag(CoqEditor.FLAG_INITIALISED)
       case _ =>

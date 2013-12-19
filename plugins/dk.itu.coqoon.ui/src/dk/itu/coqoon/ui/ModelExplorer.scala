@@ -94,7 +94,7 @@ class ModelContentProvider
   }
 
   import dk.itu.coqoon.ui.utilities.UIUtils
-  override def coqElementChanged(ev : CoqElementChangeEvent) =
+  override def coqElementChanged(ev : CoqElementEvent) =
     UIUtils.asyncExec {
       viewer.foreach(v => {
         v.refresh(ev.element)

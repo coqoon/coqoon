@@ -32,7 +32,7 @@ private abstract class CoqElementImpl[
 
   override def getModel() : CoqModelImpl = getAncestor[CoqModelImpl].get
 
-  protected[model] def notifyListeners(ev : CoqElementChangeEvent) : Unit =
+  protected[model] def notifyListeners(ev : CoqElementEvent) : Unit =
     getModel.notifyListeners(ev)
 
   override def accept(f : ICoqElement => Boolean) = f(this)
@@ -139,8 +139,7 @@ private case class CoqModelImpl(
   override def addListener(l : CoqElementChangeListener) = (listeners += l)
   override def removeListener(l : CoqElementChangeListener) = (listeners -= l)
 
-  override protected[model] def notifyListeners(
-      ev : CoqElementChangeEvent) : Unit =
+  override protected[model] def notifyListeners(ev : CoqElementEvent) =
     listeners.foreach(_.coqElementChanged(ev))
 }
 private object CoqModelImpl {
@@ -162,7 +161,7 @@ private case class CoqProjectImpl(
       Option(delta.findMember(res.getFile("_CoqProject").getFullPath)) match {
         case Some(delta) =>
           destroy
-          notifyListeners(CoqLoadPathChangeEvent(CoqProjectImpl.this))
+          notifyListeners(CoqProjectLoadPathChangedEvent(CoqProjectImpl.this))
           return
         case None =>
       }
@@ -186,7 +185,7 @@ private case class CoqProjectImpl(
       if (hierarchyChanged) {
         /* Only the expanded load path needs to be recomputed */
         loadPath.clear
-        notifyListeners(CoqLoadPathChangeEvent(CoqProjectImpl.this))
+        notifyListeners(CoqProjectLoadPathChangedEvent(CoqProjectImpl.this))
       }
     }
 
@@ -304,7 +303,6 @@ private case class CoqProjectImpl(
       count += 1
     }
     setProjectConfiguration(coqPart ++ kopitiamPart, monitor)
-    notifyListeners(CoqLoadPathChangeEvent(this))
   }
   override def getLoadPathProviders : Seq[ICoqLoadPathProvider] =
     getCache.loadPathProviders.get
