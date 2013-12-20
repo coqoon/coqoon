@@ -114,11 +114,8 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     annotationModel = Option(projViewer.getProjectionAnnotationModel)
 
     val doc = this.getDocumentProvider.getDocument(getEditorInput)
-    val outline = CoqDocumentProvider.getOutline(doc)
-
-    outline map (_.root) foreach { root =>
-      updateFolding(root, doc)
-    }
+    file.flatMap(ICoqModel.getInstance.toCoqElement).flatMap(
+        TryCast[ICoqVernacFile]).foreach(updateFolding(_, doc))
   }
 
   //Create the source viewer as one that supports folding
@@ -148,15 +145,9 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
   override def getAdapter (required : java.lang.Class[_]) : AnyRef = {
     //Console.println("Getting adapter for " + required + " on CoqEditor")
     if (required == classOf[IContentOutlinePage]) {
-      outlinePage = outlinePage match {
-        case p@Some(page) => p
-        case None => {
-          val page = new CoqContentOutlinePage(getDocumentProvider(), this)
-          if (getEditorInput() != null)
-            page.setInput(getEditorInput())
-          Some(page)
-        }
-      }
+      outlinePage = outlinePage.orElse(
+          file.flatMap(ICoqModel.getInstance.toCoqElement).flatMap(
+              TryCast[ICoqVernacFile]).map(new CoqContentOutlinePage(_)))
       outlinePage.get
     }
     else super.getAdapter(required)
@@ -164,49 +155,13 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
 
   override def doSetInput (input : IEditorInput) : Unit = {
     super.doSetInput(input)
-    if (input != null && outlinePage != null) {
-      outlinePage foreach { _.setInput(input) }
-    }
-    val doc = this.getDocumentProvider.getDocument(input)
-    val outline = CoqDocumentProvider.getOutline(doc)
-    outline map (_.root) foreach {root =>
-      updateFolding(root, doc)
-    }
-  }
-
-  override def editorSaved () : Unit = {
-    if (outlinePage != null) outlinePage foreach { _.update() }
-    super.editorSaved()
+    /* XXX: flush outline page */
   }
 
   //Necessary for Eclipse API cruft
   var oldAnnotations : Array[Annotation] = Array.empty
 
-  def updateFolding (root : VernacularRegion, document : IDocument) : Unit = {
-    val annotations = foldingAnnotations(root, document)
-    var newAnnotations = new java.util.HashMap[Any, Any]
-
-    for ((pos, annot) <- annotations) newAnnotations.put(annot, pos)
-    annotationModel.foreach(
-      am => am.modifyAnnotations(oldAnnotations, newAnnotations, null))
-    oldAnnotations = annotations.map(_._2).toArray
-    //Console.println("Updated folding " + annotations.toList)
-  }
-
-  import parsing.{NoLengthPosition, LengthPosition, RegionPosition}
-
-  private def pos2eclipsePos (pos : LengthPosition) : Position = pos match {
-    case NoLengthPosition => new Position(0)
-    case RegionPosition(off, len) => new Position(off, len)
-  }
-
-  private def foldingAnnotations(region : VernacularRegion, document : IDocument) : Stream[(Position, ProjectionAnnotation)] = {
-    //println("Collapsable " + region.outlineName + region.outlineNameExtra)
-    if (region.pos.hasPosition && document.get(region.pos.offset, region.pos.length).count(_=='\n') >= 2)
-      (pos2eclipsePos(region.pos), new ProjectionAnnotation) #:: region.getOutline.flatMap(foldingAnnotations(_, document))
-    else
-     region.getOutline.flatMap(foldingAnnotations(_, document))
-  }
+  def updateFolding (root : ICoqVernacFile, document : IDocument) : Unit = ()
 }
 object CoqEditor {
   final val FLAG_INITIALISED = "CoqEditor.initialised"
@@ -246,81 +201,12 @@ private class CoqProofReconcilingStrategy(
   override def setDocument(newDocument : IDocument) = ()
 }
 
-import org.eclipse.jface.viewers.ITreeContentProvider
-protected class CoqContentProvider extends ITreeContentProvider {
-  import coqparser.VernacularRegion
-  import coqparser.OutlineVernacular
-  import coqparser.OutlineBuilder
-  import org.eclipse.jface.text.IDocument
-  import org.eclipse.jface.viewers.Viewer
-  import org.eclipse.ui.texteditor.IDocumentProvider
-
-  var documentProvider : Option[IDocumentProvider] = None
-
-  def dispose() : Unit = {}
-
-  var content : List[VernacularRegion] = Nil
-  var root : OutlineVernacular.Document = null
-  def parse(document : IDocument) : Unit = {
-    require(document != null)
-    import scala.util.parsing.input.CharSequenceReader
-
-    //println("parse the coq")
-    root = OutlineBuilder.parse(document.get)
-  }
-
-  def inputChanged(viewer : Viewer, oldInput : Any, newInput : Any) : Unit = {
-    if (newInput != null) {
-      //println("inputChanged")
-      documentProvider foreach {prov => parse(prov.getDocument(newInput))}
-    }
-  }
-
-  def hasChildren (obj : Any) : Boolean = obj match {
-    case something : VernacularRegion if something.getOutline.length > 0 => true
-    case _ => false
-  }
-
-  def getChildren (obj : Any) : Array[AnyRef] = {
-    //Console.println("getChildren" + obj)
-    obj match {
-      case something : VernacularRegion => something.getOutline.toArray
-      case something : IFileEditorInput => if (root == null) Array[AnyRef]() else root.getOutline.toArray
-      case _ => Array[AnyRef]()
-    }
-  }
-  def getElements (obj : Any) : Array[AnyRef] = {
-    //Console.println("getElements " + obj)
-    getChildren(obj)
-  }
-
-  def getParent (obj : Any) : AnyRef = {
-    //Console.println("getParent " + obj)
-    null //FIXME: Figure out how to do this - perhaps compute a table of parents?
-  }
-}
-
 import org.eclipse.ui.editors.text.TextFileDocumentProvider
 
 object CoqDocumentProvider extends TextFileDocumentProvider {
   import org.eclipse.jface.text.IDocument
 
   override def getDefaultEncoding () : String = "UTF-8"
-
-  // The model of Coq code, used for outline view etc.
-  import coqparser.VernacularRegion
-  private val contentProviders : collection.mutable.Map[IDocument, CoqContentProvider] =
-    collection.mutable.Map.empty
-  def getOutline (doc : IDocument) : Option[CoqContentProvider] = {
-    val outline = contentProviders.get(doc) getOrElse {
-      val cprov = new CoqContentProvider()
-      cprov.documentProvider = Some(CoqDocumentProvider.this)
-      contentProviders += (doc -> cprov)
-      cprov
-    }
-    outline.parse(doc)
-    Some(outline)
-  }
 }
 
 import org.eclipse.jface.text.rules.IWordDetector
@@ -375,25 +261,9 @@ class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor
   import org.eclipse.jface.text.reconciler._
   import org.eclipse.ui.views.contentoutline.IContentOutlinePage
 
-  def reconcile (region : DirtyRegion, subregion : IRegion) : Unit = ()
+  def reconcile (dr : DirtyRegion, r : IRegion) : Unit = reconcile(dr)
 
-  def reconcile (partition : IRegion) : Unit = {
-    //println("Reconciling " + partition + " with editor = " + editor + " and doc = " + document)
-    val outline = CoqDocumentProvider.getOutline(document) // updates model as side effect
-    if (editor != null) {
-      val outlinePage = TryAdapt[IContentOutlinePage](editor).flatMap(TryCast[CoqContentOutlinePage])
-      UIUtils.asyncExec {
-        outlinePage.foreach(_.update()) //Update GUI outline
-      }
-    } else
-      println(" null editor")
-
-    // update folding
-    outline map (_.root) foreach { root =>
-      //println("Time to update folding for editor: " + editor + " and root: " + root)
-      if (editor != null && root != null) editor.updateFolding(root, document)
-    }
-  }
+  def reconcile (partition : IRegion) : Unit = ()
 
   def setDocument(doc : IDocument) : Unit = {
     document = doc
@@ -531,82 +401,29 @@ class CoqQuickAssistProcessor extends IQuickAssistProcessor {
 
 import org.eclipse.ui.views.contentoutline.ContentOutlinePage
 
-class CoqContentOutlinePage extends ContentOutlinePage {
-  import coqparser.VernacularRegion
-  import org.eclipse.jface.text.{IDocument, DocumentEvent}
-  import org.eclipse.jface.viewers.{ITreeContentProvider, LabelProvider, TreeViewer, Viewer, SelectionChangedEvent, StructuredSelection}
-  import org.eclipse.swt.widgets.{Composite, Control}
-  import org.eclipse.ui.texteditor.{IDocumentProvider, ITextEditor}
-
-  var documentProvider : Option[IDocumentProvider] = None
-  var textEditor : ITextEditor = null
-  def this(provider : org.eclipse.ui.texteditor.IDocumentProvider, editor : org.eclipse.ui.texteditor.ITextEditor) = {
-    this()
-    documentProvider = Some(provider)
-    textEditor = editor
-  }
-
-  var input : Any = null // TODO: Make into less of a direct Java port
-
-  def setInput (arg : AnyRef) : Unit = {
-    input = arg
-    update()
-  }
-
-  def update () : Unit = {
-    val viewer : TreeViewer = getTreeViewer()
-    //println("Called update when input = [" + input + "] and viewer = [" + viewer + "]")
-
-    if (viewer != null) {
-      val control : Control = viewer.getControl()
-      if (control != null && !control.isDisposed()) {
-        control.setRedraw(false)
-        viewer.setInput(input)
-        val doc = textEditor.getDocumentProvider.getDocument(input)
-        //Console.println("  In update(), document is " + doc)
-        CoqDocumentProvider.getOutline(doc) foreach { cprov => viewer.setContentProvider(cprov) }
-        viewer.expandAll()
-        control.setRedraw(true)
-      }
-    }
-  }
+class CoqContentOutlinePage(element : ICoqElement) extends ContentOutlinePage {
+  import org.eclipse.jface.viewers.{
+    TreeViewer, SelectionChangedEvent, IStructuredSelection}
+  import org.eclipse.swt.widgets.Composite
 
   override def selectionChanged(event : SelectionChangedEvent) : Unit = {
-    import parsing.{LengthPosition, NoLengthPosition, RegionPosition}
-
     super.selectionChanged(event)
 
-    val selection = event.getSelection
-
-    if (!selection.isEmpty) {
-      val sel = selection.asInstanceOf[StructuredSelection].getFirstElement.asInstanceOf[VernacularRegion]
-      sel.pos match {
-        case NoLengthPosition => println("missing position from parser!"); textEditor.resetHighlightRange
-        case at : RegionPosition => textEditor.setHighlightRange(at.offset, at.length, true)
-        case _ => ()
-      }
-    }
-  }
-
-  class CoqLabelProvider extends LabelProvider {
-    override def getText(obj : AnyRef) : String = obj match {
-      case something : VernacularRegion => something.outlineName + " " + something.outlineNameExtra
-      case something => something.toString
+    TryCast[IStructuredSelection](
+        event.getSelection).flatMap(sel => Option(sel.getFirstElement)) match {
+      case Some(s : ICoqScriptSentence) =>
+        OpenDeclarationHandler.highlightSentence(s)
+      case _ =>
     }
   }
 
   override def createControl(parent : Composite) : Unit = {
     super.createControl(parent)
 
-    val viewer : TreeViewer = getTreeViewer()
-    viewer.setContentProvider(new CoqContentProvider()) // Just to satisfy precondition - replaced later!
-    viewer.setLabelProvider(new CoqLabelProvider())
-    viewer.addSelectionChangedListener(this)
-
-    if (input != null)
-      viewer.setInput(input)
-
-    update()
+    val viewer = getTreeViewer()
+    viewer.setContentProvider(new ModelContentProvider)
+    viewer.setLabelProvider(new ModelLabelProvider)
+    viewer.setInput(element)
   }
 }
 
