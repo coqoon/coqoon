@@ -1,3 +1,38 @@
+Coqoon 0.4.2
+============
+
+This release makes the Coq model better at structuring proof scripts, improves
+the "Open Declaration" feature, and tidies up the Model Explorer, presenting
+Coq projects in a more Java-like way. (The Model Explorer will be merged into
+the normal Eclipse Project Explorer in a future release.)
+
+Other significant changes
+-------------------------
+
+* Improved the reliability of the Coq project builder
+
+  The builder now deletes .vo files when an attempt to rebuild them fails, and
+  no longer attempts to delete output root directories (like `bin/`).
+
+* Fixed the Kopitiam proof initialisation process
+
+  Kopitiam has relied on the Coq project builder since v0.4.0, but there's been
+  no way to add the Coq builder to an existing Java project. This release
+  fixes this problem: the user will now be prompted to do this as part of the
+  "Verify method" action. This change fixes issue #44.
+
+* Expanded the Coq model's support for events
+
+  Events are now generated whenever Coq elements are added, removed or
+  modified.
+
+Bug fixes
+---------
+
+* Made the Coq model more robust against content type lookup errors
+* Added support for incomplete proof scripts to the model
+* Fixed the Coq model's unhelpfully-delayed event broadcast system
+
 Coqoon 0.4.1
 ============
 
