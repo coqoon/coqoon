@@ -399,7 +399,7 @@ private class CoqTopIdeSlaveImpl(
 
   override def interp(r : CoqTypes.raw, v : CoqTypes.verbose, s : String) =
     send(
-      (<call val="interp">{s}</call> %
+      (<call val="interp" id="0">{s}</call> %
         attr("raw", if (r) "true" else null) %
         attr("verbose", if (v) "true" else null)),
       unwrapString)
