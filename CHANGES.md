@@ -1,3 +1,9 @@
+Coqoon 0.4.2.1
+==============
+
+This minor release adds support for Coq 8.4pl3's version of the <code>coqtop
+-ideslave</code> protocol.
+
 Coqoon 0.4.2
 ============
 
