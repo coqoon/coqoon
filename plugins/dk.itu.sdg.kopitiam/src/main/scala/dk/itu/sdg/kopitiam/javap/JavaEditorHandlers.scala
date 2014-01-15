@@ -89,6 +89,27 @@ class VerifyMethodHandler extends JavaEditorHandler {
   }
 }
 
+private object Analysis {
+  import org.eclipse.jdt.core.dom.{
+    TypeDeclaration, MethodDeclaration, VariableDeclaration}
+  import scala.collection.JavaConversions._
+  def getProgramVariables(m : MethodDeclaration) = {
+    var names : Seq[VariableDeclaration] = m.parameters.flatMap(
+        TryCast[VariableDeclaration]).toSeq
+    var parent = Option(m.getParent)
+    while (parent != None) parent match {
+      case Some(p : TypeDeclaration) =>
+        names ++= p.getFields.flatMap[Any, Seq[Any]](
+            _.fragments).flatMap(TryCast[VariableDeclaration])
+        parent = Option(p.getParent)
+      case Some(p) =>
+        parent = Option(p.getParent)
+      case _ =>
+    }
+    names
+  }
+}
+
 import org.eclipse.core.resources.ResourcesPlugin
 
 class SaveProofCertificateHandler extends JavaEditorHandler {
