@@ -407,7 +407,7 @@
             commandId="dk.itu.coqoon.ui.commands.interrupt_coq">
          <activeWhen>
             <reference
-                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorHasCoq">
             </reference>
          </activeWhen>
       </handler>
