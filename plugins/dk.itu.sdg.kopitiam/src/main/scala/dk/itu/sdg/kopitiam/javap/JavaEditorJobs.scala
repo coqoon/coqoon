@@ -25,40 +25,46 @@ class JavaProofInitialisationJob(jes : JavaEditorState)
 class JavaProofInitialisationRunner(
     jes : JavaEditorState) extends JobRunner[Unit] {
   override def doOperation(monitor : SubMonitor) : Unit = {
-    monitor.beginTask("Initialising Java proof mode", 4)
+    monitor.beginTask("Initialising Java proof mode", 5)
+
+    val file = jes.file.get
+    val project = file.getProject
+    val description = project.getDescription
+
+    import dk.itu.coqoon.core.{ManifestIdentifiers => CMI}
+
+    monitor.subTask("Configuring Java project")
+
+    /* Configure the project with the Coq nature (if necessary) */
+    if (!description.hasNature(CMI.NATURE_COQ)) {
+      val r = UIUtils.exec {
+        UIUtils.Dialog.question("Coq support missing",
+            "Support for Coq must be added to this Java project " +
+            "before you can use Kopitiam with it.\n\n" +
+            "Add Coq support now?")
+      }
+      if (r) {
+        import org.eclipse.core.resources.IResource
+
+        ICoqProject.configureDescription(description)
+        project.setDescription(description, IResource.NONE, null)
+      } else return
+    }
+
+    /* Add Charge! to the project's load path (if necessary) */
+    val cp = ICoqModel.toCoqProject(file.getProject)
+    val clp = AbstractLoadPath(ChargeLibrary.ID)
+    val clpp = cp.getLoadPathProviders
+    if (!cp.getLoadPathProviders.contains(clp))
+      cp.setLoadPathProviders(clpp :+ clp, null)
+
+    monitor.worked(1)
 
     jes.coqTop.transaction[Unit](ct => {
       monitor.subTask("Performing custom Coq initialisation")
 
-      import dk.itu.coqoon.core.{ManifestIdentifiers => CMI}
-
-      val file = jes.file.get
-      val project = file.getProject
-      val description = project.getDescription
-
-      /* Configure the project with the Coq nature (if necessary) */
-      if (!description.hasNature(CMI.NATURE_COQ)) {
-        val r = UIUtils.exec {
-          UIUtils.Dialog.question("Coq support missing",
-              "Support for Coq must be added to this Java project " +
-              "before you can use Kopitiam with it.\n\n" +
-              "Add Coq support now?")
-        }
-        if (r) {
-          import org.eclipse.core.resources.IResource
-
-          ICoqProject.configureDescription(description)
-          project.setDescription(description, IResource.NONE, null)
-        } else return
-      }
-
-      /* Add Charge! to the project's load path (if necessary) */
-      val cp = ICoqModel.toCoqProject(file.getProject)
-      val clp = AbstractLoadPath(ChargeLibrary.ID)
-      val clpp = cp.getLoadPathProviders
-      if (!cp.getLoadPathProviders.contains(clp))
-        cp.setLoadPathProviders(clpp :+ clp, null)
-      cp.getLoadPath.foreach(lpe => ct.interp(false, false, lpe.asCommand))
+      monitor.subTask("Adding project loadpath entries")
+      cp.getLoadPath.foreach(lpe => ct.interp(true, false, lpe.asCommand))
       monitor.worked(1)
 
       monitor.subTask("Preparing model")
@@ -128,9 +134,11 @@ class JavaProofInitialisationRunner(
       jes.activateHandler(
           "dk.itu.coqoon.ui.commands.retract", new JavaRetractAllHandler)
     }) match {
-      case CoqTypes.Fail((_, message)) => fail(
-          Activator.makeStatus(IStatus.ERROR, message))
+      case CoqTypes.Fail((_, message)) =>
+        jes.clearFlag(dk.itu.coqoon.ui.CoqEditor.FLAG_INITIALISED)
+        fail(Activator.makeStatus(IStatus.ERROR, message))
       case _ =>
+        jes.setFlag(dk.itu.coqoon.ui.CoqEditor.FLAG_INITIALISED)
     }
   }
 }
