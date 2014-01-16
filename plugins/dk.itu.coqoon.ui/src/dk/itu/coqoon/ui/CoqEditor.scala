@@ -28,8 +28,8 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
   override def editor = this
 
   import scala.collection.mutable.Stack
-  private var stepsV : Stack[CoqStep] = Stack[CoqStep]()
-  def steps = stepsV
+  private var stepsV : Stack[CoqStep] = Stack()
+  override def steps = stepsV
 
   private val annotateTask = new SupersedableTask(50)
 

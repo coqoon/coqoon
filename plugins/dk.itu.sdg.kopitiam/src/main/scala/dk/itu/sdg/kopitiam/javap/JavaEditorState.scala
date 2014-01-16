@@ -18,8 +18,8 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
   import org.eclipse.jdt.core.dom._
 
   import scala.collection.mutable.Stack
-  private val stepsV : Stack[JavaStep] = Stack[JavaStep]()
-  def steps = stepsV
+  private val stepsV : Stack[JavaStep] = Stack()
+  override def steps = stepsV
 
   import org.eclipse.ui.handlers.IHandlerService
   def getHandlerService = TryService[IHandlerService](UIUtils.getWorkbench).get

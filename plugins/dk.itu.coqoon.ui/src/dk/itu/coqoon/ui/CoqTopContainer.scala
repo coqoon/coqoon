@@ -47,6 +47,9 @@ trait CoqTopEditorContainer extends CoqTopContainer {
   import org.eclipse.ui.IFileEditorInput
   import org.eclipse.ui.texteditor.ITextEditor
 
+  import scala.collection.mutable.Stack
+  def steps() : Stack[_ <: CoqCommand]
+
   def file = TryCast[IFileEditorInput](editor.getEditorInput).map(_.getFile)
   def editor : ITextEditor
   def document : IDocument =
