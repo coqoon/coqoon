@@ -524,7 +524,10 @@ private case class CoqScriptSentenceImpl(
     private val synthetic : Boolean,
     private val parent : ICoqElement with IParent)
     extends CoqElementImpl(null, parent) with ICoqScriptSentence {
-  override def getText = text
+  override def getText = text.toString
+  override def getOffset = text.start
+  override def getLength = text.length
+
   override def isSynthetic = synthetic
 
   override def toString = "" + text

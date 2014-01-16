@@ -58,10 +58,9 @@ object OpenDeclarationHandler {
 
   def highlightSentence(s : ICoqScriptSentence) =
       openEditorOn(s).flatMap(TryCast[CoqEditor]).foreach(editor => {
-    val t = s.getText
-    val padding = t.takeWhile(_.isWhitespace).length
+    val padding = s.getText.takeWhile(_.isWhitespace).length
     val (start, length) =
-      (t.start + padding, t.length - padding)
+      (s.getOffset + padding, s.getLength - padding)
     editor.getViewer.revealRange(start, length)
     editor.getViewer.setSelectedRange(start, length)
   })

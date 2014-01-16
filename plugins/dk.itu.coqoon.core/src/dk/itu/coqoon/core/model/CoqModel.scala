@@ -313,18 +313,25 @@ object ICoqVernacFile {
       ManifestIdentifiers.CONTENT_TYPE_COQFILE)
 }
 
-sealed trait ICoqScriptElement extends ICoqElement
+sealed trait ICoqScriptElement extends ICoqElement {
+  def getText() : String
+  def getLength() : Int
+  def getOffset() : Int
+}
 
 trait ICoqScriptSentence extends ICoqScriptElement {
   override def getElementType = classOf[ICoqScriptSentence]
 
   import dk.itu.coqoon.core.utilities.Substring
-  def getText() : Substring
   def isSynthetic() : Boolean
 }
 
 trait ICoqScriptGroup extends ICoqScriptElement with IParent {
   override def getElementType = classOf[ICoqScriptGroup]
+
+  override def getText = getChildren.map(_.getText).mkString
+  override def getLength = getChildren.foldLeft(0)((a, b) => a + b.getLength)
+  override def getOffset = getChildren.head.getOffset
 
   def getDisposition() : CoqScriptGroupDisposition
 
