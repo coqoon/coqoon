@@ -160,7 +160,27 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
   //Necessary for Eclipse API cruft
   var oldAnnotations : Array[Annotation] = Array.empty
 
-  def updateFolding (root : ICoqVernacFile, document : IDocument) : Unit = ()
+  def updateFolding (root : ICoqVernacFile, document : IDocument) : Unit = {
+    import scala.collection.JavaConversions._
+    var positions : Seq[Position] = Seq()
+    root.accept(_ match {
+      case f : ICoqScriptGroup
+          if f.getChildren.size > 1 =>
+        val padding = f.getText.takeWhile(_.isWhitespace).length
+        positions +:=
+          new Position(f.getOffset + padding, f.getLength - padding)
+        true
+      case f : IParent => true
+      case _ => false
+    })
+
+    val newAnnotations = Map(positions.map(
+        p => (new ProjectionAnnotation -> p)) : _*)
+
+    annotationModel.foreach(
+        _.modifyAnnotations(oldAnnotations, newAnnotations, null))
+    oldAnnotations = newAnnotations.map(_._1).toArray
+  }
 }
 object CoqEditor {
   final val FLAG_INITIALISED = "CoqEditor.initialised"
