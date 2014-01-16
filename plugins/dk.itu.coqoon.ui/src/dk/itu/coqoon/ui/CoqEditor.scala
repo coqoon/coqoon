@@ -77,7 +77,6 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
 
   final def getViewer = super.getSourceViewer
 
-  import coqparser.VernacularRegion
   import org.eclipse.jface.text.source.{Annotation, ISourceViewer, IVerticalRuler}
   import org.eclipse.jface.text.{IDocument, Position}
   import org.eclipse.swt.widgets.Composite
@@ -222,9 +221,8 @@ object CoqWordDetector extends IWordDetector {
 }
 
 import org.eclipse.jface.text.rules.RuleBasedScanner
-import coqparser.VernacularReserved
 
-object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
+object CoqTokenScanner extends RuleBasedScanner {
   import org.eclipse.jface.text.rules.{IToken, MultiLineRule, SingleLineRule, Token, WordRule}
   import org.eclipse.jface.text.{IDocument, TextAttribute}
   import org.eclipse.swt.SWT.{BOLD, ITALIC}
@@ -245,6 +243,7 @@ object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
     new SingleLineRule("(*", "*)", commentToken)
   )
 
+  import coqparser.VernacularReserved._
   private val wordRule = new WordRule(CoqWordDetector, otherToken)
   for (k <- keyword) wordRule.addWord(k, definerToken)
   for (k <- keywords) wordRule.addWord(k, keywordToken)
@@ -256,7 +255,6 @@ object CoqTokenScanner extends RuleBasedScanner with VernacularReserved {
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
 import org.eclipse.jface.text.IDocument
 class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor) extends IReconcilingStrategy {
-  import coqparser.VernacularRegion
   import org.eclipse.jface.text.{IDocument, IRegion, Position}
   import org.eclipse.jface.text.reconciler._
   import org.eclipse.ui.views.contentoutline.IContentOutlinePage
