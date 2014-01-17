@@ -45,23 +45,6 @@ abstract class ResourceJob(name : String, resource : IResource,
     JobBase.wrap { doOperation(monitor) }
 }
 
-import org.eclipse.ui.IMarkerResolution
-
-object ConfigureCoqPathResolution extends IMarkerResolution {
-  override def getLabel = "Configure the path to Coq"
-
-  override def run(r : IMarker) = {
-    import org.eclipse.ui.dialogs.PreferencesUtil
-    PreferencesUtil.createPreferenceDialogOn(UIUtils.getActiveShell,
-      "Kopitiam.settings", null, null).open
-  }
-}
-
-import org.eclipse.ui.{IMarkerResolutionGenerator}
-class ResolutionGenerator extends IMarkerResolutionGenerator {
-  override def getResolutions(m : IMarker) = Array(ConfigureCoqPathResolution)
-}
-
 abstract class MarkerJob(resource : IResource) extends ResourceJob(
     "Update markers", resource, JobUtilities.getRuleFactory.markerRule)
 

@@ -157,9 +157,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     /* XXX: flush outline page */
   }
 
-  //Necessary for Eclipse API cruft
-  var oldAnnotations : Array[Annotation] = Array.empty
-
+  var oldAnnotations : Array[Annotation] = Array()
   def updateFolding (root : ICoqVernacFile, document : IDocument) : Unit = {
     import scala.collection.JavaConversions._
     var positions : Seq[Position] = Seq()
@@ -400,21 +398,6 @@ class CoqContentAssistantProcessor(
   def getContextInformationAutoActivationCharacters () : Array[Char] = null
   def getContextInformationValidator () : IContextInformationValidator = null
   def getErrorMessage () : String = "not yet implemented"
-}
-
-import org.eclipse.jface.text.quickassist.IQuickAssistProcessor
-
-class CoqQuickAssistProcessor extends IQuickAssistProcessor {
-  import org.eclipse.jface.text.source.Annotation
-  import org.eclipse.jface.text.quickassist.IQuickAssistInvocationContext
-
-  override def canAssist(context : IQuickAssistInvocationContext) = false
-  override def canFix(i : Annotation) = false
-  override def computeQuickAssistProposals(
-      context : IQuickAssistInvocationContext) : Array[ICompletionProposal] = {
-    Array()
-  }
-  override def getErrorMessage = null
 }
 
 import org.eclipse.ui.views.contentoutline.ContentOutlinePage
