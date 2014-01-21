@@ -306,6 +306,8 @@ trait ICoqVernacFile extends ICoqFile with IParent {
   override def getElementType = classOf[ICoqVernacFile]
 
   override def getChildren() : Seq[ICoqScriptElement]
+
+  def detach() : IDetachedCoqVernacFile
 }
 object ICoqVernacFile {
   import org.eclipse.core.runtime.Platform

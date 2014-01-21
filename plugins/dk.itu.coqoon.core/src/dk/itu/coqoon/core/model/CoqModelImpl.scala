@@ -407,7 +407,7 @@ private object EmptyInputStream extends InputStream {
 private class CoqVernacFileImpl(
     val res : IFile, val parent : ICoqPackageFragment)
     extends ParentImpl(res, parent) with ICoqVernacFile {
-  private class Cache extends ICache {
+  protected class Cache extends ICache {
     override def destroy = Seq(sentences).map(_.clear)
 
     override def update(ev : IResourceChangeEvent) = {
@@ -416,9 +416,8 @@ private class CoqVernacFileImpl(
     }
 
     import dk.itu.coqoon.core.coqtop.{CoqSentence, ParserStack}
-    private[CoqVernacFileImpl] final val sentences =
-        CacheSlot[Seq[ICoqScriptElement]] {
-      val content = TotalReader.read(res.getContents)
+    final val sentences = CacheSlot[Seq[ICoqScriptElement]] {
+      val content = CoqVernacFileImpl.this.getContents
       var sentences = CoqSentence.getNextSentences(content, 0, content.length)
 
       val stack = new ParserStack[
@@ -518,7 +517,10 @@ private class CoqVernacFileImpl(
       stack.getStack.reverse
     }
   }
-  private def getCache() = getModel.getCacheFor(this, new Cache)
+  protected def getCache() = getModel.getCacheFor(this, new Cache)
+
+  /* Called from within the cache! */
+  protected def getContents() = TotalReader.read(res.getContents)
 
   import java.io.InputStream
 
@@ -526,6 +528,29 @@ private class CoqVernacFileImpl(
     throw new IllegalArgumentException(res.getName)
 
   override def getChildren = getCache.sentences.get
+
+  override def detach = new DetachedCoqVernacFileImpl(this)
+}
+
+private class DetachedCoqVernacFileImpl(
+    val original : CoqVernacFileImpl)
+    extends CoqVernacFileImpl(original.res, original.parent)
+        with IDetachedCoqVernacFile {
+  private val content = CacheSlot[String](super.getContents)
+  content.get
+
+  override def properties = Seq(original)
+
+  import java.io.{ByteArrayInputStream => BAIS}
+  override def commit(monitor : IProgressMonitor) =
+    original.res.setContents(new BAIS(getContents.getBytes("UTF-8")),
+        IResource.KEEP_HISTORY, monitor)
+
+  override def getContents = content.get
+  override def setContents(contents : String) = {
+    content.set(Option(contents))
+    getCache.sentences.clear
+  }
 }
 
 import dk.itu.coqoon.core.utilities.Substring
