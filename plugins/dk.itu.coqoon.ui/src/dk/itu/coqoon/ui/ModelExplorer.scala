@@ -11,15 +11,26 @@ import dk.itu.coqoon.core.utilities.TryCast
 
 import org.eclipse.ui.part.ViewPart
 import org.eclipse.swt.widgets.Composite
+import org.eclipse.jface.action.{
+  Action, MenuManager, IMenuManager, IMenuListener}
 import org.eclipse.jface.viewers._
 
 class ModelExplorer extends ViewPart {
   private var tree : TreeViewer = null
 
+  private val menuManager : MenuManager = new MenuManager
+  menuManager.setRemoveAllWhenShown(true)
+  menuManager.addMenuListener(new IMenuListener {
+    override def menuAboutToShow(manager : IMenuManager) =
+      Option(tree).map(_.getSelection) match {
+        case Some(s : IStructuredSelection) if s.size == 1 =>
+        case _ =>
+      }
+  })
+
   override def createPartControl(parent : Composite) = {
     tree = new TreeViewer(parent)
     tree.addOpenListener(new IOpenListener {
-      import dk.itu.coqoon.ui.utilities.UIUtils
       import org.eclipse.ui.ide.IDE
       override def open(ev : OpenEvent) = ev.getSelection match {
         case s : IStructuredSelection => s.getFirstElement match {
@@ -32,6 +43,7 @@ class ModelExplorer extends ViewPart {
         case _ =>
       }
     })
+    tree.getControl.setMenu(menuManager.createContextMenu(tree.getControl))
     tree.setLabelProvider(new ModelLabelProvider)
     tree.setContentProvider(new ModelContentProvider)
     tree.setInput(ICoqModel.getInstance)
