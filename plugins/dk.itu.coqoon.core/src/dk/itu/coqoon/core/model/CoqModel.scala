@@ -313,6 +313,13 @@ object ICoqVernacFile {
       ManifestIdentifiers.CONTENT_TYPE_COQFILE)
 }
 
+trait IDetachedCoqVernacFile extends ICoqVernacFile {
+  def commit(monitor : IProgressMonitor)
+
+  def getContents() : String
+  def setContents(contents : String)
+}
+
 sealed trait ICoqScriptElement extends ICoqElement {
   def getText() : String
   def getLength() : Int
