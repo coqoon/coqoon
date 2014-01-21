@@ -26,6 +26,22 @@ import org.eclipse.core.resources._
 private abstract class CoqElementImpl[
     A <: IResource, B <: ICoqElement with IParent](
     private val res : A, private val parent : B) extends ICoqElement {
+  protected def properties() : Seq[Any] = Seq(res, parent)
+
+  final override def hashCode() = {
+    var result = 17
+    properties.foreach(p =>
+      result = result * 41 + (if (p == null) 0 else p.hashCode))
+    result
+  }
+
+  final override def equals(a : Any) =
+    Option(a).filter(_.getClass == getClass).flatMap(
+        TryCast[CoqElementImpl[_, _]]).exists(_.properties == properties)
+
+  override def toString = getClass.getSimpleName + "@" +
+      hashCode.toHexString + properties.mkString("(", ", ", ")")
+
   override def getParent = Option(parent)
   override def exists = getCorrespondingResource.exists { _.exists }
   override def getCorrespondingResource = Option(res)
@@ -55,8 +71,8 @@ private abstract class ParentImpl[
       getChildren.foreach(_.accept(f))
 }
 
-private case class CoqModelImpl(
-    private val res : IWorkspaceRoot)
+private class CoqModelImpl(
+    val res : IWorkspaceRoot)
     extends ParentImpl(res, null) with ICoqModel {
   import CoqModelImpl._
 
@@ -147,9 +163,8 @@ private object CoqModelImpl {
     (a.isOpen && a.getDescription.getNatureIds.exists(ICoqProject.isCoqNature))
 }
 
-private case class CoqProjectImpl(
-    private val res : IProject,
-    private val parent : ICoqModel)
+private class CoqProjectImpl(
+    val res : IProject, val parent : ICoqModel)
     extends ParentImpl(res, parent) with ICoqProject {
   private class Cache extends ICache {
     def destroy = Seq(projectFile, loadPathProviders, loadPath).map(_.clear)
@@ -328,12 +343,9 @@ private case class CoqProjectImpl(
   override def getChildren = getPackageFragmentRoots
 }
 
-private case class CoqPackageFragmentRootImpl(
-    private val res : IFolder,
-    private val parent : ICoqProject)
+private class CoqPackageFragmentRootImpl(
+    val res : IFolder, val parent : ICoqProject)
     extends ParentImpl(res, parent) with ICoqPackageFragmentRoot {
-  import CoqPackageFragmentRootImpl._
-
   private def gpfRecurse(res : IFolder) : List[ICoqPackageFragment] = {
     var results = List[ICoqPackageFragment]()
     if (res.exists) {
@@ -351,9 +363,8 @@ private case class CoqPackageFragmentRootImpl(
   override def getChildren = getPackageFragments
 }
 
-private case class CoqPackageFragmentImpl(
-    private val res : IFolder,
-    private val parent : ICoqPackageFragmentRoot)
+private class CoqPackageFragmentImpl(
+    val res : IFolder, val parent : ICoqPackageFragmentRoot)
     extends ParentImpl(res, parent) with ICoqPackageFragment {
   import CoqPackageFragmentImpl._
 
@@ -393,9 +404,8 @@ private object EmptyInputStream extends InputStream {
   override def read = -1
 }
 
-private case class CoqVernacFileImpl(
-    private val res : IFile,
-    private val parent : ICoqPackageFragment)
+private class CoqVernacFileImpl(
+    val res : IFile, val parent : ICoqPackageFragment)
     extends ParentImpl(res, parent) with ICoqVernacFile {
   private class Cache extends ICache {
     override def destroy = Seq(sentences).map(_.clear)
@@ -415,8 +425,8 @@ private case class CoqVernacFileImpl(
         ICoqScriptElement, CoqScriptGroupDisposition]()
 
       import dk.itu.coqoon.core.utilities.Substring
-      def wrapSentence(ss : (Substring, Boolean)*) =
-        ss.map(v => CoqScriptSentenceImpl(v._1, v._2, CoqVernacFileImpl.this))
+      def wrapSentence(ss : (Substring, Boolean)*) = ss.map(v =>
+          new CoqScriptSentenceImpl(v._1, v._2, CoqVernacFileImpl.this))
       def pushSentence(ss : (Substring, Boolean)*) =
         wrapSentence(ss : _*).foreach(stack.push)
 
@@ -431,7 +441,7 @@ private case class CoqVernacFileImpl(
               if stack.getInnermostContext == Some(CoqSectionGroup(id)) =>
             pushSentence(h)
             val (tag, body) = stack.popContext
-            stack.push(CoqScriptGroupImpl(
+            stack.push(new CoqScriptGroupImpl(
                 tag, body.reverse, CoqVernacFileImpl.this))
             tail
 
@@ -443,24 +453,24 @@ private case class CoqVernacFileImpl(
               if stack.getInnermostContext == Some(CoqModuleGroup(id)) =>
             pushSentence(h)
             val (tag, body) = stack.popContext
-            stack.push(CoqScriptGroupImpl(
+            stack.push(new CoqScriptGroupImpl(
                 tag, body.reverse, CoqVernacFileImpl.this))
             tail
 
           case (h @ (DefinitionSentence(_, identifier, _, _), _)) :: tail =>
-            stack.push(CoqScriptGroupImpl(CoqDefinitionGroup(identifier),
+            stack.push(new CoqScriptGroupImpl(CoqDefinitionGroup(identifier),
                 wrapSentence(h), CoqVernacFileImpl.this))
             tail
           case (h @ (LtacSentence(identifier, _), _)) :: tail =>
-            stack.push(CoqScriptGroupImpl(CoqLtacGroup(identifier),
+            stack.push(new CoqScriptGroupImpl(CoqLtacGroup(identifier),
                 wrapSentence(h), CoqVernacFileImpl.this))
             tail
           case (h @ (FixpointSentence(_, identifier, _), _)) :: tail =>
-            stack.push(CoqScriptGroupImpl(CoqFixpointGroup(identifier),
+            stack.push(new CoqScriptGroupImpl(CoqFixpointGroup(identifier),
                 wrapSentence(h), CoqVernacFileImpl.this))
             tail
           case (h @ (InductiveSentence(_, identifier, _), _)) :: tail =>
-            stack.push(CoqScriptGroupImpl(CoqInductiveGroup(identifier),
+            stack.push(new CoqScriptGroupImpl(CoqInductiveGroup(identifier),
                 wrapSentence(h), CoqVernacFileImpl.this))
             tail
 
@@ -479,7 +489,7 @@ private case class CoqVernacFileImpl(
                   _.isInstanceOf[CoqProofGroup]) =>
             pushSentence(h)
             val (tag, body) = stack.popContext
-            stack.push(CoqScriptGroupImpl(
+            stack.push(new CoqScriptGroupImpl(
                 tag, body.reverse, CoqVernacFileImpl.this))
             tail
 
@@ -501,7 +511,7 @@ private case class CoqVernacFileImpl(
        * here?) */
       while (stack.getInnermostContext != None) {
         val (tag, body) = stack.popContext
-        stack.push(CoqScriptGroupImpl(
+        stack.push(new CoqScriptGroupImpl(
             tag, body.reverse, CoqVernacFileImpl.this))
       }
 
@@ -519,10 +529,9 @@ private case class CoqVernacFileImpl(
 }
 
 import dk.itu.coqoon.core.utilities.Substring
-private case class CoqScriptSentenceImpl(
-    private val text : Substring,
-    private val synthetic : Boolean,
-    private val parent : ICoqElement with IParent)
+private class CoqScriptSentenceImpl(
+    val text : Substring, val synthetic : Boolean,
+    val parent : ICoqElement with IParent)
     extends CoqElementImpl(null, parent) with ICoqScriptSentence {
   override def getText = text.toString
   override def getOffset = text.start
@@ -533,10 +542,10 @@ private case class CoqScriptSentenceImpl(
   override def toString = "" + text
 }
 
-private case class CoqScriptGroupImpl(
-    private val disposition : CoqScriptGroupDisposition,
-    private val elements : Seq[ICoqScriptElement],
-    private val parent : ICoqElement with IParent)
+private class CoqScriptGroupImpl(
+    val disposition : CoqScriptGroupDisposition,
+    val elements : Seq[ICoqScriptElement],
+    val parent : ICoqElement with IParent)
     extends ParentImpl(null, parent) with ICoqScriptGroup {
   override def getDisposition = disposition
   override def getChildren = elements
