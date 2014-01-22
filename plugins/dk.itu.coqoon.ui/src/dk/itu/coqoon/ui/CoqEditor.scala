@@ -111,10 +111,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     projViewer.doOperation(ProjectionViewer.TOGGLE)
 
     annotationModel = Option(projViewer.getProjectionAnnotationModel)
-
-    val doc = this.getDocumentProvider.getDocument(getEditorInput)
-    file.flatMap(ICoqModel.getInstance.toCoqElement).flatMap(
-        TryCast[ICoqVernacFile]).foreach(updateFolding(_, doc))
+    updateFolding()
   }
 
   //Create the source viewer as one that supports folding
@@ -152,16 +149,22 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     else super.getAdapter(required)
   }
 
+  import dk.itu.coqoon.core.utilities.CacheSlot
+  val workingCopy = CacheSlot[IDetachedCoqVernacFile] {
+    ICoqModel.getInstance.toCoqElement(file.get).flatMap(
+        TryCast[ICoqVernacFile]).get.detach
+  }
+
   override def doSetInput (input : IEditorInput) : Unit = {
     super.doSetInput(input)
     /* XXX: flush outline page */
   }
 
   var oldAnnotations : Array[Annotation] = Array()
-  def updateFolding (root : ICoqVernacFile, document : IDocument) : Unit = {
+  def updateFolding() : Unit = {
     import scala.collection.JavaConversions._
     var positions : Seq[Position] = Seq()
-    root.accept(_ match {
+    workingCopy.get.accept(_ match {
       case f : ICoqScriptGroup
           if f.getChildren.size > 1 =>
         val padding = f.getText.takeWhile(_.isWhitespace).length
@@ -272,18 +275,20 @@ object CoqTokenScanner extends RuleBasedScanner {
 
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
 import org.eclipse.jface.text.IDocument
-class CoqOutlineReconcilingStrategy(var document : IDocument, editor : CoqEditor) extends IReconcilingStrategy {
+class CoqWorkingCopyReconcilingStrategy(var document : IDocument,
+    editor : CoqEditor) extends IReconcilingStrategy {
   import org.eclipse.jface.text.{IDocument, IRegion, Position}
   import org.eclipse.jface.text.reconciler._
-  import org.eclipse.ui.views.contentoutline.IContentOutlinePage
 
-  def reconcile (dr : DirtyRegion, r : IRegion) : Unit = reconcile(dr)
+  override def reconcile(dr : DirtyRegion, r : IRegion) = reconcile(dr)
 
-  def reconcile (partition : IRegion) : Unit = ()
-
-  def setDocument(doc : IDocument) : Unit = {
-    document = doc
+  override def reconcile(partition : IRegion) = UIUtils.asyncExec {
+    editor.workingCopy.get.setContents(document.get)
+    editor.updateFolding
+    editor.outlinePage.foreach(_.setElement(editor.workingCopy.get))
   }
+
+  override def setDocument(doc : IDocument) = (document = doc)
 }
 
 import org.eclipse.ui.editors.text.TextSourceViewerConfiguration
@@ -308,7 +313,7 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
   }
 
   override def getReconciler (v : ISourceViewer) : IReconciler = {
-    val strategy = new CoqOutlineReconcilingStrategy(v.getDocument, editor)
+    val strategy = new CoqWorkingCopyReconcilingStrategy(v.getDocument, editor)
     val reconciler = new MonoReconciler(strategy, false)
     reconciler
   }
@@ -402,7 +407,8 @@ class CoqContentAssistantProcessor(
 
 import org.eclipse.ui.views.contentoutline.ContentOutlinePage
 
-class CoqContentOutlinePage(element : ICoqElement) extends ContentOutlinePage {
+class CoqContentOutlinePage(
+    private var element : ICoqElement) extends ContentOutlinePage {
   import org.eclipse.jface.viewers.{
     TreeViewer, SelectionChangedEvent, IStructuredSelection}
   import org.eclipse.swt.widgets.Composite
@@ -424,7 +430,13 @@ class CoqContentOutlinePage(element : ICoqElement) extends ContentOutlinePage {
     val viewer = getTreeViewer()
     viewer.setContentProvider(new ModelContentProvider)
     viewer.setLabelProvider(new ModelLabelProvider)
-    viewer.setInput(element)
+
+    setElement(element)
+  }
+
+  def setElement(element : ICoqElement) = {
+    this.element = element
+    Option(getTreeViewer).foreach(_.setInput(element))
   }
 }
 
