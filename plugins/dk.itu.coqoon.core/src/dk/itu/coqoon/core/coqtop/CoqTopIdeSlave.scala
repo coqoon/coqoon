@@ -66,7 +66,7 @@ trait CoqProgramInstance {
 
 private class CoqProgramInstanceImpl(argv : Seq[String],
     start : ProcessBuilder => Process) extends CoqProgramInstance {
-  private val (in, out, pr) = {
+  protected val (in, out, pr) = {
     import java.io.{InputStreamReader, OutputStreamWriter}
 
     val pb = new ProcessBuilder(argv : _*)
@@ -86,7 +86,33 @@ private class CoqProgramInstanceImpl(argv : Seq[String],
 
 private class CoqProgramInstanceImplWindows(
     argv : Seq[String], start : ProcessBuilder => Process)
-        extends CoqProgramInstanceImpl(argv.map(a => '"' + a + '"'), start)
+        extends CoqProgramInstanceImpl(argv.map(a => '"' + a + '"'), start) {
+  override def interrupt = if (pr != null) {
+    import WindowsConsoleUtilities._
+    val handle = CoqProgramInstanceImplWindows.extractHandle(pr)
+    val pid = getProcessId(handle)
+
+    freeConsole
+    attachConsole(pid)
+    ignoreCtrlC
+    sendCtrlC
+    freeConsole
+  }
+}
+private object CoqProgramInstanceImplWindows {
+  def extractHandle(p : Process) : Long = {
+    val klass = p.getClass
+    val handleField = try {
+      Some(klass.getDeclaredField("handle"))
+    } catch {
+      case _ : NoSuchFieldException => None
+    }
+    handleField.map(hf => {
+      hf.setAccessible(true)
+      hf.getLong(p)
+    }).get
+  }
+}
 
 private class CoqProgramInstanceImplPOSIX(argv : Seq[String],
     start : ProcessBuilder => Process) extends CoqProgramInstanceImpl(
