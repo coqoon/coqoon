@@ -16,3 +16,7 @@ Export-Package: dk.itu.coqoon.core,
  dk.itu.coqoon.core.model,
  dk.itu.coqoon.core.project,
  dk.itu.coqoon.core.utilities
+Bundle-NativeCode: 
+ lib/i686/WindowsConsoleUtilities_Native.dll; processor=x86; osname=Win32,
+ lib/x86_64/WindowsConsoleUtilities_Native.dll; processor=x86-64; osname=Win32,
+ *
