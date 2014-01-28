@@ -95,6 +95,7 @@ private class CoqProgramInstanceImplWindows(
       attachConsole(pid)
       ignoreCtrlC
       sendCtrlC
+      unignoreCtrlC
       freeConsole
     })
   }
@@ -241,7 +242,7 @@ private class CoqTopIdeSlaveImpl(
     pr = None
   }
 
-  override def interrupt = { pr.foreach(_.interrupt) }
+  override def interrupt = pr.foreach(_.interrupt)
 
   private var buf = new Array[Char](32768)
 
