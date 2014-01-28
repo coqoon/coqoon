@@ -1,16 +1,6 @@
 TODO: Coqoon
 ------------
 
-* Implement a model for Coq
-
-  In order to be able to perform interesting operations (searching,
-  refactoring, ...) on Coq code, we need a model for it, like the JDT's model
-  for Java code.
-  
-  Thanks to notation, dependent types, and the lack of a stable object file
-  format, this will be rather harder for Coq than it was for Java, and it
-  probably won't be possible for the model to be quite as detailed.
-  
 * Refactoring
 
   Being able to perform refactoring -- renaming proofs, promoting nested helper
@@ -35,26 +25,6 @@ TODO: Coqoon
   The Eclipse Java editor allows the user to search for definitions,
   references, implementations, and accesses associated with an identifier; the
   Coq editor should support something like this, too.
-
-* Extend the functionality of Coq projects
-
-  Most of the functionality of the ICoqProject trait is either hard-coded or
-  dummied out -- for example, the user can't define a project-specific Coq load
-  path.
-  
-  (Ideally, Coq load paths would be handled in the same way as Java build
-  paths.)
-
-* Add support for interrupts on Windows
-
-  Interrupting Coq on Windows is tricky, as Windows doesn't really support
-  POSIX signals. CoqIde solves this with some native code trickery, but it's
-  not clear that this would work properly in the JVM (as Java registers its own
-  signal handlers).
-  
-  The Windows API function "GenerateConsoleCtrlEvent" is used to send emulated
-  POSIX signals, but it's rather restrictive (in particular, it relies on a
-  process group identifier which the JRE doesn't make generally available).
 
 * Persist the Coq state across sessions
 
