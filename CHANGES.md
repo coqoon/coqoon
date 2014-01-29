@@ -1,3 +1,23 @@
+Coqoon 0.4.3
+===========
+
+This release extends the Coq model to support temporary working copies (which
+are now used to provide outline and code folding support in the Coq editor)
+and adds support for sending interrupts to Coq on Windows.
+
+Other significant changes
+-------------------------
+
+* Deleted all of the old code parsing infrastructure
+
+  The parser was once used to provide outline and code folding support, but
+  the model's now taken over from it.
+
+Bug fixes
+---------
+
+* Re-enabled support for sending interrupts in the Java editor
+
 Coqoon 0.4.2.1
 ==============
 
