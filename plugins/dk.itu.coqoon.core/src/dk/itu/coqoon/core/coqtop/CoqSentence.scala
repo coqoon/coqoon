@@ -87,41 +87,33 @@ object CoqSentence {
 
   object Classifier {
     object LtacSentence {
-      val expr =
-        ("^\\s*Ltac\\s+([a-zA-Z0-9_']+)(?s)(.*)\\.$").r
+      val expr = ("^\\s*Ltac\\s+([a-zA-Z0-9_']+)(?s)(.*)\\.$").r
       def unapply(input : CharSequence) = input match {
-        case expr(identifier, body) =>
-          Some(identifier, body)
+        case expr(identifier, body) => Some(identifier, body)
         case _ => None
       }
     }
 
     object ModuleStartSentence {
-      val expr =
-        ("^\\s*Module\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
+      val expr = ("^\\s*Module\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
-        case expr(identifier) =>
-          Some(identifier)
+        case expr(identifier) => Some(identifier)
         case _ => None
       }
     }
 
     object SectionStartSentence {
-      val expr =
-        ("^\\s*Section\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
+      val expr = ("^\\s*Section\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
-        case expr(identifier) =>
-          Some(identifier)
+        case expr(identifier) => Some(identifier)
         case _ => None
       }
     }
 
     object IdentifiedEndSentence {
-      val expr =
-        ("^\\s*End\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
+      val expr = ("^\\s*End\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
-        case expr(identifier) =>
-          Some(identifier)
+        case expr(identifier) => Some(identifier)
         case _ => None
       }
     }
@@ -170,7 +162,7 @@ object CoqSentence {
     object ProofStartSentence {
       val expr = ("^\\s*(Proof|Next Obligation)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
-        case expr(keyword) => Some((keyword))
+        case expr(keyword) => Some(keyword)
         case _ => None
       }
     }
@@ -178,7 +170,23 @@ object CoqSentence {
     object ProofEndSentence {
       val expr = ("^\\s*(Qed|Defined|Admitted|Abort)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
-        case expr(keyword) => Some((keyword))
+        case expr(keyword) => Some(keyword)
+        case _ => None
+      }
+    }
+
+    object LoadSentence {
+      val expr = ("^Load (.*)\\.$").r
+      def unapply(input : CharSequence) = input match {
+        case expr(ident) => Some(ident)
+        case _ => None
+      }
+    }
+
+    object RequireSentence {
+      val expr = ("^Require (Import |Export |)(.*)\\.$").r
+      def unapply(input : CharSequence) = input match {
+        case expr(kind, ident) => Some((kind, ident))
         case _ => None
       }
     }

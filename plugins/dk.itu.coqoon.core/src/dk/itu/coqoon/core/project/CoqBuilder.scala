@@ -425,8 +425,6 @@ private object CoqBuilder {
       Some(path.setDevice(null).removeFirstSegments(base.segmentCount))
     } else None
 
-  private val Load = "^Load (.*)\\.$".r
-  private val Require = "^Require (Import |Export |)(.*)\\.$".r
   private val GeneralError = """(?ms)Error: (.*)$""".r.unanchored
   private val CompilationError =
     ("""(?s)File "(.*)", line (\d+), characters (\d+)-(\d+):""" +
@@ -470,13 +468,14 @@ private object CoqBuilder {
     var refs = Seq.newBuilder[CoqReference]
     ICoqModel.getInstance.toCoqElement(file).foreach(_.accept(_ match {
       case e : ICoqScriptSentence if !e.isSynthetic =>
+        import CoqSentence.Classifier._
         e.getText.trim match {
-          case Load(what) =>
+          case LoadSentence(what) =>
             refs += LoadRef(what)
-          case Require(how, what) if what(0) == '"' =>
+          case RequireSentence(_, what) if what(0) == '"' =>
             val filename = what.substring(1).split("\"", 2)(0)
             refs += RequireRef(filename)
-          case Require(how, what) =>
+          case RequireSentence(_, what) =>
             refs ++= what.split(" ").map(RequireRef)
           case _ =>
         }
