@@ -473,6 +473,18 @@ private class CoqVernacFileImpl(
                 wrapSentence(h), CoqVernacFileImpl.this))
             tail
 
+          case (h @ (LoadSentence(ident), _)) :: tail =>
+            stack.push(new CoqScriptGroupImpl(CoqLoadGroup(ident),
+                wrapSentence(h), CoqVernacFileImpl.this))
+            tail
+          case (h @ (RequireSentence(_, what), _)) :: tail =>
+            val qualids : Seq[String] = if (what(0) == '"') {
+              Seq(what.substring(1).split("\"", 2)(0))
+            } else what.split(" ")
+            stack.push(new CoqScriptGroupImpl(CoqRequireGroup(qualids),
+                wrapSentence(h), CoqVernacFileImpl.this))
+            tail
+
           case (h @ (AssertionSentence(_, identifier, _), _)) :: tail =>
             stack.pushContext(CoqProofGroup(identifier))
             pushSentence(h)

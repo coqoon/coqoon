@@ -371,6 +371,11 @@ case class CoqInductiveGroup(
 case class CoqDefinitionGroup(
     val name : String) extends CoqScriptGroupDisposition
 
+case class CoqLoadGroup(
+    val ident : String) extends CoqScriptGroupDisposition
+case class CoqRequireGroup(
+    val qualid : Seq[String]) extends CoqScriptGroupDisposition
+
 trait ICoqObjectFile extends ICoqFile {
   override def getElementType = classOf[ICoqObjectFile]
 

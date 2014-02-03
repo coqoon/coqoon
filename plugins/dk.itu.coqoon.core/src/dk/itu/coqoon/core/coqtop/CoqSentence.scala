@@ -176,7 +176,7 @@ object CoqSentence {
     }
 
     object LoadSentence {
-      val expr = ("^Load (.*)\\.$").r
+      val expr = ("^\\s*Load\\s+(.*)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(ident) => Some(ident)
         case _ => None
@@ -184,7 +184,7 @@ object CoqSentence {
     }
 
     object RequireSentence {
-      val expr = ("^Require (Import |Export |)(.*)\\.$").r
+      val expr = ("^\\s*Require\\s+(Import\\s+|Export\\s+|)(.*)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(kind, ident) => Some((kind, ident))
         case _ => None
