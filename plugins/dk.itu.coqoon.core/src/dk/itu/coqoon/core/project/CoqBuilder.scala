@@ -359,12 +359,27 @@ class CoqBuilder extends IncrementalProjectBuilder {
     None
   }
 
-  private def generateDeps(file : IFile) : Seq[Dependency] =
-    ("(self)", (_ : String) => Some(file.getLocation), Option.empty[IPath]) +:
-        CoqBuilder.generateRefs(file).map(_ match {
-          case LoadRef(r) => (r, resolveLoad(_), Option.empty[IPath])
-          case RequireRef(r) => (r, resolveRequire(_), Option.empty[IPath])
-        })
+  private def generateDeps(file : IFile) : Seq[Dependency] = {
+    var deps = Seq.newBuilder[Dependency]
+    deps +=
+        ("(self)", (_ : String) => Some(file.getLocation), Option.empty[IPath])
+    ICoqModel.getInstance.toCoqElement(file).flatMap(
+        TryCast[ICoqVernacFile]).foreach(_.accept(_ match {
+      case e : ICoqScriptGroup => e.getDisposition match {
+        case CoqLoadGroup(what) =>
+          deps += (what, resolveLoad(_), Option.empty[IPath])
+          false
+        case CoqRequireGroup(what) =>
+          for (f <- what)
+            deps += (f, resolveRequire(_), Option.empty[IPath])
+          false
+        case _ => true
+      }
+      case e : IParent => true
+      case _ => false
+    }))
+    deps.result
+  }
 
   override def toString = "(CoqBuilder for " + getProject + ")"
 }
@@ -459,32 +474,6 @@ private object CoqBuilder {
 
   def derivedFilter[A <: IResource](der : Boolean)(r : A) : Option[A] =
     Option(r).filter(_.isDerived == der)
-
-  sealed abstract class CoqReference
-  case class LoadRef(value : String) extends CoqReference
-  case class RequireRef(value : String) extends CoqReference
-
-  private def generateRefs(file : IFile) : Seq[CoqReference] = {
-    var refs = Seq.newBuilder[CoqReference]
-    ICoqModel.getInstance.toCoqElement(file).foreach(_.accept(_ match {
-      case e : ICoqScriptSentence if !e.isSynthetic =>
-        import CoqSentence.Classifier._
-        e.getText.trim match {
-          case LoadSentence(what) =>
-            refs += LoadRef(what)
-          case RequireSentence(_, what) if what(0) == '"' =>
-            val filename = what.substring(1).split("\"", 2)(0)
-            refs += RequireRef(filename)
-          case RequireSentence(_, what) =>
-            refs ++= what.split(" ").map(RequireRef)
-          case _ =>
-        }
-        false
-      case _ : IParent => true
-      case _ => false
-    }))
-    refs.result
-  }
 }
 
 class FolderCreationRunner(a : IResource) extends JobRunner[Unit] {
