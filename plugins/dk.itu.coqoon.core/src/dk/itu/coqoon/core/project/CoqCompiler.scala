@@ -17,9 +17,9 @@
 package dk.itu.coqoon.core.project
 
 import dk.itu.coqoon.core.ManifestIdentifiers
-import dk.itu.coqoon.core.model.ICoqModel
+import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.coqtop.CoqProgram
-import dk.itu.coqoon.core.utilities.{CacheSlot, JobRunner}
+import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot, JobRunner}
 
 import org.eclipse.core.runtime.{Status, IStatus, SubMonitor, IProgressMonitor}
 import org.eclipse.core.resources.{IFile, IResource}
@@ -69,6 +69,19 @@ class CoqCompilerRunner(
     if (!coqc.check)
       fail(new Status(IStatus.ERROR,
           ManifestIdentifiers.PLUGIN, "Couldn't find the coqtop program"))
+
+    ICoqModel.getInstance.toCoqElement(source).flatMap(
+        TryCast[ICoqVernacFile]).foreach(file => {
+      val myPath = file.getCorrespondingResource.get.getFullPath
+      val containingRootPath = file.getParent.flatMap(
+          _.getParent).flatMap(_.getCorrespondingResource).get.getFullPath
+      val qualifiedName = myPath.removeFirstSegments(
+          containingRootPath.segmentCount).removeFileExtension.segments
+      for (i <- qualifiedName;
+           j <- i if j.isWhitespace)
+        fail(new Status(IStatus.ERROR, ManifestIdentifiers.PLUGIN,
+            "\"" + i + "\" is not a valid part of a Coq qualified name"))
+    })
 
     val cp = ICoqModel.toCoqProject(source.getProject)
     val flp = cp.getLoadPath.flatMap(_.asArguments)
