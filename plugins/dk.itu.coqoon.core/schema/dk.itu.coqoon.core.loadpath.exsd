@@ -58,10 +58,12 @@
          </documentation>
       </annotation>
       <complexType>
-         <attribute name="id" type="string" use="required">
+         <attribute name="prefix" type="string" use="required">
             <annotation>
                <documentation>
-                  The identifier of this load path provider. Projects which want to use this provider will use this identifier to find it at runtime. (This identifier should be globally unique.)
+                  The fragment of the abstract load path namespace handled by this provider. This provider will handle abstract load path dependencies which begin with this value.
+
+&lt;p&gt;(The order in which abstract load path providers are queried is unspecified, so providers should choose a responsible value for this attribute to avoid breaking other plugins.)
                </documentation>
             </annotation>
          </attribute>
@@ -83,7 +85,7 @@
          <meta.section type="since"/>
       </appinfo>
       <documentation>
-         Coqoon 1.0.0.
+         Coqoon v0.4.0.
       </documentation>
    </annotation>
 

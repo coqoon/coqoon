@@ -158,10 +158,12 @@ class AbstractLoadPathManager {
   private var providers : Map[String, AbstractLoadPathProvider] = Map()
 
   def getProviderFor(identifier : String) : Option[AbstractLoadPathProvider] =
-    providers.get(identifier)
+    providers.collectFirst {
+      case (prefix, provider) if identifier.startsWith(prefix) => provider
+    }
 
-  def setProviderFor(identifier : String, provider : AbstractLoadPathProvider) =
-    providers += (identifier -> provider)
+  def addProvider(prefix : String, provider : AbstractLoadPathProvider) =
+    providers += (prefix -> provider)
 
   def getProviders() = providers.values.toSeq
 }
@@ -180,9 +182,9 @@ object AbstractLoadPathManager {
     } catch {
       case e : CoreException => None
     }
-    (Option(ice.getAttribute("id")), ex) match {
-      case (Some(id), Some(provider)) =>
-        getInstance.setProviderFor(id, provider)
+    (Option(ice.getAttribute("prefix")), ex) match {
+      case (Some(prefix), Some(provider)) =>
+        getInstance.addProvider(prefix, provider)
       case _ =>
     }
   }
