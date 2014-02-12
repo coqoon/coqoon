@@ -142,7 +142,8 @@ case class ExternalLoadPath(val fsPath : IPath, val dir : Option[String])
 
 case class AbstractLoadPath(
     val identifier : String) extends ICoqLoadPathProvider {
-  override def getLoadPath = getProvider.map(_.getLoadPath).getOrElse(Nil)
+  override def getLoadPath =
+    getProvider.map(_.getLoadPath(identifier)).getOrElse(Nil)
 
   def getProvider() =
     AbstractLoadPathManager.getInstance.getProviderFor(identifier)
@@ -150,7 +151,7 @@ case class AbstractLoadPath(
 
 trait AbstractLoadPathProvider {
   def getName() : String
-  def getLoadPath() : Seq[CoqLoadPath]
+  def getLoadPath(id : String) : Seq[CoqLoadPath]
 }
 
 class AbstractLoadPathManager {
@@ -190,7 +191,7 @@ object AbstractLoadPathManager {
 class Coq84Library extends AbstractLoadPathProvider {
   override def getName = "Coq 8.4 standard library"
 
-  override def getLoadPath =
+  override def getLoadPath(id : String) =
       CoqProgram("coqtop").run(Seq("-where")).readAll match {
     case (0, libraryPath_) =>
       val libraryPath = new Path(libraryPath_.trim)

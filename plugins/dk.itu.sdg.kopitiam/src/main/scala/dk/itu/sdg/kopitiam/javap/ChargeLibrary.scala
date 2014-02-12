@@ -9,7 +9,7 @@ import org.eclipse.core.runtime.Path
 class ChargeLibrary extends AbstractLoadPathProvider {
   override def getName = "Charge! for Java"
 
-  override def getLoadPath =
+  override def getLoadPath(id : String) =
       Activator.getDefault.getPreferenceStore.getString("loadpath") match {
     case p if p.length > 0 => Seq(CoqLoadPath(new Path(p), None))
     case p => Nil
