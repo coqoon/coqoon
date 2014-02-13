@@ -10,10 +10,12 @@ class ChargeLibrary extends AbstractLoadPathProvider {
   override def getName = "Charge! for Java"
 
   override def getLoadPath(id : String) =
+    if (ChargeLibrary.ID == id) {
       Activator.getDefault.getPreferenceStore.getString("loadpath") match {
-    case p if p.length > 0 => Seq(CoqLoadPath(new Path(p), None))
-    case p => Nil
-  }
+        case p if p.length > 0 => Seq(CoqLoadPath(new Path(p), None))
+        case _ => Nil
+      }
+    } else Nil
 }
 object ChargeLibrary {
   final val ID = "dk.itu.sdg.kopitiam/lp/charge/0.1"

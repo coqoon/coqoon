@@ -194,14 +194,16 @@ class Coq84Library extends AbstractLoadPathProvider {
   override def getName = "Coq 8.4 standard library"
 
   override def getLoadPath(id : String) =
+    if (Coq84Library.ID == id) {
       CoqProgram("coqtop").run(Seq("-where")).readAll match {
-    case (0, libraryPath_) =>
-      val libraryPath = new Path(libraryPath_.trim)
-      Seq(CoqLoadPath(libraryPath.append("theories"), Some("Coq")),
-          CoqLoadPath(libraryPath.append("plugins"), Some("Coq")),
-          CoqLoadPath(libraryPath.append("user-contrib"), None))
-    case _ => Nil
-  }
+        case (0, libraryPath_) =>
+          val libraryPath = new Path(libraryPath_.trim)
+          Seq(CoqLoadPath(libraryPath.append("theories"), Some("Coq")),
+              CoqLoadPath(libraryPath.append("plugins"), Some("Coq")),
+              CoqLoadPath(libraryPath.append("user-contrib"), None))
+        case _ => Nil
+      }
+    } else Nil
 }
 object Coq84Library {
   final val ID = "dk.itu.sdg.kopitiam/lp/coq/8.4"
