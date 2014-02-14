@@ -24,3 +24,8 @@ class CoqoonColorPreferencePage
       addField(new ColorFieldEditor(pref, label, getFieldEditorParent))
  }
 }
+
+object CoqoonUIPreferences {
+  val MATCHING_BRACKETS = "matchingBrackets"
+  val MATCHING_BRACKETS_COLOR = "matchingBracketsColor"
+}
