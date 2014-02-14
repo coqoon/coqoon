@@ -13,6 +13,8 @@ import org.eclipse.ui.IFileEditorInput
 import org.eclipse.ui.editors.text.TextEditor
 
 class CoqEditor extends TextEditor with CoqTopEditorContainer {
+  setPreferenceStore(Activator.getDefault.getPreferenceStore)
+
   private object ModelListener extends CoqElementChangeListener {
     override def coqElementChanged(ev : CoqElementEvent) = ev match {
       case CoqProjectLoadPathChangedEvent(project)
@@ -122,6 +124,20 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     getSourceViewerDecorationSupport(viewer)
     reconciler.install(viewer)
     viewer
+  }
+
+  import org.eclipse.ui.texteditor.SourceViewerDecorationSupport
+  import org.eclipse.jface.text.source.DefaultCharacterPairMatcher
+  override def configureSourceViewerDecorationSupport(
+      support : SourceViewerDecorationSupport) = {
+    import CoqoonUIPreferences._
+    import org.eclipse.jface.text.IDocumentExtension3
+    super.configureSourceViewerDecorationSupport(support)
+    support.setCharacterPairMatcher(new DefaultCharacterPairMatcher(
+        Array('(', ')', '{', '}', '<', '>', '[', ']'),
+        IDocumentExtension3.DEFAULT_PARTITIONING, true))
+    support.setMatchingCharacterPainterPreferenceKeys(
+        MATCHING_BRACKETS, MATCHING_BRACKETS_COLOR)
   }
 
   private def addAnnotations (first : Int, second : Int) : Unit =
