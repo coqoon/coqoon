@@ -13,7 +13,11 @@ import org.eclipse.ui.IFileEditorInput
 import org.eclipse.ui.editors.text.TextEditor
 
 class CoqEditor extends TextEditor with CoqTopEditorContainer {
-  setPreferenceStore(Activator.getDefault.getPreferenceStore)
+  import org.eclipse.ui.editors.text.EditorsUI
+  import org.eclipse.ui.texteditor.ChainedPreferenceStore
+  setPreferenceStore(new ChainedPreferenceStore(Array(
+      Activator.getDefault.getPreferenceStore,
+      EditorsUI.getPreferenceStore)))
 
   private object ModelListener extends CoqElementChangeListener {
     override def coqElementChanged(ev : CoqElementEvent) = ev match {
