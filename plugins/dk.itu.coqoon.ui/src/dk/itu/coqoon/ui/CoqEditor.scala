@@ -182,15 +182,21 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
 
   var oldAnnotations : Array[Annotation] = Array()
   def updateFolding() : Unit = {
+    import dk.itu.coqoon.core.utilities.Substring
+
     import scala.collection.JavaConversions._
     var positions : Seq[Position] = Seq()
     workingCopy.get.accept(_ match {
       case f : ICoqScriptGroup
           if f.getChildren.size > 1 =>
         val padding = f.getText.takeWhile(_.isWhitespace).length
-        positions +:=
-          new Position(f.getOffset + padding, f.getLength - padding)
-        true
+        if (Substring(f.getText, padding).count(_ == '\n') < 3) {
+          false
+        } else {
+          positions +:=
+            new Position(f.getOffset + padding, f.getLength - padding)
+          true
+        }
       case f : IParent => true
       case _ => false
     })
