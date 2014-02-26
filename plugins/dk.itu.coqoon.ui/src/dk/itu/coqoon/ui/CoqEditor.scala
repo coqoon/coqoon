@@ -279,8 +279,8 @@ object CoqTokenScanner extends RuleBasedScanner {
   private val black = UIUtils.Color(0, 0, 0)
   private val white = UIUtils.Color(255, 255, 255)
 
-  private val keywordToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, 0))
-  private val definerToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, 0))
+  private val keywordToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, BOLD))
+  private val definerToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, BOLD))
   private val opToken : IToken = new Token(new TextAttribute(UIUtils.Color(0, 0, 30), white, 0))
   private val commentToken : IToken = new Token(new TextAttribute(UIUtils.Color(30, 30, 0), white, ITALIC))
   private val otherToken : IToken = new Token(new TextAttribute(black, white, 0))
@@ -290,7 +290,28 @@ object CoqTokenScanner extends RuleBasedScanner {
     new SingleLineRule("(*", "*)", commentToken)
   )
 
-  import coqparser.VernacularReserved._
+  private val keyword =
+    Seq("Axiom", "Conjecture", "Parameter", "Parameters", "Variable",
+        "Variables", "Hypothesis", "Hypotheses", "Definition", "Example",
+        "Inductive", "CoInductive", "Fixpoint", "CoFixpoint", "Program",
+        "Goal", "Let", "Remark", "Fact", "Corollary", "Proposition", "Lemma",
+        "Instance", "Theorem", "Tactic", "Ltac", "Notation", "Infix", "Add",
+        "Record", "Section", "Module", "Require", "Import", "Export", "Open",
+        "Proof", "End", "Qed", "Admitted", "Save", "Defined", "Print", "Eval",
+        "Check", "Hint")
+
+  private val operator =
+    Seq("!", "%", "&", "&&", "(", "()", ")", "*", "+", "++", ",", "-", "->",
+        ".", ".(", "..", "/", "/\\", ":", "::", ":<", ":=", ":>", ";", "<",
+        "<-", "<->", "<:", "<=", "<>", "=", "=>", "=_D", ">", ">->", ">=", "?",
+        "?=", "@", "[", "\\/", "]", "^", "{", "|", "|-", "||", "}", "~")
+
+  // The reserved words as listed in the reference manual
+  private val keywords =
+    Seq("_", "as", "at", "cofix", "else", "end", "exists", "exists2", "fix",
+        "for", "forall", "fun", "if", "IF", "in", "let", "match", "mod",
+        "Prop", "return", "Set", "then", "Type", "using", "where", "with")
+
   private val wordRule = new WordRule(CoqWordDetector, otherToken)
   for (k <- keyword) wordRule.addWord(k, definerToken)
   for (k <- keywords) wordRule.addWord(k, keywordToken)

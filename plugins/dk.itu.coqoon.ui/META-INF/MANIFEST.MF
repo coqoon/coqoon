@@ -22,5 +22,4 @@ Require-Bundle: org.scala-ide.scala.library,
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
 Export-Package: dk.itu.coqoon.ui,
- dk.itu.coqoon.ui.coqparser,
  dk.itu.coqoon.ui.utilities
