@@ -1,0 +1,201 @@
+\documentclass{article}
+\usepackage[colorlinks=true]{hyperref}
+\usepackage{listings}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+
+\author{Alexander Faithfull\\IT University of Copenhagen\\\texttt{alef@itu.dk}}
+\title{Design of the 0.4 series\\of Coqoon and Kopitiam}
+
+\newcommand{\fdef}[1]{\textit{#1}}
+\newcommand{\name}[1]{\textbf{#1}}
+
+\begin{document}
+\maketitle
+
+\abstract{Coqoon is a proof development environment for Eclipse built atop the
+Coq interactive proof assistant, and Kopitiam is a proof environment for Java
+programs based upon Coqoon. This paper describes the motivation behind these
+projects, their evolution, architecture, and implementation, and}
+
+\tableofcontents
+
+\pagebreak
+
+\section{Introduction}
+
+\subsection{The problem}
+
+\subsection{The goal}
+
+\subsection{History}
+
+\subsubsection{In the beginning}
+
+The project began in March 2011 as \name{Kopitiam}, 
+
+\subsubsection{Early integration}
+
+Kopitiam 0.1, released in September 2012, integrated generated Java proof
+scripts with the Java editor: the user could now step through Java statements
+as though performing a normal Coq proof. This was made possible by AspectJ, a
+Java implementation of the \fdef{aspect-oriented programming} methodology.
+
+The \emph{goal} of aspect-oriented programming is to separate unrelated
+concerns. An aspect-oriented logger for a system, for example, would be written
+separately from that system and would be patched into it at runtime, removing
+the need to clutter the original code with irrelevant logging statements.
+
+In practice, however, the usefulness of an aspect-oriented programming system
+lies in its ability to patch arbitrary code at runtime. To this day, Kopitiam
+continues to use this power to extend the Java editor with Coq-like behaviour.
+
+\subsubsection{Further integration}
+
+Kopitiam 0.2, introduced in January 2013, ported the Java proof environment to
+use Eclipse's own Java parser, removing the old SimpleJava parser.
+
+\subsubsection{Moving beyond simple interaction}
+
+The 0.3 series of Kopitiam, first released in June 2013, dropped support for
+versions of Coq prior to 8.4, and introduced Coq projects with automatic
+builder support.
+
+\subsubsection{Consolidation and continuing integration}
+
+The current release series, the 0.4 series, began in November 2013. This series
+separated the monolithic Kopitiam project into several separate components. The
+core and the Coq development environment became known as \name{Coqoon}, and
+the Kopitiam name is now used exclusively for the Java proof environment.
+
+\pagebreak
+
+\section{Architecture}
+
+\subsection{Plug-ins and Eclipse}
+
+The heart of the Eclipse platform has nothing to do with IDEs at all---it's an
+implementation (called \name{Equinox}) of the OSGi component model. This
+component model expands upon the Java library system by adding \fdef{bundles},
+packages of code which can be dynamically loaded and unloaded and whose
+dependencies can automatically be resolved at runtime. The information needed
+to resolve these complex dependencies is given in the bundle's \fdef{manifest}.
+
+\begin{figure}[h]
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Coqoon core
+Bundle-SymbolicName: dk.itu.coqoon.core;singleton:=true
+Bundle-Version: 0.4.3
+Bundle-Activator: dk.itu.coqoon.core.Activator
+Bundle-Vendor: IT University of Copenhagen
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+...
+\end{lstlisting}
+\caption{A portion of the manifest for the Coqoon core.}
+\end{figure}
+
+A bundle designed for Eclipse is known as a \fdef{plug-in}. Plug-ins can also
+include additional metadata above and beyond that of the OSGi manifest: this
+metadata is stored in a second XML manifest containing \fdef{extension} and
+\fdef{extension point} definitions.
+
+\subsubsection{Extensions and extension points}
+
+Extension points define opportunities for plug-ins to extend each other. For
+example, the Eclipse core defines an extension point called
+\texttt{contentTypes}, which can be used by dependent plug-ins to add support
+for new file types to the Eclipse platform.
+
+Simply being able to contribute data to other plug-ins is not, by itself, very
+useful, so the extension point mechanism also allows extensions to contribute
+code: fully-qualified class names given as extension point attributes can be
+instantiated, providing new functionality to existing code.
+
+An extension is just a contribution to an extension point. As an example,
+Coqoon has an extension for the \texttt{contentTypes} extension point which
+adds support for Coq proof scripts.
+
+\subsubsection{Lazy activation and extensions}
+
+Making the Equinox foundation into a useful development platform requires many
+hundreds of plug-ins, each of which may contain thousands of Java
+classes\footnote{Coqoon and Kopitiam together have about a thousand classes;
+the Eclipse JDT has over four thousand for the UI alone!}; trying to load all
+of these into the JVM at once is likely to be slow---or, in
+resource-constrained environments, impossible.
+
+Eclipse addresses this problem by using \fdef{lazy activation}: that is,
+a plugin is normally only activated when another activated plugin refers to it
+(either directly in its code or indirectly through an extension point). But
+this lazy approach can cause problems. For example, Coqoon contributes a
+toolbar icon, \includegraphics[scale=0.5]{down.png}, which should only be
+enabled when a Coq proof is in progress---but how can such checks be performed
+without needing to load code from, and thus to activate, the relevant plugin?
+
+\pagebreak
+
+\section{Implementation}
+
+Coqoon is implemented almost entirely in the Scala language, which introduces
+functional programming techniques into the Java programming environment in a
+way that's compatible with existing Java code
+
+\subsection{The \texttt{core} plug-in}
+
+The heart of Coqoon is the \texttt{dk.itu.coqoon.core} plug-in. This plugin
+implements a model for Coq proof scripts, the protocol for communicating with
+\texttt{coqtop} processes, and an automatic builder for Coq projects.
+
+The \texttt{core} plug-in is also more permissively licensed than the rest of
+Coqoon and Kopitiam.
+
+\subsubsection{The \texttt{-ideslave} protocol}
+
+Prior to Coq 8.4, the \texttt{coqtop} program had only very primitive support
+for non-interactive use: the \texttt{-emacs} flag caused some extra status
+information to be included in the output, but parsing that. Coq 8.4 improved this situation
+dramatically by introducing the \texttt{-ideslave} protocol.
+
+The \texttt{-ideslave} protocol is a XML-based protocol for sending requests
+to Coq. Unlike the older \texttt{-emacs} mode, this protocol 
+
+\subsubsection{Portability challenges}
+
+The Coqoon core exposes as much Coq functionality as possible on as many
+platforms as possible. This can sometimes conflict---badly---with the Java
+philosophy of ``write once, run anywhere''.
+
+As an example, the \texttt{coqtop} program allows the user to cancel a
+long-running computation by sending an \fdef{interrupt signal} to the process.
+Sending such a signal is impossible without the identifier of that child
+process, however, and---as there is no portable way of representing a process
+identifier---Java does not expose that identifier through its \texttt{Process}
+API. On UNIX-like operating systems, Coqoon works around this by using a shell
+script wrapper to communicate the process identifier to the Java parent, but
+this is not possble on Windows, where Java runtime introspection is instead
+used to read the values of private variables from the implementation of
+\texttt{Process}.
+
+It gets worse, however. On UNIX-like operating systems, signals are a core part
+of the process model, and can be sent by any process to any other process; on
+Windows, on the other hand, they are emulated, and can only be sent to entire
+groups of processes. If a JVM running on Windows attempts to send an interrupt
+signal to one of its children, it will also signal \emph{itself}---terminating
+itself as a side effect!
+
+The only way around this is to link native code into the JVM; this native code
+exposes the Windows process group control primitives to the Java world, 
+
+\subsection{The \texttt{ui} plugin}
+
+Most of Coqoon's user interface is implemented in the
+\texttt{dk.itu.coqoon.ui} plug-in.
+
+\subsection{The \texttt{kopitiam} plugin}
+
+The \texttt{dk.itu.sdg.kopitiam} plugin
+
+\end{document}
