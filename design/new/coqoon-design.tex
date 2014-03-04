@@ -32,11 +32,14 @@ projects, their evolution, architecture, and implementation, and}
 
 \subsubsection{In the beginning}
 
-The project began in March 2011 as \name{Kopitiam}, 
+The project began in March 2011 as \name{Kopitiam}, a CoqIDE-like environment
+for Eclipse---with an extra feature: the ability to translate simple Java
+programs into Coq proof scripts, making it possible to prove properties about
+them.
 
 \subsubsection{Early integration}
 
-Kopitiam 0.1, released in September 2012, integrated generated Java proof
+Kopitiam 0.1, released in September 2012, integrated the translated Java proof
 scripts with the Java editor: the user could now step through Java statements
 as though performing a normal Coq proof. This was made possible by AspectJ, a
 Java implementation of the \fdef{aspect-oriented programming} methodology.
@@ -52,8 +55,8 @@ continues to use this power to extend the Java editor with Coq-like behaviour.
 
 \subsubsection{Further integration}
 
-Kopitiam 0.2, introduced in January 2013, ported the Java proof environment to
-use Eclipse's own Java parser, removing the old SimpleJava parser.
+Kopitiam 0.2, introduced in January 2013, replaced the hand-written Java parser
+with Eclipse's normal Java parsing infrastructure.
 
 \subsubsection{Moving beyond simple interaction}
 
@@ -127,30 +130,80 @@ the Eclipse JDT has over four thousand for the UI alone!}; trying to load all
 of these into the JVM at once is likely to be slow---or, in
 resource-constrained environments, impossible.
 
-Eclipse addresses this problem by using \fdef{lazy activation}: that is,
-a plugin is normally only activated when another activated plugin refers to it
-(either directly in its code or indirectly through an extension point). But
-this lazy approach can cause problems. For example, Coqoon contributes a
+Eclipse's solution to this problem is to use \fdef{lazy activation}: that is,
+a plug-in is only activated when another activated plug-in refers to it, either
+directly in its code or indirectly through an extension point. Manifests are
+unconditionally loaded, because the information they contain is necessary to
+calculate when a plug-in might be activated---but no actual code is loaded
+until something else requests it.
+
+A naïve lazy approach can be self-defeating. For example, Coqoon contributes a
 toolbar icon, \includegraphics[scale=0.5]{down.png}, which should only be
 enabled when a Coq proof is in progress---but how can such checks be performed
-without needing to load code from, and thus to activate, the relevant plugin?
+without needing to load code from, and thus to activate, the relevant plug-in?
+
+As luck would have it, there's already a place for plug-ins to describe
+themselves declaratively, and it's a place that Eclipse must already load---the
+plug-in manifest. Eclipse takes advantage of this by specifying a XML-based
+expression language, \fdef{Core Expressions}, which plug-ins can use to give
+the platform more information about when they should be activated.
+
+Figure~\ref{fig:edexpr} shows a Core Expression that checks whether or not the
+active editor has an associated Coq manager, and, if it does, whether or not
+that manager is also a Coq editor.
+
+\begin{figure}[h]
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
+<definition
+      id="activeEditorIsCoq">
+   <with
+         variable="activeEditor">
+      <adapt
+            type="dk.itu.coqoon.ui.CoqTopContainer">
+         <instanceof
+               value="dk.itu.coqoon.ui.CoqEditor">
+         </instanceof>
+      </adapt>
+   </with>
+</definition>
+\end{lstlisting}
+\caption{An Eclipse Core Expression that checks for Coq editors.}
+\label{fig:edexpr}
+\end{figure}
+
+\begin{figure}[h]
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
+<handler
+      class="dk.itu.coqoon.ui.CoqStepForwardHandler"
+      commandId="dk.itu.coqoon.ui.commands.step_forward">
+   <activeWhen>
+      <reference
+            definitionId="coqoon.activeEditorIsCoq">
+      </reference>
+   </activeWhen>
+</handler>
+\end{lstlisting}
+\caption{A handler definition that makes use of Figure~\ref{fig:edexpr}.}
+\end{figure}
 
 \pagebreak
 
 \section{Implementation}
 
 Coqoon is implemented almost entirely in the Scala language, which introduces
-functional programming techniques into the Java programming environment in a
-way that's compatible with existing Java code
+functional programming techniques into the Java programming environment while
+remaining compatible with existing Java code.
 
 \subsection{The \texttt{core} plug-in}
 
-The heart of Coqoon is the \texttt{dk.itu.coqoon.core} plug-in. This plugin
+The heart of Coqoon is the \texttt{dk.itu.coqoon.core} plug-in. This plug-in
 implements a model for Coq proof scripts, the protocol for communicating with
 \texttt{coqtop} processes, and an automatic builder for Coq projects.
 
 The \texttt{core} plug-in is also more permissively licensed than the rest of
 Coqoon and Kopitiam.
+
+\subsubsection{The Coq model}
 
 \subsubsection{The \texttt{-ideslave} protocol}
 
@@ -160,7 +213,9 @@ information to be included in the output, but parsing that. Coq 8.4 improved thi
 dramatically by introducing the \texttt{-ideslave} protocol.
 
 The \texttt{-ideslave} protocol is a XML-based protocol for sending requests
-to Coq. Unlike the older \texttt{-emacs} mode, this protocol 
+to Coq. Unlike the older \texttt{-emacs} mode, this protocol makes it possible
+
+\subsubsection{Coq projects and builders}
 
 \subsubsection{Portability challenges}
 
@@ -189,13 +244,13 @@ itself as a side effect!
 The only way around this is to link native code into the JVM; this native code
 exposes the Windows process group control primitives to the Java world, 
 
-\subsection{The \texttt{ui} plugin}
+\subsection{The \texttt{ui} plug-in}
 
 Most of Coqoon's user interface is implemented in the
 \texttt{dk.itu.coqoon.ui} plug-in.
 
-\subsection{The \texttt{kopitiam} plugin}
+\subsection{The \texttt{kopitiam} plug-in}
 
-The \texttt{dk.itu.sdg.kopitiam} plugin
+The \texttt{dk.itu.sdg.kopitiam} plug-in
 
 \end{document}
