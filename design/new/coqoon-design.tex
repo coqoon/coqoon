@@ -138,9 +138,10 @@ calculate when a plug-in might be activated---but no actual code is loaded
 until something else requests it.
 
 A naïve lazy approach can be self-defeating. For example, Coqoon contributes a
-toolbar icon, \includegraphics[scale=0.5]{down.png}, which should only be
-enabled when a Coq proof is in progress---but how can such checks be performed
-without needing to load code from, and thus to activate, the relevant plug-in?
+toolbar icon, \includegraphics[scale=0.5]{down.png}, which steps over the
+next Coq sentence. This should obviously only be enabled when a Coq proof is in
+progress---but how can such checks be performed without needing to load code
+from, and thus to activate, the relevant plug-in?
 
 As luck would have it, there's already a place for plug-ins to describe
 themselves declaratively, and it's a place that Eclipse must already load---the
@@ -148,14 +149,14 @@ plug-in manifest. Eclipse takes advantage of this by specifying a XML-based
 expression language, \fdef{Core Expressions}, which plug-ins can use to give
 the platform more information about when they should be activated.
 
-Figure~\ref{fig:edexpr} shows a Core Expression that checks whether or not the
-active editor has an associated Coq manager, and, if it does, whether or not
-that manager is also a Coq editor.
+Figure~\ref{fig:edexpr} shows a Core Expression, taken from Coqoon, that checks
+whether or not the active editor has an associated Coq manager---and, if it
+does, whether or not that manager is also a Coq editor.
 
 \begin{figure}[h]
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 <definition
-      id="activeEditorIsCoq">
+      id="coqoon.activeEditorIsCoq">
    <with
          variable="activeEditor">
       <adapt
@@ -171,6 +172,11 @@ that manager is also a Coq editor.
 \label{fig:edexpr}
 \end{figure}
 
+Other entries in the manifest can then use these expressions to enable and
+disable themselves without needing to perform plug-in activation. As an
+example, figure~\ref{fig:fwdhandler} gives the manifest entry which defines the
+default behaviour of the \includegraphics[scale=0.5]{down.png} button.
+
 \begin{figure}[h]
 \begin{lstlisting}[basicstyle=\footnotesize\ttfamily]
 <handler
@@ -183,8 +189,12 @@ that manager is also a Coq editor.
    </activeWhen>
 </handler>
 \end{lstlisting}
-\caption{A handler definition that makes use of Figure~\ref{fig:edexpr}.}
+\caption{A handler definition that makes use of the expression from
+figure~\ref{fig:edexpr}.}
+\label{fig:fwdhandler}
 \end{figure}
+
+\subsection{A unified Coq model}
 
 \pagebreak
 
@@ -205,6 +215,8 @@ Coqoon and Kopitiam.
 
 \subsubsection{The Coq model}
 
+\subsubsection{Coq projects and builders}
+
 \subsubsection{The \texttt{-ideslave} protocol}
 
 Prior to Coq 8.4, the \texttt{coqtop} program had only very primitive support
@@ -214,8 +226,6 @@ dramatically by introducing the \texttt{-ideslave} protocol.
 
 The \texttt{-ideslave} protocol is a XML-based protocol for sending requests
 to Coq. Unlike the older \texttt{-emacs} mode, this protocol makes it possible
-
-\subsubsection{Coq projects and builders}
 
 \subsubsection{Portability challenges}
 
