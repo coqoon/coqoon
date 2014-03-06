@@ -57,6 +57,31 @@ trait IFuturisticWordDetector extends IWordDetector {
   def isWordEnd(character : Char) : Boolean
 }
 
+class CoqWordDetector extends IFuturisticWordDetector {
+  override def isWordStart(character : Char) = isUnicodeLetter(character)
+
+  override def isWordPart(character : Char) =
+    isWordEnd(character) ||
+    character == '.' // Not actually true, but good for highlighting
+
+  override def isWordEnd(character : Char) =
+    isWordStart(character) || isUnicodeIdPart(character)
+
+  def isUnicodeLetter(character : Char) =
+    character.getType == Character.UPPERCASE_LETTER ||
+    character.getType == Character.LOWERCASE_LETTER ||
+    character.getType == Character.TITLECASE_LETTER ||
+    character.getType == Character.OTHER_LETTER ||
+    character == '_' || character == '\u00a0'
+
+  def isUnicodeIdPart(character : Char) =
+    character.getType == Character.DECIMAL_DIGIT_NUMBER ||
+    character.getType == Character.LETTER_NUMBER ||
+    character.getType == Character.OTHER_NUMBER ||
+    character == '\u0027' // According to Coq, this is a "special space"...
+}
+object CoqWordDetector extends CoqWordDetector
+
 class FuturisticWordRule(detector : IFuturisticWordDetector,
     default : IToken = Token.UNDEFINED) extends IRule {
   private var tokens : Map[String, IToken] = Map()

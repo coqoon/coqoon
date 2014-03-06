@@ -255,29 +255,6 @@ object CoqDocumentProvider extends TextFileDocumentProvider {
   override def getDefaultEncoding () : String = "UTF-8"
 }
 
-import org.eclipse.jface.text.rules.IWordDetector
-
-object CoqWordDetector extends IWordDetector {
-  def isWordStart(character : Char) = isUnicodeLetter(character)
-
-  def isWordPart(character : Char) =
-    isWordStart(character) || isUnicodeIdPart(character) ||
-    character == '.' // Not actually true, but good for highlighting
-
-  def isUnicodeLetter(character : Char) =
-    character.getType == Character.UPPERCASE_LETTER ||
-    character.getType == Character.LOWERCASE_LETTER ||
-    character.getType == Character.TITLECASE_LETTER ||
-    character.getType == Character.OTHER_LETTER ||
-    character == '_' || character == '\u00a0'
-
-  def isUnicodeIdPart(character : Char) =
-    character.getType == Character.DECIMAL_DIGIT_NUMBER ||
-    character.getType == Character.LETTER_NUMBER ||
-    character.getType == Character.OTHER_NUMBER ||
-    character == '\u0027' // According to Coq, this is a "special space"...
-}
-
 import org.eclipse.jface.text.rules.RuleBasedScanner
 
 object CoqTokenScanner extends RuleBasedScanner {
@@ -323,10 +300,11 @@ object CoqTokenScanner extends RuleBasedScanner {
         "for", "forall", "fun", "if", "IF", "in", "let", "match", "mod",
         "Prop", "return", "Set", "then", "Type", "using", "where", "with")
 
-  private val wordRule = new WordRule(CoqWordDetector, otherToken)
+  private val wordRule = new FuturisticWordRule(CoqWordDetector, otherToken)
   for (k <- keyword) wordRule.addWord(k, definerToken)
   for (k <- keywords) wordRule.addWord(k, keywordToken)
-  for (o <- operator) wordRule.addWord(o, opToken)
+  /* XXX: this can't work (the word detector ignores operator symbols) */
+  //for (o <- operator) wordRule.addWord(o, opToken)
 
   setRules((rules ++ Seq(wordRule)).toArray)
 }
