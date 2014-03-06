@@ -144,6 +144,7 @@ class RawGoalPresenter extends SashGoalPresenter {
 
 class RichGoalPresenter extends SashGoalPresenter {
   import org.eclipse.swt.custom.{StyleRange, StyledText}
+  import org.eclipse.swt.events._
   import org.eclipse.swt.widgets.{Table, TableItem, TableColumn}
 
   override protected def makeTabTop(parent : Composite) = {
@@ -153,6 +154,11 @@ class RichGoalPresenter extends SashGoalPresenter {
     ta.setColumnOrder(Array(0, 1))
     ta.setLinesVisible(true)
     ta.setHeaderVisible(true)
+
+    ta.addSelectionListener(new SelectionAdapter {
+      override def widgetSelected(ev : SelectionEvent) =
+        TryCast[() => Unit](ev.widget.getData("cqcallback")).foreach(_.apply())
+    })
   }
 
   override protected def makeTabBottom(parent : Composite) =
@@ -215,8 +221,12 @@ class RichGoalPresenter extends SashGoalPresenter {
       offset += 1
     }
 
+    table.setData("cqcallback", () => highlightContextIdentifiers(
+        text, contextIdentifiers, getSelectedContextIdentifiers(table)))
+
     text.setText(goal.goal_ccl)
-    highlightContextIdentifiers(text, contextIdentifiers, Seq())
+    highlightContextIdentifiers(
+        text, contextIdentifiers, getSelectedContextIdentifiers(table))
   }
 }
 
