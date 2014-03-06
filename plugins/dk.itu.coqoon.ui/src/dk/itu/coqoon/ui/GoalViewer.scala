@@ -159,18 +159,26 @@ class RichGoalPresenter extends SashGoalPresenter {
     new StyledText(parent,
         SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
 
+  import dk.itu.coqoon.ui.utilities.UIUtils
+  private final val RED = UIUtils.Color(255, 0, 0)
+
   import dk.itu.coqoon.core.utilities.Substring
-  private def highlightContextIdentifiers(
-      text : StyledText, contextIdentifiers : Seq[Substring]) = {
+  private def highlightContextIdentifiers(text : StyledText,
+      contextIdentifiers : Seq[Substring], focus : Seq[String]) = {
     val q =
       for (i <- contextIdentifiers)
         yield new StyleRange {
           this.start = i.start
           this.length = i.length
           this.fontStyle = SWT.BOLD
+          if (focus.contains(i.toString))
+            this.foreground = RED
         }
     text.setStyleRanges(q.toArray)
   }
+
+  private def getSelectedContextIdentifiers(t : Table) =
+    t.getSelection.map(_.getText(0).trim)
 
   override protected def updateTab(
       goal : CoqTypes.goal, top : Composite, bottom : Composite) = {
@@ -208,7 +216,7 @@ class RichGoalPresenter extends SashGoalPresenter {
     }
 
     text.setText(goal.goal_ccl)
-    highlightContextIdentifiers(text, contextIdentifiers)
+    highlightContextIdentifiers(text, contextIdentifiers, Seq())
   }
 }
 
