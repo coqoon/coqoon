@@ -125,7 +125,7 @@ abstract class SashGoalPresenter extends TabbedGoalPresenter {
     }
 }
 
-class DefaultGoalPresenter extends SashGoalPresenter {
+class RawGoalPresenter extends SashGoalPresenter {
   override protected def makeTabTop(parent : Composite) =
     new Text(parent,
         SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
@@ -142,7 +142,7 @@ class DefaultGoalPresenter extends SashGoalPresenter {
   }
 }
 
-class TabularGoalPresenter extends SashGoalPresenter {
+class RichGoalPresenter extends SashGoalPresenter {
   import org.eclipse.swt.custom.{StyleRange, StyledText}
   import org.eclipse.swt.widgets.{Table, TableItem, TableColumn}
 
@@ -157,7 +157,7 @@ class TabularGoalPresenter extends SashGoalPresenter {
 
   override protected def makeTabBottom(parent : Composite) =
     new StyledText(parent,
-      SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+        SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
 
   import dk.itu.coqoon.core.utilities.Substring
   private def highlightContextIdentifiers(
@@ -302,7 +302,7 @@ class GoalViewer
   override def createPartControl (parent : Composite) : Unit = {
     comp = new Composite(parent, SWT.NONE)
     comp.setLayout(new FillLayout())
-    setPresenter(new DefaultGoalPresenter)
+    setPresenter(new RichGoalPresenter)
 
     import org.eclipse.jface.action.{Action, IAction}
     val mm = getViewSite.getActionBars.getMenuManager
@@ -311,15 +311,15 @@ class GoalViewer
         if (presenter != null)
           setPresenter(null)
     })
-    mm.add(new Action("Default presenter") {
+    mm.add(new Action("Rich presenter") {
       override def run =
-        if (presenter == null || !presenter.isInstanceOf[DefaultGoalPresenter])
-          setPresenter(new DefaultGoalPresenter)
+        if (presenter == null || !presenter.isInstanceOf[RichGoalPresenter])
+          setPresenter(new RichGoalPresenter)
     })
-    mm.add(new Action("Tabular presenter") {
+    mm.add(new Action("Basic presenter") {
       override def run =
-        if (presenter == null || !presenter.isInstanceOf[TabularGoalPresenter])
-          setPresenter(new TabularGoalPresenter)
+        if (presenter == null || !presenter.isInstanceOf[RawGoalPresenter])
+          setPresenter(new RawGoalPresenter)
     })
   }
 
