@@ -143,6 +143,7 @@ class DefaultGoalPresenter extends SashGoalPresenter {
 }
 
 class TabularGoalPresenter extends SashGoalPresenter {
+  import org.eclipse.swt.custom.{StyleRange, StyledText}
   import org.eclipse.swt.widgets.{Table, TableItem, TableColumn}
 
   override protected def makeTabTop(parent : Composite) = {
@@ -155,8 +156,21 @@ class TabularGoalPresenter extends SashGoalPresenter {
   }
 
   override protected def makeTabBottom(parent : Composite) =
-    new Text(parent,
+    new StyledText(parent,
       SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+
+  import dk.itu.coqoon.core.utilities.Substring
+  private def highlightContextIdentifiers(
+      text : StyledText, contextIdentifiers : Seq[Substring]) = {
+    val q =
+      for (i <- contextIdentifiers)
+        yield new StyleRange {
+          this.start = i.start
+          this.length = i.length
+          this.fontStyle = SWT.BOLD
+        }
+    text.setStyleRanges(q.toArray)
+  }
 
   override protected def updateTab(
       goal : CoqTypes.goal, top : Composite, bottom : Composite) = {
@@ -166,12 +180,35 @@ class TabularGoalPresenter extends SashGoalPresenter {
         new TableItem(table, SWT.NONE)
     } else table.getItems.drop(goal.goal_hyp.length).map(_.dispose)
     table.getColumns.map(_.pack)
+
+    var names : Seq[String] = Seq()
     table.getItems.zip(goal.goal_hyp).foreach(_ match {
       case (entry, hypothesis) =>
-        entry.setText(hypothesis.split(":", 2).map(_.trim))
+        val parts = hypothesis.split(":", 2).map(_.trim)
+        names :+= parts(0)
+        entry.setText(parts)
     })
 
-    bottom.getChildren()(0).asInstanceOf[Text].setText(goal.goal_ccl)
+    val text = bottom.getChildren()(0).asInstanceOf[StyledText]
+    text.setStyleRanges(Array())
+
+    var contextIdentifiers : Seq[Substring] = Seq()
+    var (offset, detectionStart) = (0, Option.empty[Int])
+    for (i <- goal.goal_ccl :+ '\0') {
+      if (detectionStart == None) {
+        if (CoqWordDetector.isWordStart(i))
+          detectionStart = Some(offset)
+      } else if (!CoqWordDetector.isWordPart(i)) {
+        val word = Substring(goal.goal_ccl, detectionStart.get, offset)
+        if (names.contains(word.toString))
+          contextIdentifiers :+= word
+        detectionStart = None
+      }
+      offset += 1
+    }
+
+    text.setText(goal.goal_ccl)
+    highlightContextIdentifiers(text, contextIdentifiers)
   }
 }
 
