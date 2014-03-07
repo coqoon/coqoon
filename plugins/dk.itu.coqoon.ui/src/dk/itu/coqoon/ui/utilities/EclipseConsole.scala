@@ -1,5 +1,9 @@
-/* (c) 2010-2012 Hannes Mehnert and David Christiansen
- * Copyright © 2013 Alexander Faithfull */
+/* EclipseConsole.scala
+ * Wrappers around the standard output and error streams of the Coq console
+ * Copyright © 2013, 2014 Alexander Faithfull
+ *
+ * You may use, copy, modify and/or redistribute this code subject to the terms
+ * of either the license of Kopitiam or the Apache License, version 2.0 */
 
 package dk.itu.coqoon.ui.utilities
 
