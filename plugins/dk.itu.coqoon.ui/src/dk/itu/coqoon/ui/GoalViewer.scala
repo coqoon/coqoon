@@ -206,14 +206,18 @@ class RichGoalPresenter extends SashGoalPresenter {
     val text = bottom.getChildren()(0).asInstanceOf[StyledText]
     text.setStyleRanges(Array())
 
+    val input = goal.goal_ccl :+ '\0'
     var contextIdentifiers : Seq[Substring] = Seq()
     var (offset, detectionStart) = (0, Option.empty[Int])
-    for (i <- goal.goal_ccl :+ '\0') {
+    while (offset < input.length) {
+      val i = input(offset)
       if (detectionStart == None) {
         if (CoqWordDetector.isWordStart(i))
           detectionStart = Some(offset)
       } else if (!CoqWordDetector.isWordPart(i)) {
-        val word = Substring(goal.goal_ccl, detectionStart.get, offset)
+        while (offset > 0 && !CoqWordDetector.isWordEnd(input(offset - 1)))
+          offset -= 1
+        val word = Substring(input, detectionStart.get, offset)
         if (names.contains(word.toString))
           contextIdentifiers :+= word
         detectionStart = None
