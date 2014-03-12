@@ -269,7 +269,7 @@ object CoqTokenScanner extends RuleBasedScanner {
 
   private val keywordToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, BOLD))
   private val definerToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, BOLD))
-  private val opToken : IToken = new Token(new TextAttribute(UIUtils.Color(0, 0, 30), white, 0))
+  private val opToken : IToken = new Token(new TextAttribute(UIUtils.Color(0, 0, 128), white, 0))
   private val commentToken : IToken = new Token(new TextAttribute(UIUtils.Color(30, 30, 0), white, ITALIC))
   private val otherToken : IToken = new Token(new TextAttribute(black, white, 0))
 
@@ -303,10 +303,10 @@ object CoqTokenScanner extends RuleBasedScanner {
   private val wordRule = new FuturisticWordRule(CoqWordDetector, otherToken)
   for (k <- keyword) wordRule.addWord(k, definerToken)
   for (k <- keywords) wordRule.addWord(k, keywordToken)
-  /* XXX: this can't work (the word detector ignores operator symbols) */
-  //for (o <- operator) wordRule.addWord(o, opToken)
+  private val opRule = new BasicRule
+  for (o <- operator) opRule.recognise(o, opToken)
 
-  setRules((rules ++ Seq(wordRule)).toArray)
+  setRules((rules ++ Seq(wordRule, opRule)).toArray)
 }
 
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
