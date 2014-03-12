@@ -128,3 +128,58 @@ class FuturisticWordRule(detector : IFuturisticWordDetector,
     } else Token.UNDEFINED
   }
 }
+
+class BasicRule extends IRule {
+  import BasicRule._
+
+  private val start : State = new State
+
+  def recognise(input : String, token : IToken) = {
+    var s = start
+    for (i <- input)
+      s = s.require(i)
+    s.setToken(token)
+  }
+
+  override def evaluate(scanner : ICharacterScanner) : IToken = {
+    var s = Option(start)
+    var stack : List[State] = List()
+    do {
+      val c = scanner.read
+      s = if (c != ICharacterScanner.EOF) {
+        val k = s.flatMap(_.get(c.asInstanceOf[Char]))
+        if (k != None) {
+          stack = k.get +: stack
+        } else scanner.unread
+        k
+      } else None
+    } while (s != None)
+    while (stack.headOption != None) {
+      stack.head.getToken match {
+        case Some(token) => return token
+        case None =>
+          scanner.unread
+          stack = stack.tail
+      }
+    }
+    Token.UNDEFINED
+  }
+}
+object BasicRule {
+  private class State {
+    private var next : Map[Char, State] = Map()
+    private var token : Option[IToken] = None
+
+    def get(c : Char) = next.get(c)
+    def require(c : Char) : State = next.get(c) match {
+      case Some(s) => s
+      case None =>
+        val s = new State
+        next += (c -> s)
+        s
+    }
+
+    def getToken() = token
+    def setToken(t : IToken) = (token = Option(t))
+  }
+}
