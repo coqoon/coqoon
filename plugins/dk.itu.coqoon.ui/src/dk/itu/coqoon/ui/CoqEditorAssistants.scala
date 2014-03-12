@@ -173,6 +173,8 @@ class BasicRule extends IRule {
     s.setToken(token)
   }
 
+  def getStartState() = start
+
   override def evaluate(scanner : ICharacterScanner) : IToken = {
     var s = Option(start)
     var stack : List[State] = List()
@@ -198,7 +200,7 @@ class BasicRule extends IRule {
   }
 }
 object BasicRule {
-  private class State {
+  class State {
     private var next : Map[Char, State] = Map()
     private var token : Option[IToken] = None
 
@@ -210,6 +212,11 @@ object BasicRule {
         next += (c -> s)
         s
     }
+
+    def add(c : Char, s : State) : Unit =
+      if (!next.contains(c))
+        next += (c -> s)
+    def add(c : Seq[Char], s : State) : Unit = c.foreach(add(_, s))
 
     def getToken() = token
     def setToken(t : IToken) = (token = Option(t))
