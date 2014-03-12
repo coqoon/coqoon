@@ -11,11 +11,43 @@ import org.eclipse.jface.text.{IDocument, TextUtilities => TU, DocumentCommand,
   IAutoEditStrategy, DefaultIndentLineAutoEditStrategy}
 
 class CoqAutoEditStrategy extends IAutoEditStrategy {
-  val indent = new DefaultIndentLineAutoEditStrategy
-
   override def customizeDocumentCommand(
       d : IDocument, c : DocumentCommand) = {
-    indent.customizeDocumentCommand(d, c)
+    val t = Option(c.text)
+    if (c.length == 0 &&
+        t.exists(TU.endsWith(d.getLegalLineDelimiters, _) != -1))
+      CoqAutoEditStrategy.adjustIndentation(d, c)
+  }
+}
+object CoqAutoEditStrategy extends CoqAutoEditStrategy {
+  val indent = new DefaultIndentLineAutoEditStrategy
+
+  object MatchStartFragment {
+    val expr = ("^\\s*match\\s+(.*)\\s+with").r
+    def unapply(input : CharSequence) = input match {
+      case expr(ident) => Some(ident)
+      case _ => None
+    }
+  }
+
+  private def adjustIndentation(d : IDocument, c : DocumentCommand) = {
+    val lineInfo = d.getLineInformationOfOffset(c.offset)
+    val line = d.get(lineInfo.getOffset, lineInfo.getLength)
+    val leadingWhitespace = line.takeWhile(_.isWhitespace)
+    import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier._
+    line match {
+      case AssertionSentence(keyword, identifier, body) =>
+        /* XXX: don't hard-code two spaces */
+        c.text += leadingWhitespace + "Proof.\n" + leadingWhitespace + "  "
+      case ProofEndSentence(keyword) =>
+        val trimmedLine = line.dropWhile(_.isWhitespace)
+        val fixedLine = leadingWhitespace.drop(2) + trimmedLine
+        d.replace(lineInfo.getOffset, lineInfo.getLength, fixedLine)
+        c.offset = lineInfo.getOffset + fixedLine.length
+        c.text += leadingWhitespace.drop(2)
+      case _ =>
+        indent.customizeDocumentCommand(d, c)
+    }
   }
 }
 
