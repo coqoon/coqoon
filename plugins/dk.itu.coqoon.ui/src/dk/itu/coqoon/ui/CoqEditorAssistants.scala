@@ -31,20 +31,41 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
   }
 
   private def adjustIndentation(d : IDocument, c : DocumentCommand) = {
+    import dk.itu.coqoon.core.utilities.Substring
+    import dk.itu.coqoon.core.coqtop.CoqSentence
+    import CoqSentence.Classifier._
+
+    var assertions : List[Substring] = List()
+    var sentences = CoqSentence.getNextSentences(d.get, 0, c.offset)
+    while (sentences != Nil) sentences match {
+      case (s @ AssertionSentence(keyword, identifier, body), _) +: tail =>
+        assertions = s +: assertions
+        sentences = tail
+      case (ProofEndSentence(keyword), _) +: tail
+          if !assertions.isEmpty && !tail.isEmpty =>
+        assertions = assertions.tail
+        sentences = tail
+      case _ +: tail =>
+        sentences = tail
+    }
+    val llWhitespace = assertions.headOption.map(
+        _.toString.dropWhile(_ == '\n').takeWhile(_.isWhitespace)).getOrElse("")
+
     val lineInfo = d.getLineInformationOfOffset(c.offset)
     val line = d.get(lineInfo.getOffset, lineInfo.getLength)
-    val leadingWhitespace = line.takeWhile(_.isWhitespace)
-    import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier._
+
     line match {
       case AssertionSentence(keyword, identifier, body) =>
         /* XXX: don't hard-code two spaces */
-        c.text += leadingWhitespace + "Proof.\n" + leadingWhitespace + "  "
+        c.text += llWhitespace + "Proof.\n" + llWhitespace + "  "
+      case ProofStartSentence(keyword) =>
+        c.text += llWhitespace + "  "
       case ProofEndSentence(keyword) =>
         val trimmedLine = line.dropWhile(_.isWhitespace)
-        val fixedLine = leadingWhitespace.drop(2) + trimmedLine
+        val fixedLine = llWhitespace + trimmedLine
         d.replace(lineInfo.getOffset, lineInfo.getLength, fixedLine)
         c.offset = lineInfo.getOffset + fixedLine.length
-        c.text += leadingWhitespace.drop(2)
+        c.text += llWhitespace
       case _ =>
         indent.customizeDocumentCommand(d, c)
     }
