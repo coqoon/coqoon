@@ -30,26 +30,59 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
     }
   }
 
+  def quickScanBack(d : IDocument, offset : Int) : (Int, String) = {
+    import org.eclipse.jface.text.FindReplaceDocumentAdapter
+    val findAdapter = new FindReplaceDocumentAdapter(d)
+
+    val newStart = Option(findAdapter.find(
+        offset - 1, """\.\s""", false, false, false, true)).
+            map(_.getOffset + 1).getOrElse(0)
+
+    val t = d.get(newStart, offset - newStart)
+    val li = t.lastIndexOf("*)")
+    (newStart, if (li == -1) t else t.substring(li + 2))
+  }
+
+  private def getHelpfulLeadingWhitespace(s : String) : String = {
+    for (t <- s.lines;
+         head <- Some(t) if head.exists(!_.isWhitespace))
+      return head.takeWhile(_.isWhitespace)
+    ""
+  }
+
   private def adjustIndentation(d : IDocument, c : DocumentCommand) = {
     import dk.itu.coqoon.core.utilities.Substring
     import dk.itu.coqoon.core.coqtop.CoqSentence
     import CoqSentence.Classifier._
 
-    var assertions : List[Substring] = List()
-    var sentences = CoqSentence.getNextSentences(d.get, 0, c.offset)
-    while (sentences != Nil) sentences match {
-      case (s @ AssertionSentence(keyword, identifier, body), _) +: tail =>
-        assertions = s +: assertions
-        sentences = tail
-      case (ProofEndSentence(keyword), _) +: tail
-          if !assertions.isEmpty && !tail.isEmpty =>
-        assertions = assertions.tail
-        sentences = tail
-      case _ +: tail =>
-        sentences = tail
+    var qedCount = 0
+    var prStart : Int = c.offset
+    var containingAssertion : Option[String] = None
+    while (prStart != 0) {
+      val (newStart, sentence) = quickScanBack(d, prStart)
+      val whitespace = getHelpfulLeadingWhitespace(sentence)
+      prStart = sentence match {
+        case DefinitionSentence(_) | ProofStartSentence(_) =>
+          newStart /* keep going */
+        case AssertionSentence(_, _, _) if qedCount == 0 =>
+          containingAssertion = Some(sentence)
+          0 /* stop */
+        case AssertionSentence(_, _, _) =>
+          qedCount -= 1
+          newStart /* keep going */
+        case ProofEndSentence(_) =>
+          qedCount += 1
+          newStart /* keep going */
+        case _ if qedCount < 0 || whitespace.length == 0 =>
+          0 /* stop */
+        case _ =>
+          newStart /* keep going */
+      }
     }
-    val llWhitespace = assertions.headOption.map(
-        _.toString.dropWhile(_ == '\n').takeWhile(_.isWhitespace)).getOrElse("")
+
+    val outerIdt = containingAssertion.map(
+        getHelpfulLeadingWhitespace).getOrElse("")
+    val innerIdt = containingAssertion.map(_ => outerIdt + "  ").getOrElse("")
 
     val lineInfo = d.getLineInformationOfOffset(c.offset)
     val line = d.get(lineInfo.getOffset, lineInfo.getLength)
@@ -57,15 +90,15 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
     line match {
       case AssertionSentence(keyword, identifier, body) =>
         /* XXX: don't hard-code two spaces */
-        c.text += llWhitespace + "Proof.\n" + llWhitespace + "  "
+        c.text += outerIdt + "Proof.\n" + innerIdt
       case ProofStartSentence(keyword) =>
-        c.text += llWhitespace + "  "
+        c.text += innerIdt
       case ProofEndSentence(keyword) =>
         val trimmedLine = line.dropWhile(_.isWhitespace)
-        val fixedLine = llWhitespace + trimmedLine
+        val fixedLine = innerIdt + trimmedLine
         d.replace(lineInfo.getOffset, lineInfo.getLength, fixedLine)
         c.offset = lineInfo.getOffset + fixedLine.length
-        c.text += llWhitespace
+        c.text += innerIdt
       case _ =>
         indent.customizeDocumentCommand(d, c)
     }
