@@ -53,9 +53,8 @@ abstract class TabbedGoalPresenter extends GoalPresenter {
 abstract class SashGoalPresenter extends TabbedGoalPresenter {
   import org.eclipse.swt.layout.{FormData, FormLayout, FormAttachment}
 
-  /* The Composite passed to these methods has a FormLayout */
-  protected def makeTabTop(parent : Composite) : Unit
-  protected def makeTabBottom(parent : Composite) : Unit
+  /* The Composites passed to this method have FillLayouts */
+  protected def makeTabRegions(top : Composite, bottom : Composite) : Unit
 
   final val sharedSashData = new FormData
 
@@ -84,7 +83,6 @@ abstract class SashGoalPresenter extends TabbedGoalPresenter {
     topData.top = new FormAttachment(0)
     topData.bottom = new FormAttachment(sash)
     top.setLayoutData(topData)
-    makeTabTop(top)
 
     sash.addListener(SWT.Selection, new Listener {
       private final val LIMIT = 20 /* px */
@@ -109,7 +107,8 @@ abstract class SashGoalPresenter extends TabbedGoalPresenter {
     bottomData.top = new FormAttachment(sash)
     bottomData.bottom = new FormAttachment(100)
     bottom.setLayoutData(bottomData)
-    makeTabBottom(bottom)
+
+    makeTabRegions(top, bottom)
 
     area
   }
@@ -126,13 +125,13 @@ abstract class SashGoalPresenter extends TabbedGoalPresenter {
 }
 
 class RawGoalPresenter extends SashGoalPresenter {
-  override protected def makeTabTop(parent : Composite) =
-    new Text(parent,
+  override protected def makeTabRegions(
+      top : Composite, bottom : Composite) = {
+    new Text(top,
         SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
-
-  override protected def makeTabBottom(parent : Composite) =
-    new Text(parent,
+    new Text(bottom,
         SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+  }
 
   override protected def updateTab(
       goal : CoqTypes.goal, top : Composite, bottom : Composite) = {
@@ -169,10 +168,14 @@ class RichGoalPresenter extends SashGoalPresenter {
         yield j.split(":(=|)", 2)(0).trim
   }
 
-  override protected def makeTabTop(parent : Composite) = {
-    val ta = new TableViewer(parent, SWT.BORDER | SWT.MULTI)
+  override protected def makeTabRegions(
+      top : Composite, bottom : Composite) = {
+    val ta = new TableViewer(top, SWT.BORDER | SWT.MULTI)
     ta.getControl.setData("cqviewer", ta)
     ta.setContentProvider(new RichGoalContentProvider)
+
+    val st = new StyledText(bottom,
+        SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
 
     {
       object NCLP extends StyledCellLabelProvider {
@@ -217,13 +220,11 @@ class RichGoalPresenter extends SashGoalPresenter {
       override def selectionChanged(ev : SelectionChangedEvent) = {
         updateSelection(ev.getSelection.asInstanceOf[IStructuredSelection])
         ta.refresh()
+        TryCast[Seq[Substring]](st.getData("cqparts")).foreach(parts =>
+              st.setStyleRanges(toStyleRanges(parts, selection).toArray))
       }
     })
   }
-
-  override protected def makeTabBottom(parent : Composite) =
-    new StyledText(parent,
-        SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
 
   import dk.itu.coqoon.ui.utilities.UIUtils
   private final val RED = UIUtils.Color(255, 0, 0)
@@ -259,6 +260,7 @@ class RichGoalPresenter extends SashGoalPresenter {
     var parts : Seq[Substring] = Seq()
     RichGoalPresenter.handleTokens(goal.goal_ccl, part =>
       if (names.contains(part.toString)) parts :+= part)
+    text.setData("cqparts", parts)
 
     text.setStyleRanges(toStyleRanges(parts, selection).toArray)
   }
