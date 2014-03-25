@@ -260,7 +260,7 @@ object BasicRule {
     private var next : Map[Char, State] = Map()
     private var token : Option[IToken] = None
 
-    def get(c : Char) = next.get(c)
+    def get(c : Char) = next.get(c).orElse(getFallback)
     def require(c : Char) : State = next.get(c) match {
       case Some(s) => s
       case None =>
@@ -268,6 +268,10 @@ object BasicRule {
         next += (c -> s)
         s
     }
+
+    private var fallback : Option[State] = None
+    def getFallback() = fallback
+    def setFallback(f : State) = (fallback = Option(f))
 
     def add(c : Char, s : State) : Unit =
       if (!next.contains(c))
