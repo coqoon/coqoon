@@ -258,7 +258,7 @@ object CoqDocumentProvider extends TextFileDocumentProvider {
 import org.eclipse.jface.text.rules.RuleBasedScanner
 
 object CoqTokenScanner extends RuleBasedScanner {
-  import org.eclipse.jface.text.rules.{IToken, MultiLineRule, SingleLineRule, Token, WordRule}
+  import org.eclipse.jface.text.rules.{IToken, Token, WordRule}
   import org.eclipse.jface.text.{IDocument, TextAttribute}
   import org.eclipse.swt.SWT.{BOLD, ITALIC}
 
@@ -273,11 +273,6 @@ object CoqTokenScanner extends RuleBasedScanner {
   private val commentToken : IToken = new Token(new TextAttribute(UIUtils.Color(30, 30, 0), white, ITALIC))
   private val stringToken : IToken = new Token(new TextAttribute(UIUtils.Color(0, 0, 255), white, 0))
   private val otherToken : IToken = new Token(new TextAttribute(black, white, 0))
-
-  private val rules = Seq(
-    new MultiLineRule("(*", "*)", commentToken),
-    new SingleLineRule("(*", "*)", commentToken)
-  )
 
   private val keyword =
     Seq("Axiom", "Conjecture", "Parameter", "Parameters", "Variable",
@@ -321,7 +316,15 @@ object CoqTokenScanner extends RuleBasedScanner {
   s4.setToken(stringToken)
   s2.add('"', s4)
 
-  setRules((rules ++ Seq(stringRule, wordRule, opRule)).toArray)
+  private val commentRule = new BasicRule
+  val c1 = commentRule.getStartState
+  val c2 = c1.require('(').require('*') /* in comment */
+  c2.setFallback(c2)
+  val c3 = c2.require('*').require(')')
+  c2.get('*').foreach(_.setFallback(c2))
+  c3.setToken(commentToken)
+
+  setRules(Seq(commentRule, stringRule, wordRule, opRule).toArray)
 }
 
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
