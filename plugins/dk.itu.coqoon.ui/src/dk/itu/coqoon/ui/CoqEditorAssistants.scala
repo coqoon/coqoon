@@ -88,6 +88,8 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
     val line = d.get(lineInfo.getOffset, lineInfo.getLength)
 
     line match {
+      case DefinitionSentence(_) =>
+        indent.customizeDocumentCommand(d, c)
       case AssertionSentence(keyword, identifier, body) =>
         /* XXX: don't hard-code two spaces */
         c.text += outerIdt + "Proof.\n" + innerIdt
