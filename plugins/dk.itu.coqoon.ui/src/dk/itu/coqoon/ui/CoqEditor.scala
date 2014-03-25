@@ -271,6 +271,7 @@ object CoqTokenScanner extends RuleBasedScanner {
   private val definerToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, BOLD))
   private val opToken : IToken = new Token(new TextAttribute(UIUtils.Color(0, 0, 128), white, 0))
   private val commentToken : IToken = new Token(new TextAttribute(UIUtils.Color(30, 30, 0), white, ITALIC))
+  private val stringToken : IToken = new Token(new TextAttribute(UIUtils.Color(0, 0, 255), white, 0))
   private val otherToken : IToken = new Token(new TextAttribute(black, white, 0))
 
   private val rules = Seq(
@@ -306,7 +307,21 @@ object CoqTokenScanner extends RuleBasedScanner {
   private val opRule = new BasicRule
   for (o <- operator) opRule.recognise(o, opToken)
 
-  setRules((rules ++ Seq(wordRule, opRule)).toArray)
+  private val stringRule = new BasicRule
+  val s1 = stringRule.getStartState
+  val s2 = new BasicRule.State /* in string */
+  s1.add('"', s2)
+
+  s2.setFallback(s2)
+
+  val s3 = new BasicRule.State /* escape */
+  s2.add('\\', s3)
+  s3.setFallback(s2)
+  val s4 = new BasicRule.State /* out of string */
+  s4.setToken(stringToken)
+  s2.add('"', s4)
+
+  setRules((rules ++ Seq(stringRule, wordRule, opRule)).toArray)
 }
 
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
