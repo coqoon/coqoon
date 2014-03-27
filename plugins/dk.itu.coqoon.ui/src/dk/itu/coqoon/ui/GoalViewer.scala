@@ -185,6 +185,14 @@ class RichGoalPresenter extends SashGoalPresenter {
         }
       }
       object VCLP extends StyledCellLabelProvider {
+        import org.eclipse.swt.widgets.Event
+
+        override def measure(ev : Event, el : Any) = {
+          super.measure(ev, el)
+          val size = ev.gc.textExtent(el.toString.split(":", 2)(1).trim)
+          ev.height = size.y
+        }
+
         override def update(cell : ViewerCell) = {
           val names =
             TryCast[Seq[String]](ta.getData("cqnames")).getOrElse(Seq())
@@ -208,7 +216,7 @@ class RichGoalPresenter extends SashGoalPresenter {
       nc.setLabelProvider(NCLP)
 
       val vc = new TableViewerColumn(ta, SWT.NONE)
-      vc.getColumn.setWidth(50)
+      vc.getColumn.setWidth(150)
       vc.getColumn.setText("Value")
       vc.setLabelProvider(VCLP)
     }
