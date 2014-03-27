@@ -1,3 +1,12 @@
+Coqoon 0.4.4.1
+==============
+
+27th March 2014
+
+This minor release addresses a table rendering problem on Windows, adds syntax
+highlighting for strings, and fixes a minor bug in the automatic indentation
+code.
+
 Coqoon 0.4.4
 ============
 
