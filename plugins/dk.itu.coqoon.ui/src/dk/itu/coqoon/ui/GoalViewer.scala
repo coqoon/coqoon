@@ -141,18 +141,6 @@ class RawGoalPresenter extends SashGoalPresenter {
   }
 }
 
-import org.eclipse.swt.graphics.Image
-import org.eclipse.jface.viewers.{Viewer, ViewerCell, TableViewerColumn,
-  TableViewer, SelectionChangedEvent, IStructuredContentProvider,
-  IStructuredSelection, ISelectionChangedListener, StyledCellLabelProvider}
-
-private class RichGoalContentProvider extends IStructuredContentProvider {
-  override def dispose(): Unit = ()
-  override def inputChanged(v : Viewer, oldInput : Any, newInput : Any) = ()
-  override def getElements(e : Any) : Array[AnyRef] =
-    TryCast[CoqTypes.goal](e).toSeq.flatMap(_.goal_hyp).toArray
-}
-
 import dk.itu.coqoon.core.utilities.Substring
 
 class RichGoalPresenter extends SashGoalPresenter {
@@ -160,117 +148,80 @@ class RichGoalPresenter extends SashGoalPresenter {
 
   private var selection : Seq[String] = Nil
 
-  private def updateSelection(s : IStructuredSelection) : Unit = {
-    import scala.collection.JavaConversions._
-    selection =
-      for (i <- s.iterator.toSeq;
-           j <- TryCast[String](i))
-        yield j.split(":(=|)", 2)(0).trim
+  private def getCaretIdentifier(topT : StyledText) : Option[String] = {
+    val caret = topT.getCaretOffset
+    val idents = TryCast[Seq[(String, Int, Int)]](
+        topT.getData("cqidents")).getOrElse(Seq())
+    for ((name, start, end) <- idents if caret >= start && caret < end)
+      return Some(name)
+    None
   }
 
   override protected def makeTabRegions(
       top : Composite, bottom : Composite) = {
-    val ta = new TableViewer(top, SWT.BORDER | SWT.MULTI)
-    ta.getControl.setData("cqviewer", ta)
-    ta.setContentProvider(new RichGoalContentProvider)
-
-    val st = new StyledText(bottom,
+    import org.eclipse.swt.custom.{CaretEvent, CaretListener}
+    val topT = new StyledText(top,
         SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+    val bottomT = new StyledText(bottom,
+        SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+    topT.addCaretListener(new CaretListener {
+      override def caretMoved(ev : CaretEvent) = {
+        val idents = TryCast[Seq[(String, Int, Int)]](
+            topT.getData("cqidents")).getOrElse(Seq())
+        val names = idents.map(_._1)
 
-    {
-      object NCLP extends StyledCellLabelProvider {
-        override def update(cell : ViewerCell) = {
-          cell.setText(cell.getElement.toString.split(":", 2)(0).trim)
-          super.update(cell)
-        }
-      }
-      object VCLP extends StyledCellLabelProvider {
-        import org.eclipse.swt.widgets.Event
-
-        override def measure(ev : Event, el : Any) = {
-          super.measure(ev, el)
-          val size = ev.gc.textExtent(el.toString.split(":", 2)(1).trim)
-          ev.height = size.y
-        }
-
-        override def update(cell : ViewerCell) = {
-          val names =
-            TryCast[Seq[String]](ta.getData("cqnames")).getOrElse(Seq())
-
-          val t = cell.getElement.toString.split(":", 2)(1).trim
+        for (ctrl <- Seq(topT, bottomT)) {
           var parts : Seq[Substring] = Seq()
-          RichGoalPresenter.handleTokens(t, part =>
+          RichGoalPresenter.handleTokens(ctrl.getText, part =>
               if (names.contains(part.toString)) parts :+= part)
-
-          cell.setStyleRanges(Array())
-          cell.setText(t)
-          cell.setStyleRanges(toStyleRanges(parts, selection).toArray)
-
-          super.update(cell)
+          ctrl.setStyleRanges(
+              toStyleRanges(parts, getCaretIdentifier(topT)).toArray)
         }
-      }
-
-      val nc = new TableViewerColumn(ta, SWT.NONE)
-      nc.getColumn.setWidth(50)
-      nc.getColumn.setText("Name")
-      nc.setLabelProvider(NCLP)
-
-      val vc = new TableViewerColumn(ta, SWT.NONE)
-      vc.getColumn.setWidth(150)
-      vc.getColumn.setText("Value")
-      vc.setLabelProvider(VCLP)
-    }
-
-    ta.getTable.setLinesVisible(true)
-    ta.getTable.setHeaderVisible(true)
-
-    ta.addSelectionChangedListener(new ISelectionChangedListener {
-      override def selectionChanged(ev : SelectionChangedEvent) = {
-        updateSelection(ev.getSelection.asInstanceOf[IStructuredSelection])
-        ta.refresh()
-        TryCast[Seq[Substring]](st.getData("cqparts")).foreach(parts =>
-              st.setStyleRanges(toStyleRanges(parts, selection).toArray))
       }
     })
   }
 
   import dk.itu.coqoon.ui.utilities.UIUtils
   private final val RED = UIUtils.Color(255, 0, 0)
-  private final val YELLOW = UIUtils.Color(255, 255, 0)
 
   private def toStyleRanges(
-      contextIdentifiers : Seq[Substring], focus : Seq[String]) =
+      contextIdentifiers : Seq[Substring], focus : Option[String]) =
     contextIdentifiers.map(i => new StyleRange {
       this.start = i.start
       this.length = i.length
-      this.foreground = RED
-      if (focus.contains(i.toString))
-        this.background = YELLOW
+      this.fontStyle = SWT.BOLD
+      if (focus.toSeq.contains(i.toString))
+        this.foreground = RED
     })
 
   override protected def updateTab(
       goal : CoqTypes.goal, top : Composite, bottom : Composite) = {
-    val table =
-      top.getChildren()(0).getData("cqviewer").asInstanceOf[TableViewer]
-    val text = bottom.getChildren()(0).asInstanceOf[StyledText]
+    val topT = top.getChildren()(0).asInstanceOf[StyledText]
+    val bottomT = bottom.getChildren()(0).asInstanceOf[StyledText]
 
-    var names : Seq[String] = Seq()
+    var offset : Int = 0
+                   /* name, start, end */
+    var idents : Seq[(String, Int, Int)] = Seq()
     goal.goal_hyp.foreach(hypothesis => {
-      names :+= hypothesis.split(":", 2).head.trim
+      val end = offset + hypothesis.length + 1
+      idents :+= (hypothesis.split(":", 2).head.trim, offset, end)
+      offset = end
     })
-    table.setData("cqnames", names)
+    topT.setData("cqidents", idents)
 
-    table.setInput(goal)
+    val names = idents.map(_._1)
 
-    text.setStyleRanges(Array())
-    text.setText(goal.goal_ccl)
+    Seq(topT, bottomT).foreach(_.setStyleRanges(Array()))
+    topT.setText(goal.goal_hyp.mkString("\n"))
+    bottomT.setText(goal.goal_ccl)
 
-    var parts : Seq[Substring] = Seq()
-    RichGoalPresenter.handleTokens(goal.goal_ccl, part =>
-      if (names.contains(part.toString)) parts :+= part)
-    text.setData("cqparts", parts)
-
-    text.setStyleRanges(toStyleRanges(parts, selection).toArray)
+    for (ctrl <- Seq(topT, bottomT)) {
+      var parts : Seq[Substring] = Seq()
+      RichGoalPresenter.handleTokens(ctrl.getText, part =>
+          if (names.contains(part.toString)) parts :+= part)
+      ctrl.setStyleRanges(
+          toStyleRanges(parts, getCaretIdentifier(topT)).toArray)
+    }
   }
 }
 object RichGoalPresenter {
