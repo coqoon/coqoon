@@ -157,6 +157,8 @@ class RichGoalPresenter extends SashGoalPresenter {
     None
   }
 
+  private var suppressUpdate = false
+
   override protected def makeTabRegions(
       top : Composite, bottom : Composite) = {
     import org.eclipse.swt.custom.{CaretEvent, CaretListener}
@@ -165,7 +167,7 @@ class RichGoalPresenter extends SashGoalPresenter {
     val bottomT = new StyledText(bottom,
         SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
     topT.addCaretListener(new CaretListener {
-      override def caretMoved(ev : CaretEvent) = {
+      override def caretMoved(ev : CaretEvent) = if (!suppressUpdate) {
         val idents = TryCast[Seq[(String, Int, Int)]](
             topT.getData("cqidents")).getOrElse(Seq())
         val names = idents.map(_._1)
@@ -211,9 +213,12 @@ class RichGoalPresenter extends SashGoalPresenter {
 
     val names = idents.map(_._1)
 
-    Seq(topT, bottomT).foreach(_.setStyleRanges(Array()))
-    topT.setText(goal.goal_hyp.mkString("\n"))
-    bottomT.setText(goal.goal_ccl)
+    try {
+      suppressUpdate = true
+      Seq(topT, bottomT).foreach(_.setStyleRanges(Array()))
+      topT.setText(goal.goal_hyp.mkString("\n"))
+      bottomT.setText(goal.goal_ccl)
+    } finally suppressUpdate = false
 
     for (ctrl <- Seq(topT, bottomT)) {
       var parts : Seq[Substring] = Seq()
