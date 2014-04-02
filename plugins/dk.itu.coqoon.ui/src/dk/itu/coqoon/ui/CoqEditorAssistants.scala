@@ -85,7 +85,7 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
     val innerIdt = containingAssertion.map(_ => outerIdt + "  ").getOrElse("")
 
     val lineInfo = d.getLineInformationOfOffset(c.offset)
-    val line = d.get(lineInfo.getOffset, lineInfo.getLength)
+    val line = d.get(lineInfo.getOffset, c.offset - lineInfo.getOffset)
 
     line match {
       case DefinitionSentence(_) =>
