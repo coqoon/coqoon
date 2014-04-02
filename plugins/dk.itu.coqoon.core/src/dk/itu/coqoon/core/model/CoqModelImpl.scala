@@ -480,7 +480,7 @@ private class CoqVernacFileImpl(
           case (h @ (RequireSentence(_, what), _)) :: tail =>
             val qualids : Seq[String] = if (what(0) == '"') {
               Seq(what.substring(1).split("\"", 2)(0))
-            } else what.split(" ")
+            } else what.split("\\s+")
             stack.push(new CoqScriptGroupImpl(CoqRequireGroup(qualids),
                 wrapSentence(h), CoqVernacFileImpl.this))
             tail
