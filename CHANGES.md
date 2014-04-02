@@ -1,3 +1,12 @@
+Coqoon 0.4.4.2
+==============
+
+2nd April 2014
+
+This minor release replaces the goal viewer's table view with a more portable
+text view, and fixes a dependency resolution bug and some peculiar
+autocompletion behaviour.
+
 Coqoon 0.4.4.1
 ==============
 
