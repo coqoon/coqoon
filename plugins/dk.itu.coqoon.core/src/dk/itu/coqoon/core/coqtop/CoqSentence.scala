@@ -87,7 +87,7 @@ object CoqSentence {
 
   object Classifier {
     object LtacSentence {
-      val expr = ("^\\s*Ltac\\s+([a-zA-Z0-9_']+)(?s)(.*)\\.$").r
+      val expr = ("(?s)^\\s*Ltac\\s+([a-zA-Z0-9_']+)(.*)\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(identifier, body) => Some(identifier, body)
         case _ => None
@@ -95,7 +95,7 @@ object CoqSentence {
     }
 
     object ModuleStartSentence {
-      val expr = ("^\\s*Module\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
+      val expr = ("(?s)^\\s*Module\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(identifier) => Some(identifier)
         case _ => None
@@ -103,7 +103,7 @@ object CoqSentence {
     }
 
     object SectionStartSentence {
-      val expr = ("^\\s*Section\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
+      val expr = ("(?s)^\\s*Section\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(identifier) => Some(identifier)
         case _ => None
@@ -111,7 +111,7 @@ object CoqSentence {
     }
 
     object IdentifiedEndSentence {
-      val expr = ("^\\s*End\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
+      val expr = ("(?s)^\\s*End\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(identifier) => Some(identifier)
         case _ => None
@@ -120,8 +120,8 @@ object CoqSentence {
 
     object AssertionSentence {
       val expr =
-        ("^\\s*(Theorem|Lemma|Remark|Fact|Corollary|" +
-         "Proposition|Definition|Example)\\s+([a-zA-Z0-9_']+)(?s)(.*)\\.$").r
+        ("(?s)^\\s*(Theorem|Lemma|Remark|Fact|Corollary|" +
+         "Proposition|Definition|Example)\\s+([a-zA-Z0-9_']+)(.*)\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(keyword, identifier, body) =>
           Some((keyword, identifier, body))
@@ -131,7 +131,7 @@ object CoqSentence {
 
     object FixpointSentence {
       val expr =
-        ("^\\s*(Fixpoint|CoFixpoint)\\s+([a-zA-Z0-9_']+)(?s)(.*)\\.$").r
+        ("(?s)^\\s*(Fixpoint|CoFixpoint)\\s+([a-zA-Z0-9_']+)(.*)\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(keyword, identifier, body) =>
           Some((keyword, identifier, body))
@@ -141,7 +141,7 @@ object CoqSentence {
 
     object InductiveSentence {
       val expr =
-        ("^\\s*(Inductive|CoInductive)\\s+([a-zA-Z0-9_']+)(?s)(.*)\\.$").r
+        ("(?s)^\\s*(Inductive|CoInductive)\\s+([a-zA-Z0-9_']+)(.*)\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(keyword, identifier, body) =>
           Some((keyword, identifier, body))
@@ -151,7 +151,7 @@ object CoqSentence {
 
     object DefinitionSentence {
       val expr =
-        ("^\\s*(Definition|Let)\\s+([a-zA-Z0-9_']+)(?s)(.*):=(.*)\\.$").r
+        ("(?s)^\\s*(Definition|Let)\\s+([a-zA-Z0-9_']+)(.*):=(.*)\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(keyword, identifier, binders, body) =>
           Some((keyword, identifier, binders, body))
@@ -160,7 +160,7 @@ object CoqSentence {
     }
 
     object ProofStartSentence {
-      val expr = ("^\\s*(Proof|Next Obligation)\\s*\\.$").r
+      val expr = ("(?s)^\\s*(Proof|Next Obligation)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(keyword) => Some(keyword)
         case _ => None
@@ -168,7 +168,7 @@ object CoqSentence {
     }
 
     object ProofEndSentence {
-      val expr = ("^\\s*(Qed|Defined|Admitted|Abort)\\s*\\.$").r
+      val expr = ("(?s)^\\s*(Qed|Defined|Admitted|Abort)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(keyword) => Some(keyword)
         case _ => None
@@ -176,7 +176,7 @@ object CoqSentence {
     }
 
     object LoadSentence {
-      val expr = ("^\\s*Load\\s+(.*)\\s*\\.$").r
+      val expr = ("(?s)^\\s*Load\\s+(.*)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(ident) => Some(ident)
         case _ => None
@@ -184,7 +184,7 @@ object CoqSentence {
     }
 
     object RequireSentence {
-      val expr = ("^\\s*Require\\s+(Import\\s+|Export\\s+|)(.*)\\s*\\.$").r
+      val expr = ("(?s)^\\s*Require\\s+(Import\\s+|Export\\s+|)(.*)\\s*\\.$").r
       def unapply(input : CharSequence) = input match {
         case expr(kind, ident) => Some((kind, ident))
         case _ => None
