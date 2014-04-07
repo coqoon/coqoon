@@ -217,7 +217,7 @@ class FuturisticWordRule(detector : IFuturisticWordDetector,
   }
 }
 
-class BasicRule extends IRule {
+class BasicRule(label : String = "<anonymous>") extends IRule {
   import BasicRule._
 
   private val start : State = new State
@@ -254,6 +254,8 @@ class BasicRule extends IRule {
     }
     Token.UNDEFINED
   }
+
+  override def toString = "BasicRule(" + label + ")"
 }
 object BasicRule {
   class State {

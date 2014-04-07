@@ -299,10 +299,10 @@ object CoqTokenScanner extends RuleBasedScanner {
   private val wordRule = new FuturisticWordRule(CoqWordDetector, otherToken)
   for (k <- keyword) wordRule.addWord(k, definerToken)
   for (k <- keywords) wordRule.addWord(k, keywordToken)
-  private val opRule = new BasicRule
+  private val opRule = new BasicRule("operator")
   for (o <- operator) opRule.recognise(o, opToken)
 
-  private val stringRule = new BasicRule
+  private val stringRule = new BasicRule("string")
   val s1 = stringRule.getStartState
   val s2 = new BasicRule.State /* in string */
   s1.add('"', s2)
@@ -316,7 +316,7 @@ object CoqTokenScanner extends RuleBasedScanner {
   s4.setToken(stringToken)
   s2.add('"', s4)
 
-  private val commentRule = new BasicRule
+  private val commentRule = new BasicRule("comment")
   val c1 = commentRule.getStartState
   val c2 = c1.require('(').require('*') /* in comment */
   c2.setFallback(c2)
