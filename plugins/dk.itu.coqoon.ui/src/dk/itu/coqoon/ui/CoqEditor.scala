@@ -320,9 +320,11 @@ object CoqTokenScanner extends RuleBasedScanner {
   val c1 = commentRule.getStartState
   val c2 = c1.require('(').require('*') /* in comment */
   c2.setFallback(c2)
-  val c3 = c2.require('*').require(')')
-  c2.get('*').foreach(_.setFallback(c2))
-  c3.setToken(commentToken)
+  val c3 = c2.require('*') /* leaving comment */
+  c3.add('*', c3)
+  c3.setFallback(c2)
+  val c4 = c3.require(')') /* left comment */
+  c4.setToken(commentToken)
 
   setRules(Seq(commentRule, stringRule, wordRule, opRule).toArray)
 }
