@@ -237,7 +237,7 @@ class BasicRule(label : String = "<anonymous>") extends IRule {
     do {
       val c = scanner.read
       s = if (c != ICharacterScanner.EOF) {
-        val k = s.flatMap(_.get(c.asInstanceOf[Char]))
+        val k = s.flatMap(_.get(c))
         if (k != None) {
           stack = k.get +: stack
         } else scanner.unread
@@ -259,11 +259,11 @@ class BasicRule(label : String = "<anonymous>") extends IRule {
 }
 object BasicRule {
   class State {
-    private var next : Map[Char, State] = Map()
+    private var next : Map[Int, State] = Map()
     private var token : Option[IToken] = None
 
-    def get(c : Char) = next.get(c).orElse(getFallback)
-    def require(c : Char) : State = next.get(c) match {
+    def get(c : Int) = next.get(c).orElse(getFallback)
+    def require(c : Int) : State = next.get(c) match {
       case Some(s) => s
       case None =>
         val s = new State
@@ -275,10 +275,9 @@ object BasicRule {
     def getFallback() = fallback
     def setFallback(f : State) = (fallback = Option(f))
 
-    def add(c : Char, s : State) : Unit =
+    def add(c : Int, s : State) : Unit =
       if (!next.contains(c))
         next += (c -> s)
-    def add(c : Seq[Char], s : State) : Unit = c.foreach(add(_, s))
 
     def getToken() = token
     def setToken(t : IToken) = (token = Option(t))
