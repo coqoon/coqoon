@@ -698,4 +698,10 @@
          </with>
       </definition>
    </extension>
+   <extension
+         point="org.eclipse.core.runtime.preferences">
+      <initializer
+            class="dk.itu.coqoon.ui.CoqoonUIPreferences">
+      </initializer>
+   </extension>
 </plugin>

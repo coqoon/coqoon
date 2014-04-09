@@ -14,22 +14,6 @@ class Activator extends AbstractUIPlugin {
     super.stop(context)
   }
 
-  import org.eclipse.jface.preference.{IPreferenceStore, PreferenceConverter}
-  override protected def initializeDefaultPreferences(
-      store : IPreferenceStore) = {
-    import org.eclipse.swt.graphics.RGB
-    PreferenceConverter.setDefault(
-        store, "coqSentBg", new RGB(118, 255, 133))
-    PreferenceConverter.setDefault(
-        store, "coqSentProcessBg", new RGB(244, 255, 200))
-    PreferenceConverter.setDefault(
-        store, "coqKeywordFg", new RGB(127, 6, 101))
-
-    store.setDefault(CoqoonUIPreferences.MATCHING_BRACKETS, true)
-    PreferenceConverter.setDefault(store,
-        CoqoonUIPreferences.MATCHING_BRACKETS_COLOR, new RGB(192, 192, 192))
-  }
-
   import ManifestIdentifiers.Images._
   import dk.itu.coqoon.ui.utilities.UIUtils
   import org.eclipse.swt.graphics.{Image, ImageData}
