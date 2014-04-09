@@ -270,6 +270,7 @@ object CoqTokenScanner extends RuleBasedScanner {
   private val keywordToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, BOLD))
   private val definerToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, BOLD))
   private val opToken : IToken = new Token(new TextAttribute(UIUtils.Color(0, 0, 128), white, 0))
+  private val optionToken : IToken = new Token(new TextAttribute(UIUtils.Color(200, 0, 100), white, 0))
   private val commentToken : IToken = new Token(new TextAttribute(UIUtils.Color(30, 30, 0), white, ITALIC))
   private val stringToken : IToken = new Token(new TextAttribute(UIUtils.Color(0, 0, 255), white, 0))
   private val otherToken : IToken = new Token(new TextAttribute(black, white, 0))
@@ -282,7 +283,7 @@ object CoqTokenScanner extends RuleBasedScanner {
         "Instance", "Theorem", "Tactic", "Ltac", "Notation", "Infix", "Add",
         "Record", "Section", "Module", "Require", "Import", "Export", "Open",
         "Proof", "End", "Qed", "Admitted", "Save", "Defined", "Print", "Eval",
-        "Check", "Hint")
+        "Check", "Hint", "Unset")
 
   private val operator =
     Seq("!", "%", "&", "&&", "(", "()", ")", "*", "+", "++", ",", "-", "->",
@@ -296,11 +297,41 @@ object CoqTokenScanner extends RuleBasedScanner {
         "for", "forall", "fun", "if", "IF", "in", "let", "match", "mod",
         "Prop", "return", "Set", "then", "Type", "using", "where", "with")
 
+  private val options = /* Correct as of Coq 8.4pl3 */
+    Seq("Whelp Server", "Whelp Getter", "Virtual Machine",
+        "Verbose Compat Notations", "Undo", "Typeclasses Depth",
+        "Typeclasses Debug", "Transparent Obligations",
+        "Tactic Pattern Unification", "Tactic Evars Pattern Unification",
+        "Strongly Strict Implicit", "Strict Proofs", "Strict Implicit",
+        "Silent", "Short Module Printing", "Rewriting Schemes",
+        "Reversible Pattern Implicit", "Printing Wildcard", "Printing Width",
+        "Printing Universes", "Printing Synth", "Printing Records",
+        "Printing Projections", "Printing Notations", "Printing Matching",
+        "Printing Implicit Defensive", "Printing Existential Instances",
+        "Printing Depth", "Printing Coercions", "Printing All",
+        "Parsing Explicit", "Maximal Implicit Insertion", "Ltac Debug",
+        "Intuition Iff Unfolding", "Inline Level", "Info Trivial",
+        "Info Eauto", "Info Auto", "Implicit Arguments", "Hyps Limit",
+        "Hide Obligations", "Functional Induction Rewrite Dependent",
+        "Function_raw_tcc", "Function_debug", "Firstorder Depth",
+        "Extraction TypeExpand", "Extraction Optimize",
+        "Extraction KeepSingleton", "Extraction Flag", "Extraction AutoInline",
+        "Extraction AccessOpaque", "Equality Scheme", "Elimination Schemes",
+        "Discriminate Introduction", "Dependent Propositions Elimination",
+        "Default Timeout", "Default Proof Mode", "Decidable Equality Schemes",
+        "Debug Trivial", "Debug Eauto", "Debug Auto", "Contextual Implicit",
+        "Congruence Verbose", "Congruence Depth", "Compat Notations",
+        "Case Analysis Schemes", "Bullet Behavior", "Boxed Values",
+        "Boolean Equality Schemes", "Automatic Introduction",
+        "Automatic Coercions Import", "Autoinstance", "Atomic Load")
+
   private val wordRule = new FuturisticWordRule(CoqWordDetector, otherToken)
   for (k <- keyword) wordRule.addWord(k, definerToken)
   for (k <- keywords) wordRule.addWord(k, keywordToken)
   private val opRule = new BasicRule("operator")
   for (o <- operator) opRule.recognise(o, opToken)
+  private val optionRule = new BasicRule("option")
+  for (o <- options) optionRule.recognise(o, optionToken)
 
   private val stringRule = new BasicRule("string")
   val s1 = stringRule.getStartState
@@ -326,7 +357,7 @@ object CoqTokenScanner extends RuleBasedScanner {
   val c4 = c3.require(')') /* left comment */
   c4.setToken(commentToken)
 
-  setRules(Seq(commentRule, stringRule, wordRule, opRule).toArray)
+  setRules(Seq(commentRule, stringRule, optionRule, wordRule, opRule).toArray)
 }
 
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
