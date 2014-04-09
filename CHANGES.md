@@ -1,3 +1,11 @@
+Coqoon 0.4.4.3
+==============
+
+9th April 2014
+
+This minor release restores Windows compatibility by adding back some files
+that had been accidentally left out of the build process.
+
 Coqoon 0.4.4.2
 ==============
 
