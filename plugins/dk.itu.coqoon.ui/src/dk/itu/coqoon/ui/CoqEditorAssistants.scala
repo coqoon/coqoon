@@ -70,7 +70,7 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
         case AssertionSentence(_, _, _) =>
           qedCount -= 1
           newStart /* keep going */
-        case ProofEndSentence(_) =>
+        case ProofEndSentence(_) if prStart != c.offset =>
           qedCount += 1
           newStart /* keep going */
         case _ if qedCount < 0 || whitespace.length == 0 =>
@@ -95,12 +95,13 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
         c.text += outerIdt + "Proof.\n" + innerIdt
       case ProofStartSentence(keyword) =>
         c.text += innerIdt
-      case ProofEndSentence(keyword) =>
+      case ProofEndSentence(keyword)
+          if containingAssertion != None =>
         val trimmedLine = line.dropWhile(_.isWhitespace)
-        val fixedLine = innerIdt + trimmedLine
+        val fixedLine = outerIdt + trimmedLine
         d.replace(lineInfo.getOffset, lineInfo.getLength, fixedLine)
         c.offset = lineInfo.getOffset + fixedLine.length
-        c.text += innerIdt
+        c.text += outerIdt
       case _ =>
         indent.customizeDocumentCommand(d, c)
     }
