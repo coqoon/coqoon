@@ -99,8 +99,10 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
           if containingAssertion != None =>
         val trimmedLine = line.dropWhile(_.isWhitespace)
         val fixedLine = outerIdt + trimmedLine
-        d.replace(lineInfo.getOffset, lineInfo.getLength, fixedLine)
-        c.offset = lineInfo.getOffset + fixedLine.length
+        if (fixedLine != line) {
+          d.replace(lineInfo.getOffset, lineInfo.getLength, fixedLine)
+          c.offset = lineInfo.getOffset + fixedLine.length
+        }
         c.text += outerIdt
       case _ =>
         indent.customizeDocumentCommand(d, c)
