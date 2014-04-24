@@ -150,7 +150,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     super.configureSourceViewerDecorationSupport(support)
     support.setCharacterPairMatcher(new DefaultCharacterPairMatcher(
         Array('(', ')', '{', '}', '<', '>', '[', ']'),
-        IDocumentExtension3.DEFAULT_PARTITIONING, true))
+        CoqPartitions.COQ, true))
     support.setMatchingCharacterPainterPreferenceKeys(
         MATCHING_BRACKETS, MATCHING_BRACKETS_COLOR)
   }
@@ -425,6 +425,11 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
     val reconciler = new MonoReconciler(strategy, false)
     reconciler
   }
+
+  override def getConfiguredContentTypes(v : ISourceViewer) =
+    CoqPartitions.TYPES
+  override def getConfiguredDocumentPartitioning(v : ISourceViewer) =
+    CoqPartitions.COQ
 
   import dk.itu.coqoon.core.utilities.CacheSlot
   private val coqScanner =
