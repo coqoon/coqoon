@@ -46,6 +46,7 @@ class CoqPartitionScanner extends IPartitionTokenScanner {
   private var contentType : Option[String] = None
 
   override def setRange(document : IDocument, offset : Int, length : Int) = {
+    println(s"${this}.setRange(${document}, ${offset}, ${length})")
     this.document = Option(document)
     this.start = offset
     this.position = offset
@@ -54,7 +55,15 @@ class CoqPartitionScanner extends IPartitionTokenScanner {
 
   override def setPartialRange(document : IDocument, offset : Int,
       length : Int, contentType : String, partitionOffset : Int) : Unit = {
-    this.contentType = Option(contentType)
+    println(s"${this}.setPartialRange(${document}, " +
+        s"${offset}, ${length}, ${contentType}, ${partitionOffset})")
+    lastFinalState = contentType match {
+      case CoqPartitions.Types.COQ => States.Coq
+      case CoqPartitions.Types.COMMENT => States.Comment
+      case CoqPartitions.Types.STRING => States.String
+      case _ => States.Coq
+    }
+    lastEnd = partitionOffset
     setRange(document, offset, length)
   }
 
@@ -86,8 +95,12 @@ class CoqPartitionScanner extends IPartitionTokenScanner {
           try {
             lastStart = lastEnd
             lastEnd = position
-            if (lastEnd - lastStart > 0)
+            if (lastEnd - lastStart > 0) {
+              println("Yielding " + lastFinalState + " (from "
+                  + lastStart + " to " + lastEnd + ")")
               return lastFinalState.getToken.get
+            } else println("Not yielding " + lastFinalState +
+                " (length " + (lastEnd - lastStart) + ")")
           } finally {
             lastFinalState = f
           }
@@ -97,6 +110,7 @@ class CoqPartitionScanner extends IPartitionTokenScanner {
       }
       position += 1
     }
+    println("Yielding fallback " + lastFinalState)
     lastStart = lastEnd
     lastEnd = position
     lastFinalState.getToken.get
