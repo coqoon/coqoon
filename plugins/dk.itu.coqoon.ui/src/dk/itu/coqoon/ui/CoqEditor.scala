@@ -12,6 +12,8 @@ import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
 import org.eclipse.ui.IFileEditorInput
 import org.eclipse.ui.editors.text.TextEditor
 
+import org.eclipse.jface.text.IDocument
+
 class CoqEditor extends TextEditor with CoqTopEditorContainer {
   import org.eclipse.ui.editors.text.EditorsUI
   import org.eclipse.ui.texteditor.ChainedPreferenceStore
@@ -84,7 +86,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
   final def getViewer = super.getSourceViewer
 
   import org.eclipse.jface.text.source.{Annotation, ISourceViewer, IVerticalRuler}
-  import org.eclipse.jface.text.{IDocument, Position}
+  import org.eclipse.jface.text.Position
   import org.eclipse.swt.widgets.Composite
   import org.eclipse.ui.IEditorInput
   import org.eclipse.ui.views.contentoutline.{ContentOutlinePage, IContentOutlinePage}
@@ -216,7 +218,7 @@ object CoqEditor {
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
 private class CoqProofReconcilingStrategy(
     editor : CoqEditor) extends IReconcilingStrategy {
-  import org.eclipse.jface.text.{IRegion, Region, IDocument}
+  import org.eclipse.jface.text.{IRegion, Region}
   import org.eclipse.jface.text.reconciler.DirtyRegion
 
   import org.eclipse.core.resources.{IMarker,IResource}
@@ -248,23 +250,21 @@ private class CoqProofReconcilingStrategy(
 }
 
 import org.eclipse.jface.text.rules.RuleBasedScanner
+import org.eclipse.jface.text.TextAttribute
+import org.eclipse.jface.text.rules.{Token, IToken}
 
 object CoqTokenScanner extends RuleBasedScanner {
-  import org.eclipse.jface.text.rules.{IToken, Token, WordRule}
-  import org.eclipse.jface.text.{IDocument, TextAttribute}
   import org.eclipse.swt.SWT.{BOLD, ITALIC}
 
   //Console.println("Initializing CoqTokenScanner")
 
-  private val black = UIUtils.Color(0, 0, 0)
-  private val white = UIUtils.Color(255, 255, 255)
+  private[ui] val black = UIUtils.Color(0, 0, 0)
+  private[ui] val white = UIUtils.Color(255, 255, 255)
 
   private val keywordToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, BOLD))
   private val definerToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, BOLD))
   private val opToken : IToken = new Token(new TextAttribute(UIUtils.Color(0, 0, 128), white, 0))
   private val optionToken : IToken = new Token(new TextAttribute(UIUtils.Color(200, 0, 100), white, 0))
-  private val commentToken : IToken = new Token(new TextAttribute(UIUtils.Color(30, 30, 0), white, ITALIC))
-  private val stringToken : IToken = new Token(new TextAttribute(UIUtils.Color(0, 0, 255), white, 0))
   private val otherToken : IToken = new Token(new TextAttribute(black, white, 0))
 
   private val keyword =
@@ -325,6 +325,32 @@ object CoqTokenScanner extends RuleBasedScanner {
   private val optionRule = new BasicRule("option")
   for (o <- options) optionRule.recognise(o, optionToken)
 
+  setRules(Array(optionRule, wordRule, opRule))
+}
+
+object CommentTokenScanner extends RuleBasedScanner {
+  import org.eclipse.swt.SWT
+
+  private val commentToken : IToken = new Token(new TextAttribute(
+      UIUtils.Color(63, 127, 95), CoqTokenScanner.white, SWT.ITALIC))
+
+  private val commentRule = new BasicRule("comment")
+  val c1 = commentRule.getStartState
+  val c2 = c1.require('(').require('*') /* in comment */
+  c2.setFallback(c2)
+  val c3 = c2.require('*') /* leaving comment */
+  c3.add('*', c3)
+  c3.setFallback(c2)
+  val c4 = c3.require(')') /* left comment */
+  c4.setToken(commentToken)
+
+  setRules(Array(commentRule))
+}
+
+object StringTokenScanner extends RuleBasedScanner {
+  private val stringToken : IToken = new Token(new TextAttribute(
+      UIUtils.Color(0, 0, 255), CoqTokenScanner.white, 0))
+
   private val stringRule = new BasicRule("string")
   val s1 = stringRule.getStartState
   val s2 = new BasicRule.State /* in string */
@@ -339,24 +365,13 @@ object CoqTokenScanner extends RuleBasedScanner {
   s4.setToken(stringToken)
   s2.add('"', s4)
 
-  private val commentRule = new BasicRule("comment")
-  val c1 = commentRule.getStartState
-  val c2 = c1.require('(').require('*') /* in comment */
-  c2.setFallback(c2)
-  val c3 = c2.require('*') /* leaving comment */
-  c3.add('*', c3)
-  c3.setFallback(c2)
-  val c4 = c3.require(')') /* left comment */
-  c4.setToken(commentToken)
-
-  setRules(Seq(commentRule, stringRule, optionRule, wordRule, opRule).toArray)
+  setRules(Array(stringRule))
 }
 
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
-import org.eclipse.jface.text.IDocument
 class CoqWorkingCopyReconcilingStrategy(var document : IDocument,
     editor : CoqEditor) extends IReconcilingStrategy {
-  import org.eclipse.jface.text.{IDocument, IRegion, Position}
+  import org.eclipse.jface.text.{IRegion, Position}
   import org.eclipse.jface.text.reconciler._
 
   override def reconcile(dr : DirtyRegion, r : IRegion) = reconcile(dr)
@@ -381,13 +396,18 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
   import org.eclipse.jface.text.source.ISourceViewer
   import org.eclipse.jface.text.contentassist.{IContentAssistant,ContentAssistant}
 
-  override def getAutoEditStrategies(v : ISourceViewer, ct : String) =
-    Array(new CoqAutoEditStrategy)
+  override def getAutoEditStrategies(v : ISourceViewer, contentType : String) =
+    contentType match {
+      case CoqPartitions.Types.COQ =>
+        Array(new CoqAutoEditStrategy)
+      case _ => Array()
+    }
 
   override def getContentAssistant(v : ISourceViewer) : IContentAssistant = {
     val assistant= new ContentAssistant
     val assistantProcessor = new CoqContentAssistantProcessor(editor)
-    assistant.setContentAssistProcessor(assistantProcessor, IDocument.DEFAULT_CONTENT_TYPE)
+    assistant.setContentAssistProcessor(
+        assistantProcessor, CoqPartitions.Types.COQ)
     assistant
   }
 
@@ -397,13 +417,26 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
     reconciler
   }
 
+  import dk.itu.coqoon.core.utilities.CacheSlot
+  private val coqScanner =
+    CacheSlot { new DefaultDamagerRepairer(CoqTokenScanner) }
+  private val commentScanner =
+    CacheSlot { new DefaultDamagerRepairer(CommentTokenScanner) }
+  private val stringScanner =
+    CacheSlot { new DefaultDamagerRepairer(StringTokenScanner) }
+
   override def getPresentationReconciler (v : ISourceViewer) : IPresentationReconciler = {
     val pr = new PresentationReconciler
-    //println("About to create damager/repairer")
-    val ddr = new DefaultDamagerRepairer(CoqTokenScanner)
-    //println("Created damager/repairer successfully")
-    pr.setDamager(ddr, IDocument.DEFAULT_CONTENT_TYPE)
-    pr.setRepairer(ddr, IDocument.DEFAULT_CONTENT_TYPE)
+    pr.setDocumentPartitioning(CoqPartitions.COQ)
+
+    for ((typ, scanner) <- Seq(
+        (CoqPartitions.Types.COQ, coqScanner),
+        (CoqPartitions.Types.COMMENT, commentScanner),
+        (CoqPartitions.Types.STRING, stringScanner))) {
+      pr.setDamager(scanner.get, typ)
+      pr.setRepairer(scanner.get, typ)
+    }
+
     pr
   }
 
