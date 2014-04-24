@@ -247,14 +247,6 @@ private class CoqProofReconcilingStrategy(
   override def setDocument(newDocument : IDocument) = ()
 }
 
-import org.eclipse.ui.editors.text.TextFileDocumentProvider
-
-object CoqDocumentProvider extends TextFileDocumentProvider {
-  import org.eclipse.jface.text.IDocument
-
-  override def getDefaultEncoding () : String = "UTF-8"
-}
-
 import org.eclipse.jface.text.rules.RuleBasedScanner
 
 object CoqTokenScanner extends RuleBasedScanner {
