@@ -7,22 +7,23 @@
 
 package dk.itu.coqoon.ui
 
-import org.eclipse.ui.editors.text.TextFileDocumentProvider
 import org.eclipse.jface.text.IDocument
 import org.eclipse.jface.text.rules.{
   IPartitionTokenScanner, BufferedRuleBasedScanner}
 
-object CoqDocumentProvider extends TextFileDocumentProvider {
+object CoqPartitions {
+  final val COQ = "__coqoon_ptn_coqn"
+  object Types {
+    final val COQ = "__coqoon_ptn_coqn_coq"
+    final val STRING = "__coqoon_ptn_coqn_string"
+    final val COMMENT = "__coqoon_ptn_coqn_comment"
+  }
+  final val TYPES = Array(Types.COQ, Types.COMMENT, Types.STRING)
+
+  import org.eclipse.ui.editors.text.ForwardingDocumentProvider
   import org.eclipse.jface.text.{IDocumentExtension3, IDocumentPartitioner}
   import org.eclipse.jface.text.rules.FastPartitioner
-
-  override def getDocument(input : Any) =
-      Option(super.getDocument(input)) match {
-    case Some(document) =>
-      installPartitioner(document, CoqPartitions.COQ)
-      document
-    case None => null
-  }
+  import org.eclipse.core.filebuffers.IDocumentSetupParticipant
 
   def installPartitioner(input : IDocument, partitioning : String) = {
     import dk.itu.coqoon.core.utilities.TryCast
@@ -38,18 +39,6 @@ object CoqDocumentProvider extends TextFileDocumentProvider {
 
   def createPartitioner() : IDocumentPartitioner =
     new FastPartitioner(new CoqPartitionScanner, CoqPartitions.TYPES)
-
-  override def getDefaultEncoding () : String = "UTF-8"
-}
-
-object CoqPartitions {
-  final val COQ = "__coqoon_ptn_coqn"
-  object Types {
-    final val COQ = "__coqoon_ptn_coqn_coq"
-    final val STRING = "__coqoon_ptn_coqn_string"
-    final val COMMENT = "__coqoon_ptn_coqn_comment"
-  }
-  final val TYPES = Array(Types.COQ, Types.COMMENT, Types.STRING)
 }
 
 class CoqPartitionScanner extends IPartitionTokenScanner {

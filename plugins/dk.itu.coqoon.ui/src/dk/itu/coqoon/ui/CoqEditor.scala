@@ -94,14 +94,23 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
 
   var annotationModel : Option[ProjectionAnnotationModel] = None
 
+  import org.eclipse.ui.editors.text.{
+    TextFileDocumentProvider, ForwardingDocumentProvider}
+  import org.eclipse.core.filebuffers.IDocumentSetupParticipant
+
+  object CoqDocumentSetupParticipant extends IDocumentSetupParticipant {
+    override def setup(doc : IDocument) =
+      CoqPartitions.installPartitioner(doc, CoqPartitions.COQ)
+  }
+
   override protected def initializeEditor () : Unit = {
-    //Console.println("initializeEditor was called")
-    setDocumentProvider(CoqDocumentProvider)
-    //Console.println(" - document provider set")
+    setDocumentProvider(new ForwardingDocumentProvider(
+      CoqPartitions.COQ, CoqDocumentSetupParticipant,
+      new TextFileDocumentProvider {
+        override def getDefaultEncoding() = "UTF-8"
+      }))
     setSourceViewerConfiguration(new CoqSourceViewerConfiguration(this))
-    //Console.println(" - source viewer configuration set")
     super.initializeEditor()
-    //Console.println(" - initializeEditor called super")
   }
 
   private var parent : Composite = null
