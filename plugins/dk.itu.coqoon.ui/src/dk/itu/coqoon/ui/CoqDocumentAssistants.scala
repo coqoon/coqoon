@@ -57,13 +57,15 @@ class CoqPartitionScanner extends IPartitionTokenScanner {
       length : Int, contentType : String, partitionOffset : Int) : Unit = {
     println(s"${this}.setPartialRange(${document}, " +
         s"${offset}, ${length}, ${contentType}, ${partitionOffset})")
-    lastFinalState = contentType match {
-      case CoqPartitions.Types.COQ => States.Coq
-      case CoqPartitions.Types.COMMENT => States.Comment
-      case CoqPartitions.Types.STRING => States.String
-      case _ => States.Coq
+    if (contentType != null && partitionOffset != -1) {
+      lastFinalState = contentType match {
+        case CoqPartitions.Types.COQ => States.Coq
+        case CoqPartitions.Types.COMMENT => States.Comment
+        case CoqPartitions.Types.STRING => States.String
+        case _ => States.Coq
+      }
+      lastEnd = partitionOffset
     }
-    lastEnd = partitionOffset
     setRange(document, offset, length)
   }
 
