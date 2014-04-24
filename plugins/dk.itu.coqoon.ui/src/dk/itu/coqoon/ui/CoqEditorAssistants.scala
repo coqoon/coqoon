@@ -239,13 +239,12 @@ class BasicRule(label : String = "<anonymous>") extends IRule {
     var stack : List[State] = List()
     do {
       val c = scanner.read
-      s = if (c != ICharacterScanner.EOF) {
-        val k = s.flatMap(_.get(c))
-        if (k != None) {
-          stack = k.get +: stack
-        } else scanner.unread
-        k
-      } else None
+      s = s.flatMap(_.get(c))
+      if (s != None) {
+        stack = s.get +: stack
+        if (c == ICharacterScanner.EOF)
+          s = None
+      } else scanner.unread
     } while (s != None)
     while (stack.headOption != None) {
       stack.head.getToken match {
