@@ -86,14 +86,14 @@ class CoqPartitionScanner extends IPartitionTokenScanner {
       lastEnd = lastStart
       return Token.EOF
     }
-    position += lastFinalState.offsetCorrection
+    position += lastFinalState.getLeadCount
     var state : PartitionState = lastFinalState
     while (position < end) {
       val c = doc.getChar(position)
       state.get(c) match {
         case Some(f : PartitionFinalState)
             if f != lastFinalState =>
-          position += 1 - f.offsetCorrection()
+          position += 1 - f.getLeadCount()
           try {
             lastStart = lastEnd
             lastEnd = position
@@ -128,7 +128,12 @@ private object States {
   sealed abstract class PartitionFinalState(
       token : IToken) extends PartitionState {
     setToken(token)
-    def offsetCorrection() : Int
+
+    /* Returns the length of the character sequence that leads into this state:
+     * one for strings, '"', and two for comments, '(*'. (This value is used
+     * to make sure that lead-in sequences correctly terminate a token without
+     * becoming part of it.) */
+    def getLeadCount() : Int
   }
 
   case object Coq extends PartitionFinalState(
@@ -137,7 +142,7 @@ private object States {
     add('(', PossiblyEnteringComment)
     setFallback(Coq)
 
-    override def offsetCorrection = 0
+    override def getLeadCount = 0
   }
 
   case object String extends PartitionFinalState(
@@ -146,7 +151,7 @@ private object States {
     add('"', Coq)
     setFallback(String)
 
-    override def offsetCorrection = 1
+    override def getLeadCount = 1
   }
 
   case object StringEscape extends PartitionState {
@@ -165,7 +170,7 @@ private object States {
     add('*', PossiblyLeavingComment)
     setFallback(Comment)
 
-    override def offsetCorrection = 2
+    override def getLeadCount = 2
   }
 
   case object PossiblyLeavingComment extends PartitionState {
@@ -180,6 +185,6 @@ private object States {
   case object End extends PartitionFinalState(Token.EOF) {
     setFallback(End)
 
-    override def offsetCorrection = 0
+    override def getLeadCount = 0
   }
 }
