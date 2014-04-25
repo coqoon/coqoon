@@ -51,12 +51,16 @@ class CoqPartitionScanner extends IPartitionTokenScanner {
     this.start = offset
     this.position = offset
     this.end = offset + length
+    lastEnd = 0
+    lastStart = 0
+    lastFinalState = States.Coq
   }
 
   override def setPartialRange(document : IDocument, offset : Int,
       length : Int, contentType : String, partitionOffset : Int) : Unit = {
     println(s"${this}.setPartialRange(${document}, " +
         s"${offset}, ${length}, ${contentType}, ${partitionOffset})")
+    setRange(document, offset, length)
     if (contentType != null && partitionOffset != -1) {
       lastFinalState = contentType match {
         case CoqPartitions.Types.COQ => States.Coq
@@ -66,7 +70,6 @@ class CoqPartitionScanner extends IPartitionTokenScanner {
       }
       lastEnd = partitionOffset
     }
-    setRange(document, offset, length)
   }
 
   private var (start, position, end) = (0, 0, 0)
