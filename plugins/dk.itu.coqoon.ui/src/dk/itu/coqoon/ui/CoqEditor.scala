@@ -343,27 +343,19 @@ object CommentTokenScanner extends RuleBasedScanner {
   private val commentToken : IToken = new Token(new TextAttribute(
       UIUtils.Color(63, 127, 95), CoqTokenScanner.white, SWT.ITALIC))
 
-  setDefaultReturnToken(commentToken)
+  private val commentRule = new BasicRule("!comment")
+  commentRule.getStartState.setFallback(commentRule.getStartState)
+  commentRule.getStartState.setToken(commentToken)
+  setRules(Array(commentRule))
 }
 
 object StringTokenScanner extends RuleBasedScanner {
   private val stringToken : IToken = new Token(new TextAttribute(
       UIUtils.Color(0, 0, 255), CoqTokenScanner.white, 0))
 
-  private val stringRule = new BasicRule("string")
-  val s1 = stringRule.getStartState
-  val s2 = new BasicRule.State /* in string */
-  s1.add('"', s2)
-
-  s2.setFallback(s2)
-
-  val s3 = new BasicRule.State /* escape */
-  s2.add('\\', s3)
-  s3.setFallback(s2)
-  val s4 = new BasicRule.State /* out of string */
-  s4.setToken(stringToken)
-  s2.add('"', s4)
-
+  private val stringRule = new BasicRule("!string")
+  stringRule.getStartState.setFallback(stringRule.getStartState)
+  stringRule.getStartState.setToken(stringToken)
   setRules(Array(stringRule))
 }
 
