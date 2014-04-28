@@ -102,11 +102,12 @@ class CoqPartitionScanner extends IPartitionTokenScanner {
             lastEnd = position
             if (lastEnd - lastStart > 0) {
               println("Yielding " + lastFinalState + " (from "
-                  + lastStart + " to " + lastEnd + ")")
+                  + lastStart + " to " + lastEnd + ") -> " + f)
               return lastFinalState.getToken.get
             } else println("Not yielding " + lastFinalState +
-                " (length " + (lastEnd - lastStart) + ")")
+                " (length " + (lastEnd - lastStart) + ") -> " + f)
           } finally {
+            state = f
             lastFinalState = f
           }
         case Some(s : PartitionState) =>
