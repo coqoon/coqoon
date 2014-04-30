@@ -148,6 +148,15 @@ class ResolutionGenerator extends IMarkerResolutionGenerator {
   override def getResolutions(m : IMarker) = Array(ConfigureCoqPathResolution)
 }
 
+import org.eclipse.jface.text.formatter.IFormattingStrategy
+
+class CoqFormattingStrategy extends IFormattingStrategy {
+  override def formatterStarts(initialIndentation : String) = ()
+  override def format(content : String, isLineStart : Boolean,
+      indentation : String, positions : Array[Int]) = content
+  override def formatterStops = ()
+}
+
 import org.eclipse.jface.text.rules.{
   IRule, Token, IToken, IWordDetector, ICharacterScanner}
 

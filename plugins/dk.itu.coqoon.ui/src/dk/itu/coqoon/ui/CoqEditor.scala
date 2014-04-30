@@ -399,11 +399,21 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
     }
 
   override def getContentAssistant(v : ISourceViewer) : IContentAssistant = {
-    val assistant= new ContentAssistant
+    val assistant = new ContentAssistant
+    assistant.setDocumentPartitioning(CoqPartitions.COQ)
     val assistantProcessor = new CoqContentAssistantProcessor(editor)
     assistant.setContentAssistProcessor(
         assistantProcessor, CoqPartitions.Types.COQ)
     assistant
+  }
+
+  import org.eclipse.jface.text.formatter.{ContentFormatter, IContentFormatter}
+  override def getContentFormatter(v : ISourceViewer) : IContentFormatter = {
+    val formatter = new ContentFormatter
+    formatter.setDocumentPartitioning(CoqPartitions.COQ)
+    formatter.setFormattingStrategy(
+        new CoqFormattingStrategy, CoqPartitions.Types.COQ)
+    formatter
   }
 
   override def getReconciler (v : ISourceViewer) : IReconciler = {
