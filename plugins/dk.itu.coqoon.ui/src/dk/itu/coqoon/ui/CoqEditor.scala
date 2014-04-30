@@ -389,9 +389,13 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
 
   override def getAutoEditStrategies(v : ISourceViewer, contentType : String) =
     contentType match {
-      case CoqPartitions.Types.COQ =>
+      case CoqPartitions.Types.STRING | CoqPartitions.Types.COMMENT =>
+        Array()
+      case _ =>
+        /* Using _ here rather than Types.COQ makes the automatic indentation
+         * work properly at the end of the file, where there's a mysterious
+         * shadow realm whose content type is IDocument.DEFAULT_CONTENT_TYPE */
         Array(new CoqAutoEditStrategy)
-      case _ => Array()
     }
 
   override def getContentAssistant(v : ISourceViewer) : IContentAssistant = {
@@ -409,7 +413,7 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
   }
 
   override def getConfiguredContentTypes(v : ISourceViewer) =
-    CoqPartitions.TYPES
+    IDocument.DEFAULT_CONTENT_TYPE +: CoqPartitions.TYPES
   override def getConfiguredDocumentPartitioning(v : ISourceViewer) =
     CoqPartitions.COQ
 
