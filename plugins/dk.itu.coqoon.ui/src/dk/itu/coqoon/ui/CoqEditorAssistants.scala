@@ -148,13 +148,36 @@ class ResolutionGenerator extends IMarkerResolutionGenerator {
   override def getResolutions(m : IMarker) = Array(ConfigureCoqPathResolution)
 }
 
-import org.eclipse.jface.text.formatter.IFormattingStrategy
+import org.eclipse.jface.text.formatter.{
+  IFormattingStrategy, IFormattingStrategyExtension}
 
-class CoqFormattingStrategy extends IFormattingStrategy {
-  override def formatterStarts(initialIndentation : String) = ()
-  override def format(content : String, isLineStart : Boolean,
-      indentation : String, positions : Array[Int]) = content
-  override def formatterStops = ()
+class DummyFormattingStrategy extends IFormattingStrategy {
+  override def formatterStarts(initialIndentation : String) : Unit = ???
+  override def format(a : String,
+      b : Boolean, c : String, d : Array[Int]) : String = ???
+  override def formatterStops() : Unit = ???
+}
+
+class CoqMasterFormattingStrategy
+    extends DummyFormattingStrategy with IFormattingStrategyExtension {
+  import org.eclipse.jface.text.formatter.IFormattingContext
+
+  private var context : Option[IFormattingContext] = None
+
+  override def formatterStarts(c : IFormattingContext) = (context = Option(c))
+  override def format() = context.foreach(context => {
+    def propertyAs[A](t : String)(implicit a0 : Manifest[A]) =
+      context.getProperty(t).asInstanceOf[A]
+    import org.eclipse.jface.text.formatter.FormattingContextProperties._
+    import org.eclipse.jface.text.{IRegion, TypedPosition}
+    import java.util.{Map => JMap}
+    val document = propertyAs[Boolean](CONTEXT_DOCUMENT)
+    val partition = propertyAs[TypedPosition](CONTEXT_PARTITION)
+    val preferences = propertyAs[JMap[_, _]](CONTEXT_PREFERENCES)
+    val region = propertyAs[IRegion](CONTEXT_REGION)
+    val medium = propertyAs[IDocument](CONTEXT_MEDIUM)
+  })
+  override def formatterStops = (context = None)
 }
 
 import org.eclipse.jface.text.rules.{

@@ -407,12 +407,12 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
     assistant
   }
 
-  import org.eclipse.jface.text.formatter.{ContentFormatter, IContentFormatter}
+  import org.eclipse.jface.text.formatter.{
+    MultiPassContentFormatter, IContentFormatter}
   override def getContentFormatter(v : ISourceViewer) : IContentFormatter = {
-    val formatter = new ContentFormatter
-    formatter.setDocumentPartitioning(CoqPartitions.COQ)
-    formatter.setFormattingStrategy(
-        new CoqFormattingStrategy, CoqPartitions.Types.COQ)
+    val formatter = new MultiPassContentFormatter(
+        CoqPartitions.COQ, CoqPartitions.Types.COQ)
+    formatter.setMasterStrategy(new CoqMasterFormattingStrategy)
     formatter
   }
 
