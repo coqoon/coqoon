@@ -135,6 +135,12 @@
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="F3">
       </key>
+      <key
+            commandId="dk.itu.coqoon.ui.commands.reformat"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+F">
+      </key>
    </extension>
    <extension
          point="org.eclipse.ui.editors">
@@ -190,36 +196,43 @@
       </category>
       <command
             categoryId="dk.itu.coqoon.ui.commands.category"
+            description="Send the next sentence to the Coq process"
             id="dk.itu.coqoon.ui.commands.step_forward"
             name="Step forward command">
       </command>
       <command
             categoryId="dk.itu.coqoon.ui.commands.category"
+            description="Retracts the last sentence sent to the Coq process"
             id="dk.itu.coqoon.ui.commands.step_backward"
             name="Step backward command">
       </command>
       <command
             categoryId="dk.itu.coqoon.ui.commands.category"
+            description="Sends all sentences up to the cursor position to the Coq process"
             id="dk.itu.coqoon.ui.commands.step_cursor"
             name="Step to cursor command">
       </command>
       <command
             categoryId="dk.itu.coqoon.ui.commands.category"
+            description="Sends all sentences in the current file to the Coq process"
             id="dk.itu.coqoon.ui.commands.step_all"
             name="Step all command">
       </command>
       <command
             categoryId="dk.itu.coqoon.ui.commands.category"
+            description="Retracts all sentences sent to the Coq process"
             id="dk.itu.coqoon.ui.commands.retract"
             name="Retract all command">
       </command>
       <command
             categoryId="dk.itu.coqoon.ui.commands.category"
+            description="Terminates the running Coq process"
             id="dk.itu.coqoon.ui.commands.stop_coq"
             name="Stop Coq command">
       </command>
       <command
             categoryId="dk.itu.coqoon.ui.commands.category"
+            description="Send an interrupt to the running Coq process"
             id="dk.itu.coqoon.ui.commands.interrupt_coq"
             name="Interrupt Coq command">
       </command>
@@ -236,8 +249,15 @@
       </command>
       <command
             categoryId="dk.itu.coqoon.ui.commands.category"
+            description="Jump to the declaration of the highlighted name"
             id="dk.itu.coqoon.ui.commands.open_declaration"
             name="Open declaration command">
+      </command>
+      <command
+            categoryId="dk.itu.coqoon.ui.commands.category"
+            description="Reindent and reformat a region of Coq code"
+            id="dk.itu.coqoon.ui.commands.reformat"
+            name="Reformat Coq region command">
       </command>
    </extension>
    <extension
@@ -423,6 +443,15 @@
       <handler
             class="dk.itu.coqoon.ui.OpenDeclarationHandler"
             commandId="dk.itu.coqoon.ui.commands.open_declaration">
+         <activeWhen>
+            <reference
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
+            </reference>
+         </activeWhen>
+      </handler>
+      <handler
+            class="dk.itu.coqoon.ui.ReformatCoqHandler"
+            commandId="dk.itu.coqoon.ui.commands.reformat">
          <activeWhen>
             <reference
                   definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
@@ -664,6 +693,12 @@
                   label="Open Declaration"
                   style="push"
                   tooltip="Open Declaration">
+            </command>
+            <command
+                  commandId="dk.itu.coqoon.ui.commands.reformat"
+                  label="Reformat"
+                  mode="FORCE_TEXT"
+                  style="push">
             </command>
             <visibleWhen
                   checkEnabled="false">
