@@ -413,6 +413,10 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
     val formatter = new MultiPassContentFormatter(
         getConfiguredDocumentPartitioning(v), IDocument.DEFAULT_CONTENT_TYPE)
     formatter.setMasterStrategy(new CoqMasterFormattingStrategy)
+    formatter.setSlaveStrategy(new CoqSubservientFormattingStrategy,
+        CoqPartitions.Types.COQ)
+    formatter.setSlaveStrategy(new CommentSubservientFormattingStrategy,
+        CoqPartitions.Types.COMMENT)
     formatter
   }
 

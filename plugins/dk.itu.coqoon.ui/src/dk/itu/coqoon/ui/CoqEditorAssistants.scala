@@ -158,26 +158,43 @@ class DummyFormattingStrategy extends IFormattingStrategy {
   override def formatterStops() : Unit = ???
 }
 
-class CoqMasterFormattingStrategy
+abstract class FormattingStrategyBase
     extends DummyFormattingStrategy with IFormattingStrategyExtension {
   import org.eclipse.jface.text.formatter.IFormattingContext
 
   private var context : Option[IFormattingContext] = None
+  protected def getContext() = context
+
+  import dk.itu.coqoon.core.utilities.TryCast
+  import org.eclipse.jface.text.formatter.FormattingContextProperties._
+
+  private def propertyAs[A](t : String)(implicit a0 : Manifest[A]) =
+    context.map(_.getProperty(t)).flatMap(TryCast[A])
+
+  import org.eclipse.jface.text.{IRegion, TypedPosition}
+  import java.util.{Map => JMap}
+  import scala.collection.JavaConversions._
+  protected def getDocument() = propertyAs[Boolean](CONTEXT_DOCUMENT)
+  protected def getPartition() = propertyAs[TypedPosition](CONTEXT_PARTITION)
+  protected def getPreferences() = propertyAs[JMap[_, _]](
+      CONTEXT_PREFERENCES).map(f => mapAsScalaMap(f).toMap)
+  protected def getRegion() = propertyAs[IRegion](CONTEXT_REGION)
+  protected def getMedium() = propertyAs[IDocument](CONTEXT_MEDIUM)
 
   override def formatterStarts(c : IFormattingContext) = (context = Option(c))
-  override def format() = context.foreach(context => {
-    def propertyAs[A](t : String)(implicit a0 : Manifest[A]) =
-      context.getProperty(t).asInstanceOf[A]
-    import org.eclipse.jface.text.formatter.FormattingContextProperties._
-    import org.eclipse.jface.text.{IRegion, TypedPosition}
-    import java.util.{Map => JMap}
-    val document = propertyAs[Boolean](CONTEXT_DOCUMENT)
-    val partition = propertyAs[TypedPosition](CONTEXT_PARTITION)
-    val preferences = propertyAs[JMap[_, _]](CONTEXT_PREFERENCES)
-    val region = propertyAs[IRegion](CONTEXT_REGION)
-    val medium = propertyAs[IDocument](CONTEXT_MEDIUM)
-  })
   override def formatterStops = (context = None)
+}
+
+class CoqMasterFormattingStrategy extends FormattingStrategyBase {
+  override protected def format() = ()
+}
+
+class CoqSubservientFormattingStrategy extends FormattingStrategyBase {
+  override protected def format() = ()
+}
+
+class CommentSubservientFormattingStrategy extends FormattingStrategyBase {
+  override protected def format() = ()
 }
 
 import org.eclipse.jface.text.rules.{
