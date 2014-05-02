@@ -411,7 +411,7 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
     MultiPassContentFormatter, IContentFormatter}
   override def getContentFormatter(v : ISourceViewer) : IContentFormatter = {
     val formatter = new MultiPassContentFormatter(
-        CoqPartitions.COQ, CoqPartitions.Types.COQ)
+        getConfiguredDocumentPartitioning(v), IDocument.DEFAULT_CONTENT_TYPE)
     formatter.setMasterStrategy(new CoqMasterFormattingStrategy)
     formatter
   }
