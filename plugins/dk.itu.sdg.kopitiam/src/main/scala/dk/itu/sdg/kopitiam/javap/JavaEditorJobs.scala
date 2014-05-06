@@ -210,7 +210,7 @@ class JavaStepBackRunner(jes : JavaEditorState, stepCount : Int)
     monitor.beginTask("Stepping back", 2)
 
     val steps = jes.steps.synchronized { jes.steps.take(stepCount) }
-    val rewindCount = steps.size /* XXX: synthetic steps? */
+    val rewindCount = steps.count(_.synthetic == false)
     jes.coqTop.rewind(rewindCount) match {
       case CoqTypes.Good(extra) =>
         monitor.worked(1)
@@ -219,11 +219,18 @@ class JavaStepBackRunner(jes : JavaEditorState, stepCount : Int)
             jes.steps.pop
 
           if (extra > 0) {
-            // XXX: synthetic steps
-            var redoSteps = jes.steps.take(extra).toList.reverse
+            var i = 0
+            var redoSteps = jes.steps.takeWhile(a => {
+              if (i < extra) {
+                if (!a.synthetic)
+                  i += 1
+                true
+              } else false
+            }).toList.reverse
             for (step <- redoSteps)
               jes.steps.pop
-            new JavaStepForwardRunner(jes, redoSteps).run(monitor.newChild(1))
+            new JavaStepForwardRunner(
+                jes, redoSteps).run(monitor.newChild(1))
           }
         }
         CoqTypes.Good("")
