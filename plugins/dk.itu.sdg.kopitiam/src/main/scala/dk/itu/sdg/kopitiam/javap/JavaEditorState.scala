@@ -189,7 +189,9 @@ object JavaEditorState {
   import org.eclipse.jdt.core.dom.MethodDeclaration
   def getProofScript(m : MethodDeclaration) =
     EclipseJavaASTProperties.getProof(m).get ++ JavaASTUtils.traverseAST(
-        m, true, false, JavaASTUtils.printProofScript) :+ "Qed."
+        m, true, false,
+        n => JavaASTUtils.printProofScript(n).headOption.map(
+            _._1.toString)) :+ "Qed."
 }
 
 import org.eclipse.core.runtime.IAdapterFactory

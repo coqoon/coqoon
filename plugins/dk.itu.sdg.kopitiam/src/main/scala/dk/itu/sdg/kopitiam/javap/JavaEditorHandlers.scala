@@ -202,7 +202,8 @@ object JavaStepForwardHandler {
     }
     def print(x : Statement) : Option[JavaStep] =
       if (captureP(x)) {
-        JavaASTUtils.printProofScript(x).map(a => JavaStep(x, a))
+        JavaASTUtils.printProofScript(x).headOption.map(
+            a => JavaStep(x, a._1.toString))
       } else None
 
     JavaASTUtils.traverseAST(method, true, !multiple, print)

@@ -2,14 +2,15 @@
 
 package dk.itu.sdg.kopitiam.javap
 
-import dk.itu.coqoon.core.utilities.TryCast
+import dk.itu.coqoon.core.coqtop.CoqSentence
+import dk.itu.coqoon.core.utilities.{TryCast, Substring}
 
 import dk.itu.sdg.kopitiam.Activator
 
 object JavaASTUtils {
 
   import org.eclipse.jdt.core.dom.{EmptyStatement, Statement}
-  def printProofScript (statement : Statement) : Option[String] =
+  def printProofScript(statement : Statement) : Seq[CoqSentence.Sentence] =
     statement match {
       case x : EmptyStatement =>
         statement.getProperty("dk.itu.sdg.kopitiam.contentExpr") match {
@@ -27,16 +28,16 @@ object JavaASTUtils {
                     script.substring(i3 + 6, script.length).trim
                 "forward (" + i + ") (" + f + ")."
               } else script
-            Some(con)
+            CoqSentence.getNextSentences(con, 0, con.length)
           case _ =>
-            None
+            Nil
         }
       case x : Statement =>
         val fwd = Activator.getDefault.getPreferenceStore.getBoolean("implicit")
         if (fwd)
-          Some("forward.")
+          Seq((Substring("forward."), false))
         else
-          None
+          Nil
     }
 
   import scala.collection.JavaConversions.asScalaBuffer
