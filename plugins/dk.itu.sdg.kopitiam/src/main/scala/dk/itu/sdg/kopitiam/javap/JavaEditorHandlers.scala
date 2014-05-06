@@ -15,7 +15,8 @@ import org.eclipse.core.commands.ExecutionEvent
 
 case class JavaStep(
     val node : Statement,
-    override val text : String) extends CoqCommand(text)
+    override val text : String,
+    override val synthetic : Boolean) extends CoqCommand(text, synthetic)
 
 abstract class JavaEditorHandler extends EditorHandler {
   override def editor : ITextEditor = TryCast[ITextEditor](super.editor).orNull
@@ -203,7 +204,7 @@ object JavaStepForwardHandler {
     def print(x : Statement) : Option[JavaStep] =
       if (captureP(x)) {
         JavaASTUtils.printProofScript(x).headOption.map(
-            a => JavaStep(x, a._1.toString))
+            a => JavaStep(x, a._1.toString, a._2))
       } else None
 
     JavaASTUtils.traverseAST(method, true, !multiple, print)

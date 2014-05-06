@@ -20,19 +20,17 @@ import org.eclipse.core.runtime.jobs.ISchedulingRule
 
 import org.eclipse.core.resources.WorkspaceJob
 
-abstract class CoqCommand(val text : String) {
+abstract class CoqCommand(val text : String, val synthetic : Boolean) {
   def run(coqTop : CoqTopIdeSlave_v20120710) : CoqTypes.value[String] =
-    coqTop.interp(false, true, text)
+    if (!synthetic) {
+      coqTop.interp(false, true, text)
+    } else CoqTypes.Good("")
 }
 
 case class CoqStep(
     val offset : Int,
     override val text : String,
-    val synthetic : Boolean) extends CoqCommand(text) {
-  override def run(coqTop : CoqTopIdeSlave_v20120710) = if (!synthetic) {
-    super.run(coqTop)
-  } else CoqTypes.Good("")
-}
+    override val synthetic : Boolean) extends CoqCommand(text, synthetic)
 
 abstract class ResourceJob(name : String, resource : IResource,
     ruleProvider : IResource => ISchedulingRule) extends WorkspaceJob(name) {
