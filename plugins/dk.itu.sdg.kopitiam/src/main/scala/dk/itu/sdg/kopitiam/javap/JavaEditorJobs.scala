@@ -118,8 +118,9 @@ class JavaProofInitialisationRunner(
         case _ => None
       }
       UIUtils.asyncExec {
-        jes.setComplete(
-            jes.method.flatMap(EclipseJavaASTProperties.getPostcondition))
+        val post =
+          jes.method.flatMap(EclipseJavaASTProperties.getPostcondition)
+        jes.setComplete(post.map(n => n.getStartPosition + n.getLength))
         jes.setGoals(goals)
       }
       //register handlers!
@@ -151,13 +152,16 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
   override protected def onGood(
       step : JavaStep, result : CoqTypes.Good[String]) = {
     jes.steps.synchronized { jes.steps.push(step) }
-    UIUtils.asyncExec { jes.setComplete(Some(step.node)) }
+    UIUtils.asyncExec {
+      val node = step.node
+      jes.setComplete(Some(node.getStartPosition + node.getLength))
+    }
   }
 
   override protected def onFail(
       step : JavaStep, result : CoqTypes.Fail[String]) = {
     import org.eclipse.ui.IFileEditorInput
-    UIUtils.asyncExec { jes.setUnderway(jes.__temp_getComplete) }
+    UIUtils.asyncExec { jes.setUnderway(jes.complete) }
     val ep = result.value
     import org.eclipse.jdt.core.dom.EmptyStatement
     val range = ep._1 match {
@@ -236,10 +240,8 @@ class JavaStepBackRunner(jes : JavaEditorState, stepCount : Int)
         CoqTypes.Good("")
       case CoqTypes.Fail(ep) =>
         val completed = jes.steps.synchronized {
-          jes.steps.headOption match {
-            case None => None
-            case Some(step) => Some(step.node)
-          }
+          val node = jes.steps.headOption.map(_.node)
+          node.map(n => n.getStartPosition + n.getLength)
         }
         UIUtils.asyncExec { jes.setUnderway(completed) }
         CoqTypes.Fail(ep)

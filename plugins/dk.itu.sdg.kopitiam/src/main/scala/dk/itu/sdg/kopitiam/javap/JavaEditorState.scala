@@ -46,21 +46,16 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
   def compilationUnit : Option[CompilationUnit] = cu
   def setCompilationUnit (a : Option[CompilationUnit]) = cu = a
 
-  private var completeV : Option[ASTNode] = None
-  def complete : Option[Int] =
-    completeV.map(n => n.getStartPosition + n.getLength)
-  def setComplete(a : Option[ASTNode]) = {
+  private var completeV : Option[Int] = None
+  def complete : Option[Int] = completeV
+  def setComplete(a : Option[Int]) = {
     completeV = a
     addAnnotations(complete, underway)
   }
 
-  @deprecated("Dummy transitional function.", since = "always")
-  def __temp_getComplete() : Option[ASTNode] = completeV
-
-  private var underwayV : Option[ASTNode] = None
-  def underway : Option[Int] =
-    underwayV.map(n => n.getStartPosition + n.getLength)
-  def setUnderway(a : Option[ASTNode]) = {
+  private var underwayV : Option[Int] = None
+  def underway : Option[Int] = underwayV
+  def setUnderway(a : Option[Int]) = {
     underwayV = a
     (underway, complete) match {
       case (Some(un), Some(co)) if co > un =>
@@ -138,29 +133,30 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
     val cu = EclipseJavaHelper.getCompilationUnit(bla)
     if (CoreJavaChecker.checkAST(this, cu, doc)) {
       if (EclipseJavaHelper.walkAST(this, cu, doc)) {
-    	setCompilationUnit(Some(cu))
+        setCompilationUnit(Some(cu))
         val node = EclipseJavaHelper.findASTNode(cu, off, 0)
         setMethod(EclipseJavaHelper.findMethod(node))
-    	
-    	val newSteps = JavaStepForwardHandler.collectProofScript(
-    	    method.get, true, None,
-    	    complete.orElse(Some(Int.MinValue)))
-    	steps.clear
-    	steps.pushAll(newSteps)
-    	
-    	val newCompletedMethods =
-    	  for (i <- completedMethods;
-    	       j <- TryCast[MethodDeclaration](
-    	           cu.findDeclaringNode(i.resolveBinding.getKey)))
-    	    yield j
-    	val update = (completedMethods.size != newCompletedMethods.size)
-    	
-    	UIUtils.asyncExec {
-    	  setUnderway(Some(steps.top.node))
-    	  completedMethods = newCompletedMethods
-    	  if (update) /* XXX: is this test good enough? */
-    	    markCompletedMethods
-    	}
+
+        val newSteps = JavaStepForwardHandler.collectProofScript(
+            method.get, true, None,
+            complete.orElse(Some(Int.MinValue)))
+        steps.clear
+        steps.pushAll(newSteps)
+
+        val newCompletedMethods =
+          for (i <- completedMethods;
+               j <- TryCast[MethodDeclaration](
+                   cu.findDeclaringNode(i.resolveBinding.getKey)))
+            yield j
+        val update = (completedMethods.size != newCompletedMethods.size)
+
+        UIUtils.asyncExec {
+          val top = steps.top.node
+          setUnderway(Some(top.getStartPosition + top.getLength))
+          completedMethods = newCompletedMethods
+          if (update) /* XXX: is this test good enough? */
+            markCompletedMethods
+        }
       }
     }
   }
