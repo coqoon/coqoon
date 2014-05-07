@@ -118,9 +118,7 @@ class JavaProofInitialisationRunner(
         case _ => None
       }
       UIUtils.asyncExec {
-        val post =
-          jes.method.flatMap(EclipseJavaASTProperties.getPostcondition)
-        jes.setComplete(post.map(n => n.getStartPosition + n.getLength))
+        jes.setComplete(None) /* Trigger an annotation redraw */
         jes.setGoals(goals)
       }
       //register handlers!

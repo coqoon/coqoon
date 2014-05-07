@@ -79,19 +79,14 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
   private def addAnnotations(
       complete : Option[Int], underway : Option[Int],
       model : IAnnotationModel) : Unit = {
-    var startNode : Option[ASTNode] = None
-    method.flatMap(EclipseJavaASTProperties.getQuantification) match {
-      case n @ Some(q) => startNode = n
-      case _ => method.flatMap(EclipseJavaASTProperties.getPrecondition) match {
-        case n @ Some(p) => startNode = n
-        case _ => method.flatMap(EclipseJavaASTProperties.getPostcondition) match {
-          case n @ Some(p) => startNode = n
-          case _ => startNode = method
-        }
-      }
-    }
+    import javap.{EclipseJavaASTProperties => EJP}
+    var startNode : Option[ASTNode] =
+      method.flatMap(EJP.getQuantification).orElse(
+      method.flatMap(EJP.getPrecondition)).orElse(
+      method.flatMap(EJP.getPostcondition)).orElse(method)
+    val start = complete.getOrElse(method.get.getBody.getStartPosition)
     doSplitAnnotations(CoqTopEditorContainer.getSplitAnnotationRanges(
-        startNode.map(a => a.getStartPosition), complete, underway), model)
+        startNode.map(a => a.getStartPosition), Some(start), underway), model)
   }
 
   import org.eclipse.core.resources.IMarker
