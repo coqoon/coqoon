@@ -100,17 +100,17 @@ trait CoqTopEditorContainer extends CoqTopContainer {
 object CoqTopEditorContainer {
   import org.eclipse.jface.text.Position
   def getSplitAnnotationRanges(
-      start_ : Option[Int], first_ : Option[Int], second_ : Option[Int]) = {
-    val firstRange = start_.flatMap(start => first_.flatMap(first =>
-        Some(new Position(start, first - start))))
-    val secondRange = start_.flatMap(start => second_.flatMap(second =>
-      first_ match {
-        case None =>
-          Some(new Position(start, second - start))
-        case Some(first) if first != second =>
-          Some(new Position(first, second - first))
-        case _ => None
-      }))
-    (firstRange, secondRange)
-  }
+      start_ : Option[Int], complete_ : Option[Int], underway_ : Option[Int]) =
+    (start_, complete_, underway_) match {
+      case (None, _, _) | (_, None, None) => (None, None)
+
+      case (Some(start), None, Some(underway)) =>
+        (None, Some(new Position(start, underway - start)))
+      case (Some(start), Some(complete), Some(underway))
+          if complete < underway =>
+        (Some(new Position(start, complete - start)),
+            Some(new Position(complete, underway - complete)))
+      case (Some(start), Some(complete), _) =>
+        (Some(new Position(start, complete - start)), None)
+    }
 }
