@@ -157,7 +157,7 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
   override protected def onFail(
       step : JavaStep, result : CoqTypes.Fail[String]) = {
     import org.eclipse.ui.IFileEditorInput
-    UIUtils.asyncExec { jes.setUnderway(jes.complete) }
+    UIUtils.asyncExec { jes.setUnderway(jes.__temp_getComplete) }
     val ep = result.value
     import org.eclipse.jdt.core.dom.EmptyStatement
     val range = ep._1 match {

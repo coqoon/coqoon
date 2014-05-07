@@ -183,8 +183,7 @@ object JavaStepForwardHandler {
   def collectProofScript(
       jes : JavaEditorState, multiple : Boolean, limit : Option[Int] = None) :
       List[JavaStep] =
-    collectProofScript(jes.method.get, multiple,
-        jes.complete.map { _.getStartPosition }, limit)
+    collectProofScript(jes.method.get, multiple, jes.complete, limit)
 
   import org.eclipse.jdt.core.dom.MethodDeclaration
   def collectProofScript(
@@ -192,10 +191,10 @@ object JavaStepForwardHandler {
       start : Option[Int], end : Option[Int]) : List[JavaStep] = {
     val captureP : (Statement => Boolean) = (start, end) match {
       case (Some(a), Some(b)) =>
-        (c => c.getStartPosition > a &&
+        (c => c.getStartPosition >= a &&
             (c.getStartPosition + c.getLength <= b))
       case (Some(a), None) =>
-        (c => c.getStartPosition > a)
+        (c => c.getStartPosition >= a)
       case (None, Some(b)) =>
         (c => c.getStartPosition + c.getLength <= b)
       case (None, None) =>
@@ -230,8 +229,7 @@ class JavaStepToCursorHandler extends JavaEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
       val jes = getState
-      val underwayPos =
-        jes.underway.map(a => a.getStartPosition + a.getLength) getOrElse 0
+      val underwayPos = jes.underway.getOrElse(0)
       val cursorPos = jes.cursorPosition
       if (cursorPos > underwayPos) { /* Forwards! */
         JavaStepForwardHandler.collectProofScript(

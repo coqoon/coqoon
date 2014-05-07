@@ -47,18 +47,23 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
   def setCompilationUnit (a : Option[CompilationUnit]) = cu = a
 
   private var completeV : Option[ASTNode] = None
-  def complete : Option[ASTNode] = completeV
+  def complete : Option[Int] =
+    completeV.map(n => n.getStartPosition + n.getLength)
   def setComplete(a : Option[ASTNode]) = {
     completeV = a
     addAnnotations(complete, underway)
   }
 
+  @deprecated("Dummy transitional function.", since = "always")
+  def __temp_getComplete() : Option[ASTNode] = completeV
+
   private var underwayV : Option[ASTNode] = None
-  def underway : Option[ASTNode] = underwayV
+  def underway : Option[Int] =
+    underwayV.map(n => n.getStartPosition + n.getLength)
   def setUnderway(a : Option[ASTNode]) = {
     underwayV = a
     (underway, complete) match {
-      case (Some(un), Some(co)) if co.getStartPosition > un.getStartPosition =>
+      case (Some(un), Some(co)) if co > un =>
         completeV = underwayV
       case (None, _) =>
         completeV = underwayV
@@ -72,12 +77,12 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
         _.getViewer.invalidateTextPresentation) /* XXX */
 
   private def addAnnotations(
-      complete : Option[ASTNode], underway : Option[ASTNode]) : Unit =
+      complete : Option[Int], underway : Option[Int]) : Unit =
     doConnectedToAnnotationModel { addAnnotations(complete, underway, _) }
 
   import org.eclipse.jface.text.source.IAnnotationModel
   private def addAnnotations(
-      complete : Option[ASTNode], underway : Option[ASTNode],
+      complete : Option[Int], underway : Option[Int],
       model : IAnnotationModel) : Unit = {
     var startNode : Option[ASTNode] = None
     method.flatMap(EclipseJavaASTProperties.getQuantification) match {
@@ -91,9 +96,7 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
       }
     }
     doSplitAnnotations(CoqTopEditorContainer.getSplitAnnotationRanges(
-        startNode.map(a => a.getStartPosition),
-        complete.map(a => a.getStartPosition + a.getLength),
-        underway.map(a => a.getStartPosition + a.getLength)), model)
+        startNode.map(a => a.getStartPosition), complete, underway), model)
   }
 
   import org.eclipse.core.resources.IMarker
@@ -141,8 +144,7 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
     	
     	val newSteps = JavaStepForwardHandler.collectProofScript(
     	    method.get, true, None,
-    	    complete.map(a => a.getStartPosition + a.getLength).
-    	        orElse(Some(Int.MinValue)))
+    	    complete.orElse(Some(Int.MinValue)))
     	steps.clear
     	steps.pushAll(newSteps)
     	
@@ -232,14 +234,12 @@ private class JavaEditorReconcilingStrategy(
     node match {
       case e: org.eclipse.jdt.core.dom.EmptyStatement =>
 
-        val underwayOffset =
-          jes.underway.map(a => a.getStartPosition + a.getLength).getOrElse { Int.MinValue }
+        val underwayOffset = jes.underway.getOrElse(Int.MinValue)
 
         if (off < underwayOffset) {
           if (jes.busy)
             jes.coqTop.interrupt
-          val completeOffset =
-            jes.complete.map(a => a.getStartPosition + a.getLength).getOrElse { Int.MinValue }
+          val completeOffset = jes.complete.getOrElse(Int.MinValue)
           if (off < completeOffset)
             UIUtils.exec {
               JavaEditorHandler.doStepBack(jes, _.prefixLength(
