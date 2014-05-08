@@ -55,7 +55,7 @@ import org.eclipse.core.commands.ExecutionEvent
 
 class CoqStepForwardHandler extends CoqEditorHandler {
   /* Don't check whether the editor's coqtop instance is busy */
-  override def isEnabled = (editor != null)
+  override def calculateEnabled = (editor != null)
 
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled())

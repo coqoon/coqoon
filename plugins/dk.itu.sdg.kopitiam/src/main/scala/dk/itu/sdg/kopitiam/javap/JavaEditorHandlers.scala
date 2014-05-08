@@ -20,16 +20,7 @@ case class JavaStep(
 
 abstract class JavaEditorHandler extends EditorHandler {
   override def editor : ITextEditor = TryCast[ITextEditor](super.editor).orNull
-
-  override def calculateEnabled : Boolean = {
-    if (editor == null)
-      return false
-    val state = getState
-    if (state == null || state.busy)
-      return false
-    return true
-  }
-
+  override def calculateEnabled = (getState != null && !getState.busy)
   protected def getState = JavaEditorState.requireStateFor(editor)
 }
 object JavaEditorHandler {
@@ -166,6 +157,8 @@ private object SaveProofCertificateHandler {
 }
 
 class JavaStepForwardHandler extends JavaEditorHandler {
+  override def calculateEnabled = (getState != null)
+
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
       val jes = getState
