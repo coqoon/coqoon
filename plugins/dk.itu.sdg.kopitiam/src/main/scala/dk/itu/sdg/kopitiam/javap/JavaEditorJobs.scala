@@ -150,16 +150,21 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
   override protected def onGood(
       step : JavaStep, result : CoqTypes.Good[String]) = {
     jes.steps.synchronized { jes.steps.push(step) }
-    UIUtils.asyncExec {
-      val node = step.node
-      jes.setComplete(Some(node.getStartPosition + node.getLength))
-    }
+    jes.setComplete(Some(step.node.getStartPosition + step.node.getLength))
+  }
+
+  override protected def preCheck = {
+    val nextStep = JavaStepForwardHandler.collectProofScript(
+        jes, false, jes.complete).headOption
+    if (nextStep != steps.headOption) {
+      Some(CoqTypes.Fail((None, "(missing step)")))
+    } else None
   }
 
   override protected def onFail(
       step : JavaStep, result : CoqTypes.Fail[String]) = {
     import org.eclipse.ui.IFileEditorInput
-    UIUtils.asyncExec { jes.setUnderway(jes.complete) }
+    jes.setUnderway(jes.complete)
     val ep = result.value
     import org.eclipse.jdt.core.dom.EmptyStatement
     val range = ep._1 match {
