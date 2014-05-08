@@ -169,7 +169,8 @@ class JavaStepForwardHandler extends JavaEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
       val jes = getState
-      JavaStepForwardHandler.collectProofScript(jes, false) match {
+      JavaStepForwardHandler.collectProofScript(
+          jes, false, jes.underway) match {
         case a : List[JavaStep] if a.size == 1 =>
           val last = a.last.node
           jes.setUnderway(Some(last.getStartPosition + last.getLength))
@@ -181,10 +182,9 @@ class JavaStepForwardHandler extends JavaEditorHandler {
   }
 }
 object JavaStepForwardHandler {
-  def collectProofScript(
-      jes : JavaEditorState, multiple : Boolean, limit : Option[Int] = None) :
-      List[JavaStep] =
-    collectProofScript(jes.method.get, multiple, jes.complete, limit)
+  def collectProofScript(jes : JavaEditorState, multiple : Boolean,
+      start : Option[Int], end : Option[Int] = None) : List[JavaStep] =
+    collectProofScript(jes.method.get, multiple, start, end)
 
   import org.eclipse.jdt.core.dom.MethodDeclaration
   def collectProofScript(
@@ -215,7 +215,8 @@ class JavaStepAllHandler extends JavaEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
       val jes = getState
-      JavaStepForwardHandler.collectProofScript(jes, true) match {
+      JavaStepForwardHandler.collectProofScript(
+          jes, true, jes.underway) match {
         case a : List[JavaStep] if a.size > 0 =>
           val last = a.last.node
           jes.setUnderway(Some(last.getStartPosition + last.getLength))
@@ -235,7 +236,7 @@ class JavaStepToCursorHandler extends JavaEditorHandler {
       val cursorPos = jes.cursorPosition
       if (cursorPos > underwayPos) { /* Forwards! */
         JavaStepForwardHandler.collectProofScript(
-            jes, true, Some(jes.cursorPosition)) match {
+            jes, true, jes.underway, Some(jes.cursorPosition)) match {
           case a : List[JavaStep] if a.size > 0 =>
             val last = a.last.node
             jes.setUnderway(Some(last.getStartPosition + last.getLength))
