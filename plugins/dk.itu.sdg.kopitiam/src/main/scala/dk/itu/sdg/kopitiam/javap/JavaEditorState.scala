@@ -15,6 +15,8 @@ import org.eclipse.core.commands.{IHandler, ExecutionEvent}
 class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
   type ForbiddenJavaEditor = org.eclipse.jdt.internal.ui.javaeditor.JavaEditor
 
+  private val lock = new Object
+
   import org.eclipse.jdt.core.dom._
 
   import scala.collection.mutable.Stack
@@ -46,16 +48,21 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
   def compilationUnit : Option[CompilationUnit] = cu
   def setCompilationUnit (a : Option[CompilationUnit]) = cu = a
 
+  import dk.itu.coqoon.ui.utilities.SupersedableTask
+  private val annotateTask = new SupersedableTask(50)
+
   private var completeV : Option[Int] = None
-  def complete : Option[Int] = completeV
-  def setComplete(a : Option[Int]) = {
+  def complete : Option[Int] = lock synchronized { completeV }
+  def setComplete(a : Option[Int]) = lock synchronized {
     completeV = a
-    addAnnotations(complete, underway)
+    annotateTask.schedule {
+      UIUtils.asyncExec { addAnnotations(complete, underway) }
+    }
   }
 
   private var underwayV : Option[Int] = None
-  def underway : Option[Int] = underwayV
-  def setUnderway(a : Option[Int]) = {
+  def underway : Option[Int] = lock synchronized { underwayV }
+  def setUnderway(a : Option[Int]) = lock synchronized {
     underwayV = a
     (underway, complete) match {
       case (Some(un), Some(co)) if co > un =>
@@ -64,7 +71,9 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
         completeV = underwayV
       case _ =>
     }
-    addAnnotations(complete, underway)
+    annotateTask.schedule {
+      UIUtils.asyncExec { addAnnotations(complete, underway) }
+    }
   }
 
   override protected def invalidate() =
