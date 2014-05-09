@@ -200,7 +200,7 @@ object JavaStepForwardHandler {
             a => JavaStep(x, a._1.toString, a._2))
       } else None
 
-    JavaASTUtils.traverseAST(method, true, !multiple, print)
+    JavaASTUtils.traverseAST(method, !multiple, print)
   }
 }
 

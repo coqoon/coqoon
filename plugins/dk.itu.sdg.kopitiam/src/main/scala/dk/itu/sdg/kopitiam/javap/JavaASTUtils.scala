@@ -43,41 +43,35 @@ object JavaASTUtils {
   import scala.collection.JavaConversions.asScalaBuffer
   import scala.collection.immutable.Stack
   import org.eclipse.jdt.core.dom.{MethodDeclaration, Statement, WhileStatement, IfStatement, Block}
-  def traverseAST [A](method : MethodDeclaration, forward : Boolean, early : Boolean, callback : Statement => Option[A]) : List[A] = {
-    var todo : Stack[Statement] = Stack[Statement]()
-    todo = todo.push(method.getBody)
-    var res : List[A] = List[A]()
-    var cont : Boolean = true
-    while (! todo.isEmpty && cont) {
-      val st = todo.top
-      todo = todo.pop
+  def traverseAST[A](method : MethodDeclaration, early : Boolean,
+      callback : Statement => Option[A]) : List[A] = {
+    var todo = List[Statement](method.getBody)
+    val res = List.newBuilder[A]
+    var cont = true
+    while (!todo.isEmpty && cont) {
+      val st = todo.head
+      todo = todo.tail
       st match {
         case x : Block =>
-          val body = asScalaBuffer(x.statements).flatMap(TryCast[Statement])
-          if (forward)
-            todo = todo.pushAll(body.reverse)
-          else
-            todo = todo.pushAll(body)
+          val body =
+            asScalaBuffer(x.statements).flatMap(TryCast[Statement]).toList
+          todo = body ++ todo
         case x : WhileStatement =>
-          todo = todo.push(x.getBody)
+          todo = x.getBody +: todo
         case x : IfStatement =>
-          val el = x.getElseStatement
-          if (el != null && forward)
-            todo = todo.push(el)
-          todo = todo.push(x.getThenStatement)
-          if (el != null && ! forward)
-            todo = todo.push(el)
+          Option(x.getThenStatement).foreach(so => todo = so +: todo)
+          Option(x.getElseStatement).foreach(el => todo = el +: todo)
         case x : Statement =>
           callback(x) match {
             case Some(x) =>
-              res ::= x
+              res += x
               if (early)
                 cont = false
             case None =>
           }
       }
     }
-    res.reverse
+    res.result
   }
 
 
