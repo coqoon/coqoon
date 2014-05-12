@@ -44,7 +44,7 @@ object JavaASTUtils {
   import scala.collection.immutable.Stack
   import org.eclipse.jdt.core.dom.{MethodDeclaration, Statement, WhileStatement, IfStatement, Block}
   def traverseAST[A](method : MethodDeclaration, early : Boolean,
-      callback : Statement => Option[A]) : List[A] = {
+      callback : Statement => Seq[A]) : List[A] = {
     var todo = List[Statement](method.getBody)
     val res = List.newBuilder[A]
     var cont = true
@@ -61,14 +61,11 @@ object JavaASTUtils {
         case x : IfStatement =>
           Option(x.getThenStatement).foreach(so => todo = so +: todo)
           Option(x.getElseStatement).foreach(el => todo = el +: todo)
-        case x : Statement =>
-          callback(x) match {
-            case Some(x) =>
-              res += x
-              if (early)
-                cont = false
-            case None =>
-          }
+        case x =>
+          val r = if (!early) callback(x) else callback(x).take(1)
+          res ++= r
+          if (!r.isEmpty && early)
+            cont = false
       }
     }
     res.result

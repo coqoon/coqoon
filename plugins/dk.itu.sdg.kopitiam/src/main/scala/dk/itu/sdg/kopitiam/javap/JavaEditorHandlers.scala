@@ -194,11 +194,11 @@ object JavaStepForwardHandler {
       case (None, None) =>
         (_ => true)
     }
-    def print(x : Statement) : Option[JavaStep] =
+    def print(x : Statement) : Seq[JavaStep] =
       if (captureP(x)) {
-        JavaASTUtils.printProofScript(x).headOption.map(
+        JavaASTUtils.printProofScript(x).map(
             a => JavaStep(x, a._1.toString, a._2))
-      } else None
+      } else Nil
 
     JavaASTUtils.traverseAST(method, !multiple, print)
   }
