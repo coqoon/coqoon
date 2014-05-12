@@ -155,8 +155,7 @@ class JavaEditorState(val editor : ITextEditor) extends CoqTopEditorContainer {
         val update = (completedMethods.size != newCompletedMethods.size)
 
         UIUtils.asyncExec {
-          val top = steps.top.node
-          setUnderway(Some(top.getStartPosition + top.getLength))
+          setUnderway(Some(steps.top.end))
           completedMethods = newCompletedMethods
           if (update) /* XXX: is this test good enough? */
             markCompletedMethods
@@ -242,7 +241,7 @@ private class JavaEditorReconcilingStrategy(
           if (off < completeOffset)
             UIUtils.exec {
               JavaEditorHandler.doStepBack(jes, _.prefixLength(
-                a => (off < (a.node.getStartPosition + a.node.getLength))))
+                a => (off < a.end)))
             }
         }
 

@@ -150,7 +150,7 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
   override protected def onGood(
       step : JavaStep, result : CoqTypes.Good[String]) = {
     jes.steps.synchronized { jes.steps.push(step) }
-    jes.setComplete(Some(step.node.getStartPosition + step.node.getLength))
+    jes.setComplete(Some(step.end))
   }
 
   override protected def preCheck = {
@@ -169,11 +169,9 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
     import org.eclipse.jdt.core.dom.EmptyStatement
     val range = ep._1 match {
       case Some((start, end)) if step.node.isInstanceOf[EmptyStatement] =>
-        (step.node.getStartPosition + 2 + start,
-            step.node.getStartPosition + 2 + end)
+        (step.start + 2 + start, step.start + 2 + end)
       case _ =>
-        (step.node.getStartPosition,
-            step.node.getStartPosition + step.node.getLength)
+        (step.start, step.end)
     }
     jes.file.foreach(file => CreateErrorMarkerJob(file, range, ep._2).schedule)
   }
@@ -243,8 +241,7 @@ class JavaStepBackRunner(jes : JavaEditorState, stepCount : Int)
         CoqTypes.Good("")
       case CoqTypes.Fail(ep) =>
         val completed = jes.steps.synchronized {
-          val node = jes.steps.headOption.map(_.node)
-          node.map(n => n.getStartPosition + n.getLength)
+          jes.steps.headOption.map(_.end)
         }
         UIUtils.asyncExec { jes.setUnderway(completed) }
         CoqTypes.Fail(ep)

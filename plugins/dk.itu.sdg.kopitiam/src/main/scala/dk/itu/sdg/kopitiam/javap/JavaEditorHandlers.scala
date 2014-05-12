@@ -14,7 +14,7 @@ import org.eclipse.ui.texteditor.ITextEditor
 import org.eclipse.core.commands.ExecutionEvent
 
 case class JavaStep(
-    val node : Statement,
+    val start : Int, val end : Int, val node : Statement,
     override val text : String,
     override val synthetic : Boolean) extends CoqCommand(text, synthetic)
 
@@ -30,7 +30,7 @@ object JavaEditorHandler {
     if (p._1 > 0) {
       jes.setUnderway(p._2 match {
         case None => None
-        case Some(x) => Some(x.node.getStartPosition + x.node.getLength)
+        case Some(x) => Some(x.end)
       })
       jes.setBusy(true)
       new JavaStepBackJob(jes, p._1).schedule()
@@ -165,8 +165,7 @@ class JavaStepForwardHandler extends JavaEditorHandler {
       JavaStepForwardHandler.collectProofScript(
           jes, false, jes.underway) match {
         case a : List[JavaStep] if a.size == 1 =>
-          val last = a.last.node
-          jes.setUnderway(Some(last.getStartPosition + last.getLength))
+          jes.setUnderway(Some(a.last.end))
           scheduleJob(new JavaStepForwardJob(a, jes))
         case _ =>
       }
@@ -196,8 +195,9 @@ object JavaStepForwardHandler {
     }
     def print(x : Statement) : Seq[JavaStep] =
       if (captureP(x)) {
-        JavaASTUtils.printProofScript(x).map(
-            a => JavaStep(x, a._1.toString, a._2))
+        JavaASTUtils.printProofScript(x).map(a => JavaStep(
+            x.getStartPosition, x.getStartPosition + x.getLength, x,
+            a._1.toString, a._2))
       } else Nil
 
     JavaASTUtils.traverseAST(method, !multiple, print)
@@ -211,8 +211,7 @@ class JavaStepAllHandler extends JavaEditorHandler {
       JavaStepForwardHandler.collectProofScript(
           jes, true, jes.underway) match {
         case a : List[JavaStep] if a.size > 0 =>
-          val last = a.last.node
-          jes.setUnderway(Some(last.getStartPosition + last.getLength))
+          jes.setUnderway(Some(a.last.end))
           scheduleJob(new JavaStepForwardJob(a, jes))
         case _ =>
       }
@@ -231,14 +230,13 @@ class JavaStepToCursorHandler extends JavaEditorHandler {
         JavaStepForwardHandler.collectProofScript(
             jes, true, jes.underway, Some(jes.cursorPosition)) match {
           case a : List[JavaStep] if a.size > 0 =>
-            val last = a.last.node
-            jes.setUnderway(Some(last.getStartPosition + last.getLength))
+            jes.setUnderway(Some(a.last.end))
             scheduleJob(new JavaStepForwardJob(a, jes))
           case _ =>
         }
       } else if (cursorPos < underwayPos) { /* Backwards! */
         JavaEditorHandler.doStepBack(jes, _.prefixLength(
-            a => (cursorPos < (a.node.getStartPosition + a.node.getLength))))
+            a => (cursorPos < (a.end))))
       }
     }
     null
