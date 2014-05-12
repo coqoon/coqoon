@@ -21,9 +21,9 @@ import org.eclipse.core.runtime.jobs.ISchedulingRule
 import org.eclipse.core.resources.WorkspaceJob
 
 abstract class CoqCommand(val text : String, val synthetic : Boolean) {
-  def run(coqTop : CoqTopIdeSlave_v20120710) : CoqTypes.value[String] =
+  def run(container : CoqTopContainer) : CoqTypes.value[String] =
     if (!synthetic) {
-      coqTop.interp(false, true, text)
+      container.coqTop.interp(false, true, text)
     } else CoqTypes.Good("")
 }
 
@@ -139,7 +139,7 @@ abstract class StepForwardRunner[A <: CoqCommand](
       if (monitor.isCanceled)
         cancel
       monitor.subTask(step.text.trim)
-      step.run(container.coqTop) match {
+      step.run(container) match {
         case r @ CoqTypes.Good(msg) =>
           perhapsPrint(EclipseConsole.out, msg)
           onGood(step, r)
