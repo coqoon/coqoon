@@ -169,7 +169,7 @@ class JavaStepForwardRunner(jes : JavaEditorState, steps : List[JavaStep])
     import org.eclipse.jdt.core.dom.EmptyStatement
     val range = ep._1 match {
       case Some((start, end)) if step.node.isInstanceOf[EmptyStatement] =>
-        (step.start + 2 + start, step.start + 2 + end)
+        (step.start + start, step.start + end)
       case _ =>
         (step.start, step.end)
     }
