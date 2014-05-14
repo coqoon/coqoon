@@ -9,7 +9,7 @@ import dk.itu.sdg.kopitiam.Activator
 
 object JavaASTUtils {
   import org.eclipse.jdt.core.dom.{EmptyStatement, Statement}
-  def printProofScript(statement : Statement) : Seq[CoqSentence.Sentence] =
+  def printProofScript(statement : Statement) : Seq[JavaStep] =
     statement match {
       case x : EmptyStatement =>
         EclipseJavaASTProperties.getAntiquoteContent(x) match {
@@ -27,14 +27,21 @@ object JavaASTUtils {
                     script.substring(i3 + 6, script.length).trim
                 "forward (" + i + ") (" + f + ")."
               } else script
-            CoqSentence.getNextSentences(con, 0, con.length)
+
+            /* 2 is the length of "<%", the antiquote lead-in */
+            val start = x.getStartPosition + 2
+            for ((con, syn) <-
+                CoqSentence.getNextSentences(con, 0, con.length))
+              yield JavaStep(start + con.start, start + con.end,
+                  x, con.toString, syn)
           case _ =>
             Nil
         }
       case x : Statement =>
         val fwd = Activator.getDefault.getPreferenceStore.getBoolean("implicit")
         if (fwd)
-          Seq((Substring("forward."), false))
+          Seq(JavaStep(x.getStartPosition, x.getStartPosition + x.getLength,
+              x, "forward.", false))
         else
           Nil
     }

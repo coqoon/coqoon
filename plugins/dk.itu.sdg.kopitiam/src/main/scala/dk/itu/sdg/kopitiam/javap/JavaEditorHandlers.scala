@@ -182,6 +182,8 @@ object JavaStepForwardHandler {
   def collectProofScript(
       method : MethodDeclaration, multiple : Boolean,
       start : Option[Int], end : Option[Int]) : List[JavaStep] = {
+    import org.eclipse.jdt.core.dom._
+
     val captureP : (Statement => Boolean) = (start, end) match {
       case (Some(a), Some(b)) =>
         (c => c.getStartPosition >= a &&
@@ -195,9 +197,7 @@ object JavaStepForwardHandler {
     }
     def print(x : Statement) : Seq[JavaStep] =
       if (captureP(x)) {
-        JavaASTUtils.printProofScript(x).map(a => JavaStep(
-            x.getStartPosition, x.getStartPosition + x.getLength, x,
-            a._1.toString, a._2))
+        JavaASTUtils.printProofScript(x)
       } else Nil
 
     JavaASTUtils.traverseAST(method, !multiple, print)
