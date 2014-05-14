@@ -54,6 +54,10 @@ object EclipseJavaASTProperties {
   def setQuantification(a : ASTNode, p : Option[Initializer]) =
     a.setProperty(quantification, p.orNull)
 
+  private val antiquoteContent = "dk.itu.sdg.kopitiam.contentExpr"
+  def getAntiquoteContent(a : Statement) : Option[String] =
+    TryCast[String](a.getProperty(antiquoteContent))
+
   val coqOffset : String = "dk.itu.sdg.kopitiam.coqOffset"
   val specOffset : String = "dk.itu.sdg.kopitiam.specOffset"
 }

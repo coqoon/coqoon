@@ -8,13 +8,12 @@ import dk.itu.coqoon.core.utilities.{TryCast, Substring}
 import dk.itu.sdg.kopitiam.Activator
 
 object JavaASTUtils {
-
   import org.eclipse.jdt.core.dom.{EmptyStatement, Statement}
   def printProofScript(statement : Statement) : Seq[CoqSentence.Sentence] =
     statement match {
       case x : EmptyStatement =>
-        statement.getProperty("dk.itu.sdg.kopitiam.contentExpr") match {
-          case script : String if script.length > 0 =>
+        EclipseJavaASTProperties.getAntiquoteContent(x) match {
+          case Some(script) =>
             val con =
               if (script.contains("invariant:")) {
                 val i1 = script.indexOf(":")
