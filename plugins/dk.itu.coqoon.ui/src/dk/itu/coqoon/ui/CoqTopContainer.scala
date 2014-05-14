@@ -34,6 +34,11 @@ trait CoqTopContainer {
   def clearFlag(name : String) = lock synchronized { flags -= name }
   def testFlag(name : String) = lock synchronized { flags.contains(name) }
   def clearFlags = lock synchronized { flags = Set() }
+
+  def run(command : CoqCommand) =
+    if (!command.synthetic) {
+      coqTop.interp(false, true, command.text)
+    } else CoqTypes.Good("")
 }
 object CoqTopContainer {
   final val PROPERTY_BUSY = 979
