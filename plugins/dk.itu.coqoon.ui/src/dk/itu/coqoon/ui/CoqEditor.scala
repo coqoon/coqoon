@@ -380,7 +380,6 @@ import org.eclipse.ui.editors.text.TextSourceViewerConfiguration
 
 class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerConfiguration {
   import org.eclipse.jface.text.presentation.{IPresentationReconciler, PresentationReconciler}
-  import org.eclipse.jface.text.rules.DefaultDamagerRepairer
   import org.eclipse.jface.text.{TextAttribute,IDocument}
   import org.eclipse.jface.text.reconciler.{IReconciler, MonoReconciler}
   import org.eclipse.swt.graphics.{Color,RGB}
@@ -431,27 +430,10 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
   override def getConfiguredDocumentPartitioning(v : ISourceViewer) =
     CoqPartitions.COQ
 
-  import dk.itu.coqoon.core.utilities.CacheSlot
-  private val coqScanner =
-    CacheSlot { new DefaultDamagerRepairer(CoqTokenScanner) }
-  private val commentScanner =
-    CacheSlot { new DefaultDamagerRepairer(CommentTokenScanner) }
-  private val stringScanner =
-    CacheSlot { new DefaultDamagerRepairer(StringTokenScanner) }
-
   override def getPresentationReconciler (v : ISourceViewer) : IPresentationReconciler = {
     val pr = new PresentationReconciler
     pr.setDocumentPartitioning(CoqPartitions.COQ)
-
-    for ((typ, scanner) <- Seq(
-        (CoqPartitions.Types.COQ, coqScanner),
-        (CoqPartitions.Types.COMMENT, commentScanner),
-        (CoqPartitions.Types.STRING, stringScanner))) {
-      pr.setDamager(scanner.get, typ)
-      pr.setRepairer(scanner.get, typ)
-    }
-
-    pr
+    CoqSourceViewerConfiguration.addDamagerRepairers(pr)
   }
 
   import org.eclipse.jface.text.quickassist.QuickAssistAssistant
@@ -460,6 +442,33 @@ class CoqSourceViewerConfiguration(editor : CoqEditor) extends TextSourceViewerC
     val qa = new QuickAssistAssistant
     qa.setQuickAssistProcessor(new CoqQuickAssistProcessor)
     qa
+  }
+}
+object CoqSourceViewerConfiguration {
+  import org.eclipse.jface.text.rules.DefaultDamagerRepairer
+  import org.eclipse.jface.text.presentation.PresentationReconciler
+
+  import dk.itu.coqoon.core.utilities.CacheSlot
+  private val coqScanner =
+    CacheSlot { new DefaultDamagerRepairer(CoqTokenScanner) }
+  private val commentScanner =
+    CacheSlot { new DefaultDamagerRepairer(CommentTokenScanner) }
+  private val stringScanner =
+    CacheSlot { new DefaultDamagerRepairer(StringTokenScanner) }
+
+  def getCoqScanner() = coqScanner.get
+  def getCommentScanner() = commentScanner.get
+  def getStringScanner() = stringScanner.get
+
+  def addDamagerRepairers(pr : PresentationReconciler) = {
+    for ((typ, scanner) <- Seq(
+        (CoqPartitions.Types.COQ, getCoqScanner),
+        (CoqPartitions.Types.COMMENT, getCommentScanner),
+        (CoqPartitions.Types.STRING, getStringScanner))) {
+      pr.setDamager(scanner, typ)
+      pr.setRepairer(scanner, typ)
+    }
+    pr
   }
 }
 
