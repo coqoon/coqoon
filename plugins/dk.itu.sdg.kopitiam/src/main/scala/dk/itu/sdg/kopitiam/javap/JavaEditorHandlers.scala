@@ -182,25 +182,18 @@ object JavaStepForwardHandler {
   def collectProofScript(
       method : MethodDeclaration, multiple : Boolean,
       start : Option[Int], end : Option[Int]) : List[JavaStep] = {
-    import org.eclipse.jdt.core.dom._
-
-    val captureP : (Statement => Boolean) = (start, end) match {
+    val captureP : (JavaStep => Boolean) = (start, end) match {
       case (Some(a), Some(b)) =>
-        (c => c.getStartPosition >= a &&
-            (c.getStartPosition + c.getLength <= b))
+        (c => c.start >= a && (c.end <= b))
       case (Some(a), None) =>
-        (c => c.getStartPosition >= a)
+        (c => c.start >= a)
       case (None, Some(b)) =>
-        (c => c.getStartPosition + c.getLength <= b)
+        (c => c.end <= b)
       case (None, None) =>
         (_ => true)
     }
-    def print(x : Statement) : Seq[JavaStep] =
-      if (captureP(x)) {
-        JavaASTUtils.printProofScript(x)
-      } else Nil
-
-    JavaASTUtils.traverseAST(method, !multiple, print)
+    JavaASTUtils.traverseAST(method, !multiple,
+        x => JavaASTUtils.printProofScript(x).filter(captureP))
   }
 }
 
