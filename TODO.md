@@ -10,15 +10,11 @@ TODO: Coqoon
   (Eclipse has lots of built-in support for refactoring, which should make this
   fairly easy to implement.)
 
-* "Jump to"
+* Sourceless declaration handling
 
-  In the Java editor, pressing F3 (or choosing the "Navigate -> Open
-  Declaration" menu item) shows the definition of the identifier under the
-  text cursor; this should also work in the Coq editor.
-  
-  (This becomes a bit trickier when the source isn't available. For Java,
-  Eclipse shows a disassembly of the object code associated with the
-  definition; what should we do for Coq object code?)
+  How should Coqoon implement the "Open Declaration" action in the absence
+  of source code? (For Java, Eclipse shows a disassembly of the object code
+  associated with the definition; this doesn't seem like a good idea...)
 
 * Advanced Java-like search functionality
 
@@ -46,15 +42,6 @@ TODO: Coqoon
 
 TODO: Kopitiam
 --------------
-
-* Multiple commands in an antiquote
-
-  Antiquotes -- the "<%" and "%>" markers used to decorate Java code -- can't
-  contain more than one Coq command.
-  
-  (This limitation is imposed by the way that JavaEditorState keeps track of
-  the "underway" and "completed" markers -- it's not currently possible to
-  break an underlying Java AST node into more than one executable region.)
 
 * Support for more fundamental Java language features
 
