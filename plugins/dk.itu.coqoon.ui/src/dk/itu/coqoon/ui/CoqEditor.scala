@@ -553,8 +553,8 @@ class CoqContentOutlinePage(
 
     TryCast[IStructuredSelection](
         event.getSelection).flatMap(sel => Option(sel.getFirstElement)) match {
-      case Some(s : ICoqScriptSentence) =>
-        OpenDeclarationHandler.highlightSentence(s)
+      case Some(e : ICoqScriptElement) =>
+        OpenDeclarationHandler.highlightElement(e)
       case _ =>
     }
   }

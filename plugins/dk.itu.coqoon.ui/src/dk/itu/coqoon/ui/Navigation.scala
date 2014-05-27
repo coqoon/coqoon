@@ -42,8 +42,8 @@ class OpenDeclarationHandler extends EditorHandler {
                 case p : IParent if result == None => true
                 case _ => false
               }))
-              result.flatMap(_.getChildren.headOption).flatMap(
-                  TryCast[ICoqScriptSentence]).foreach(highlightSentence)
+              result.flatMap(
+                  _.getChildren.headOption).foreach(highlightElement)
             }
           case _ =>
         }
@@ -63,11 +63,11 @@ object OpenDeclarationHandler {
     Option(org.eclipse.ui.ide.IDE.openEditor(page, resource, false))
   })
 
-  def highlightSentence(s : ICoqScriptSentence) =
-      openEditorOn(s).flatMap(TryCast[CoqEditor]).foreach(editor => {
-    val padding = s.getText.takeWhile(_.isWhitespace).length
+  def highlightElement(e : ICoqScriptElement) =
+      openEditorOn(e).flatMap(TryCast[CoqEditor]).foreach(editor => {
+    val padding = e.getText.takeWhile(_.isWhitespace).length
     val (start, length) =
-      (s.getOffset + padding, s.getLength - padding)
+      (e.getOffset + padding, e.getLength - padding)
     editor.getViewer.revealRange(start, length)
     editor.getViewer.setSelectedRange(start, length)
   })

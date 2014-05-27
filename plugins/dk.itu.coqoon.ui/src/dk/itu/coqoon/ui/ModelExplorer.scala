@@ -36,8 +36,8 @@ class ModelExplorer extends ViewPart {
         case s : IStructuredSelection => s.getFirstElement match {
           case f : ICoqVernacFile =>
             OpenDeclarationHandler.openEditorOn(f)
-          case s : ICoqScriptSentence =>
-            OpenDeclarationHandler.highlightSentence(s)
+          case e : ICoqScriptElement =>
+            OpenDeclarationHandler.highlightElement(e)
           case _ =>
         }
         case _ =>
