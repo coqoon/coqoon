@@ -36,6 +36,15 @@ class OpenDeclarationHandler extends EditorHandler {
                 case e : ICoqLtacSentence
                     if e.getIdentifier() == identifier =>
                   result = Some(e); false
+                case e : ICoqFixpointSentence
+                    if e.getIdentifier() == identifier =>
+                  result = Some(e); false
+                case e : ICoqInductiveSentence
+                    if e.getIdentifier() == identifier =>
+                  result = Some(e); false
+                case e : ICoqDefinitionSentence
+                    if e.getIdentifier() == identifier =>
+                  result = Some(e); false
                 case e : ICoqScriptGroup if result == None =>
                   e.getDisposition match {
                     case NamedCoqGroup(id) if id == identifier =>

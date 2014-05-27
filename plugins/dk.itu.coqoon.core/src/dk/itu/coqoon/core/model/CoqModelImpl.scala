@@ -457,19 +457,17 @@ private class CoqVernacFileImpl(
             tail
 
           case (h @ (DefinitionSentence(_, identifier, _, _), _)) :: tail =>
-            stack.push(new CoqScriptGroupImpl(CoqDefinitionGroup(identifier),
-                wrapSentence(h), CoqVernacFileImpl.this))
+            stack.push(
+                new CoqDefinitionSentenceImpl(h, CoqVernacFileImpl.this))
             tail
           case (h @ (LtacSentence(identifier, _), _)) :: tail =>
             stack.push(new CoqLtacSentenceImpl(h, CoqVernacFileImpl.this))
             tail
           case (h @ (FixpointSentence(_, identifier, _), _)) :: tail =>
-            stack.push(new CoqScriptGroupImpl(CoqFixpointGroup(identifier),
-                wrapSentence(h), CoqVernacFileImpl.this))
+            stack.push(new CoqFixpointSentenceImpl(h, CoqVernacFileImpl.this))
             tail
           case (h @ (InductiveSentence(_, identifier, _), _)) :: tail =>
-            stack.push(new CoqScriptGroupImpl(CoqInductiveGroup(identifier),
-                wrapSentence(h), CoqVernacFileImpl.this))
+            stack.push(new CoqInductiveSentenceImpl(h, CoqVernacFileImpl.this))
             tail
 
           case (h @ (LoadSentence(ident), _)) :: tail =>
@@ -579,11 +577,28 @@ private class CoqScriptSentenceImpl(
   override def toString = "" + getText
 }
 
-import dk.itu.coqoon.core.utilities.Substring
 private class CoqLtacSentenceImpl(
     private val sentence : Sentence,
     private val parent : ICoqElement with IParent)
         extends CoqScriptSentenceImpl(sentence, parent) with ICoqLtacSentence
+
+private class CoqFixpointSentenceImpl(
+    private val sentence : Sentence,
+    private val parent : ICoqElement with IParent)
+        extends CoqScriptSentenceImpl(sentence, parent)
+            with ICoqFixpointSentence
+
+private class CoqInductiveSentenceImpl(
+    private val sentence : Sentence,
+    private val parent : ICoqElement with IParent)
+        extends CoqScriptSentenceImpl(sentence, parent)
+            with ICoqInductiveSentence
+
+private class CoqDefinitionSentenceImpl(
+    private val sentence : Sentence,
+    private val parent : ICoqElement with IParent)
+        extends CoqScriptSentenceImpl(sentence, parent)
+            with ICoqDefinitionSentence
 
 private class CoqScriptGroupImpl(
     val disposition : CoqScriptGroupDisposition,

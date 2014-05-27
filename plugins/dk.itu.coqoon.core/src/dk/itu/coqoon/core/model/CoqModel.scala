@@ -348,6 +348,34 @@ trait ICoqLtacSentence extends ICoqScriptSentence {
   def getBody() = Classifier.LtacSentence.unapply(getText).get._2
 }
 
+trait ICoqFixpointSentence extends ICoqScriptSentence {
+  override def getElementType = classOf[ICoqFixpointSentence]
+
+  import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
+  def getKeyword() = Classifier.FixpointSentence.unapply(getText).get._1
+  def getIdentifier() = Classifier.FixpointSentence.unapply(getText).get._2
+  def getBody() = Classifier.FixpointSentence.unapply(getText).get._3
+}
+
+trait ICoqInductiveSentence extends ICoqScriptSentence {
+  override def getElementType = classOf[ICoqInductiveSentence]
+
+  import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
+  def getKeyword() = Classifier.InductiveSentence.unapply(getText).get._1
+  def getIdentifier() = Classifier.InductiveSentence.unapply(getText).get._2
+  def getBody() = Classifier.InductiveSentence.unapply(getText).get._3
+}
+
+trait ICoqDefinitionSentence extends ICoqScriptSentence {
+  override def getElementType = classOf[ICoqDefinitionSentence]
+
+  import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
+  def getKeyword() = Classifier.DefinitionSentence.unapply(getText).get._1
+  def getIdentifier() = Classifier.DefinitionSentence.unapply(getText).get._2
+  def getBinders() = Classifier.DefinitionSentence.unapply(getText).get._3
+  def getBody() = Classifier.DefinitionSentence.unapply(getText).get._4
+}
+
 trait ICoqScriptGroup extends ICoqScriptElement with IParent {
   override def getElementType = classOf[ICoqScriptGroup]
 
@@ -366,21 +394,12 @@ object NamedCoqGroup {
     case CoqProofGroup(name) => Some(name)
     case CoqModuleGroup(name) => Some(name)
     case CoqSectionGroup(name) => Some(name)
-    case CoqFixpointGroup(name) => Some(name)
-    case CoqInductiveGroup(name) => Some(name)
-    case CoqDefinitionGroup(name) => Some(name)
     case _ => None
   }
 }
 case class CoqProofGroup(val name : String) extends CoqScriptGroupDisposition
 case class CoqModuleGroup(val name : String) extends CoqScriptGroupDisposition
 case class CoqSectionGroup(val name : String) extends CoqScriptGroupDisposition
-case class CoqFixpointGroup(
-    val name : String) extends CoqScriptGroupDisposition
-case class CoqInductiveGroup(
-    val name : String) extends CoqScriptGroupDisposition
-case class CoqDefinitionGroup(
-    val name : String) extends CoqScriptGroupDisposition
 
 case class CoqLoadGroup(
     val ident : String) extends CoqScriptGroupDisposition
