@@ -31,19 +31,21 @@ class OpenDeclarationHandler extends EditorHandler {
               end += 1
             if (start != end) {
               val identifier = editor.document.get(start, end - start)
-              var result : Option[ICoqScriptGroup] = None
+              var result : Option[ICoqScriptElement] = None
               f.getAncestor[ICoqProject].foreach(_.accept(_ match {
+                case e : ICoqLtacSentence
+                    if e.getIdentifier() == identifier =>
+                  result = Some(e); false
                 case e : ICoqScriptGroup if result == None =>
                   e.getDisposition match {
                     case NamedCoqGroup(id) if id == identifier =>
-                      result = Some(e); false
+                      result = e.getChildren.headOption; false
                     case _ => true
                   }
                 case p : IParent if result == None => true
                 case _ => false
               }))
-              result.flatMap(
-                  _.getChildren.headOption).foreach(highlightElement)
+              result.foreach(highlightElement)
             }
           case _ =>
         }

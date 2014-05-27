@@ -461,8 +461,7 @@ private class CoqVernacFileImpl(
                 wrapSentence(h), CoqVernacFileImpl.this))
             tail
           case (h @ (LtacSentence(identifier, _), _)) :: tail =>
-            stack.push(new CoqScriptGroupImpl(CoqLtacGroup(identifier),
-                wrapSentence(h), CoqVernacFileImpl.this))
+            stack.push(new CoqLtacSentenceImpl(h, CoqVernacFileImpl.this))
             tail
           case (h @ (FixpointSentence(_, identifier, _), _)) :: tail =>
             stack.push(new CoqScriptGroupImpl(CoqFixpointGroup(identifier),
@@ -579,6 +578,12 @@ private class CoqScriptSentenceImpl(
 
   override def toString = "" + getText
 }
+
+import dk.itu.coqoon.core.utilities.Substring
+private class CoqLtacSentenceImpl(
+    private val sentence : Sentence,
+    private val parent : ICoqElement with IParent)
+        extends CoqScriptSentenceImpl(sentence, parent) with ICoqLtacSentence
 
 private class CoqScriptGroupImpl(
     val disposition : CoqScriptGroupDisposition,

@@ -334,10 +334,18 @@ sealed trait ICoqScriptElement extends ICoqElement {
 }
 
 trait ICoqScriptSentence extends ICoqScriptElement {
-  override def getElementType = classOf[ICoqScriptSentence]
+  override def getElementType : Class[_ <: ICoqElement] =
+    classOf[ICoqScriptSentence]
 
-  import dk.itu.coqoon.core.utilities.Substring
   def isSynthetic() : Boolean
+}
+
+trait ICoqLtacSentence extends ICoqScriptSentence {
+  override def getElementType = classOf[ICoqLtacSentence]
+
+  import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
+  def getIdentifier() = Classifier.LtacSentence.unapply(getText).get._1
+  def getBody() = Classifier.LtacSentence.unapply(getText).get._2
 }
 
 trait ICoqScriptGroup extends ICoqScriptElement with IParent {
@@ -355,7 +363,6 @@ trait ICoqScriptGroup extends ICoqScriptElement with IParent {
 abstract class CoqScriptGroupDisposition
 object NamedCoqGroup {
   def unapply(p : Any) = p match {
-    case CoqLtacGroup(name) => Some(name)
     case CoqProofGroup(name) => Some(name)
     case CoqModuleGroup(name) => Some(name)
     case CoqSectionGroup(name) => Some(name)
@@ -365,7 +372,6 @@ object NamedCoqGroup {
     case _ => None
   }
 }
-case class CoqLtacGroup(val name : String) extends CoqScriptGroupDisposition
 case class CoqProofGroup(val name : String) extends CoqScriptGroupDisposition
 case class CoqModuleGroup(val name : String) extends CoqScriptGroupDisposition
 case class CoqSectionGroup(val name : String) extends CoqScriptGroupDisposition
