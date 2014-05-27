@@ -425,7 +425,7 @@ private class CoqVernacFileImpl(
 
       import dk.itu.coqoon.core.utilities.Substring
       def wrapSentence(ss : (Substring, Boolean)*) = ss.map(v =>
-          new CoqScriptSentenceImpl(v._1, v._2, CoqVernacFileImpl.this))
+          new CoqScriptSentenceImpl(v, CoqVernacFileImpl.this))
       def pushSentence(ss : (Substring, Boolean)*) =
         wrapSentence(ss : _*).foreach(stack.push)
 
@@ -565,18 +565,19 @@ private class DetachedCoqVernacFileImpl(
   }
 }
 
+import dk.itu.coqoon.core.coqtop.CoqSentence.Sentence
 import dk.itu.coqoon.core.utilities.Substring
 private class CoqScriptSentenceImpl(
-    val text : Substring, val synthetic : Boolean,
-    val parent : ICoqElement with IParent)
-    extends CoqElementImpl(null, parent) with ICoqScriptSentence {
-  override def getText = text.toString
-  override def getOffset = text.start
-  override def getLength = text.length
+    private val sentence : Sentence,
+    private val parent : ICoqElement with IParent)
+        extends CoqElementImpl(null, parent) with ICoqScriptSentence {
+  override def getText = sentence._1.toString
+  override def getOffset = sentence._1.start
+  override def getLength = sentence._1.length
 
-  override def isSynthetic = synthetic
+  override def isSynthetic = sentence._2
 
-  override def toString = "" + text
+  override def toString = "" + getText
 }
 
 private class CoqScriptGroupImpl(
