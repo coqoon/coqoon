@@ -376,6 +376,28 @@ trait ICoqDefinitionSentence extends ICoqScriptSentence {
   def getBody() = Classifier.DefinitionSentence.unapply(getText).get._4
 }
 
+trait ICoqLoadSentence extends ICoqScriptSentence {
+  override def getElementType = classOf[ICoqLoadSentence]
+
+  import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
+  def getIdent() = Classifier.LoadSentence.unapply(getText).get
+}
+
+trait ICoqRequireSentence extends ICoqScriptSentence {
+  override def getElementType = classOf[ICoqRequireSentence]
+
+  import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
+  def getKind() = Classifier.RequireSentence.unapply(getText).get._1
+  def getIdent() = Classifier.RequireSentence.unapply(getText).get._2
+
+  def getQualid() : Seq[String] = {
+    val ident = getIdent
+    if (ident(0) == '"') {
+      Seq(ident.substring(1).split("\"", 2)(0))
+    } else ident.split("\\s+")
+  }
+}
+
 trait ICoqScriptGroup extends ICoqScriptElement with IParent {
   override def getElementType = classOf[ICoqScriptGroup]
 
@@ -400,11 +422,6 @@ object NamedCoqGroup {
 case class CoqProofGroup(val name : String) extends CoqScriptGroupDisposition
 case class CoqModuleGroup(val name : String) extends CoqScriptGroupDisposition
 case class CoqSectionGroup(val name : String) extends CoqScriptGroupDisposition
-
-case class CoqLoadGroup(
-    val ident : String) extends CoqScriptGroupDisposition
-case class CoqRequireGroup(
-    val qualid : Seq[String]) extends CoqScriptGroupDisposition
 
 trait ICoqObjectFile extends ICoqFile {
   override def getElementType = classOf[ICoqObjectFile]

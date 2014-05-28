@@ -471,15 +471,10 @@ private class CoqVernacFileImpl(
             tail
 
           case (h @ (LoadSentence(ident), _)) :: tail =>
-            stack.push(new CoqScriptGroupImpl(CoqLoadGroup(ident),
-                wrapSentence(h), CoqVernacFileImpl.this))
+            stack.push(new CoqLoadSentenceImpl(h, CoqVernacFileImpl.this))
             tail
           case (h @ (RequireSentence(_, what), _)) :: tail =>
-            val qualids : Seq[String] = if (what(0) == '"') {
-              Seq(what.substring(1).split("\"", 2)(0))
-            } else what.split("\\s+")
-            stack.push(new CoqScriptGroupImpl(CoqRequireGroup(qualids),
-                wrapSentence(h), CoqVernacFileImpl.this))
+            stack.push(new CoqRequireSentenceImpl(h, CoqVernacFileImpl.this))
             tail
 
           case (h @ (AssertionSentence(_, identifier, _), _)) :: tail =>
@@ -599,6 +594,18 @@ private class CoqDefinitionSentenceImpl(
     private val parent : ICoqElement with IParent)
         extends CoqScriptSentenceImpl(sentence, parent)
             with ICoqDefinitionSentence
+
+private class CoqLoadSentenceImpl(
+    private val sentence : Sentence,
+    private val parent : ICoqElement with IParent)
+        extends CoqScriptSentenceImpl(sentence, parent)
+            with ICoqLoadSentence
+
+private class CoqRequireSentenceImpl(
+    private val sentence : Sentence,
+    private val parent : ICoqElement with IParent)
+        extends CoqScriptSentenceImpl(sentence, parent)
+            with ICoqRequireSentence
 
 private class CoqScriptGroupImpl(
     val disposition : CoqScriptGroupDisposition,

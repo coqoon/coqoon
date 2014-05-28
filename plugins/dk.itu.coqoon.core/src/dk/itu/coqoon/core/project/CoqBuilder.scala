@@ -365,16 +365,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
         ("(self)", (_ : String) => Some(file.getLocation), Option.empty[IPath])
     ICoqModel.getInstance.toCoqElement(file).flatMap(
         TryCast[ICoqVernacFile]).foreach(_.accept(_ match {
-      case e : ICoqScriptGroup => e.getDisposition match {
-        case CoqLoadGroup(what) =>
-          deps += (what, resolveLoad(_), Option.empty[IPath])
-          false
-        case CoqRequireGroup(what) =>
-          for (f <- what)
-            deps += (f, resolveRequire(_), Option.empty[IPath])
-          false
-        case _ => true
-      }
+      case l : ICoqLoadSentence =>
+        deps += (l.getIdent(), resolveLoad(_), Option.empty[IPath])
+        false
+      case r : ICoqRequireSentence =>
+        for (f <- r.getQualid)
+          deps += (f, resolveRequire(_), Option.empty[IPath])
+        false
       case e : IParent => true
       case _ => false
     }))
