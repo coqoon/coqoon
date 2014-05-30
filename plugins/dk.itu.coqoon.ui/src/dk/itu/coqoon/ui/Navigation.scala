@@ -45,14 +45,17 @@ class OpenDeclarationHandler extends EditorHandler {
                 case e : ICoqDefinitionSentence
                     if e.getIdentifier() == identifier =>
                   result = Some(e); false
-                case e : ICoqScriptGroup if result == None =>
-                  e.getDisposition match {
-                    case NamedCoqGroup(id) if id == identifier =>
-                      result = e.getChildren.headOption; false
-                    case _ => true
-                  }
+                case e : ICoqSectionStartSentence
+                    if e.getIdentifier() == identifier =>
+                  result = Some(e); false
+                case e : ICoqModuleStartSentence
+                    if e.getIdentifier() == identifier =>
+                  result = Some(e); false
+                case e : ICoqAssertionSentence
+                    if e.getIdentifier() == identifier =>
+                  result = Some(e); false
                 case p : IParent if result == None => true
-                case _ => false
+                case f => false
               }))
               result.foreach(highlightElement)
             }

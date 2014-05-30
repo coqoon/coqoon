@@ -398,6 +398,29 @@ trait ICoqRequireSentence extends ICoqScriptSentence {
   }
 }
 
+trait ICoqAssertionSentence extends ICoqScriptSentence {
+  override def getElementType = classOf[ICoqAssertionSentence]
+
+  import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
+  def getKeyword() = Classifier.AssertionSentence.unapply(getText).get._1
+  def getIdentifier() = Classifier.AssertionSentence.unapply(getText).get._2
+  def getBody() = Classifier.AssertionSentence.unapply(getText).get._3
+}
+
+trait ICoqModuleStartSentence extends ICoqScriptSentence {
+  override def getElementType = classOf[ICoqModuleStartSentence]
+
+  import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
+  def getIdentifier() = Classifier.ModuleStartSentence.unapply(getText).get
+}
+
+trait ICoqSectionStartSentence extends ICoqScriptSentence {
+  override def getElementType = classOf[ICoqSectionStartSentence]
+
+  import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
+  def getIdentifier() = Classifier.SectionStartSentence.unapply(getText).get
+}
+
 trait ICoqScriptGroup extends ICoqScriptElement with IParent {
   override def getElementType = classOf[ICoqScriptGroup]
 
@@ -405,23 +428,11 @@ trait ICoqScriptGroup extends ICoqScriptElement with IParent {
   override def getLength = getChildren.foldLeft(0)((a, b) => a + b.getLength)
   override def getOffset = getChildren.head.getOffset
 
-  def getDisposition() : CoqScriptGroupDisposition
+  def getDeterminingSentence() : ICoqScriptSentence =
+    getChildren.head.asInstanceOf[ICoqScriptSentence]
 
   override def getChildren() : Seq[ICoqScriptElement]
 }
-
-abstract class CoqScriptGroupDisposition
-object NamedCoqGroup {
-  def unapply(p : Any) = p match {
-    case CoqProofGroup(name) => Some(name)
-    case CoqModuleGroup(name) => Some(name)
-    case CoqSectionGroup(name) => Some(name)
-    case _ => None
-  }
-}
-case class CoqProofGroup(val name : String) extends CoqScriptGroupDisposition
-case class CoqModuleGroup(val name : String) extends CoqScriptGroupDisposition
-case class CoqSectionGroup(val name : String) extends CoqScriptGroupDisposition
 
 trait ICoqObjectFile extends ICoqFile {
   override def getElementType = classOf[ICoqObjectFile]
