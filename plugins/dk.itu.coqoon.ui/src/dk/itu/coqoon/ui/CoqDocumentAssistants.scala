@@ -119,6 +119,7 @@ class CoqPartitionScanner extends IPartitionTokenScanner {
 }
 
 private object States {
+  import dk.itu.coqoon.core.model.StateRule
   import org.eclipse.jface.text.rules.{Token, IToken}
   sealed abstract class PartitionState extends StateRule.State[IToken]
   sealed abstract class PartitionFinalState(
