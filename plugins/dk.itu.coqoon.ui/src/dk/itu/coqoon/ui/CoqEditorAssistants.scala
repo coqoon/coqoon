@@ -269,12 +269,20 @@ class FuturisticWordRule(detector : IFuturisticWordDetector,
   }
 }
 
-class BasicRule(label : String = "<anonymous>") extends IRule {
-  import BasicRule._
+trait CharacterScanner {
+  def read() : Int
+  def unread()
+}
+object CharacterScanner {
+  final val EOF = -1
+}
 
-  private val start : State = new State
+class StateRule[T](label : String = "<anonymous>", default : T) {
+  import StateRule._
 
-  def recognise(input : String, token : IToken) = {
+  private val start : State[T] = new State
+
+  def recognise(input : String, token : T) = {
     var s = start
     for (i <- input)
       s = s.require(i)
@@ -283,12 +291,12 @@ class BasicRule(label : String = "<anonymous>") extends IRule {
 
   def getStartState() = start
 
-  override def evaluate(scanner : ICharacterScanner) : IToken = {
+  def evaluate(scanner : CharacterScanner) : T = {
     var s = Option(start)
-    var stack : List[State] = List()
+    var stack : List[State[T]] = List()
     do {
       val c = scanner.read
-      s = if (c != ICharacterScanner.EOF) {
+      s = if (c != CharacterScanner.EOF) {
         val k = s.flatMap(_.get(c))
         if (k != None) {
           stack = k.get +: stack
@@ -304,34 +312,49 @@ class BasicRule(label : String = "<anonymous>") extends IRule {
           stack = stack.tail
       }
     }
-    Token.UNDEFINED
+    default
   }
 
   override def toString = "BasicRule(" + label + ")"
 }
-object BasicRule {
-  class State {
-    private var next : Map[Int, State] = Map()
-    private var token : Option[IToken] = None
+object StateRule {
+  class State[T] {
+    private var next : Map[Int, State[T]] = Map()
+    private var token : Option[T] = None
 
     def get(c : Int) = next.get(c).orElse(getFallback)
-    def require(c : Int) : State = next.get(c) match {
+    def require(c : Int) : State[T] = next.get(c) match {
       case Some(s) => s
       case None =>
-        val s = new State
+        val s = new State[T]
         next += (c -> s)
         s
     }
 
-    private var fallback : Option[State] = None
+    private var fallback : Option[State[T]] = None
     def getFallback() = fallback
-    def setFallback(f : State) = (fallback = Option(f))
+    def setFallback(f : State[T]) = (fallback = Option(f))
 
-    def add(c : Int, s : State) : Unit =
+    def add(c : Int, s : State[T]) : Unit =
       if (!next.contains(c))
         next += (c -> s)
 
     def getToken() = token
-    def setToken(t : IToken) = (token = Option(t))
+    def setToken(t : T) = (token = Option(t))
+  }
+}
+
+import org.eclipse.jface.text.rules.Token
+
+class BasicRule(label : String = "<anonymous>")
+    extends StateRule(label, Token.UNDEFINED) with IRule {
+  override def evaluate(scanner : ICharacterScanner) =
+    super.evaluate(BasicRule.Scanner(scanner))
+}
+private object BasicRule {
+  case class Scanner(
+      scanner : ICharacterScanner) extends CharacterScanner {
+    override def read() = scanner.read
+    override def unread() = scanner.unread
   }
 }
