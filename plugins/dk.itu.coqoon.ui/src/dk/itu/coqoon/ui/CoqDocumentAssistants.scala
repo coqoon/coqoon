@@ -121,7 +121,7 @@ class CoqPartitionScanner extends IPartitionTokenScanner {
 private object States {
   import dk.itu.coqoon.core.model.StateRule
   import org.eclipse.jface.text.rules.{Token, IToken}
-  sealed abstract class PartitionState extends StateRule.State[IToken]
+  sealed abstract class PartitionState extends StateRule.State[Char, IToken]
   sealed abstract class PartitionFinalState(
       token : IToken) extends PartitionState {
     setToken(token)
@@ -177,7 +177,7 @@ private object States {
   }
 
   import org.eclipse.jface.text.rules.ICharacterScanner
-  Seq(Coq, String, Comment).foreach(_.add(ICharacterScanner.EOF, End))
+  Seq(Coq, String, Comment).foreach(_.add(None, End))
 
   case object End extends PartitionFinalState(Token.EOF) {
     setFallback(End)

@@ -280,7 +280,9 @@ class BasicRule(label : String = "<anonymous>")
 private object BasicRule {
   case class Scanner(
       scanner : ICharacterScanner) extends CharacterScanner {
-    override def read() = scanner.read
+    override def read() =
+      Option(scanner.read).filter(
+          _ != ICharacterScanner.EOF).map(_.asInstanceOf[Char])
     override def unread() = scanner.unread
   }
 }

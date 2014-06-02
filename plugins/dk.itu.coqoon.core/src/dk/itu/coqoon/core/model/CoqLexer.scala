@@ -17,22 +17,19 @@
 package dk.itu.coqoon.core.model
 
 trait CharacterScanner {
-  def read() : Int
+  def read() : Option[Char]
   def unread()
-}
-object CharacterScanner {
-  final val EOF = -1
 }
 
 class StateRule[T](label : String = "<anonymous>", default : T) {
   import StateRule._
 
-  private val start : State[T] = new State
+  private val start : State[Char, T] = new State
 
   def recognise(input : String, token : T) = {
     var s = start
     for (i <- input)
-      s = s.require(i)
+      s = s.require(Some(i))
     s.setToken(token)
   }
 
@@ -40,10 +37,10 @@ class StateRule[T](label : String = "<anonymous>", default : T) {
 
   def evaluate(scanner : CharacterScanner) : T = {
     var s = Option(start)
-    var stack : List[State[T]] = List()
+    var stack : List[State[Char, T]] = List()
     do {
       val c = scanner.read
-      s = if (c != CharacterScanner.EOF) {
+      s = if (c != None) {
         val k = s.flatMap(_.get(c))
         if (k != None) {
           stack = k.get +: stack
@@ -65,24 +62,26 @@ class StateRule[T](label : String = "<anonymous>", default : T) {
   override def toString = "BasicRule(" + label + ")"
 }
 object StateRule {
-  class State[T] {
-    private var next : Map[Int, State[T]] = Map()
+  class State[A, T] {
+    private var next : Map[Option[A], State[A, T]] = Map()
     private var token : Option[T] = None
 
-    def get(c : Int) = next.get(c).orElse(getFallback)
-    def require(c : Int) : State[T] = next.get(c) match {
+    def get(c : A) : Option[State[A, T]] = get(Option(c))
+    def get(c : Option[A]) = next.get(c).orElse(getFallback)
+    def require(c : Option[A]) : State[A, T] = next.get(c) match {
       case Some(s) => s
       case None =>
-        val s = new State[T]
+        val s = new State[A, T]
         next += (c -> s)
         s
     }
 
-    private var fallback : Option[State[T]] = None
+    private var fallback : Option[State[A, T]] = None
     def getFallback() = fallback
-    def setFallback(f : State[T]) = (fallback = Option(f))
+    def setFallback(f : State[A, T]) = (fallback = Option(f))
 
-    def add(c : Int, s : State[T]) : Unit =
+    def add(c : A, s : State[A, T]) : Unit = add(Some(c), s)
+    def add(c : Option[A], s : State[A, T]) : Unit =
       if (!next.contains(c))
         next += (c -> s)
 
