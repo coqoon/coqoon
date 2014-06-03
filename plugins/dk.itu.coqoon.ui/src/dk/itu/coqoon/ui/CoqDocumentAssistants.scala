@@ -90,7 +90,7 @@ class CoqPartitionScanner extends IPartitionTokenScanner {
     var state : PartitionState = lastFinalState
     while (position < end) {
       val c = doc.getChar(position)
-      state.get(c) match {
+      state.get(Some(c)) match {
         case Some(f : PartitionFinalState)
             if f != lastFinalState =>
           position += 1 - f.getLeadCount()
@@ -124,7 +124,7 @@ private object States {
   sealed abstract class PartitionState extends StateRule.State[Char, IToken]
   sealed abstract class PartitionFinalState(
       token : IToken) extends PartitionState {
-    setToken(token)
+    setToken(Option(token))
 
     /* Returns the length of the character sequence that leads into this state:
      * one for strings, '"', and two for comments, '(*'. (This value is used
@@ -137,7 +137,7 @@ private object States {
       new Token(CoqPartitions.Types.COQ)) {
     add('"', String)
     add('(', PossiblyEnteringComment)
-    setFallback(Coq)
+    setFallback(Some(Coq))
 
     override def getLeadCount = 0
   }
@@ -146,26 +146,26 @@ private object States {
       new Token(CoqPartitions.Types.STRING)) {
     add('\\', StringEscape)
     add('"', Coq)
-    setFallback(String)
+    setFallback(Some(String))
 
     override def getLeadCount = 1
   }
 
   case object StringEscape extends PartitionState {
-    setFallback(String)
+    setFallback(Some(String))
   }
 
   case object PossiblyEnteringComment extends PartitionState {
     add('"', String)
     add('*', Comment)
     add('(', PossiblyEnteringComment)
-    setFallback(Coq)
+    setFallback(Some(Coq))
   }
 
   case object Comment extends PartitionFinalState(
       new Token(CoqPartitions.Types.COMMENT)) {
     add('*', PossiblyLeavingComment)
-    setFallback(Comment)
+    setFallback(Some(Comment))
 
     override def getLeadCount = 2
   }
@@ -173,14 +173,14 @@ private object States {
   case object PossiblyLeavingComment extends PartitionState {
     add('*', PossiblyLeavingComment)
     add(')', Coq)
-    setFallback(Comment)
+    setFallback(Some(Comment))
   }
 
   import org.eclipse.jface.text.rules.ICharacterScanner
   Seq(Coq, String, Comment).foreach(_.add(None, End))
 
   case object End extends PartitionFinalState(Token.EOF) {
-    setFallback(End)
+    setFallback(Some(End))
 
     override def getLeadCount = 0
   }

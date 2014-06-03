@@ -30,7 +30,7 @@ class StateRule[A, T](label : String = "<anonymous>", default : T) {
     var s = start
     for (i <- input)
       s = s.require(Some(i))
-    s.setToken(token)
+    s.setToken(Option(token))
   }
 
   def getStartState() = start
@@ -78,7 +78,7 @@ object StateRule {
 
     private var fallback : Option[State[A, T]] = None
     def getFallback() = fallback
-    def setFallback(f : State[A, T]) = (fallback = Option(f))
+    def setFallback(f : Option[State[A, T]]) = (fallback = f)
 
     def add(c : A, s : State[A, T]) : Unit = add(Some(c), s)
     def add(c : Option[A], s : State[A, T]) : Unit =
@@ -86,6 +86,6 @@ object StateRule {
         next += (c -> s)
 
     def getToken() = token
-    def setToken(t : T) = (token = Option(t))
+    def setToken(t : Option[T]) = (token = t)
   }
 }
