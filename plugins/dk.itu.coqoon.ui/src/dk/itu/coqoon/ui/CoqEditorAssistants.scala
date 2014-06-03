@@ -269,17 +269,17 @@ class FuturisticWordRule(detector : IFuturisticWordDetector,
   }
 }
 
-import dk.itu.coqoon.core.model.{StateRule, CharacterScanner}
+import dk.itu.coqoon.core.model.{Scanner, StateRule}
 import org.eclipse.jface.text.rules.Token
 
 class BasicRule(label : String = "<anonymous>")
-    extends StateRule(label, Token.UNDEFINED) with IRule {
+    extends StateRule[Char, IToken](label, Token.UNDEFINED) with IRule {
   override def evaluate(scanner : ICharacterScanner) =
-    super.evaluate(BasicRule.Scanner(scanner))
+    super.evaluate(BasicRule.BasicScanner(scanner))
 }
 private object BasicRule {
-  case class Scanner(
-      scanner : ICharacterScanner) extends CharacterScanner {
+  case class BasicScanner(
+      scanner : ICharacterScanner) extends Scanner[Char] {
     override def read() =
       Option(scanner.read).filter(
           _ != ICharacterScanner.EOF).map(_.asInstanceOf[Char])

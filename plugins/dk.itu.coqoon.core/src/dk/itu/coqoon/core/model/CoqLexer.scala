@@ -16,17 +16,17 @@
 
 package dk.itu.coqoon.core.model
 
-trait CharacterScanner {
-  def read() : Option[Char]
+trait Scanner[A] {
+  def read() : Option[A]
   def unread()
 }
 
-class StateRule[T](label : String = "<anonymous>", default : T) {
+class StateRule[A, T](label : String = "<anonymous>", default : T) {
   import StateRule._
 
-  private val start : State[Char, T] = new State
+  private val start : State[A, T] = new State
 
-  def recognise(input : String, token : T) = {
+  def recognise(input : Seq[A], token : T) = {
     var s = start
     for (i <- input)
       s = s.require(Some(i))
@@ -35,9 +35,9 @@ class StateRule[T](label : String = "<anonymous>", default : T) {
 
   def getStartState() = start
 
-  def evaluate(scanner : CharacterScanner) : T = {
+  def evaluate(scanner : Scanner[A]) : T = {
     var s = Option(start)
-    var stack : List[State[Char, T]] = List()
+    var stack : List[State[A, T]] = List()
     do {
       val c = scanner.read
       s = if (c != None) {
