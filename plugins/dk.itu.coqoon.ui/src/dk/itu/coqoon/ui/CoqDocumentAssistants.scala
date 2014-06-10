@@ -135,8 +135,8 @@ private object States {
 
   case object Coq extends PartitionFinalState(
       new Token(CoqPartitions.Types.COQ)) {
-    add('"', String)
-    add('(', PossiblyEnteringComment)
+    add(Some('"'), String)
+    add(Some('('), PossiblyEnteringComment)
     setFallback(Some(Coq))
 
     override def getLeadCount = 0
@@ -144,8 +144,8 @@ private object States {
 
   case object String extends PartitionFinalState(
       new Token(CoqPartitions.Types.STRING)) {
-    add('\\', StringEscape)
-    add('"', Coq)
+    add(Some('\\'), StringEscape)
+    add(Some('"'), Coq)
     setFallback(Some(String))
 
     override def getLeadCount = 1
@@ -156,23 +156,23 @@ private object States {
   }
 
   case object PossiblyEnteringComment extends PartitionState {
-    add('"', String)
-    add('*', Comment)
-    add('(', PossiblyEnteringComment)
+    add(Some('"'), String)
+    add(Some('*'), Comment)
+    add(Some('('), PossiblyEnteringComment)
     setFallback(Some(Coq))
   }
 
   case object Comment extends PartitionFinalState(
       new Token(CoqPartitions.Types.COMMENT)) {
-    add('*', PossiblyLeavingComment)
+    add(Some('*'), PossiblyLeavingComment)
     setFallback(Some(Comment))
 
     override def getLeadCount = 2
   }
 
   case object PossiblyLeavingComment extends PartitionState {
-    add('*', PossiblyLeavingComment)
-    add(')', Coq)
+    add(Some('*'), PossiblyLeavingComment)
+    add(Some(')'), Coq)
     setFallback(Some(Comment))
   }
 

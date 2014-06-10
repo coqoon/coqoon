@@ -39,7 +39,7 @@ class StateRule[A, T](label : String = "<anonymous>", default : T) {
   def recognise(input : Seq[A], token : T) = {
     var s = start
     for (i <- input)
-      s = s.require(Some(i))
+      s = s.require(Some(i), new State[A, T])
     s.setToken(Option(token))
   }
 
@@ -76,12 +76,12 @@ object StateRule {
     private var next : Map[Option[A], State[A, T]] = Map()
     private var token : Option[T] = None
 
-    def get(c : A) : Option[State[A, T]] = get(Option(c))
     def get(c : Option[A]) = next.get(c).orElse(getFallback)
-    def require(c : Option[A]) : State[A, T] = next.get(c) match {
+    def require(
+        c : Option[A], f : => State[A, T]) : State[A, T] = next.get(c) match {
       case Some(s) => s
       case None =>
-        val s = new State[A, T]
+        val s = f
         next += (c -> s)
         s
     }
@@ -90,7 +90,6 @@ object StateRule {
     def getFallback() = fallback
     def setFallback(f : Option[State[A, T]]) = (fallback = f)
 
-    def add(c : A, s : State[A, T]) : Unit = add(Some(c), s)
     def add(c : Option[A], s : State[A, T]) : Unit =
       if (!next.contains(c))
         next += (c -> s)
