@@ -21,6 +21,16 @@ trait Scanner[A] {
   def unread()
 }
 
+class SequenceScanner[A](seq : Seq[A]) extends Scanner[A] {
+  private var position = 0
+
+  override def read() =
+    if (position < seq.length) {
+      try Some(seq(position)) finally position += 1
+    } else None
+  override def unread() = if (position > 0) position -= 1
+}
+
 class StateRule[A, T](label : String = "<anonymous>", default : T) {
   import StateRule._
 
