@@ -31,15 +31,16 @@ class SequenceScanner[A](seq : Seq[A]) extends Scanner[A] {
   override def unread() = if (position > 0) position -= 1
 }
 
-class StateRule[A, T](label : String = "<anonymous>", default : T) {
-  import StateRule._
+import StateRule.State
 
-  private val start : State[A, T] = new State
+class StateRule[A, T](label : String = "<anonymous>",
+    default : T, stateInit : => State[A, T] = new State[A, T]) {
+  private val start : State[A, T] = stateInit
 
   def recognise(input : Seq[A], token : T) = {
     var s = start
     for (i <- input)
-      s = s.require(Some(i), new State[A, T])
+      s = s.require(Some(i), stateInit)
     s.setToken(Option(token))
   }
 
