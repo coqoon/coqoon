@@ -273,11 +273,15 @@ import dk.itu.coqoon.core.model.{Scanner, StateRule}
 import org.eclipse.jface.text.rules.Token
 
 class BasicRule(label : String = "<anonymous>")
-    extends StateRule[Char, IToken](label, Token.UNDEFINED) with IRule {
+    extends StateRule[Char, IToken, BasicRule.BasicState](
+        label, Token.UNDEFINED, new BasicRule.BasicState) with IRule {
   override def evaluate(scanner : ICharacterScanner) =
     super.evaluate(BasicRule.BasicScanner(scanner))
 }
-private object BasicRule {
+object BasicRule {
+  class BasicState extends StateRule.State[Char, BasicState]
+      with StateRule.TokenState[Char, IToken, BasicState]
+          with StateRule.FallbackState[Char, BasicState]
   case class BasicScanner(
       scanner : ICharacterScanner) extends Scanner[Char] {
     override def read() =

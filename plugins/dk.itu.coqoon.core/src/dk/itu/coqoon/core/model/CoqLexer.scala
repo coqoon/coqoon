@@ -31,13 +31,13 @@ class SequenceScanner[A](seq : Seq[A]) extends Scanner[A] {
   override def unread() = if (position > 0) position -= 1
 }
 
-import StateRule.State
+import StateRule._
 
-class StateRule[A, T](label : String = "<anonymous>",
-    default : T, stateInit : => State[A, T] = new State[A, T]) {
-  private val start : State[A, T] = stateInit
+class StateRule[I, T, N <: TokenState[I, T, N]](
+    label : String = "<anonymous>", default : T, stateInit : => N) {
+  private val start : N = stateInit
 
-  def recognise(input : Seq[A], token : T) = {
+  def recognise(input : Seq[I], token : T) = {
     var s = start
     for (i <- input)
       s = s.require(Some(i), stateInit)
@@ -46,9 +46,9 @@ class StateRule[A, T](label : String = "<anonymous>",
 
   def getStartState() = start
 
-  def evaluate(scanner : Scanner[A]) : T = {
+  def evaluate(scanner : Scanner[I]) : T = {
     var s = Option(start)
-    var stack : List[State[A, T]] = List()
+    var stack : List[N] = List()
     do {
       val c = scanner.read
       s = if (c != None) {
@@ -73,29 +73,40 @@ class StateRule[A, T](label : String = "<anonymous>",
   override def toString = "BasicRule(" + label + ")"
 }
 object StateRule {
-  class State[A, T] {
-    private var next : Map[Option[A], State[A, T]] = Map()
-    private var token : Option[T] = None
+  trait State[Input, NextState <: State[Input, NextState]] {
+    private var next : Map[Option[Input], NextState] = Map()
 
-    def get(c : Option[A]) = next.get(c).orElse(getFallback)
-    def require(
-        c : Option[A], f : => State[A, T]) : State[A, T] = next.get(c) match {
-      case Some(s) => s
+    def get(in : Option[Input]) : Option[NextState] = next.get(in)
+    def require(in : Option[Input], nsb : => NextState) =
+        next.get(in) match {
+      case Some(next) => next
       case None =>
-        val s = f
-        next += (c -> s)
+        val s = nsb
+        next += (in -> s)
         s
     }
 
-    private var fallback : Option[State[A, T]] = None
-    def getFallback() = fallback
-    def setFallback(f : Option[State[A, T]]) = (fallback = f)
+    def add(in : Option[Input], ns : NextState) =
+      if (!next.contains(in))
+        next += (in -> ns)
+  }
 
-    def add(c : Option[A], s : State[A, T]) : Unit =
-      if (!next.contains(c))
-        next += (c -> s)
+  trait TokenState[Input, Token, NextState <: State[Input, NextState]]
+      extends State[Input, NextState] {
+    private var token : Option[Token] = None
 
     def getToken() = token
-    def setToken(t : Option[T]) = (token = t)
+    def setToken(token : Option[Token]) = (this.token = token)
+  }
+
+  trait FallbackState[Input, NextState <: State[Input, NextState]]
+      extends State[Input, NextState] {
+    private var fallback : Option[NextState] = None
+
+    override def get(in : Option[Input]) = super.get(in).orElse(getFallback)
+
+    def getFallback() = fallback
+    def setFallback(fallback : Option[NextState]) =
+      (this.fallback = fallback)
   }
 }
