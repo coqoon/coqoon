@@ -84,8 +84,14 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
         getHelpfulLeadingWhitespace).getOrElse("")
     val innerIdt = containingAssertion.map(_ => outerIdt + "  ").getOrElse("")
 
-    val lineInfo = d.getLineInformationOfOffset(c.offset)
-    val line = d.get(lineInfo.getOffset, c.offset - lineInfo.getOffset)
+    val lineInfo = {
+      import org.eclipse.jface.text.Region
+      val (_, content) = quickScanBack(d, c.offset)
+      val nlCount = content.takeWhile(c => c == '\r' || c == '\n').size
+      new Region(
+          c.offset - content.length + nlCount, content.length - nlCount)
+    }
+    val line = d.get(lineInfo.getOffset, lineInfo.getLength)
 
     line match {
       case DefinitionSentence(_) =>
