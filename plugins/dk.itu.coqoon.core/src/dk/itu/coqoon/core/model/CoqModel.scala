@@ -60,10 +60,11 @@ trait ICoqModel extends ICoqElement with IParent {
   def removeListener(l : CoqElementChangeListener)
 }
 object ICoqModel {
-  def create(root : IWorkspaceRoot) : ICoqModel = new CoqModelImpl(root)
+  def create(root : IWorkspaceRoot) : ICoqModel =
+    new CoqModelImpl(Option(root))
 
-  private val instance = new CoqModelImpl(
-      org.eclipse.core.resources.ResourcesPlugin.getWorkspace.getRoot)
+  private val instance =
+    create(org.eclipse.core.resources.ResourcesPlugin.getWorkspace.getRoot)
   def getInstance : ICoqModel = instance
 
   def toCoqProject(project : IProject) : ICoqProject =

@@ -24,7 +24,7 @@ import org.eclipse.core.runtime.{Path, IPath, IProgressMonitor}
 import org.eclipse.core.resources._
 
 private abstract class CoqElementImpl[
-    A <: IResource, B <: ICoqElement with IParent](
+    A <: Option[IResource], B <: ICoqElement with IParent](
     private val res : A, private val parent : B) extends ICoqElement {
   protected def properties() : Seq[Any] = Seq(res, parent)
 
@@ -44,7 +44,7 @@ private abstract class CoqElementImpl[
 
   override def getParent = Option(parent)
   override def exists = getCorrespondingResource.exists { _.exists }
-  override def getCorrespondingResource = Option(res)
+  override def getCorrespondingResource = res
 
   override def getModel() : CoqModelImpl = getAncestor[CoqModelImpl].get
 
@@ -64,7 +64,7 @@ private trait ICache {
 
 private abstract class ParentImpl[
     A <: IResource, B <: ICoqElement with IParent](
-    private val res : A, private val parent : B)
+    private val res : Option[A], private val parent : B)
     extends CoqElementImpl(res, parent) with IParent {
   override def accept(f : ICoqElement => Boolean) =
     if (f(this))
@@ -72,7 +72,7 @@ private abstract class ParentImpl[
 }
 
 private class CoqModelImpl(
-    val res : IWorkspaceRoot)
+    val res : Option[IWorkspaceRoot])
     extends ParentImpl(res, null) with ICoqModel {
   import CoqModelImpl._
 
@@ -102,13 +102,14 @@ private class CoqModelImpl(
       case _ =>
     }
   }
-  res.getWorkspace.addResourceChangeListener(
-      WorkspaceListener, IResourceChangeEvent.POST_CHANGE)
+  res.foreach(_.getWorkspace.addResourceChangeListener(
+      WorkspaceListener, IResourceChangeEvent.POST_CHANGE))
 
   override def getProject(name : String) =
-    new CoqProjectImpl(res.getProject(name), this)
-  override def getProjects = res.getProjects.filter(hasNature).map(
-      a => new CoqProjectImpl(a, this))
+    new CoqProjectImpl(res.map(_.getProject(name)), this)
+  override def getProjects =
+    res.toSeq.flatMap(_.getProjects).filter(hasNature).map(
+      a => new CoqProjectImpl(Some(a), this))
 
   override def toCoqElement(resource : IResource) : Option[ICoqElement] =
       resource match {
@@ -118,14 +119,14 @@ private class CoqModelImpl(
       val project = getProject(f.getProject.getName)
       for (i <- project.getLoadPathProviders) i match {
         case SourceLoadPath(src, bin) if src.contains(f) =>
-          return Some(new CoqPackageFragmentImpl(f,
-              new CoqPackageFragmentRootImpl(src, project)))
+          return Some(new CoqPackageFragmentImpl(Some(f),
+              new CoqPackageFragmentRootImpl(Some(src), project)))
         case SourceLoadPath(src, Some(bin)) if bin.contains(f) =>
-          return Some(new CoqPackageFragmentImpl(f,
-              new CoqPackageFragmentRootImpl(bin, project)))
+          return Some(new CoqPackageFragmentImpl(Some(f),
+              new CoqPackageFragmentRootImpl(Some(bin), project)))
         case DefaultOutputLoadPath(bin) if bin.contains(f) =>
-          return Some(new CoqPackageFragmentImpl(f,
-              new CoqPackageFragmentRootImpl(bin, project)))
+          return Some(new CoqPackageFragmentImpl(Some(f),
+              new CoqPackageFragmentRootImpl(Some(bin), project)))
         case _ =>
       }
       None
@@ -134,9 +135,9 @@ private class CoqModelImpl(
           TryCast[CoqPackageFragmentImpl]).flatMap(
         fragment =>
           if (CoqPackageFragmentImpl.isVernacFile(f)) {
-            Some(new CoqVernacFileImpl(f, fragment))
+            Some(new CoqVernacFileImpl(Some(f), fragment))
           } else if (CoqPackageFragmentImpl.isObjectFile(f)) {
-            Some(new CoqObjectFileImpl(f, fragment))
+            Some(new CoqObjectFileImpl(Some(f), fragment))
           } else None)
     case _ => None
   }
@@ -164,7 +165,7 @@ private object CoqModelImpl {
 }
 
 private class CoqProjectImpl(
-    val res : IProject, val parent : ICoqModel)
+    val res : Option[IProject], val parent : ICoqModel)
     extends ParentImpl(res, parent) with ICoqProject {
   private class Cache extends ICache {
     def destroy = Seq(projectFile, loadPathProviders, loadPath).map(_.clear)
@@ -173,7 +174,8 @@ private class CoqProjectImpl(
       /* XXX: Is this a sensible place to send notifications from? */
 
       val delta = ev.getDelta
-      Option(delta.findMember(res.getFile("_CoqProject").getFullPath)) match {
+      res.map(res => delta.findMember(
+          res.getFile("_CoqProject").getFullPath)) match {
         case Some(delta) =>
           destroy
           notifyListeners(CoqProjectLoadPathChangedEvent(CoqProjectImpl.this))
@@ -207,9 +209,10 @@ private class CoqProjectImpl(
     import CoqProjectFile._
     private[CoqProjectImpl] final val projectFile =
         CacheSlot[CoqProjectFile] {
-      val f = res.getFile("_CoqProject")
-      if (f.exists) {
-        CoqProjectFile.fromString(TotalReader.read(f.getContents))
+      val f = res.map(_.getFile("_CoqProject"))
+      /* Option.exists followed by IResource.exists, since you ask */
+      if (f.exists(_.exists)) {
+        CoqProjectFile.fromString(TotalReader.read(f.get.getContents))
       } else Seq()
     }
 
@@ -220,6 +223,7 @@ private class CoqProjectImpl(
         /* XXX: also parse the -R options later? */
         case (q @ VariableEntry(name, value)) :: tail
             if name.startsWith("KOPITIAM_") =>
+          val res = CoqProjectImpl.this.res.get
           CoqProjectFile.shellTokenise(value) match {
             case "DefaultOutput" :: bindir :: Nil =>
               new DefaultOutputLoadPath(res.getFolder(bindir)) +: _util(tail)
@@ -244,9 +248,10 @@ private class CoqProjectImpl(
         case Nil => Seq.empty
       }
       projectFile.get match {
+        case _ if res == None => Seq()
         case Nil => List(
-          new SourceLoadPath(res.getFolder("src")),
-          new DefaultOutputLoadPath(res.getFolder("bin")),
+          new SourceLoadPath(res.get.getFolder("src")),
+          new DefaultOutputLoadPath(res.get.getFolder("bin")),
           new AbstractLoadPath(Coq84Library.ID))
         case pc => _util(pc)
       }
@@ -262,8 +267,8 @@ private class CoqProjectImpl(
   import CoqProjectFile._
   import java.io.ByteArrayInputStream
   private def setProjectConfiguration(
-      cfg : CoqProjectFile, monitor : IProgressMonitor) = {
-    val f = res.getFile("_CoqProject")
+      cfg : CoqProjectFile, monitor : IProgressMonitor) = if (res != None) {
+    val f = res.get.getFile("_CoqProject")
     if (!cfg.isEmpty) {
       val contents = new ByteArrayInputStream(
         CoqProjectFile.toString(cfg).getBytes)
@@ -326,30 +331,30 @@ private class CoqProjectImpl(
     for (i <- getLoadPathProviders;
          j <- TryCast[DefaultOutputLoadPath](i))
       return Some(j.folder)
-    Option(res).map(_.getFolder("bin"))
+    res.map(_.getFolder("bin"))
   }
 
   override def getPackageFragmentRoot(folder : IPath) =
-    new CoqPackageFragmentRootImpl(res.getFolder(folder), this)
+    new CoqPackageFragmentRootImpl(res.map(_.getFolder(folder)), this)
   override def getPackageFragmentRoots = getLoadPathProviders.collect {
     case SourceLoadPath(folder, output)
-        if (res == folder.getProject) =>
-      new CoqPackageFragmentRootImpl(folder, this)
+        if (res == Some(folder.getProject)) =>
+      new CoqPackageFragmentRootImpl(Some(folder), this)
     case DefaultOutputLoadPath(folder)
-        if (res == folder.getProject) =>
-      new CoqPackageFragmentRootImpl(folder, this)
+        if (res == Some(folder.getProject)) =>
+      new CoqPackageFragmentRootImpl(Some(folder), this)
   }
 
   override def getChildren = getPackageFragmentRoots
 }
 
 private class CoqPackageFragmentRootImpl(
-    val res : IFolder, val parent : ICoqProject)
+    val res : Option[IFolder], val parent : ICoqProject)
     extends ParentImpl(res, parent) with ICoqPackageFragmentRoot {
   private def gpfRecurse(res : IFolder) : List[ICoqPackageFragment] = {
     var results = List[ICoqPackageFragment]()
     if (res.exists) {
-      results = results :+ new CoqPackageFragmentImpl(res, this)
+      results = results :+ new CoqPackageFragmentImpl(Some(res), this)
       for (i <- res.members; j <- TryCast[IFolder](i))
         results = results ++ gpfRecurse(j)
     }
@@ -357,31 +362,31 @@ private class CoqPackageFragmentRootImpl(
   }
 
   override def getPackageFragment(folder : IPath) =
-    new CoqPackageFragmentImpl(res.getFolder(folder), this)
-  override def getPackageFragments = gpfRecurse(res)
+    new CoqPackageFragmentImpl(res.map(_.getFolder(folder)), this)
+  override def getPackageFragments = res.toSeq.flatMap(gpfRecurse)
 
   override def getChildren = getPackageFragments
 }
 
 private class CoqPackageFragmentImpl(
-    val res : IFolder, val parent : ICoqPackageFragmentRoot)
+    val res : Option[IFolder], val parent : ICoqPackageFragmentRoot)
     extends ParentImpl(res, parent) with ICoqPackageFragment {
   import CoqPackageFragmentImpl._
 
   override def getVernacFile(file : IPath) =
-    new CoqVernacFileImpl(res.getFile(file), this)
+    new CoqVernacFileImpl(res.map(_.getFile(file)), this)
   override def getVernacFiles =
-    res.members.collect(fileCollector).filter(isVernacFile).map(
-        new CoqVernacFileImpl(_, this))
+    res.toSeq.flatMap(_.members).collect(fileCollector).filter(
+        isVernacFile).map(f => new CoqVernacFileImpl(Some(f), this))
 
   override def getObjectFile(file : IPath) =
-    new CoqObjectFileImpl(res.getFile(file), this)
+    new CoqObjectFileImpl(res.map(_.getFile(file)), this)
   override def getObjectFiles =
-    res.members.collect(fileCollector).filter(isObjectFile).map(
-        new CoqObjectFileImpl(_, this))
+    res.toSeq.flatMap(_.members).collect(fileCollector).filter(
+        isObjectFile).map(f => new CoqObjectFileImpl(Some(f), this))
 
   override def getNonCoqFiles =
-    res.members.collect(fileCollector).filterNot(
+    res.toSeq.flatMap(_.members).collect(fileCollector).filterNot(
         f => isVernacFile(f) || isObjectFile(f))
 
   override def getChildren = getVernacFiles ++ getObjectFiles
@@ -405,7 +410,7 @@ private object EmptyInputStream extends InputStream {
 }
 
 private class CoqVernacFileImpl(
-    val res : IFile, val parent : ICoqPackageFragment)
+    val res : Option[IFile], val parent : ICoqPackageFragment)
     extends ParentImpl(res, parent) with ICoqVernacFile {
   protected class Cache extends ICache {
     override def destroy = Seq(sentences).map(_.clear)
@@ -520,7 +525,8 @@ private class CoqVernacFileImpl(
   protected def getCache() = getModel.getCacheFor(this, new Cache)
 
   /* Called from within the cache! */
-  protected def getContents() = TotalReader.read(res.getContents)
+  protected def getContents() =
+    res.map(f => TotalReader.read(f.getContents)).getOrElse("")
 
   override def getChildren = getCache.sentences.get
 
@@ -538,8 +544,8 @@ private class DetachedCoqVernacFileImpl(
 
   import java.io.{ByteArrayInputStream => BAIS}
   override def commit(monitor : IProgressMonitor) =
-    original.res.setContents(new BAIS(getContents.getBytes("UTF-8")),
-        IResource.KEEP_HISTORY, monitor)
+    original.res.foreach(_.setContents(new BAIS(getContents.getBytes("UTF-8")),
+        IResource.KEEP_HISTORY, monitor))
 
   override def getContents = content.get
   override def setContents(contents : String) = {
@@ -553,7 +559,7 @@ import dk.itu.coqoon.core.utilities.Substring
 private class CoqScriptSentenceImpl(
     private val sentence : Sentence,
     private val parent : ICoqElement with IParent)
-        extends CoqElementImpl(null, parent) with ICoqScriptSentence {
+        extends CoqElementImpl(None, parent) with ICoqScriptSentence {
   override def getText = sentence._1.toString
   override def getOffset = sentence._1.start
   override def getLength = sentence._1.length
@@ -619,14 +625,14 @@ private class CoqModuleStartSentenceImpl(
 private class CoqScriptGroupImpl(
     val elements : Seq[ICoqScriptElement],
     val parent : ICoqElement with IParent)
-    extends ParentImpl(null, parent) with ICoqScriptGroup {
+    extends ParentImpl(None, parent) with ICoqScriptGroup {
   override def getChildren = elements
 
   override def toString = s"CoqScriptGroupImpl(${getDeterminingSentence})"
 }
 
 private case class CoqObjectFileImpl(
-    private val res : IFile,
+    private val res : Option[IFile],
     private val parent : ICoqPackageFragment)
     extends CoqElementImpl(res, parent) with ICoqObjectFile {
   override def getVernacFile = None
