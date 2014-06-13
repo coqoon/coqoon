@@ -38,7 +38,6 @@ trait ICoqElement {
       case _ => getParent.flatMap(_.getAncestor[A])
     }
   def getParent : Option[ICoqElement with IParent]
-  def getElementType : Class[_ <: ICoqElement]
   def getCorrespondingResource : Option[IResource]
   def getContainingResource : Option[IResource] =
     getCorrespondingResource.orElse(getParent.flatMap(_.getContainingResource))
@@ -48,8 +47,6 @@ trait ICoqElement {
 }
 
 trait ICoqModel extends ICoqElement with IParent {
-  override def getElementType = classOf[ICoqModel]
-
   override def getParent = None
   override def getCorrespondingResource : Option[IWorkspaceRoot]
 
@@ -210,8 +207,6 @@ object Coq84Library {
 }
 
 trait ICoqProject extends ICoqElement with IParent {
-  override def getElementType = classOf[ICoqProject]
-
   override def getParent : Option[ICoqModel]
   override def getCorrespondingResource : Option[IProject]
 
@@ -269,8 +264,6 @@ trait ICoqPackageFragmentRoot extends ICoqElement with IParent {
   override def getCorrespondingResource : Option[IFolder]
   override def getParent : Option[ICoqProject]
 
-  override def getElementType = classOf[ICoqPackageFragmentRoot]
-
   def getPackageFragment(folder : IPath) : ICoqPackageFragment
   def getPackageFragments : Seq[ICoqPackageFragment]
   def hasPackageFragments : Boolean = (!getPackageFragments.isEmpty)
@@ -281,8 +274,6 @@ trait ICoqPackageFragmentRoot extends ICoqElement with IParent {
 trait ICoqPackageFragment extends ICoqElement with IParent {
   override def getCorrespondingResource : Option[IFolder]
   override def getParent : Option[ICoqPackageFragmentRoot]
-
-  override def getElementType = classOf[ICoqPackageFragment]
 
   def getVernacFile(file : IPath) : ICoqVernacFile
   def getVernacFiles : Seq[ICoqVernacFile]
@@ -308,8 +299,6 @@ trait ICoqFile extends ICoqElement {
 import java.io.InputStream
 
 trait ICoqVernacFile extends ICoqFile with IParent {
-  override def getElementType = classOf[ICoqVernacFile]
-
   override def getChildren() : Seq[ICoqScriptElement]
 
   def detach() : IDetachedCoqVernacFile
@@ -334,23 +323,16 @@ sealed trait ICoqScriptElement extends ICoqElement {
 }
 
 trait ICoqScriptSentence extends ICoqScriptElement {
-  override def getElementType : Class[_ <: ICoqElement] =
-    classOf[ICoqScriptSentence]
-
   def isSynthetic() : Boolean
 }
 
 trait ICoqLtacSentence extends ICoqScriptSentence {
-  override def getElementType = classOf[ICoqLtacSentence]
-
   import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
   def getIdentifier() = Classifier.LtacSentence.unapply(getText).get._1
   def getBody() = Classifier.LtacSentence.unapply(getText).get._2
 }
 
 trait ICoqFixpointSentence extends ICoqScriptSentence {
-  override def getElementType = classOf[ICoqFixpointSentence]
-
   import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
   def getKeyword() = Classifier.FixpointSentence.unapply(getText).get._1
   def getIdentifier() = Classifier.FixpointSentence.unapply(getText).get._2
@@ -358,8 +340,6 @@ trait ICoqFixpointSentence extends ICoqScriptSentence {
 }
 
 trait ICoqInductiveSentence extends ICoqScriptSentence {
-  override def getElementType = classOf[ICoqInductiveSentence]
-
   import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
   def getKeyword() = Classifier.InductiveSentence.unapply(getText).get._1
   def getIdentifier() = Classifier.InductiveSentence.unapply(getText).get._2
@@ -367,8 +347,6 @@ trait ICoqInductiveSentence extends ICoqScriptSentence {
 }
 
 trait ICoqDefinitionSentence extends ICoqScriptSentence {
-  override def getElementType = classOf[ICoqDefinitionSentence]
-
   import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
   def getKeyword() = Classifier.DefinitionSentence.unapply(getText).get._1
   def getIdentifier() = Classifier.DefinitionSentence.unapply(getText).get._2
@@ -377,15 +355,11 @@ trait ICoqDefinitionSentence extends ICoqScriptSentence {
 }
 
 trait ICoqLoadSentence extends ICoqScriptSentence {
-  override def getElementType = classOf[ICoqLoadSentence]
-
   import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
   def getIdent() = Classifier.LoadSentence.unapply(getText).get
 }
 
 trait ICoqRequireSentence extends ICoqScriptSentence {
-  override def getElementType = classOf[ICoqRequireSentence]
-
   import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
   def getKind() = Classifier.RequireSentence.unapply(getText).get._1
   def getIdent() = Classifier.RequireSentence.unapply(getText).get._2
@@ -399,8 +373,6 @@ trait ICoqRequireSentence extends ICoqScriptSentence {
 }
 
 trait ICoqAssertionSentence extends ICoqScriptSentence {
-  override def getElementType = classOf[ICoqAssertionSentence]
-
   import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
   def getKeyword() = Classifier.AssertionSentence.unapply(getText).get._1
   def getIdentifier() = Classifier.AssertionSentence.unapply(getText).get._2
@@ -408,22 +380,16 @@ trait ICoqAssertionSentence extends ICoqScriptSentence {
 }
 
 trait ICoqModuleStartSentence extends ICoqScriptSentence {
-  override def getElementType = classOf[ICoqModuleStartSentence]
-
   import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
   def getIdentifier() = Classifier.ModuleStartSentence.unapply(getText).get
 }
 
 trait ICoqSectionStartSentence extends ICoqScriptSentence {
-  override def getElementType = classOf[ICoqSectionStartSentence]
-
   import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
   def getIdentifier() = Classifier.SectionStartSentence.unapply(getText).get
 }
 
 trait ICoqScriptGroup extends ICoqScriptElement with IParent {
-  override def getElementType = classOf[ICoqScriptGroup]
-
   override def getText = getChildren.map(_.getText).mkString
   override def getLength = getChildren.foldLeft(0)((a, b) => a + b.getLength)
   override def getOffset = getChildren.head.getOffset
@@ -435,8 +401,6 @@ trait ICoqScriptGroup extends ICoqScriptElement with IParent {
 }
 
 trait ICoqObjectFile extends ICoqFile {
-  override def getElementType = classOf[ICoqObjectFile]
-
   def getVernacFile : Option[ICoqVernacFile]
 }
 object ICoqObjectFile {
