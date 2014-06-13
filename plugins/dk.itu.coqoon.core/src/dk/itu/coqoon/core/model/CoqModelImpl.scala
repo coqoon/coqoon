@@ -522,11 +522,6 @@ private class CoqVernacFileImpl(
   /* Called from within the cache! */
   protected def getContents() = TotalReader.read(res.getContents)
 
-  import java.io.InputStream
-
-  if (!res.getName.endsWith(".v"))
-    throw new IllegalArgumentException(res.getName)
-
   override def getChildren = getCache.sentences.get
 
   override def detach = new DetachedCoqVernacFileImpl(this)
@@ -634,8 +629,5 @@ private case class CoqObjectFileImpl(
     private val res : IFile,
     private val parent : ICoqPackageFragment)
     extends CoqElementImpl(res, parent) with ICoqObjectFile {
-  if (!res.getName.endsWith(".vo"))
-    throw new IllegalArgumentException(res.getName)
-
   override def getVernacFile = None
 }
