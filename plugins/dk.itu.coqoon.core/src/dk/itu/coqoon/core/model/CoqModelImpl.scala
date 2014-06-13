@@ -322,11 +322,11 @@ private class CoqProjectImpl(
   override def getLoadPathProviders : Seq[ICoqLoadPathProvider] =
     getCache.loadPathProviders.get
 
-  override def getDefaultOutputLocation : IFolder = {
+  override def getDefaultOutputLocation : Option[IFolder] = {
     for (i <- getLoadPathProviders;
          j <- TryCast[DefaultOutputLoadPath](i))
-      return j.folder
-    res.getFolder("bin")
+      return Some(j.folder)
+    Option(res).map(_.getFolder("bin"))
   }
 
   override def getPackageFragmentRoot(folder : IPath) =

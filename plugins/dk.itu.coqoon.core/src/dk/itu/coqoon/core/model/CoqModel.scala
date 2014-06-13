@@ -216,7 +216,7 @@ trait ICoqProject extends ICoqElement with IParent {
   def setLoadPathProviders(
       lp : Seq[ICoqLoadPathProvider], monitor : IProgressMonitor)
 
-  def getDefaultOutputLocation : IFolder
+  def getDefaultOutputLocation : Option[IFolder]
 
   def getPackageFragmentRoot(folder : IPath) : ICoqPackageFragmentRoot
   def getPackageFragmentRoots : Seq[ICoqPackageFragmentRoot]

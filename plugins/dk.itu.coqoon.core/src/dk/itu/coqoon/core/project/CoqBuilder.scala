@@ -405,7 +405,7 @@ private object CoqBuilder {
         val base = location.removeFirstSegments(
             src.getLocation.segmentCount).removeFileExtension
         val output = bin.getOrElse(
-            project.getDefaultOutputLocation).getLocation
+            project.getDefaultOutputLocation.get).getLocation
         return Some(output.append(base).addFileExtension("vo"))
       case _ =>
     }
@@ -415,9 +415,9 @@ private object CoqBuilder {
     var candidates : Seq[IPath] = Seq()
     for (i <- project.getLoadPathProviders) i match {
       case SourceLoadPath(src, bin_)
-          if bin_.getOrElse(project.getDefaultOutputLocation).
+          if bin_.getOrElse(project.getDefaultOutputLocation.get).
               getLocation.isPrefixOf(location) =>
-        val bin = bin_.getOrElse(project.getDefaultOutputLocation)
+        val bin = bin_.getOrElse(project.getDefaultOutputLocation.get)
         val base = location.removeFirstSegments(
             bin.getLocation.segmentCount).removeFileExtension
         candidates :+= src.getLocation.append(base).addFileExtension("v")

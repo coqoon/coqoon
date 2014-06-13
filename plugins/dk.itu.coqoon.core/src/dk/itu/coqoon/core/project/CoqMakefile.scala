@@ -70,7 +70,7 @@ override _COQCMD = \
         sb ++= "override COQFLAGS += " +
             p.getLoadPath.flatMap(escape).mkString(" ") + "\n"
       case p @ SourceLoadPath(src, bin_) =>
-        val bin = bin_.getOrElse(cp.getDefaultOutputLocation)
+        val bin = bin_.getOrElse(cp.getDefaultOutputLocation.get)
         sb ++= bin.getProjectRelativePath + "/%.vo: " +
           src.getProjectRelativePath + "/%.v\n\t$(_COQCMD)\n"
         sb ++= "override COQFLAGS += " +
