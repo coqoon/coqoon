@@ -496,7 +496,9 @@ private class CoqVernacFileImpl(
                 new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
             tail
 
-          case h :: (i @ (ProofStartSentence(), _)) :: tail =>
+          /* Something of the form "Foo. Proof." is probably a proof, even if
+           * we don't recognise what "Foo." means (unless it's a comment) */
+          case (h @ (_, false)) :: (i @ (ProofStartSentence(), _)) :: tail =>
             /* XXX: scan "h" for a proof identifier? */
             stack.pushContext("proof-baffling")
             stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
