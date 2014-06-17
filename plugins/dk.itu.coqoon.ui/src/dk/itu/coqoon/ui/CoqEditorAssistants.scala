@@ -192,7 +192,63 @@ abstract class FormattingStrategyBase
 }
 
 class CoqMasterFormattingStrategy extends FormattingStrategyBase {
-  override protected def format() = ()
+  import dk.itu.coqoon.core.model._
+
+  private var builder : Option[StringBuilder] = None
+
+  private def normalise(sentence : String) = {
+    val lines = sentence.lines.toStream match {
+      case f #:: tail if f.forall(_.isWhitespace) =>
+        tail
+      case l => l
+    }
+    var firstActual = lines.find(!onlyWhitespace(_))
+    var leadingWhitespace =
+      firstActual.map(_.takeWhile(_.isWhitespace)).getOrElse("")
+    for (i <- lines)
+      yield i.stripPrefix(leadingWhitespace)
+  }
+
+  private def onlyWhitespace(s : String) = s.matches("""^\s*$""")
+
+  private def line(
+      initialWhitespace : String, indentationLevel : Int, text : String) =
+    builder.get ++=
+      (if (!onlyWhitespace(text)) {
+        initialWhitespace + ("  " * indentationLevel) + text + "\n"
+      } else "\n")
+
+  private def loop(initialWhitespace : String,
+      indentationLevel : Int, element : ICoqScriptElement) : Unit =
+    element match {
+      case s : ICoqScriptSentence =>
+        import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier._
+        s.getText match {
+          case t @ (ProofStartSentence(_) | ProofEndSentence(_)) =>
+            /* These should appear in the enclosing scope */
+            line(initialWhitespace, indentationLevel - 1, t.trim)
+          case f =>
+            for (i <- normalise(f))
+              line(initialWhitespace, indentationLevel, i)
+        }
+      case s : ICoqScriptGroup =>
+        for (i <- normalise(s.getChildren.head.getText))
+          line(initialWhitespace, indentationLevel, i)
+        for (i <- s.getChildren.tail)
+          loop(initialWhitespace, indentationLevel + 1, i)
+    }
+
+  override protected def format() = {
+    val document = getMedium.get
+    val region = getRegion.get
+    val content = document.get(region.getOffset, region.getLength)
+    val dummy = IDetachedCoqVernacFile.createDummy
+    dummy.setContents(content)
+    builder = Some(new StringBuilder)
+    for (i <- dummy.getChildren)
+      loop("", 0, i)
+    document.replace(region.getOffset, region.getLength, builder.get.result)
+  }
 }
 
 class CoqSubservientFormattingStrategy extends FormattingStrategyBase {
