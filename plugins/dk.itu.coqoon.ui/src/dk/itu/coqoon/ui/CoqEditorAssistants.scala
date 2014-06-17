@@ -192,24 +192,9 @@ abstract class FormattingStrategyBase
 }
 
 class CoqMasterFormattingStrategy extends FormattingStrategyBase {
-  import dk.itu.coqoon.core.model._
+  import CoqMasterFormattingStrategy._
 
   private var builder : Option[StringBuilder] = None
-
-  private def normalise(sentence : String) = {
-    val lines = sentence.lines.toStream match {
-      case f #:: tail if f.forall(_.isWhitespace) =>
-        tail
-      case l => l
-    }
-    var firstActual = lines.find(!onlyWhitespace(_))
-    var leadingWhitespace =
-      firstActual.map(_.takeWhile(_.isWhitespace)).getOrElse("")
-    for (i <- lines)
-      yield i.stripPrefix(leadingWhitespace)
-  }
-
-  private def onlyWhitespace(s : String) = s.matches("""^\s*$""")
 
   private def line(
       initialWhitespace : String, indentationLevel : Int, text : String) =
@@ -218,6 +203,7 @@ class CoqMasterFormattingStrategy extends FormattingStrategyBase {
         initialWhitespace + ("  " * indentationLevel) + text + "\n"
       } else "\n")
 
+  import dk.itu.coqoon.core.model._
   private def loop(initialWhitespace : String,
       indentationLevel : Int, element : ICoqScriptElement) : Unit =
     element match {
@@ -249,6 +235,26 @@ class CoqMasterFormattingStrategy extends FormattingStrategyBase {
       loop("", 0, i)
     document.replace(region.getOffset, region.getLength, builder.get.result)
   }
+}
+private object CoqMasterFormattingStrategy {
+  private def leading(lines : Seq[String]) = {
+    var firstActual = lines.find(!onlyWhitespace(_))
+    firstActual.map(_.takeWhile(_.isWhitespace)).getOrElse("")
+  }
+  private def normalise(sentence : String) = {
+    val lines = sentence.lines.toStream match {
+      case f #:: tail if f.forall(_.isWhitespace) =>
+        tail
+      case l => l
+    }
+    var leadingWhitespace = leading(lines)
+    for (i <- lines)
+      yield i.stripPrefix(leadingWhitespace)
+  }
+
+  import java.util.regex.Pattern
+  private final val ws = Pattern.compile("""^\s*$""")
+  private def onlyWhitespace(s : String) = ws.matcher(s).matches()
 }
 
 class CoqSubservientFormattingStrategy extends FormattingStrategyBase {
