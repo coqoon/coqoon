@@ -316,6 +316,13 @@ trait IDetachedCoqVernacFile extends ICoqVernacFile {
   def getContents() : String
   def setContents(contents : String)
 }
+object IDetachedCoqVernacFile {
+  def createDummy() : IDetachedCoqVernacFile = new DetachedCoqVernacFileImpl(
+      new CoqVernacFileImpl(None, new CoqPackageFragmentImpl(
+          None, new CoqPackageFragmentRootImpl(
+              None, new CoqProjectImpl(None,
+                  new CoqModelImpl(None))))))
+}
 
 sealed trait ICoqScriptElement extends ICoqElement {
   def getText() : String
