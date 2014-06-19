@@ -226,15 +226,28 @@ class CoqMasterFormattingStrategy extends FormattingStrategyBase {
     }
 
   override protected def format() = {
+    import dk.itu.coqoon.core.coqtop.CoqSentence
+    import org.eclipse.jface.text.Region
+
     val document = getMedium.get
-    val region = getRegion.get
-    val content = document.get(region.getOffset, region.getLength)
-    val dummy = IDetachedCoqVernacFile.createDummy
-    dummy.setContents(content)
-    builder = Some(new StringBuilder)
-    for (i <- dummy.getChildren)
-      loop("", 0, i)
-    document.replace(region.getOffset, region.getLength, builder.get.result)
+    val rawRegion = getRegion.get
+    val rawEnd = rawRegion.getOffset + rawRegion.getLength
+    val sentences =
+      for ((s, _) <- CoqSentence.getNextSentences(document.get, 0, rawEnd)
+             if (s.start + s.takeWhile(
+                 _.isWhitespace).length) >= rawRegion.getOffset)
+        yield s
+    if (sentences.length >= 1) {
+      val start = sentences.head.start
+      val region = new Region(start, sentences.last.end - start)
+      val content = sentences.mkString
+      val dummy = IDetachedCoqVernacFile.createDummy
+      dummy.setContents(content)
+      builder = Some(new StringBuilder)
+      for (i <- dummy.getChildren)
+        loop("", 0, i)
+      document.replace(region.getOffset, region.getLength, builder.get.result)
+    }
   }
 }
 private object CoqMasterFormattingStrategy {
