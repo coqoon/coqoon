@@ -202,36 +202,38 @@ abstract class FormattingStrategyBase
 class CoqMasterFormattingStrategy extends FormattingStrategyBase {
   import CoqMasterFormattingStrategy._
 
+  import dk.itu.coqoon.core.model._
+
   private var builder : Option[StringBuilder] = None
 
-  private def line(
-      initialWhitespace : String, indentationLevel : Int, text : String) =
-    builder.get ++=
-      (if (!onlyWhitespace(text)) {
-        initialWhitespace + ("  " * indentationLevel) + text + "\n"
-      } else "\n")
+  private def out(startAt : Int,
+      indentationLevel : Int, sentence : ICoqScriptSentence) =
+    if (sentence.getOffset >= startAt)
+      for (t <- normalise(sentence.getText))
+        builder.get ++=
+          (if (!onlyWhitespace(t)) {
+            ("  " * indentationLevel) + t + "\n"
+          } else "\n")
 
-  import dk.itu.coqoon.core.model._
-  private def loop(initialWhitespace : String,
-      indentationLevel : Int, element : ICoqScriptElement) : Unit =
+  private def loop(startAt : Int,
+      indentationLevel : Int, element : ICoqScriptElement) : Unit = {
     element match {
       case s : ICoqScriptSentence =>
         import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier._
         s.getText match {
-          case t @ (ProofStartSentence(_) | ProofEndSentence(_) |
-              IdentifiedEndSentence(_)) =>
+          case ProofStartSentence(_) | ProofEndSentence(_) |
+              IdentifiedEndSentence(_) =>
             /* These should appear in the enclosing scope */
-            line(initialWhitespace, indentationLevel - 1, t.trim)
-          case f =>
-            for (i <- normalise(f))
-              line(initialWhitespace, indentationLevel, i)
+            out(startAt, indentationLevel - 1, s)
+          case _ =>
+            out(startAt, indentationLevel, s)
         }
       case s : ICoqScriptGroup =>
-        for (i <- normalise(s.getChildren.head.getText))
-          line(initialWhitespace, indentationLevel, i)
+        out(startAt, indentationLevel, s.getDeterminingSentence)
         for (i <- s.getChildren.tail)
-          loop(initialWhitespace, indentationLevel + 1, i)
+          loop(startAt, indentationLevel + 1, i)
     }
+  }
 
   override protected def format() = {
     import dk.itu.coqoon.core.coqtop.CoqSentence
@@ -241,19 +243,19 @@ class CoqMasterFormattingStrategy extends FormattingStrategyBase {
     val rawRegion = getRegion.get
     val rawEnd = rawRegion.getOffset + rawRegion.getLength
     val sentences =
-      for ((s, _) <- CoqSentence.getNextSentences(document.get, 0, rawEnd)
-             if (s.start + s.takeWhile(
-                 _.isWhitespace).length) >= rawRegion.getOffset)
-        yield s
-    if (sentences.length >= 1) {
-      val start = sentences.head.start
+      CoqSentence.getNextSentences(document.get, 0, rawEnd).map(_._1)
+    val firstSentence = sentences.find(
+        s => s.start + s.takeWhile(
+            _.isWhitespace).length >= rawRegion.getOffset)
+    if (firstSentence != None) {
+      val start = firstSentence.get.start
       val region = new Region(start, sentences.last.end - start)
       val content = sentences.mkString
       val dummy = IDetachedCoqVernacFile.createDummy
       dummy.setContents(content)
       builder = Some(new StringBuilder)
       for (i <- dummy.getChildren)
-        loop("", 0, i)
+        loop(start, 0, i)
       document.replace(region.getOffset, region.getLength, builder.get.result)
     }
   }
