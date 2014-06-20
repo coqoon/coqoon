@@ -84,16 +84,15 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
         getHelpfulLeadingWhitespace).getOrElse("")
     val innerIdt = containingAssertion.map(_ => outerIdt + "  ").getOrElse("")
 
-    val lineInfo = {
+    val sentenceInfo = {
       import org.eclipse.jface.text.Region
       val (_, content) = quickScanBack(d, c.offset)
-      val nlCount = content.takeWhile(c => c == '\r' || c == '\n').size
-      new Region(
-          c.offset - content.length + nlCount, content.length - nlCount)
+      new Region(c.offset - content.length, content.length)
     }
-    val line = d.get(lineInfo.getOffset, lineInfo.getLength)
+    val sentence = d.get(sentenceInfo.getOffset, sentenceInfo.getLength)
+    println(s"> ${sentence} <")
 
-    line match {
+    sentence match {
       case DefinitionSentence(_) =>
         indent.customizeDocumentCommand(d, c)
       case AssertionSentence(keyword, identifier, body) =>
@@ -101,14 +100,23 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
         c.text += outerIdt + "Proof.\n" + innerIdt
       case ProofStartSentence(keyword) =>
         c.text += innerIdt
-      case ProofEndSentence(keyword)
+      case sentence @ ProofEndSentence(keyword)
           if containingAssertion != None =>
-        val trimmedLine = line.dropWhile(_.isWhitespace)
-        val fixedLine = outerIdt + trimmedLine
-        if (fixedLine != line) {
-          d.replace(lineInfo.getOffset, lineInfo.getLength, fixedLine)
-          c.offset = lineInfo.getOffset + fixedLine.length
+        /* As a safety precaution to avoid mangling lines containing multiple
+         * sentences, require that the last sentence contain a newline
+         * character before we try to overwrite it */
+        if (sentence.contains('\n')) {
+          val nlCount = sentence.takeWhile(c => c == '\r' || c == '\n').size
+          val trimmedLine =
+            sentence.substring(nlCount).dropWhile(_.isWhitespace)
+          val fixedSentence = outerIdt + trimmedLine
+          if (fixedSentence != sentence) {
+            d.replace(sentenceInfo.getOffset + nlCount,
+                sentenceInfo.getLength - nlCount, fixedSentence)
+            c.offset = sentenceInfo.getOffset + nlCount + fixedSentence.length
+          }
         }
+        /* Appropriately indenting the next line is always a good idea */
         c.text += outerIdt
       case _ =>
         indent.customizeDocumentCommand(d, c)
