@@ -90,7 +90,6 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
       new Region(c.offset - content.length, content.length)
     }
     val sentence = d.get(sentenceInfo.getOffset, sentenceInfo.getLength)
-    println(s"> ${sentence} <")
 
     sentence match {
       case DefinitionSentence(_) =>
@@ -252,11 +251,14 @@ class CoqMasterFormattingStrategy extends FormattingStrategyBase {
       val region = new Region(start, sentences.last.end - start)
       val content = sentences.mkString
       val dummy = IDetachedCoqVernacFile.createDummy
+      val initialWhitespace =
+        firstSentence.get.toString.takeWhile(_.isWhitespace)
       dummy.setContents(content)
       builder = Some(new StringBuilder)
       for (i <- dummy.getChildren)
         loop(start, 0, i)
-      document.replace(region.getOffset, region.getLength, builder.get.result)
+      document.replace(region.getOffset,
+          region.getLength, initialWhitespace + builder.get.result.trim)
     }
   }
 }
