@@ -34,9 +34,12 @@ class CoqoonFormattingPreferencePage
     setPreferenceStore(Activator.getDefault.getPreferenceStore)
 
   import org.eclipse.jface.preference.StringFieldEditor
+  import org.eclipse.jface.preference.BooleanFieldEditor
 
   import CoqoonUIPreferences._
   override def createFieldEditors = {
+    addField(new BooleanFieldEditor(AutomaticFormatting.ID,
+        "Automatically format Coq code as you type", getFieldEditorParent))
     addField(new StringFieldEditor(SpacesPerIndentationLevel.ID,
         "Spaces per indentation level", getFieldEditorParent))
   }
@@ -66,6 +69,7 @@ class CoqoonUIPreferences extends AbstractPreferenceInitializer {
         StringConverter.asString(new RGB(192, 192, 192)))
 
     node.putInt(SpacesPerIndentationLevel.ID, 2)
+    node.putBoolean(AutomaticFormatting.ID, true)
   }
 }
 object CoqoonUIPreferences {
@@ -78,5 +82,10 @@ object CoqoonUIPreferences {
   object SpacesPerIndentationLevel {
     val ID = "spacesPerIndentationLevel"
     def get() = Activator.getDefault.getPreferenceStore.getInt(ID)
+  }
+
+  object AutomaticFormatting {
+    val ID = "automaticFormatting"
+    def get() = Activator.getDefault.getPreferenceStore.getBoolean(ID)
   }
 }

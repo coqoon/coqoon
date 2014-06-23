@@ -15,7 +15,8 @@ class CoqAutoEditStrategy extends IAutoEditStrategy {
       d : IDocument, c : DocumentCommand) = {
     val t = Option(c.text)
     if (c.length == 0 &&
-        t.exists(TU.endsWith(d.getLegalLineDelimiters, _) != -1))
+        t.exists(TU.endsWith(d.getLegalLineDelimiters, _) != -1) &&
+        CoqoonUIPreferences.AutomaticFormatting.get)
       CoqAutoEditStrategy.adjustIndentation(d, c)
   }
 }
