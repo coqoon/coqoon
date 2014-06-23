@@ -82,7 +82,9 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
 
     val outerIdt = containingAssertion.map(
         getHelpfulLeadingWhitespace).getOrElse("")
-    val innerIdt = containingAssertion.map(_ => outerIdt + "  ").getOrElse("")
+    val wsCount = CoqoonUIPreferences.SpacesPerIndentationLevel.get
+    val innerIdt = containingAssertion.map(
+        _ => outerIdt + (" " * wsCount)).getOrElse("")
 
     val sentenceInfo = {
       import org.eclipse.jface.text.Region
@@ -211,7 +213,8 @@ class CoqMasterFormattingStrategy extends FormattingStrategyBase {
       for (t <- normalise(sentence.getText))
         builder.get ++=
           (if (!onlyWhitespace(t)) {
-            ("  " * indentationLevel) + t + "\n"
+            val wsCount = CoqoonUIPreferences.SpacesPerIndentationLevel.get
+            (" " * wsCount * indentationLevel) + t + "\n"
           } else "\n")
 
   private def loop(startAt : Int,

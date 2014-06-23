@@ -47,6 +47,8 @@ class CoqoonUIPreferences extends AbstractPreferenceInitializer {
     node.putBoolean(MATCHING_BRACKETS, true)
     node.put(MATCHING_BRACKETS_COLOR,
         StringConverter.asString(new RGB(192, 192, 192)))
+
+    node.putInt(SpacesPerIndentationLevel.ID, 2)
   }
 }
 object CoqoonUIPreferences {
@@ -55,4 +57,9 @@ object CoqoonUIPreferences {
   val KEYWORD_COLOR = "coqKeywordFg"
   val MATCHING_BRACKETS = "matchingBrackets"
   val MATCHING_BRACKETS_COLOR = "matchingBracketsColor"
+
+  object SpacesPerIndentationLevel {
+    val ID = "spacesPerIndentationLevel"
+    def get() = Activator.getDefault.getPreferenceStore.getInt(ID)
+  }
 }
