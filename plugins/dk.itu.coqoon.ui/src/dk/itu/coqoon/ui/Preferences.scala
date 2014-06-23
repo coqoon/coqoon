@@ -1,4 +1,5 @@
 /* (c) 2011 Hannes Mehnert */
+/* Copyright © 2013, 2014 Alexander Faithfull */
 
 package dk.itu.coqoon.ui
 
@@ -23,6 +24,22 @@ class CoqoonColorPreferencePage
     for ((pref, label) <- fields)
       addField(new ColorFieldEditor(pref, label, getFieldEditorParent))
  }
+}
+
+class CoqoonFormattingPreferencePage
+    extends FieldEditorPreferencePage with IWorkbenchPreferencePage {
+  import org.eclipse.ui.IWorkbench
+
+  override def init(workbench : IWorkbench) =
+    setPreferenceStore(Activator.getDefault.getPreferenceStore)
+
+  import org.eclipse.jface.preference.StringFieldEditor
+
+  import CoqoonUIPreferences._
+  override def createFieldEditors = {
+    addField(new StringFieldEditor(SpacesPerIndentationLevel.ID,
+        "Spaces per indentation level", getFieldEditorParent))
+  }
 }
 
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer

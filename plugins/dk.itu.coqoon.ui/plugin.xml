@@ -185,7 +185,13 @@
             category="dk.itu.coqoon.core.pref"
             class="dk.itu.coqoon.ui.CoqoonColorPreferencePage"
             id="dk.itu.coqoon.ui.pref.color"
-            name="Color Settings">
+            name="Color">
+      </page>
+      <page
+            category="dk.itu.coqoon.core.pref"
+            class="dk.itu.coqoon.ui.CoqoonFormattingPreferencePage"
+            id="Formatting"
+            name="Formatting">
       </page>
    </extension>
    <extension
