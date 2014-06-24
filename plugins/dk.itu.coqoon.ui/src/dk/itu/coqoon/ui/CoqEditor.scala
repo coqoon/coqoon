@@ -241,21 +241,25 @@ private class CoqProofReconcilingStrategy(
     })
 
     val off = r.getOffset
-    if (off < editor.underway) {
+    if (off <= editor.underway) {
       if (editor.busy)
         editor.coqTop.interrupt
-      if (off < editor.completed)
+      if (off < editor.completed ||
+          (off == editor.completed && !doc.forall(
+               doc => off >= doc.getLength || doc.getChar(off).isWhitespace)))
         /* We can't finish reconciliation until the job is scheduled */
         UIUtils.exec {
           CoqEditorHandler.doStepBack(editor,
-              _.prefixLength(a => (off < (a.offset + a.text.length))), false)
+              _.prefixLength(a => (off <= (a.offset + a.text.length))), false)
         }
     }
   }
 
   override def reconcile(dr : DirtyRegion, r : IRegion) = reconcile(dr)
 
-  override def setDocument(newDocument : IDocument) = ()
+  private var doc : Option[IDocument] = None
+  override def setDocument(newDocument : IDocument) =
+    doc = Option(newDocument)
 }
 
 import org.eclipse.jface.text.rules.RuleBasedScanner

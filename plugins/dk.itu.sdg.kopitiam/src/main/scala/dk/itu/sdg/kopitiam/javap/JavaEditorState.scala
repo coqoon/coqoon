@@ -234,14 +234,16 @@ private class JavaEditorReconcilingStrategy(
 
         val underwayOffset = jes.underway.getOrElse(Int.MinValue)
 
-        if (off < underwayOffset) {
+        if (off <= underwayOffset) {
           if (jes.busy)
             jes.coqTop.interrupt
           val completeOffset = jes.complete.getOrElse(Int.MinValue)
-          if (off < completeOffset)
+          if (off < completeOffset ||
+              (off == completeOffset && !doc.forall(
+                   doc => off >= doc.getLength ||
+                          doc.getChar(off).isWhitespace)))
             UIUtils.exec {
-              JavaEditorHandler.doStepBack(jes, _.prefixLength(
-                a => (off < a.end)))
+              JavaEditorHandler.doStepBack(jes, _.prefixLength(off <= _.end))
             }
         }
 
@@ -259,5 +261,7 @@ private class JavaEditorReconcilingStrategy(
 
   override def reconcile(dr : DirtyRegion, r : IRegion) = reconcile(r)
 
-  override def setDocument(newDocument : IDocument) = ()
+  private var doc : Option[IDocument] = None
+  override def setDocument(newDocument : IDocument) =
+    doc = Option(newDocument)
 }
