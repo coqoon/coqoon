@@ -3,11 +3,11 @@
 
 package dk.itu.coqoon.ui
 
-import org.eclipse.jface.preference.FieldEditorPreferencePage
+import org.eclipse.jface.preference.{FieldEditorPreferencePage => FEPP}
 import org.eclipse.ui.IWorkbenchPreferencePage
 
 class CoqoonColorPreferencePage
-    extends FieldEditorPreferencePage with IWorkbenchPreferencePage {
+    extends FEPP(FEPP.GRID) with IWorkbenchPreferencePage {
   import org.eclipse.ui.IWorkbench
 
   override def init (workbench : IWorkbench) : Unit = {
@@ -27,7 +27,7 @@ class CoqoonColorPreferencePage
 }
 
 class CoqoonFormattingPreferencePage
-    extends FieldEditorPreferencePage with IWorkbenchPreferencePage {
+    extends FEPP(FEPP.GRID) with IWorkbenchPreferencePage {
   import org.eclipse.ui.IWorkbench
 
   override def init(workbench : IWorkbench) =

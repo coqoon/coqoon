@@ -27,7 +27,7 @@ trait CoqProgram {
 }
 object CoqProgram {
   private class ProgramImpl(name : String) extends CoqProgram {
-    override def path : String = CoqoonPreferences.getCoqPath match {
+    override def path : String = CoqoonPreferences.CoqPath.get match {
       case Some(path) => path + java.io.File.separator + name
       case _ => name
     }

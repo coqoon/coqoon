@@ -27,9 +27,10 @@ class CoqoonPreferencesPage
     setPreferenceStore(Activator.getDefault.getPreferenceStore)
 
   import org.eclipse.jface.preference.DirectoryFieldEditor
-  override def createFieldEditors =
+  override def createFieldEditors = {
     addField(new DirectoryFieldEditor(
-        "coqpath", "Path to Coq", getFieldEditorParent))
+        CoqoonPreferences.CoqPath.ID, "Path to Coq", getFieldEditorParent))
+  }
 
   override def performOk = {
     super.performOk()
@@ -41,8 +42,12 @@ class CoqoonPreferencesPage
 }
 
 object CoqoonPreferences {
-  import org.eclipse.core.runtime.{Path, IPath}
-  def getCoqPath() : Option[IPath] =
-    Option(Activator.getDefault.getPreferenceStore.getString("coqpath")).
-        map(_.trim).filter(_.length != 0).map(p => new Path(p))
+  object CoqPath {
+    final val ID = "coqpath"
+
+    import org.eclipse.core.runtime.{Path, IPath}
+    def get() : Option[IPath] =
+      Option(Activator.getDefault.getPreferenceStore.getString("coqpath")).
+          map(_.trim).filter(_.length != 0).map(p => new Path(p))
+  }
 }

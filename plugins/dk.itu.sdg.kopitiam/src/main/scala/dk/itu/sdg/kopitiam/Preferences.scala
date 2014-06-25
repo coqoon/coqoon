@@ -2,10 +2,11 @@
 
 package dk.itu.sdg.kopitiam
 
-import org.eclipse.jface.preference.FieldEditorPreferencePage
+import org.eclipse.jface.preference.{FieldEditorPreferencePage => FEPP}
 import org.eclipse.ui.IWorkbenchPreferencePage
 
-class KopitiamPreferencePage extends FieldEditorPreferencePage with IWorkbenchPreferencePage {
+class KopitiamPreferencePage
+    extends FEPP(FEPP.GRID) with IWorkbenchPreferencePage {
   import org.eclipse.ui.IWorkbench
 
   override def init (workbench : IWorkbench) : Unit = {
