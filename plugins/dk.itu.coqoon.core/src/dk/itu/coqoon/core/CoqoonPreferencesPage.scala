@@ -26,11 +26,10 @@ class CoqoonPreferencesPage
   override def init(w : IWorkbench) =
     setPreferenceStore(Activator.getDefault.getPreferenceStore)
 
-  import org.eclipse.jface.preference.DirectoryFieldEditor
-  override def createFieldEditors = {
-    addField(new DirectoryFieldEditor(
-        CoqoonPreferences.CoqPath.ID, "Path to Coq", getFieldEditorParent))
-  }
+  import org.eclipse.jface.preference._
+  override def createFieldEditors =
+    addField(new DirectoryFieldEditor(CoqoonPreferences.CoqPath.ID,
+        "Folder containing Coq", getFieldEditorParent))
 
   override def performOk = {
     super.performOk()
@@ -41,13 +40,39 @@ class CoqoonPreferencesPage
   }
 }
 
+import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer
+
+class CoqoonPreferences extends AbstractPreferenceInitializer {
+  import CoqoonPreferences._
+
+  override def initializeDefaultPreferences() = {
+    import org.eclipse.core.runtime.preferences.DefaultScope
+
+    val node = DefaultScope.INSTANCE.getNode(ManifestIdentifiers.PLUGIN)
+
+    node.put(CoqPath.ID, CoqPath.tryCandidates.getOrElse(""))
+  }
+}
 object CoqoonPreferences {
   object CoqPath {
     final val ID = "coqpath"
 
     import org.eclipse.core.runtime.{Path, IPath}
     def get() : Option[IPath] =
-      Option(Activator.getDefault.getPreferenceStore.getString("coqpath")).
+      Option(Activator.getDefault.getPreferenceStore.getString(ID)).
           map(_.trim).filter(_.length != 0).map(p => new Path(p))
+
+    private final val candidates = Seq(
+        ("/usr/local/bin", "coqtop"),
+        ("/usr/bin", "coqtop"),
+        ("C:\\Program Files\\Coq\\bin", "coqtop.exe"),
+        ("C:\\Program Files (x86)\\Coq\\bin", "coqtop.exe"))
+    private[CoqoonPreferences] def tryCandidates : Option[String] = {
+      import java.io.File
+      for ((directory, executable) <- candidates
+               if new File(directory, executable).exists)
+        return Some(directory)
+      None
+    }
   }
 }

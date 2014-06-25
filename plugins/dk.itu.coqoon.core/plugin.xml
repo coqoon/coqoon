@@ -69,4 +69,10 @@
             provider="dk.itu.coqoon.core.model.Coq84Library">
       </provider>
    </extension>
+   <extension
+         point="org.eclipse.core.runtime.preferences">
+      <initializer
+            class="dk.itu.coqoon.core.CoqoonPreferences">
+      </initializer>
+   </extension>
 </plugin>
