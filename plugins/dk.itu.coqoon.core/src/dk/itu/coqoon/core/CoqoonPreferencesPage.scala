@@ -27,9 +27,20 @@ class CoqoonPreferencesPage
     setPreferenceStore(Activator.getDefault.getPreferenceStore)
 
   import org.eclipse.jface.preference._
-  override def createFieldEditors =
+  override def createFieldEditors = {
     addField(new DirectoryFieldEditor(CoqoonPreferences.CoqPath.ID,
         "Folder containing Coq", getFieldEditorParent))
+    addField({
+      val parent = getFieldEditorParent
+      val ed = new BooleanFieldEditor(CoqoonPreferences.EnforceNamespaces.ID,
+          "Enable namespace enforcement (experimental)", parent)
+      ed.getDescriptionControl(parent).setToolTipText(
+          "Don't use the -R option to include project directories or " +
+          "dependencies.")
+      ed.setEnabled(false, parent)
+      ed
+    })
+  }
 
   override def performOk = {
     super.performOk()
@@ -51,6 +62,7 @@ class CoqoonPreferences extends AbstractPreferenceInitializer {
     val node = DefaultScope.INSTANCE.getNode(ManifestIdentifiers.PLUGIN)
 
     node.put(CoqPath.ID, CoqPath.tryCandidates.getOrElse(""))
+    node.putBoolean(EnforceNamespaces.ID, false)
   }
 }
 object CoqoonPreferences {
@@ -74,5 +86,10 @@ object CoqoonPreferences {
         return Some(directory)
       None
     }
+  }
+
+  object EnforceNamespaces {
+    final val ID = "enforce"
+    def get() = Activator.getDefault.getPreferenceStore.getBoolean(ID)
   }
 }
