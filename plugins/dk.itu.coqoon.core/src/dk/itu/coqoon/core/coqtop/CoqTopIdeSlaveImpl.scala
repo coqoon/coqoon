@@ -135,6 +135,8 @@ private class CoqTopIdeSlaveImpl(
 
   import scala.xml.{Attribute, Elem, Node, Null, Text, XML}
   private def sendRaw(n : Elem) : Elem = synchronized {
+    import dk.itu.coqoon.core.CoqoonPreferences
+
     if (pr == None) {
       val ct = CoqProgram("coqtop")
       if (!ct.check)
@@ -143,7 +145,8 @@ private class CoqTopIdeSlaveImpl(
     }
     pr.get.stdin.write(n.toString())
     pr.get.stdin.flush()
-    /* println("TO   " + n.toString()) */
+    if (CoqoonPreferences.PrintIdeslaveTraffic.get)
+      println("TO   " + n.toString())
     var t = new String()
     @scala.annotation.tailrec def _util : Elem = {
       val count = pr.get.stdout.read(buf)
@@ -155,7 +158,8 @@ private class CoqTopIdeSlaveImpl(
       } else _util
     }
     val x = _util
-    /* println("FROM " + x.toString()) */
+    if (CoqoonPreferences.PrintIdeslaveTraffic.get)
+      println("FROM " + Option(x).map(_.toString).getOrElse("(null)"))
     x
   }
 
