@@ -89,27 +89,39 @@ case class CoqFileContentChangedEvent(
 case class CoqProjectLoadPathChangedEvent(
     override val element : ICoqProject) extends CoqElementChangedEvent(element)
 
-final case class CoqLoadPath(path : IPath, coqdir : Option[String]) {
+final case class CoqLoadPath(
+    path : IPath, coqdir : Option[String], alwaysExpand : Boolean = false) {
+  import dk.itu.coqoon.core.CoqoonPreferences
+
   def asCommand : String =
-    "Add Rec LoadPath \"" + path.toOSString + "\"" + (coqdir match {
+    (if (!alwaysExpand && CoqoonPreferences.EnforceNamespaces.get) {
+      s"""Add LoadPath "${path.toOSString}" """
+    } else s"""Add Rec LoadPath "${path.toOSString}" """) + (coqdir match {
       case Some(dir) => " as " + dir
       case None => ""
     }) + "."
+
   def asArguments : Seq[String] =
-    Seq("-R", path.toOSString, coqdir.getOrElse(""))
+    if (!alwaysExpand && CoqoonPreferences.EnforceNamespaces.get) {
+      Seq("-I", path.toOSString) ++ coqdir.toSeq.flatMap(cd => Seq("-as", cd))
+    } else Seq("-R", path.toOSString, coqdir.getOrElse(""))
 
   import java.io.File
 
-  def expand() : Seq[(Seq[String], File)] = {
-    def _recurse(coqdir : Seq[String], f : File) : Seq[(Seq[String], File)] = {
-      val l = f.listFiles
-      (if (l != null) {
-        l.toSeq.filter(_.isDirectory).flatMap(
-          f => _recurse(coqdir :+ f.getName, f))
-      } else Seq.empty) :+ (coqdir, f)
+  def expand() : Seq[(Seq[String], File)] =
+    if (!alwaysExpand && CoqoonPreferences.EnforceNamespaces.get) {
+      Seq((coqdir.toSeq.flatMap(_.split('.')), path.toFile))
+    } else {
+      def _recurse(
+          coqdir : Seq[String], f : File) : Seq[(Seq[String], File)] = {
+        val l = f.listFiles
+        (if (l != null) {
+          l.toSeq.filter(_.isDirectory).flatMap(
+            f => _recurse(coqdir :+ f.getName, f))
+        } else Seq.empty) :+ (coqdir, f)
+      }
+      _recurse(coqdir.map(_.split('.').toSeq).getOrElse(Seq()), path.toFile)
     }
-    _recurse(coqdir.map(_.split('.').toSeq).getOrElse(Seq()), path.toFile)
-  }
 }
 
 sealed trait ICoqLoadPathProvider {
@@ -196,9 +208,9 @@ class Coq84Library extends AbstractLoadPathProvider {
       CoqProgram("coqtop").run(Seq("-where")).readAll match {
         case (0, libraryPath_) =>
           val libraryPath = new Path(libraryPath_.trim)
-          Seq(CoqLoadPath(libraryPath.append("theories"), Some("Coq")),
-              CoqLoadPath(libraryPath.append("plugins"), Some("Coq")),
-              CoqLoadPath(libraryPath.append("user-contrib"), None))
+          Seq(CoqLoadPath(libraryPath.append("theories"), Some("Coq"), true),
+              CoqLoadPath(libraryPath.append("plugins"), Some("Coq"), true),
+              CoqLoadPath(libraryPath.append("user-contrib"), None, true))
         case _ => Nil
       }
     } else Nil
