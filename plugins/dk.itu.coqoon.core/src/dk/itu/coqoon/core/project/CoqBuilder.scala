@@ -348,10 +348,15 @@ class CoqBuilder extends IncrementalProjectBuilder {
       (i.init, i.last)
     }
 
-    for ((coqdir, location) <- completeLoadPath
-        if coqdir.endsWith(libdir)) {
-      val p = new Path(location.getAbsolutePath).
-          append(libname).addFileExtension("vo")
+    for ((coqdir, location) <- completeLoadPath) {
+      /* If we're looking for "Utilities.Foo.Bar", and we're in the "Utilities"
+       * folder, then drop "Utilities" (this is approximately what Coq does) */
+      val adjusted =
+        if (libdir.startsWith(coqdir)) {
+          libdir.drop(coqdir.length)
+        } else libdir
+      val p = new Path(location.getAbsolutePath).append(
+          adjusted.mkString("/")).append(libname).addFileExtension("vo")
       val f = p.toFile
       if (f.exists || deps.get.hasDependencies(p))
         return Some(p)
