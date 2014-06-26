@@ -28,8 +28,15 @@ class CoqoonPreferencesPage
 
   import org.eclipse.jface.preference._
   override def createFieldEditors = {
-    addField(new DirectoryFieldEditor(CoqoonPreferences.CoqPath.ID,
-        "Folder containing Coq", getFieldEditorParent))
+    addField({
+      val parent = getFieldEditorParent
+      val ed = new DirectoryFieldEditor(CoqoonPreferences.CoqPath.ID,
+          "Folder containing Coq", parent)
+      ed.getLabelControl(parent).setToolTipText(
+          "The directory containing the coqtop program (or coqtop.exe on " +
+          "Windows systems).")
+      ed
+    })
     addField({
       val parent = getFieldEditorParent
       val ed = new BooleanFieldEditor(CoqoonPreferences.EnforceNamespaces.ID,
