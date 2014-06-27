@@ -142,11 +142,21 @@ class CoqBuilder extends IncrementalProjectBuilder {
       override def run() = setResult(try {
         objectToSource(out) match {
           case in :: Nil =>
-            val inF = makePathRelativeFile(in)
-            val runner = new CoqCompilerRunner(inF.get)
-            runner.setTicker(
-              Some(() => !isInterrupted && !monitor.isCanceled))
-            CompilerDone(runner.run(null))
+            try {
+              val inF = makePathRelativeFile(in)
+              val vernac = inF.flatMap(coqProject.get.getModel.toCoqElement)
+              (inF, vernac) match {
+                case (Some(inF), Some(vernac : ICoqVernacFile)) =>
+                  val runner = new CoqCompilerRunner(inF,
+                      vernac.getParent.get.getCoqdir.get)
+                  runner.setTicker(
+                    Some(() => !isInterrupted && !monitor.isCanceled))
+                  CompilerDone(runner.run(null))
+                case f =>
+                  println(":-( " + f)
+                  Error("Couldn't retrieve source file handle for " + out)
+              }
+            }
           case Nil => Error("Not enough source files for " + out)
           case _ => Error("Too many source files for " + out)
         }

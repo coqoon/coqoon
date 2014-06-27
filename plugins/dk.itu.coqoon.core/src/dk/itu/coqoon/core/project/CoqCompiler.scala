@@ -24,8 +24,8 @@ import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot, JobRunner}
 import org.eclipse.core.runtime.{Status, IStatus, SubMonitor, IProgressMonitor}
 import org.eclipse.core.resources.{IFile, IResource}
 
-class CoqCompilerRunner(
-    source : IFile) extends JobRunner[CoqCompilerResult] {
+class CoqCompilerRunner(source : IFile,
+    coqdir : Seq[String]) extends JobRunner[CoqCompilerResult] {
   import java.io.{File, IOException, FileInputStream}
 
   private var ticker : Option[() => Boolean] = None
@@ -83,11 +83,14 @@ class CoqCompilerRunner(
             "\"" + i + "\" is not a valid part of a Coq qualified name"))
     })
 
+    val owndirArguments =
+      Seq("-I", location.removeLastSegments(1).toOSString) ++
+          (if (coqdir.length > 0) Seq("-as", coqdir.mkString(".")) else Seq())
+
     val cp = ICoqModel.toCoqProject(source.getProject)
     val flp = cp.getLoadPath.flatMap(_.asArguments)
-    val coqcp = coqc.run(
-        flp ++ Seq("-noglob", "-compile", location.toOSString),
-        _configureProcess)
+    val coqcp = coqc.run(flp ++ owndirArguments ++
+        Seq("-noglob", "-compile", location.toOSString), _configureProcess)
 
     try {
       coqcp.readAll match {
