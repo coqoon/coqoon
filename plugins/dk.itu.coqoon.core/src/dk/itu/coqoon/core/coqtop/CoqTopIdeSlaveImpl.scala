@@ -18,6 +18,10 @@ package dk.itu.coqoon.core.coqtop
 
 private class CoqProgramInstanceImpl(argv : Seq[String],
     start : ProcessBuilder => Process) extends CoqProgramInstance {
+  import dk.itu.coqoon.core.CoqoonPreferences
+  if (CoqoonPreferences.PrintIdeslaveTraffic.get)
+    println("RUN " + argv.mkString("[", ", ", "]"))
+
   protected val (in, out, pr) = {
     import java.io.{InputStreamReader, OutputStreamWriter}
 

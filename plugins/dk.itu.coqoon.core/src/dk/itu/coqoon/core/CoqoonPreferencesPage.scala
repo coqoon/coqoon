@@ -52,8 +52,8 @@ class CoqoonPreferencesPage
           CoqoonPreferences.PrintIdeslaveTraffic.ID,
           "Show -ideslave traffic (debug)", parent)
       ed.getDescriptionControl(parent).setToolTipText(
-          "Copy the XML messages sent to and from coqtop to the standard " +
-          "output stream.")
+          "Write messages to standard output when coqtop is started and " +
+          "when XML protocol messages are sent and received.")
       ed
     })
   }
