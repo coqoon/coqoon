@@ -44,7 +44,6 @@ class CoqoonPreferencesPage
       ed.getDescriptionControl(parent).setToolTipText(
           "Don't use the -R option to include project directories or " +
           "dependencies.")
-      ed.setEnabled(false, parent)
       ed
     })
     addField({
