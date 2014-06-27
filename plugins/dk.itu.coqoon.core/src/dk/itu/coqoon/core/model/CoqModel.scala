@@ -288,6 +288,8 @@ trait ICoqPackageFragment extends ICoqElement with IParent {
   override def getCorrespondingResource : Option[IFolder]
   override def getParent : Option[ICoqPackageFragmentRoot]
 
+  def getCoqdir() : Option[Seq[String]]
+
   def getVernacFile(file : IPath) : ICoqVernacFile
   def getVernacFiles : Seq[ICoqVernacFile]
   def hasVernacFiles : Boolean = (!getVernacFiles.isEmpty)

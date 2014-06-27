@@ -373,6 +373,14 @@ private class CoqPackageFragmentImpl(
     extends ParentImpl(res, parent) with ICoqPackageFragment {
   import CoqPackageFragmentImpl._
 
+  override def getCoqdir() =
+    (getCorrespondingResource.map(_.getLocation),
+     getParent.flatMap(_.getCorrespondingResource).map(_.getLocation)) match {
+      case (Some(myLoc), Some(parentLoc)) =>
+        Some(myLoc.removeFirstSegments(parentLoc.segmentCount).segments.toSeq)
+      case _ => None
+    }
+
   override def getVernacFile(file : IPath) =
     new CoqVernacFileImpl(res.map(_.getFile(file)), this)
   override def getVernacFiles =
