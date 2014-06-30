@@ -1,3 +1,65 @@
+Coqoon 0.4.5
+============
+
+30th June 2014
+
+This release dramatically improves syntax highlighting, adds support for block
+reindentation of Coq code, and (finally!) allows multiple Coq sentences to
+appear in a Kopitiam antiquote region.
+
+Other significant changes
+-------------------------
+
+* Indentation preferences
+
+  Coqoon's indentation behaviour is now _very slightly_ configurable: the
+  number of spaces per level of indentation can be changed and the automatic
+  indentation can be switched off entirely.
+
+* Proper document partitioning
+
+  Coq proof scripts are now partitioned into several different content types:
+  one for Coq, one for strings, and one for comments. Not only does this
+  make the syntax highlighting much more robust, it also makes it possible to
+  switch off code assistants that don't make sense for a given content type:
+  for example, autocompletion no longer does anything inside a comment.
+
+* Experimental namespace enforcement
+
+  Coqoon normally includes a project's files and dependencies using `Add Rec
+  LoadPath` (or the equivalent `-R` command-line option), which clutters up
+  the global namespace. This behaviour can now optionally be replaced with
+  behaviour akin to that of Scala packages.
+
+  (Note that this option is experimental, and is quite likely to change
+  between versions&mdash;or to go away entirely.)
+
+* Debugging options
+
+  Coqoon can now dump its communications with `coqtop` processes to standard
+  output.
+
+* Cleaner Coq model implementation
+
+  Coq model objects can now be created without any backing objects in the
+  workspace.
+
+* Syntax highlighting for option keywords and option names
+
+  Coqoon now recognises the "Set" and "Unset" keywords, and displays Coq
+  option names in a different colour. This change resolves issue #42.
+
+Bug fixes
+---------
+
+* Correctly handle comment tokens that begin with multiple asterisks (issue
+  #54)
+* Pressing Enter after a "Qed." shouldn't necessarily retract it (issue #57)
+* Deleting whitespace between two sentences should (potentially) cause the
+  first sentence to be retracted
+* Initialise the Coqoon preferences correctly even when the Kopitiam plugin
+  isn't present
+
 Coqoon 0.4.4.3
 ==============
 
