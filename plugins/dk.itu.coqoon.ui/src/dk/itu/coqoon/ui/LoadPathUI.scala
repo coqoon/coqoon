@@ -105,8 +105,6 @@ import org.eclipse.jface.viewers.{StyledCellLabelProvider, StyledString,
 private class LoadPathLabelProvider extends StyledCellLabelProvider {
   import LoadPathModel._
   import LoadPathLabelProvider._
-  
-  LoadPathLabelProvider.putColours
 
   override def update(cell : ViewerCell) = cell.getElement match {
     case l : LPBase =>
@@ -116,49 +114,45 @@ private class LoadPathLabelProvider extends StyledCellLabelProvider {
           s.append("Library: ")
           lpe.getProvider match {
             case Some(provider) =>
-              s.append(provider.getName,
-                  StyledString.createColorRegistryStyler(VALID, null))
+              s.append(provider.getName, ColourStyler(VALID))
             case None =>
-              s.append(lpe.identifier,
-                  StyledString.createColorRegistryStyler(ERROR, null))
+              s.append(lpe.identifier, ColourStyler(ERROR))
           }
         case SourceLPE(_, lpe) =>
           s.append("Source folder: ")
           s.append(
               lpe.folder.getProjectRelativePath.addTrailingSeparator.toString,
-              StyledString.createColorRegistryStyler(VALID, null))
+              ColourStyler(VALID))
         case DefaultOutputLPE(_, lpe) =>
           s.append("Default output folder: ")
           s.append(
               lpe.folder.getProjectRelativePath.addTrailingSeparator.toString,
-              StyledString.createColorRegistryStyler(VALID, null))
+              ColourStyler(VALID))
         case ProjectLPE(_, lpe) =>
           import dk.itu.coqoon.core.{ManifestIdentifiers => CMI}
           s.append("Project: ")
-          val styler = StyledString.createColorRegistryStyler(
-            (if (lpe.project.exists() && lpe.project.hasNature(CMI.NATURE_COQ))
-              VALID else ERROR), null)
+          val styler = ColourStyler(
+            if (lpe.project.exists() && lpe.project.hasNature(CMI.NATURE_COQ))
+              VALID else ERROR)
           s.append(lpe.project.getName.toString, styler)
         case ExternalLPE(_, lpe) =>
           import dk.itu.coqoon.core.project.CoqNature
           s.append("External development: ")
-          val styler = StyledString.createColorRegistryStyler(
-            (if (lpe.fsPath.toFile.exists) VALID else ERROR), null)
+          val styler =
+            ColourStyler(if (lpe.fsPath.toFile.exists) VALID else ERROR)
           s.append(lpe.fsPath.addTrailingSeparator.toString, styler)
 
         case NamespaceSLPE(_, lpe) =>
           s.append("Namespace: ")
-          s.append(lpe.coqdir.getOrElse("(root)"),
-              StyledString.createColorRegistryStyler(NSLOC, null))
+          s.append(lpe.coqdir.getOrElse("(root)"), ColourStyler(NSLOC))
         case LocationSLPE(_, lpe) =>
           s.append("Location: ")
-          s.append(lpe.path.toString,
-              StyledString.createColorRegistryStyler(NSLOC, null))
+          s.append(lpe.path.toString, ColourStyler(NSLOC))
         case OutputSLPE(_, lpe) =>
           s.append("Output folder: ")
           s.append(lpe.output.map(
                   _.getProjectRelativePath.toString).getOrElse("(default)"),
-              StyledString.createColorRegistryStyler(NSLOC, null))
+              ColourStyler(NSLOC))
         case SeparatorSLPE(_) =>
           s.append("--")
         case _ =>
@@ -171,18 +165,16 @@ private class LoadPathLabelProvider extends StyledCellLabelProvider {
   }
 }
 private object LoadPathLabelProvider {
-  final val VALID = "lpcp-valid"
-  final val ERROR = "lpcp-error"
-  final val NSLOC = "lpcp-nsloc"
+  import dk.itu.coqoon.ui.utilities.UIUtils.{Color => ColorI}
+  import org.eclipse.swt.graphics.{Color, TextStyle}
 
-  def putColours() = {
-    val registry = org.eclipse.jface.resource.JFaceResources.getColorRegistry
-    import org.eclipse.swt.graphics.RGB
-    registry.put(VALID, new RGB(0, 128, 0))
-    registry.put(ERROR, new RGB(255, 0, 0))
-    registry.put(NSLOC, new RGB(0, 0, 255))
+  final val VALID = ColorI(0, 128, 0)
+  final val ERROR = ColorI(255, 0, 0)
+  final val NSLOC = ColorI(0, 0, 255)
+
+  case class ColourStyler(c : Color) extends StyledString.Styler {
+    override def applyStyles(s : TextStyle) = (s.foreground = c)
   }
-  putColours()
 }
 
 private class LoadPathContentProvider extends ITreeContentProvider {
