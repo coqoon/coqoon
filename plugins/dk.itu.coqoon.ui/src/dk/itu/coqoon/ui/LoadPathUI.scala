@@ -13,41 +13,199 @@ import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot}
 
-import org.eclipse.jface.viewers.{
-  LabelProvider, ILabelProviderListener, ITreeContentProvider, Viewer}
-
-private class LoadPathLabelProvider extends LabelProvider {
-  override def getText(input : Any) = input match {
-    case q @ AbstractLoadPath(identifier) => q.getProvider.map(
-        a => a.getName).getOrElse("(missing library " + identifier + ")")
-    case _ => super.getText(input)
+protected object LoadPathModel {
+  abstract class LPBase(private val parent : Option[LPBase]) {
+    final def getParent() : Option[LPBase] = parent
+    def getChildren() : Seq[LPBase]
+    def hasChildren() : Boolean
+    def hasAncestor[A]()(implicit a0 : Manifest[A]) : Boolean =
+      getParent match {
+        case Some(f : A) => true
+        case Some(f) => f.hasAncestor[A]
+        case None => false
+      }
   }
+
+  abstract class LPNSChild(parent : Option[LPBase],
+      cl : ICoqLoadPathProvider) extends LPBase(parent) {
+    override def getChildren = {
+      var result = Seq[LPBase]()
+      var children = cl.getLoadPath
+      while (children != Nil) children = children match {
+        case Nil =>
+          Nil
+        case head :: tail =>
+          result ++= Seq(
+              NamespaceSLPE(Some(this), head),
+              LocationSLPE(Some(this), head))
+          if (tail != Nil)
+            result :+= SeparatorSLPE(Some(this))
+          tail
+      }
+      result
+    }
+    override def hasChildren = cl.getLoadPath.size > 0
+  }
+
+  abstract class LPNSNoChild(
+      parent : Option[LPBase]) extends LPBase(parent) {
+    override def getChildren = Seq()
+    override def hasChildren = false
+  }
+
+  case class AbstractLPE(parent : Option[LPBase],
+      cl : AbstractLoadPath) extends LPNSChild(parent, cl)
+
+  case class SourceLPE(
+      parent : Option[LPBase], cl : SourceLoadPath) extends LPBase(parent) {
+    override def getChildren = Seq(OutputSLPE(Some(this), cl))
+    override def hasChildren = true
+  }
+
+  case class DefaultOutputLPE(parent : Option[LPBase],
+      cl : DefaultOutputLoadPath) extends LPBase(parent) {
+    override def getChildren = Seq()
+    override def hasChildren = false
+  }
+
+  case class ProjectLPE(parent : Option[LPBase],
+      cl : ProjectLoadPath) extends LPBase(parent) {
+    override def getChildren = Option(
+        ICoqModel.toCoqProject(cl.project)).toSeq.map(
+            _.getLoadPathProviders).flatMap(translate(Some(this), _))
+    override def hasChildren = getChildren.size > 0
+  }
+
+  case class ExternalLPE(parent : Option[LPBase],
+      cl : ExternalLoadPath) extends LPNSChild(parent, cl)
+
+  case class OutputSLPE(
+      parent : Option[LPBase], cl : SourceLoadPath) extends LPNSNoChild(parent)
+  case class NamespaceSLPE(
+      parent : Option[LPBase], cl : CoqLoadPath) extends LPNSNoChild(parent)
+  case class LocationSLPE(
+      parent : Option[LPBase], cl : CoqLoadPath) extends LPNSNoChild(parent)
+  case class SeparatorSLPE(
+      parent : Option[LPBase]) extends LPNSNoChild(parent)
+
+  def translate(
+      parent : Option[LPBase], providers : Seq[ICoqLoadPathProvider]) =
+    providers.map(_ match {
+      case p : AbstractLoadPath => AbstractLPE(parent, p)
+      case p : SourceLoadPath => SourceLPE(parent, p)
+      case p : DefaultOutputLoadPath => DefaultOutputLPE(parent, p)
+      case p : ProjectLoadPath => ProjectLPE(parent, p)
+      case p : ExternalLoadPath => ExternalLPE(parent, p)
+    })
 }
 
-private class LoadPathContentProvider(
-    filter : ICoqLoadPathProvider => Boolean) extends ITreeContentProvider {
+import org.eclipse.jface.viewers.{StyledCellLabelProvider, StyledString,
+  ILabelProviderListener, ITreeContentProvider, Viewer, ViewerCell}
+
+private class LoadPathLabelProvider extends StyledCellLabelProvider {
+  import LoadPathModel._
+  import LoadPathLabelProvider._
+  
+  LoadPathLabelProvider.putColours
+
+  override def update(cell : ViewerCell) = cell.getElement match {
+    case l : LPBase =>
+      val s = new StyledString
+      l match {
+        case AbstractLPE(_, lpe) =>
+          s.append("Library: ")
+          lpe.getProvider match {
+            case Some(provider) =>
+              s.append(provider.getName,
+                  StyledString.createColorRegistryStyler(VALID, null))
+            case None =>
+              s.append(lpe.identifier,
+                  StyledString.createColorRegistryStyler(ERROR, null))
+          }
+        case SourceLPE(_, lpe) =>
+          s.append("Source folder: ")
+          s.append(
+              lpe.folder.getProjectRelativePath.addTrailingSeparator.toString,
+              StyledString.createColorRegistryStyler(VALID, null))
+        case DefaultOutputLPE(_, lpe) =>
+          s.append("Default output folder: ")
+          s.append(
+              lpe.folder.getProjectRelativePath.addTrailingSeparator.toString,
+              StyledString.createColorRegistryStyler(VALID, null))
+        case ProjectLPE(_, lpe) =>
+          import dk.itu.coqoon.core.{ManifestIdentifiers => CMI}
+          s.append("Project: ")
+          val styler = StyledString.createColorRegistryStyler(
+            (if (lpe.project.exists() && lpe.project.hasNature(CMI.NATURE_COQ))
+              VALID else ERROR), null)
+          s.append(lpe.project.getName.toString, styler)
+        case ExternalLPE(_, lpe) =>
+          import dk.itu.coqoon.core.project.CoqNature
+          s.append("External development: ")
+          val styler = StyledString.createColorRegistryStyler(
+            (if (lpe.fsPath.toFile.exists) VALID else ERROR), null)
+          s.append(lpe.fsPath.addTrailingSeparator.toString, styler)
+
+        case NamespaceSLPE(_, lpe) =>
+          s.append("Namespace: ")
+          s.append(lpe.coqdir.getOrElse("(root)"),
+              StyledString.createColorRegistryStyler(NSLOC, null))
+        case LocationSLPE(_, lpe) =>
+          s.append("Location: ")
+          s.append(lpe.path.toString,
+              StyledString.createColorRegistryStyler(NSLOC, null))
+        case OutputSLPE(_, lpe) =>
+          s.append("Output folder: ")
+          s.append(lpe.output.map(
+                  _.getProjectRelativePath.toString).getOrElse("(default)"),
+              StyledString.createColorRegistryStyler(NSLOC, null))
+        case SeparatorSLPE(_) =>
+          s.append("--")
+        case _ =>
+      }
+      cell.setText(s.getString)
+      cell.setStyleRanges(s.getStyleRanges)
+      super.update(cell)
+    case _ =>
+      super.update(cell)
+  }
+}
+private object LoadPathLabelProvider {
+  final val VALID = "lpcp-valid"
+  final val ERROR = "lpcp-error"
+  final val NSLOC = "lpcp-nsloc"
+
+  def putColours() = {
+    val registry = org.eclipse.jface.resource.JFaceResources.getColorRegistry
+    import org.eclipse.swt.graphics.RGB
+    registry.put(VALID, new RGB(0, 128, 0))
+    registry.put(ERROR, new RGB(255, 0, 0))
+    registry.put(NSLOC, new RGB(0, 0, 255))
+  }
+  putColours()
+}
+
+private class LoadPathContentProvider extends ITreeContentProvider {
+  import LoadPathModel._
+
   override def dispose = ()
 
   override def inputChanged(viewer : Viewer, oldInput : Any, newInput : Any) =
     viewer.refresh
 
   override def getElements(input : Any) = input match {
-    case c : CacheSlot[_] => getElements(c.get)
-    case a : Seq[_] => a.flatMap(_ match {
-      case q : ICoqLoadPathProvider if filter(q) => Some(q)
-      case _ => None
-    }).toArray
-    case _ => Array()
+    case s : Seq[ICoqLoadPathProvider] =>
+      translate(None, s).toArray
+    case _ => Array.empty
   }
 
-  override def getChildren(parent : Any) = parent match {
-    case a : ICoqLoadPathProvider => a.getLoadPath.toArray
-    case _ => Array()
-  }
+  override def getChildren(parent : Any) =
+    TryCast[LPBase](parent).toSeq.flatMap(_.getChildren).toArray
 
-  override def getParent(child : Any) = null
+  override def getParent(child : Any) =
+    TryCast[LPBase](child).flatMap(_.getParent).getOrElse(null)
   override def hasChildren(parent : Any) =
-    (TryCast[ICoqLoadPathProvider](parent) != None)
+    TryCast[LPBase](parent).map(_.hasChildren).getOrElse(false)
 }
 
 import org.eclipse.swt.SWT
@@ -85,20 +243,13 @@ class LoadPathConfigurationPage
     import org.eclipse.jface.window.Window
     import org.eclipse.jface.viewers._
 
-    val folder = new TabFolder(c, SWT.NONE)
-
-    val t1 = new TabItem(folder, SWT.NONE)
-    t1.setText("Source")
-
-    val c1 = new Composite(folder, SWT.NONE)
-    t1.setControl(c1)
+    val c1 = new Composite(c, SWT.NONE)
     c1.setLayout(GridLayoutFactory.swtDefaults().numColumns(2).create)
 
     val tv1 = new TreeViewer(c1)
     tv1.setLabelProvider(new LoadPathLabelProvider)
-    tv1.setContentProvider(new LoadPathContentProvider(
-        a => a.isInstanceOf[SourceLoadPath]))
-    tv1.setInput(loadPath)
+    tv1.setContentProvider(new LoadPathContentProvider)
+    tv1.setInput(loadPath.get)
     tv1.getControl.setLayoutData(GridDataFactory.swtDefaults().
         align(SWT.FILL, SWT.FILL).hint(0, 0).grab(true, true).create)
 
@@ -151,150 +302,6 @@ class LoadPathConfigurationPage
         tv1.refresh()
       }
     })
-
-    val oll = new Label(c1, SWT.NONE)
-    oll.setLayoutData(GridDataFactory.swtDefaults().
-        align(SWT.FILL, SWT.TOP).span(2, 1).create)
-    oll.setText("Default output location:")
-
-    val olt = new Text(c1, SWT.BORDER)
-    olt.setLayoutData(GridDataFactory.swtDefaults().
-        align(SWT.FILL, SWT.TOP).create)
-
-    val olb = new Button(c1, SWT.NONE)
-    olb.setLayoutData(GridDataFactory.swtDefaults().
-        align(SWT.FILL, SWT.TOP).create)
-    olb.setText("Browse...")
-
-    val t2 = new TabItem(folder, SWT.NONE)
-    t2.setText("Projects")
-
-    val c2 = new Composite(folder, SWT.NONE)
-    t2.setControl(c2)
-    c2.setLayout(GridLayoutFactory.swtDefaults().numColumns(2).create)
-
-    val tv2 = new TreeViewer(c2)
-    tv2.setLabelProvider(new LoadPathLabelProvider)
-    tv2.setContentProvider(new LoadPathContentProvider(
-        a => a.isInstanceOf[ProjectLoadPath]))
-    tv2.setInput(loadPath)
-    tv2.getControl.setLayoutData(GridDataFactory.swtDefaults().
-        align(SWT.FILL, SWT.FILL).hint(0, 0).grab(true, true).create)
-
-    val c2r = new Composite(c2, SWT.NONE)
-    c2r.setLayout(RowLayoutFactory.swtDefaults().
-        `type`(SWT.VERTICAL).fill(true).create())
-    c2r.setLayoutData(GridDataFactory.swtDefaults().
-        align(SWT.FILL, SWT.TOP).create)
-
-    val apb = new Button(c2r, SWT.NONE)
-    apb.setText("Add Project...")
-    apb.addSelectionListener(new SelectionAdapter {
-      override def widgetSelected(ev : SelectionEvent) = {
-        val dialog = UIUtils.createWorkspaceElementDialog(getShell)
-        dialog.setInput(getElement.getWorkspace.getRoot)
-        dialog.addFilter(MultiFilter(
-            new OnlyProjectsFilter, new OmitResourcesFilter(getElement)))
-        dialog.setValidator(new SelectionValidator {
-          override def check(selection : Object) : Option[String] = {
-            for (i <- loadPath.get;
-                 j <- TryCast[ProjectLoadPath](i)
-                     if j.project == selection)
-              return Some(j.project.getName + " is already in the load path")
-            None
-          }
-        })
-        dialog.setAllowMultiple(false)
-        if (dialog.open == Window.OK) {
-          Option(dialog.getFirstResult) match {
-            case Some(p : IProject) =>
-              loadPath.get += new ProjectLoadPath(p)
-              tv2.refresh()
-            case _ =>
-          }
-        }
-      }
-    })
-    new Label(c2r, SWT.SEPARATOR | SWT.HORIZONTAL)
-    val dpb = new Button(c2r, SWT.NONE)
-    dpb.setText("Delete")
-    dpb.addSelectionListener(new SelectionAdapter {
-      import scala.collection.JavaConversions._
-      override def widgetSelected(ev : SelectionEvent) = {
-        for (i <- tv2.getSelection.asInstanceOf[TreeSelection].iterator)
-          Option(i) match {
-            case Some(plp : ProjectLoadPath) =>
-              loadPath.get -= plp
-            case _ =>
-          }
-        tv2.refresh()
-      }
-    })
-
-    val t3 = new TabItem(folder, SWT.NONE)
-    t3.setText("Libraries")
-
-    val c3 = new Composite(folder, SWT.NONE)
-    t3.setControl(c3)
-    c3.setLayout(GridLayoutFactory.swtDefaults().numColumns(2).create)
-
-    val tv3 = new TreeViewer(c3)
-    tv3.setLabelProvider(new LoadPathLabelProvider)
-    tv3.setContentProvider(new LoadPathContentProvider(
-        a => a.isInstanceOf[ExternalLoadPath] ||
-            a.isInstanceOf[AbstractLoadPath]))
-    tv3.setInput(loadPath)
-    tv3.getControl.setLayoutData(GridDataFactory.swtDefaults().
-        align(SWT.FILL, SWT.FILL).hint(0, 0).grab(true, true).create)
-
-    val c3r = new Composite(c3, SWT.NONE)
-    c3r.setLayout(RowLayoutFactory.swtDefaults().
-        `type`(SWT.VERTICAL).fill(true).create())
-    c3r.setLayoutData(GridDataFactory.swtDefaults().
-        align(SWT.FILL, SWT.TOP).create)
-
-    val alb = new Button(c3r, SWT.NONE)
-    alb.setText("Add Library...")
-    alb.addSelectionListener(new SelectionAdapter {
-      import org.eclipse.swt.widgets.DirectoryDialog
-      import org.eclipse.core.runtime.Path
-      override def widgetSelected(ev : SelectionEvent) : Unit = {
-        val dialog = new DirectoryDialog(getShell)
-        Option(dialog.open).map(f => new Path(f)) match {
-          case Some(p) =>
-            for (i <- loadPath.get;
-                 j <- TryCast[ExternalLoadPath](i)
-                     if j.fsPath == p)
-              return
-            loadPath.get += new ExternalLoadPath(p, None)
-            tv3.refresh()
-          case _ =>
-        }
-      }
-    })
-
-    val aslb = new Button(c3r, SWT.NONE)
-    aslb.setText("Add System Library...")
-    aslb.setEnabled(false)
-    new Label(c3r, SWT.SEPARATOR | SWT.HORIZONTAL)
-    val dlb = new Button(c3r, SWT.NONE)
-    dlb.setText("Delete")
-    dlb.addSelectionListener(new SelectionAdapter {
-      import scala.collection.JavaConversions._
-      override def widgetSelected(ev : SelectionEvent) = {
-        for (i <- tv3.getSelection.asInstanceOf[TreeSelection].iterator)
-          Option(i) match {
-            case Some(elp : ExternalLoadPath) =>
-              loadPath.get -= elp
-            /* case Some(alp : AbstractLoadPath) =>
-              loadPath.get -= alp */
-            case _ =>
-          }
-        tv3.refresh()
-      }
-    })
-
-    folder.pack
-    folder
+    c1
   }
 }
