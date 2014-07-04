@@ -236,23 +236,25 @@ class LoadPathConfigurationPage
     import org.eclipse.jface.viewers._
 
     val c1 = new Composite(c, SWT.NONE)
-    c1.setLayout(GridLayoutFactory.swtDefaults().numColumns(2).create)
+    c1.setLayout(GridLayoutFactory.fillDefaults.numColumns(2).create)
 
     val tv1 = new TreeViewer(c1)
     tv1.setLabelProvider(new LoadPathLabelProvider)
     tv1.setContentProvider(new LoadPathContentProvider)
     tv1.setInput(loadPath.get)
     tv1.getControl.setLayoutData(GridDataFactory.swtDefaults().
-        align(SWT.FILL, SWT.FILL).hint(0, 0).grab(true, true).create)
+        align(SWT.FILL, SWT.FILL).grab(true, true).create)
 
     val c1r = new Composite(c1, SWT.NONE)
-    c1r.setLayout(RowLayoutFactory.swtDefaults().
-        `type`(SWT.VERTICAL).fill(true).create())
+    c1r.setLayout(GridLayoutFactory.swtDefaults().
+        numColumns(2).equalWidth(true).create)
     c1r.setLayoutData(GridDataFactory.swtDefaults().
-        align(SWT.FILL, SWT.TOP).create)
+        align(SWT.FILL, SWT.FILL).create)
 
     val afb = new Button(c1r, SWT.NONE)
-    afb.setText("Add Folder...")
+    afb.setText("Add...")
+    afb.setLayoutData(GridDataFactory.swtDefaults.span(2, 1).
+        align(SWT.FILL, SWT.FILL).create)
     afb.addSelectionListener(new SelectionAdapter {
       override def widgetSelected(ev : SelectionEvent) = {
         val dialog = UIUtils.createWorkspaceElementDialog(getShell)
@@ -279,9 +281,15 @@ class LoadPathConfigurationPage
         }
       }
     })
-    new Label(c1r, SWT.SEPARATOR | SWT.HORIZONTAL)
+
+    new Label(c1r, SWT.SEPARATOR | SWT.HORIZONTAL).setLayoutData(
+        GridDataFactory.swtDefaults.
+            align(SWT.FILL, SWT.FILL).span(2, 1).create)
+
     val dfb = new Button(c1r, SWT.NONE)
-    dfb.setText("Delete")
+    dfb.setText("Remove")
+    dfb.setLayoutData(GridDataFactory.swtDefaults.span(2, 1).
+        align(SWT.FILL, SWT.FILL).create)
     dfb.addSelectionListener(new SelectionAdapter {
       import scala.collection.JavaConversions._
       override def widgetSelected(ev : SelectionEvent) = {
@@ -294,6 +302,29 @@ class LoadPathConfigurationPage
         tv1.refresh()
       }
     })
+    val edb = new Button(c1r, SWT.NONE)
+    edb.setText("Edit...")
+    edb.setLayoutData(GridDataFactory.swtDefaults.span(2, 1).
+        align(SWT.FILL, SWT.FILL).create)
+    val upb = new Button(c1r, SWT.NONE)
+    upb.setText("Up")
+    upb.setLayoutData(GridDataFactory.swtDefaults.
+        align(SWT.FILL, SWT.FILL).create)
+    val dob = new Button(c1r, SWT.NONE)
+    dob.setText("Down")
+    dob.setLayoutData(GridDataFactory.swtDefaults.
+        align(SWT.FILL, SWT.FILL).create)
+
+    new Label(c1r, SWT.SEPARATOR | SWT.HORIZONTAL).setLayoutData(
+        GridDataFactory.swtDefaults.align(
+            SWT.FILL, SWT.FILL).span(2, 1).create)
+
+    val inl = new Label(c1r, SWT.CENTER | SWT.READ_ONLY | SWT.WRAP)
+    inl.setLayoutData(GridDataFactory.swtDefaults.hint(100, SWT.DEFAULT).align(
+        SWT.FILL, SWT.BEGINNING).grab(false, true).span(2, 1).create)
+    inl.setText("Higher entries take priority over lower ones. " +
+        "Use the Up and Down buttons to reorder entries.")
+
     c1
   }
 }
