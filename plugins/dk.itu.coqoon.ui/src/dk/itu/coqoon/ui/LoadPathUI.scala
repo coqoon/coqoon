@@ -213,6 +213,8 @@ import org.eclipse.jface.viewers.TreeViewer
 
 class LoadPathConfigurationPage
     extends PreferencePage with IWorkbenchPropertyPage {
+  import LoadPathModel._
+
   private var loadPath = CacheSlot(actualLoadPath.toBuffer)
   private def actualLoadPath() = TryCast[IProject](element).map(
       ICoqModel.toCoqProject).map(_.getLoadPathProviders).getOrElse(Nil)
@@ -240,7 +242,7 @@ class LoadPathConfigurationPage
     val c1 = new Composite(c, SWT.NONE)
     c1.setLayout(GridLayoutFactory.fillDefaults.numColumns(2).create)
 
-    val tv1 = new TreeViewer(c1)
+    val tv1 = new TreeViewer(c1, SWT.SINGLE)
     tv1.setLabelProvider(new LoadPathLabelProvider)
     tv1.setContentProvider(new LoadPathContentProvider)
     tv1.setInput(loadPath.get)
@@ -295,15 +297,16 @@ class LoadPathConfigurationPage
     dfb.addSelectionListener(new SelectionAdapter {
       import scala.collection.JavaConversions._
       override def widgetSelected(ev : SelectionEvent) = {
-        for (i <- tv1.getSelection.asInstanceOf[TreeSelection].iterator)
-          Option(i) match {
-            case Some(slp : SourceLoadPath) =>
-              loadPath.get -= slp
-            case _ =>
-          }
+        Option(tv1.getSelection.
+            asInstanceOf[TreeSelection].getFirstElement) match {
+          case Some(p : LPProvider) =>
+            loadPath.get.remove(p.getIndex)
+          case _ =>
+        }
         tv1.refresh()
       }
     })
+
     val edb = new Button(c1r, SWT.NONE)
     edb.setText("Edit...")
     edb.setLayoutData(GridDataFactory.swtDefaults.span(2, 1).
