@@ -89,16 +89,20 @@ protected object LoadPathModel {
   case class SeparatorSLPE(
       parent : Option[LPProvider]) extends LPBase(parent)
 
-  def translate(
-      parent : Option[LPProvider], providers : Seq[ICoqLoadPathProvider]) =
+  def translate(parent : Option[LPProvider],
+      providers : Seq[ICoqLoadPathProvider]) : Seq[LPProvider] =
     for ((provider, index) <- providers.zipWithIndex)
-      yield provider match {
-        case p : AbstractLoadPath => AbstractLPE(parent, p, index)
-        case p : SourceLoadPath => SourceLPE(parent, p, index)
-        case p : DefaultOutputLoadPath => DefaultOutputLPE(parent, p, index)
-        case p : ProjectLoadPath => ProjectLPE(parent, p, index)
-        case p : ExternalLoadPath => ExternalLPE(parent, p, index)
-      }
+      yield translate(parent, provider, index)
+
+  def translate(parent : Option[LPProvider],
+      provider : ICoqLoadPathProvider, index : Int) : LPProvider =
+    provider match {
+      case p : AbstractLoadPath => AbstractLPE(parent, p, index)
+      case p : SourceLoadPath => SourceLPE(parent, p, index)
+      case p : DefaultOutputLoadPath => DefaultOutputLPE(parent, p, index)
+      case p : ProjectLoadPath => ProjectLPE(parent, p, index)
+      case p : ExternalLoadPath => ExternalLPE(parent, p, index)
+    }
 }
 
 import org.eclipse.jface.viewers.{StyledCellLabelProvider, StyledString,
@@ -242,7 +246,7 @@ class LoadPathConfigurationPage
     val c1 = new Composite(c, SWT.NONE)
     c1.setLayout(GridLayoutFactory.fillDefaults.numColumns(2).create)
 
-    val tv1 = new TreeViewer(c1, SWT.SINGLE)
+    val tv1 = new TreeViewer(c1, SWT.SINGLE | SWT.BORDER)
     tv1.setLabelProvider(new LoadPathLabelProvider)
     tv1.setContentProvider(new LoadPathContentProvider)
     tv1.setInput(loadPath.get)
@@ -301,9 +305,9 @@ class LoadPathConfigurationPage
             asInstanceOf[TreeSelection].getFirstElement) match {
           case Some(p : LPProvider) =>
             loadPath.get.remove(p.getIndex)
+            tv1.refresh()
           case _ =>
         }
-        tv1.refresh()
       }
     })
 
@@ -311,14 +315,50 @@ class LoadPathConfigurationPage
     edb.setText("Edit...")
     edb.setLayoutData(GridDataFactory.swtDefaults.span(2, 1).
         align(SWT.FILL, SWT.FILL).create)
+
     val upb = new Button(c1r, SWT.NONE)
     upb.setText("Up")
     upb.setLayoutData(GridDataFactory.swtDefaults.
         align(SWT.FILL, SWT.FILL).create)
+    upb.addSelectionListener(new SelectionAdapter {
+      import scala.collection.JavaConversions._
+      override def widgetSelected(ev : SelectionEvent) = {
+        Option(tv1.getSelection.
+            asInstanceOf[TreeSelection].getFirstElement) match {
+          case Some(p : LPProvider)
+              if p.getIndex > 0 =>
+            val element = loadPath.get.remove(p.getIndex)
+            loadPath.get.insert(p.getIndex - 1, element)
+            tv1.refresh()
+            tv1.setSelection(new TreeSelection(new TreePath(Array(
+                loadPath.get,
+                translate(None, element, p.getIndex - 1)))))
+          case _ =>
+        }
+      }
+    })
+
     val dob = new Button(c1r, SWT.NONE)
     dob.setText("Down")
     dob.setLayoutData(GridDataFactory.swtDefaults.
         align(SWT.FILL, SWT.FILL).create)
+    dob.addSelectionListener(new SelectionAdapter {
+      import scala.collection.JavaConversions._
+      override def widgetSelected(ev : SelectionEvent) = {
+        Option(tv1.getSelection.
+            asInstanceOf[TreeSelection].getFirstElement) match {
+          case Some(p : LPProvider)
+              if p.getIndex < (loadPath.get.length - 1) =>
+            val element = loadPath.get.remove(p.getIndex)
+            loadPath.get.insert(p.getIndex + 1, element)
+            tv1.refresh()
+            tv1.setSelection(new TreeSelection(new TreePath(Array(
+                loadPath.get,
+                translate(None, element, p.getIndex + 1)))))
+          case _ =>
+        }
+      }
+    })
 
     new Label(c1r, SWT.SEPARATOR | SWT.HORIZONTAL).setLayoutData(
         GridDataFactory.swtDefaults.align(
