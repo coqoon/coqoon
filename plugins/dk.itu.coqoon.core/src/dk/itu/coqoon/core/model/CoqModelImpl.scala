@@ -353,7 +353,7 @@ private class CoqPackageFragmentRootImpl(
     extends ParentImpl(res, parent) with ICoqPackageFragmentRoot {
   private def gpfRecurse(res : IFolder) : List[ICoqPackageFragment] = {
     var results = List[ICoqPackageFragment]()
-    if (res.exists) {
+    if (res.exists() && res.getName.matches("^[a-zA-Z0-9-_]+$")) {
       results = results :+ new CoqPackageFragmentImpl(Some(res), this)
       for (i <- res.members; j <- TryCast[IFolder](i))
         results = results ++ gpfRecurse(j)
