@@ -12,8 +12,8 @@ import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot}
 
-import org.eclipse.jface.viewers.{StyledCellLabelProvider, StyledString,
-  ILabelProviderListener, ITreeContentProvider, Viewer, ViewerCell}
+import org.eclipse.jface.wizard._
+import org.eclipse.jface.viewers._
 
 import org.eclipse.swt.SWT
 import org.eclipse.swt.layout.FillLayout
@@ -22,9 +22,6 @@ import org.eclipse.swt.widgets.{
 import org.eclipse.core.runtime.IAdaptable
 import org.eclipse.ui.IWorkbenchPropertyPage
 import org.eclipse.jface.preference.PreferencePage
-import org.eclipse.jface.wizard._
-import org.eclipse.jface.viewers.TreeViewer
-import org.eclipse.jface.viewers.ISelectionChangedListener
 
 protected object LoadPathModel {
   abstract class LPBase(private val parent : Option[LPProvider]) {
@@ -242,7 +239,6 @@ class LoadPathConfigurationPage
     import org.eclipse.core.resources.IFolder
     import org.eclipse.jface.layout._
     import org.eclipse.jface.window.Window
-    import org.eclipse.jface.viewers._
 
     val c1 = new Composite(c, SWT.NONE)
     c1.setLayout(GridLayoutFactory.fillDefaults.numColumns(2).create)
@@ -265,8 +261,13 @@ class LoadPathConfigurationPage
     afb.setLayoutData(GridDataFactory.swtDefaults.span(2, 1).
         align(SWT.FILL, SWT.FILL).create)
     afb.addSelectionListener(new SelectionAdapter {
-      override def widgetSelected(ev : SelectionEvent) =
-        new WizardDialog(c.getShell, new NewLoadPathWizard).open()
+      override def widgetSelected(ev : SelectionEvent) = {
+        val wiz = new NewLoadPathWizard
+        if (new WizardDialog(c.getShell, wiz).open == Window.OK) {
+          wiz.getResult.foreach(loadPath.get.append(_))
+          tv1.refresh()
+        }
+      }
     })
 
     new Label(c1r, SWT.SEPARATOR | SWT.HORIZONTAL).setLayoutData(
@@ -358,9 +359,18 @@ class NewLoadPathWizard extends Wizard {
   addPage(selectionPage)
   setForcePreviousAndNextButtons(true)
 
+  private var result : Option[ICoqLoadPathProvider] = None
+  def getResult() = result
+
   override def canFinish = selectionPage.isPageComplete &&
       Option(selectionPage.getNextPage).exists(_.isPageComplete)
-  override def performFinish = true
+  override def performFinish = {
+    result =
+      if (canFinish()) {
+        selectionPage.getNextPage.createLoadPathEntry
+      } else None
+    canFinish
+  }
 }
 
 class NLPSelectionPage extends WizardPage(
@@ -373,11 +383,9 @@ class NLPSelectionPage extends WizardPage(
       new NLPExternalEntryPage)
 
   private var nextPage : Option[NLPWizardPage] = None
-  override def getNextPage = nextPage.orNull
+  override def getNextPage : NLPWizardPage = nextPage.orNull
 
   override def createControl(parent : Composite) = {
-    import org.eclipse.jface.viewers._
-
     val lv = new ListViewer(parent, SWT.BORDER)
     lv.setContentProvider(new IStructuredContentProvider {
       override def dispose = ()
@@ -420,7 +428,6 @@ class NLPAbstractEntryPage extends NLPWizardPage(
 
   override def createControl(parent : Composite) = {
     import org.eclipse.jface.layout.{GridDataFactory => GDF, GridLayoutFactory}
-    import org.eclipse.jface.viewers.ListViewer
     val c = new Composite(parent, SWT.NONE)
     c.setLayout(GridLayoutFactory.fillDefaults.create)
 
@@ -435,7 +442,7 @@ class NLPAbstractEntryPage extends NLPWizardPage(
     b1.setText("Select from a list of available abstract dependencies")
     b1.setLayoutData(GDF.fillDefaults.grab(true, false).
         align(SWT.FILL, SWT.FILL).create)
-    val lv = new ListViewer(c, SWT.BORDER)
+    val lv = new ListViewer(c, SWT.SINGLE | SWT.BORDER)
     lv.getControl.setLayoutData(
         GDF.fillDefaults.grab(true, true).align(SWT.FILL, SWT.FILL).create)
     lv.setContentProvider(new MonomaniacalContentProvider[
@@ -444,10 +451,12 @@ class NLPAbstractEntryPage extends NLPWizardPage(
         input.getProviders
     })
     lv.setLabelProvider(
-        new MonomaniacalLabelProvider[AbstractLoadPathProvider] {
-      override def actuallyGetText(element : AbstractLoadPathProvider) =
-        element.getName
-      override def actuallyGetImage(element : AbstractLoadPathProvider) =
+        new MonomaniacalLabelProvider[(String, AbstractLoadPathProvider)] {
+      override def actuallyGetText(
+          element : (String, AbstractLoadPathProvider)) =
+        element._2.getName
+      override def actuallyGetImage(
+          element : (String, AbstractLoadPathProvider)) =
         (UIUtils.getWorkbench.getSharedImages.getImage(
             org.eclipse.ui.ISharedImages.IMG_OBJ_FOLDER), false)
     })
@@ -457,8 +466,27 @@ class NLPAbstractEntryPage extends NLPWizardPage(
     b2.setText("Manually specify an abstract dependency")
     b2.setLayoutData(
         GDF.fillDefaults.grab(true, false).align(SWT.FILL, SWT.FILL).create)
-    new Text(c, SWT.BORDER).setLayoutData(
+
+    import org.eclipse.swt.events.{ModifyEvent, ModifyListener}
+    val at = new Text(c, SWT.BORDER)
+    at.setLayoutData(
         GDF.fillDefaults.grab(true, false).align(SWT.FILL, SWT.FILL).create)
+    at.addModifyListener(new ModifyListener {
+      override def modifyText(ev : ModifyEvent) = {
+        identifier = Option(at.getText).map(_.trim).filter(_.length > 0)
+        getContainer.updateButtons
+      }
+    })
+
+    lv.addSelectionChangedListener(new ISelectionChangedListener {
+      override def selectionChanged(ev : SelectionChangedEvent) =
+        TryCast[IStructuredSelection](ev.getSelection).map(
+            _.getFirstElement) match {
+          case Some((identifier : String, _)) =>
+            at.setText(identifier)
+          case _ =>
+        }
+    })
 
     setControl(c)
   }
@@ -503,8 +531,7 @@ class NLPProjectEntryPage extends NLPWizardPage(
     import org.eclipse.ui.model.{
       WorkbenchLabelProvider, WorkbenchContentProvider}
     import org.eclipse.core.resources.ResourcesPlugin
-    import org.eclipse.jface.viewers.ViewerFilter
-    val tv = new TreeViewer(c)
+    val tv = new TreeViewer(c, SWT.BORDER | SWT.SINGLE)
     tv.setLabelProvider(
         WorkbenchLabelProvider.getDecoratingWorkbenchLabelProvider())
     tv.setContentProvider(new WorkbenchContentProvider {
@@ -525,6 +552,14 @@ class NLPProjectEntryPage extends NLPWizardPage(
             true
           case _ => false
         }
+    })
+    tv.addSelectionChangedListener(new ISelectionChangedListener {
+      override def selectionChanged(ev : SelectionChangedEvent) = {
+        val p = TryCast[IStructuredSelection](ev.getSelection).map(
+            _.getFirstElement).flatMap(TryCast[IProject])
+        project = p
+        getContainer.updateButtons()
+      }
     })
 
     setControl(c)
@@ -556,8 +591,6 @@ class NLPExternalEntryPage extends NLPWizardPage(
   }
 }
 
-import org.eclipse.jface.viewers.IStructuredContentProvider
-
 abstract class MonomaniacalContentProvider[A <: Viewer, I <: AnyRef](
     implicit a0 : Manifest[A], a1 : Manifest[I])
         extends IStructuredContentProvider {
@@ -582,8 +615,6 @@ abstract class MonomaniacalContentProvider[A <: Viewer, I <: AnyRef](
   }
   def actuallyGetElements(input : I) : Seq[AnyRef]
 }
-
-import org.eclipse.jface.viewers.LabelProvider
 
 class MonomaniacalLabelProvider[I <: AnyRef](
     implicit a0 : Manifest[I]) extends LabelProvider {
