@@ -8,10 +8,23 @@
 package dk.itu.coqoon.ui
 
 import org.eclipse.core.resources.IProject
-
 import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot}
+
+import org.eclipse.jface.viewers.{StyledCellLabelProvider, StyledString,
+  ILabelProviderListener, ITreeContentProvider, Viewer, ViewerCell}
+
+import org.eclipse.swt.SWT
+import org.eclipse.swt.layout.FillLayout
+import org.eclipse.swt.widgets.{
+  Text, Composite, Button, Label, TabFolder, TabItem}
+import org.eclipse.core.runtime.IAdaptable
+import org.eclipse.ui.IWorkbenchPropertyPage
+import org.eclipse.jface.preference.PreferencePage
+import org.eclipse.jface.wizard._
+import org.eclipse.jface.viewers.TreeViewer
+import org.eclipse.jface.viewers.ISelectionChangedListener
 
 protected object LoadPathModel {
   abstract class LPBase(private val parent : Option[LPProvider]) {
@@ -104,9 +117,6 @@ protected object LoadPathModel {
       case p : ExternalLoadPath => ExternalLPE(parent, p, index)
     }
 }
-
-import org.eclipse.jface.viewers.{StyledCellLabelProvider, StyledString,
-  ILabelProviderListener, ITreeContentProvider, Viewer, ViewerCell}
 
 private class LoadPathLabelProvider extends StyledCellLabelProvider {
   import LoadPathModel._
@@ -206,15 +216,6 @@ private class LoadPathContentProvider extends ITreeContentProvider {
     TryCast[LPBase](parent).map(_.hasChildren).getOrElse(false)
 }
 
-import org.eclipse.swt.SWT
-import org.eclipse.swt.layout.FillLayout
-import org.eclipse.swt.widgets.{
-  Text, Composite, Button, Label, TabFolder, TabItem}
-import org.eclipse.core.runtime.IAdaptable
-import org.eclipse.ui.IWorkbenchPropertyPage
-import org.eclipse.jface.preference.PreferencePage
-import org.eclipse.jface.viewers.TreeViewer
-
 class LoadPathConfigurationPage
     extends PreferencePage with IWorkbenchPropertyPage {
   import LoadPathModel._
@@ -264,30 +265,8 @@ class LoadPathConfigurationPage
     afb.setLayoutData(GridDataFactory.swtDefaults.span(2, 1).
         align(SWT.FILL, SWT.FILL).create)
     afb.addSelectionListener(new SelectionAdapter {
-      override def widgetSelected(ev : SelectionEvent) = {
-        val dialog = UIUtils.createWorkspaceElementDialog(getShell)
-        dialog.setInput(getElement)
-        dialog.addFilter(MultiFilter(new OnlyFoldersFilter,
-            new NoOutputFoldersFilter, new NoHiddenResourcesFilter))
-        dialog.setValidator(new SelectionValidator {
-          override def check(selection : Object) : Option[String] = {
-            for (i <- loadPath.get;
-                 j <- TryCast[SourceLoadPath](i)
-                     if j.folder == selection)
-              return Some(j.folder.getName + " is already in the load path")
-            None
-          }
-        })
-        dialog.setAllowMultiple(false)
-        if (dialog.open == Window.OK) {
-          Option(dialog.getFirstResult) match {
-            case Some(f : IFolder) =>
-              loadPath.get += new SourceLoadPath(f, None)
-              tv1.refresh()
-            case _ =>
-          }
-        }
-      }
+      override def widgetSelected(ev : SelectionEvent) =
+        new WizardDialog(c.getShell, new NewLoadPathWizard).open()
     })
 
     new Label(c1r, SWT.SEPARATOR | SWT.HORIZONTAL).setLayoutData(
@@ -372,4 +351,267 @@ class LoadPathConfigurationPage
 
     c1
   }
+}
+
+class NewLoadPathWizard extends Wizard {
+  private val selectionPage = new NLPSelectionPage
+  addPage(selectionPage)
+  setForcePreviousAndNextButtons(true)
+
+  override def canFinish = selectionPage.isPageComplete &&
+      Option(selectionPage.getNextPage).exists(_.isPageComplete)
+  override def performFinish = true
+}
+
+class NLPSelectionPage extends WizardPage(
+    "nlpSP", "Selection", null) {
+  setPageComplete(false)
+  val subpages = Array(
+      new NLPAbstractEntryPage,
+      new NLPSourceEntryPage,
+      new NLPProjectEntryPage,
+      new NLPExternalEntryPage)
+
+  private var nextPage : Option[NLPWizardPage] = None
+  override def getNextPage = nextPage.orNull
+
+  override def createControl(parent : Composite) = {
+    import org.eclipse.jface.viewers._
+
+    val lv = new ListViewer(parent, SWT.BORDER)
+    lv.setContentProvider(new IStructuredContentProvider {
+      override def dispose = ()
+      override def inputChanged(v : Viewer, o : Any, n : Any) = ()
+      override def getElements(input : Any) = input match {
+        case a : Array[AnyRef] => a
+        case _ => Array.empty
+      }
+    })
+    lv.addSelectionChangedListener(new ISelectionChangedListener {
+      override def selectionChanged(ev : SelectionChangedEvent) = {
+        nextPage = TryCast[IStructuredSelection](ev.getSelection).map(
+            _.getFirstElement).flatMap(TryCast[NLPWizardPage])
+        nextPage.foreach(_.setWizard(getWizard))
+        setErrorMessage("Aaaaaargh, next page is now " + nextPage)
+        setPageComplete(nextPage != None)
+        getContainer.updateButtons()
+      }
+    })
+    lv.setInput(subpages)
+    setControl(lv.getControl)
+  }
+}
+
+import org.eclipse.jface.resource.ImageDescriptor
+
+abstract class NLPWizardPage(
+    id : String, name : String, descriptor : ImageDescriptor = null)
+        extends WizardPage(id, name, descriptor) {
+  /* Calling this method should be basically free, so it also serves as the
+   * implementation of isPageComplete */
+  def createLoadPathEntry() : Option[ICoqLoadPathProvider]
+  override def isPageComplete() = (createLoadPathEntry != None)
+}
+
+class NLPAbstractEntryPage extends NLPWizardPage(
+    "nlpAEP", "Abstract") {
+  private var identifier : Option[String] = None
+  override def createLoadPathEntry = identifier.map(AbstractLoadPath)
+
+  override def createControl(parent : Composite) = {
+    import org.eclipse.jface.layout.{GridDataFactory => GDF, GridLayoutFactory}
+    import org.eclipse.jface.viewers.ListViewer
+    val c = new Composite(parent, SWT.NONE)
+    c.setLayout(GridLayoutFactory.fillDefaults.create)
+
+    val description = new Label(c, SWT.WRAP)
+    description.setText(
+        "Abstract dependencies are used to specify complex dependencies " +
+        "whose paths and command-line options would otherwise be unportable.")
+    description.setLayoutData(GDF.fillDefaults.grab(true, false).
+        align(SWT.FILL, SWT.FILL).hint(100, SWT.DEFAULT).create)
+
+    val b1 = new Button(c, SWT.RADIO)
+    b1.setText("Select from a list of available abstract dependencies")
+    b1.setLayoutData(GDF.fillDefaults.grab(true, false).
+        align(SWT.FILL, SWT.FILL).create)
+    val lv = new ListViewer(c, SWT.BORDER)
+    lv.getControl.setLayoutData(
+        GDF.fillDefaults.grab(true, true).align(SWT.FILL, SWT.FILL).create)
+    lv.setContentProvider(new MonomaniacalContentProvider[
+        ListViewer, AbstractLoadPathManager] {
+      override def actuallyGetElements(input : AbstractLoadPathManager) =
+        input.getProviders
+    })
+    lv.setLabelProvider(
+        new MonomaniacalLabelProvider[AbstractLoadPathProvider] {
+      override def actuallyGetText(element : AbstractLoadPathProvider) =
+        element.getName
+      override def actuallyGetImage(element : AbstractLoadPathProvider) =
+        (UIUtils.getWorkbench.getSharedImages.getImage(
+            org.eclipse.ui.ISharedImages.IMG_OBJ_FOLDER), false)
+    })
+    lv.setInput(AbstractLoadPathManager.getInstance)
+
+    val b2 = new Button(c, SWT.RADIO)
+    b2.setText("Manually specify an abstract dependency")
+    b2.setLayoutData(
+        GDF.fillDefaults.grab(true, false).align(SWT.FILL, SWT.FILL).create)
+    new Text(c, SWT.BORDER).setLayoutData(
+        GDF.fillDefaults.grab(true, false).align(SWT.FILL, SWT.FILL).create)
+
+    setControl(c)
+  }
+}
+
+class NLPSourceEntryPage extends NLPWizardPage(
+    "nlpSEP", "Source folder") {
+  import org.eclipse.core.resources.IFolder
+  private var folder : Option[IFolder] = None
+  private var output : Option[IFolder] = None
+  override def createLoadPathEntry = folder.map(SourceLoadPath(_, output))
+
+  override def createControl(parent : Composite) = {
+    import org.eclipse.swt.layout.{GridData, GridLayout}
+    val c = new Composite(parent, SWT.NONE)
+    c.setLayout(new GridLayout(3, false))
+
+    new Label(c, SWT.NONE).setText("Source folder: ")
+    new Text(c, SWT.BORDER).setLayoutData(new GridData(
+        SWT.FILL, SWT.FILL, true, false))
+    new Button(c, SWT.PUSH).setText("Browse...")
+
+    new Label(c, SWT.NONE).setText("Output folder:")
+    new Text(c, SWT.BORDER).setLayoutData(new GridData(
+        SWT.FILL, SWT.FILL, true, false))
+    new Button(c, SWT.PUSH).setText("Browse...")
+
+    setControl(c)
+  }
+}
+
+class NLPProjectEntryPage extends NLPWizardPage(
+    "nlpPEP", "Coqoon project") {
+  private var project : Option[IProject] = None
+  override def createLoadPathEntry = project.map(ProjectLoadPath)
+
+  override def createControl(parent : Composite) = {
+    import org.eclipse.swt.layout.{GridData, GridLayout}
+    val c = new Composite(parent, SWT.NONE)
+    c.setLayout(new FillLayout)
+
+    import org.eclipse.ui.model.{
+      WorkbenchLabelProvider, WorkbenchContentProvider}
+    import org.eclipse.core.resources.ResourcesPlugin
+    import org.eclipse.jface.viewers.ViewerFilter
+    val tv = new TreeViewer(c)
+    tv.setLabelProvider(
+        WorkbenchLabelProvider.getDecoratingWorkbenchLabelProvider())
+    tv.setContentProvider(new WorkbenchContentProvider {
+      import org.eclipse.core.resources.IWorkspaceRoot
+      override def getChildren(el : AnyRef) = el match {
+        case e : IWorkspaceRoot => super.getChildren(el)
+        case _ => Array()
+      }
+    })
+    tv.setInput(
+        org.eclipse.core.resources.ResourcesPlugin.getWorkspace.getRoot)
+    tv.addFilter(new ViewerFilter {
+      import dk.itu.coqoon.core.{ManifestIdentifiers => CMI}
+      override def select(
+          viewer : Viewer, parent : AnyRef, element : AnyRef) =
+        element match {
+          case e : IProject if e.isOpen && e.hasNature(CMI.NATURE_COQ) =>
+            true
+          case _ => false
+        }
+    })
+
+    setControl(c)
+  }
+}
+
+class NLPExternalEntryPage extends NLPWizardPage(
+    "nlpEEP", "External development") {
+  import org.eclipse.core.runtime.IPath
+  private var fspath : Option[IPath] = None
+  private var dir : Option[String] = None
+  override def createLoadPathEntry = fspath.map(ExternalLoadPath(_, dir))
+
+  override def createControl(parent : Composite) = {
+    import org.eclipse.swt.layout.{GridData, GridLayout}
+    val c = new Composite(parent, SWT.NONE)
+    c.setLayout(new GridLayout(3, false))
+
+    new Label(c, SWT.NONE).setText("Folder: ")
+    new Text(c, SWT.BORDER).setLayoutData(new GridData(
+        SWT.FILL, SWT.FILL, true, false))
+    new Button(c, SWT.PUSH).setText("Browse...")
+
+    new Label(c, SWT.NONE).setText("Coq namespace:")
+    new Text(c, SWT.BORDER).setLayoutData(new GridData(
+        SWT.FILL, SWT.FILL, true, false, 2, 1))
+
+    setControl(c)
+  }
+}
+
+import org.eclipse.jface.viewers.IStructuredContentProvider
+
+abstract class MonomaniacalContentProvider[A <: Viewer, I <: AnyRef](
+    implicit a0 : Manifest[A], a1 : Manifest[I])
+        extends IStructuredContentProvider {
+  override def dispose() = viewer.foreach(inputChanged(_, null, null))
+
+  private var viewer : Option[A] = None
+  override def inputChanged(viewer : Viewer,
+      oldInput : AnyRef, newInput : AnyRef) = {
+    this.viewer.foreach(
+        v => TryCast[I](oldInput).foreach(i => unsubscribe(v, i)))
+    this.viewer = TryCast[A](viewer)
+    this.viewer.foreach(
+        v => TryCast[I](newInput).foreach(i => subscribe(v, i)))
+  }
+
+  protected def subscribe(viewer : A, input : I) = ()
+  protected def unsubscribe(viewer : A, input : I) = ()
+
+  override final def getElements(input : AnyRef) = input match {
+    case i : I => actuallyGetElements(i).toArray
+    case q => Array.empty
+  }
+  def actuallyGetElements(input : I) : Seq[AnyRef]
+}
+
+import org.eclipse.jface.viewers.LabelProvider
+
+class MonomaniacalLabelProvider[I <: AnyRef](
+    implicit a0 : Manifest[I]) extends LabelProvider {
+  override def getText(element : AnyRef) =
+    TryCast[I](element).map(actuallyGetText).orNull
+  def actuallyGetText(element : I) : String = null
+
+  override def dispose() = {
+    for ((_, image) <- cache)
+      image.dispose
+    cache = Map()
+  }
+
+  import org.eclipse.swt.graphics.Image
+  private var cache : Map[I, Image] = Map()
+  override def getImage(element : AnyRef) = element match {
+    case i : I => cache.get(i) match {
+      case Some(image) => image
+      case None =>
+        val (image, manage) = actuallyGetImage(i)
+        if (manage)
+          cache += (i -> image)
+        image
+    }
+    case _ => null
+  }
+
+  /* Returns an image and a boolean specifying whether or not this image should
+   * be cached and automatically disposed */
+  def actuallyGetImage(element : I) : (Image, Boolean) = (null, false)
 }
