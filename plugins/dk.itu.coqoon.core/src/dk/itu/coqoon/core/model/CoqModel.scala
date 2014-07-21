@@ -165,17 +165,17 @@ trait AbstractLoadPathProvider {
 }
 
 class AbstractLoadPathManager {
-  private var providers : Map[String, AbstractLoadPathProvider] = Map()
+  private var providers : Seq[AbstractLoadPathProvider] = Seq()
+  def getProviders() = providers
+  def addProvider(provider : AbstractLoadPathProvider) =
+    providers :+= provider
 
-  def getProviderFor(identifier : String) : Option[AbstractLoadPathProvider] =
-    providers.collectFirst {
-      case (prefix, provider) if identifier.startsWith(prefix) => provider
-    }
-
-  def addProvider(prefix : String, provider : AbstractLoadPathProvider) =
-    providers += (prefix -> provider)
-
-  def getProviders() = providers.toSeq
+  def getProviderFor(
+      identifier : String) : Option[AbstractLoadPathProvider] = {
+    for (i <- getProviders if i.getLoadPath(identifier) != Nil)
+      return Some(i)
+    None
+  }
 }
 object AbstractLoadPathManager {
   private final val instance = new AbstractLoadPathManager
@@ -192,11 +192,7 @@ object AbstractLoadPathManager {
     } catch {
       case e : CoreException => None
     }
-    (Option(ice.getAttribute("prefix")), ex) match {
-      case (Some(prefix), Some(provider)) =>
-        getInstance.addProvider(prefix, provider)
-      case _ =>
-    }
+    ex.foreach(getInstance.addProvider)
   }
 }
 

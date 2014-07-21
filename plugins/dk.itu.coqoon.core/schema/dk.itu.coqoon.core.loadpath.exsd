@@ -58,13 +58,14 @@
          </documentation>
       </annotation>
       <complexType>
-         <attribute name="prefix" type="string" use="required">
+         <attribute name="prefix" type="string">
             <annotation>
                <documentation>
-                  The fragment of the abstract load path namespace handled by this provider. This provider will handle abstract load path dependencies which begin with this value.
-
-&lt;p&gt;(The order in which abstract load path providers are queried is unspecified, so providers should choose a responsible value for this attribute to avoid breaking other plugins.)
+                  This field was once used to specify which fragment of the abstract load path namespace this provider should handle, but its value has been ignored by Coqoon from v0.4.6 onwards.
                </documentation>
+               <appinfo>
+                  <meta.attribute deprecated="true"/>
+               </appinfo>
             </annotation>
          </attribute>
          <attribute name="provider" type="string" use="required">
