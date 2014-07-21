@@ -306,11 +306,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
     for (i <- coqProject.get.getLoadPathProviders) i match {
       case DefaultOutputLoadPath(bin) =>
         if (!bin.exists()) {
-          bin.create(IResource.DERIVED, true, null)
+          bin.create(IResource.FORCE | IResource.DERIVED, true, null)
         } else bin.setDerived(true, null)
       case SourceLoadPath(_, Some(bin)) =>
         if (!bin.exists()) {
-          bin.create(IResource.DERIVED, true, null)
+          bin.create(IResource.FORCE | IResource.DERIVED, true, null)
         } else bin.setDerived(true, null)
       case _ =>
     }
