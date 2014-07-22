@@ -442,23 +442,36 @@ class NLPAbstractEntryPage extends NLPWizardPage(
     b1.setText("Select from a list of available abstract dependencies")
     b1.setLayoutData(GDF.fillDefaults.grab(true, false).
         align(SWT.FILL, SWT.FILL).create)
-    val lv = new ListViewer(c, SWT.SINGLE | SWT.BORDER)
+    val lv = new TreeViewer(c, SWT.SINGLE | SWT.BORDER)
     lv.getControl.setLayoutData(
         GDF.fillDefaults.grab(true, true).align(SWT.FILL, SWT.FILL).create)
-    lv.setContentProvider(new MonomaniacalContentProvider[
-        ListViewer, AbstractLoadPathManager] {
-      override def actuallyGetElements(input : AbstractLoadPathManager) =
-        input.getProviders
+    lv.setContentProvider(new FuturisticContentProvider[TreeViewer] {
+      override def actuallyGetChildren(element : AnyRef) =
+        element match {
+          case a : AbstractLoadPathManager =>
+            for (i <- a.getProviders;
+                 f <- Some(i.getImplementations))
+              yield (if (f.size == 1) f.head else i)
+          case p : AbstractLoadPathProvider => p.getImplementations
+          case _ => Seq()
+        }
     })
-    lv.setLabelProvider(
-        new MonomaniacalLabelProvider[(String, AbstractLoadPathProvider)] {
-      override def actuallyGetText(
-          element : (String, AbstractLoadPathProvider)) =
-        element._2.getName
-      override def actuallyGetImage(
-          element : (String, AbstractLoadPathProvider)) =
-        (UIUtils.getWorkbench.getSharedImages.getImage(
-            org.eclipse.ui.ISharedImages.IMG_OBJ_FOLDER), false)
+    lv.setLabelProvider(new FuturisticLabelProvider {
+      override def actuallyGetText(element : AnyRef) = element match {
+        case p : AbstractLoadPathProvider => Some(p.getName)
+        case i : AbstractLoadPathImplementation => Some(i.getName)
+        case _ => None
+      }
+      import org.eclipse.ui.ISharedImages
+      override def actuallyGetImage(element : AnyRef) = element match {
+        case p : AbstractLoadPathProvider =>
+          Some((UIUtils.getWorkbench.getSharedImages.getImage(
+              ISharedImages.IMG_OBJ_FOLDER), false))
+        case i : AbstractLoadPathImplementation =>
+          Some((UIUtils.getWorkbench.getSharedImages.getImage(
+              ISharedImages.IMG_OBJ_ELEMENT), false))
+        case _ => None
+      }
     })
     lv.setInput(AbstractLoadPathManager.getInstance)
 
@@ -482,8 +495,8 @@ class NLPAbstractEntryPage extends NLPWizardPage(
       override def selectionChanged(ev : SelectionChangedEvent) =
         TryCast[IStructuredSelection](ev.getSelection).map(
             _.getFirstElement) match {
-          case Some((identifier : String, _)) =>
-            at.setText(identifier)
+          case Some(i : AbstractLoadPathImplementation) =>
+            at.setText(i.getIdentifier)
           case _ =>
         }
     })
@@ -591,36 +604,39 @@ class NLPExternalEntryPage extends NLPWizardPage(
   }
 }
 
-abstract class MonomaniacalContentProvider[A <: Viewer, I <: AnyRef](
-    implicit a0 : Manifest[A], a1 : Manifest[I])
-        extends IStructuredContentProvider {
+abstract class FuturisticContentProvider[A <: Viewer](
+    implicit a0 : Manifest[A]) extends ITreeContentProvider {
   override def dispose() = viewer.foreach(inputChanged(_, null, null))
 
   private var viewer : Option[A] = None
   override def inputChanged(viewer : Viewer,
       oldInput : AnyRef, newInput : AnyRef) = {
-    this.viewer.foreach(
-        v => TryCast[I](oldInput).foreach(i => unsubscribe(v, i)))
+    this.viewer.foreach(unsubscribe(_, oldInput))
     this.viewer = TryCast[A](viewer)
-    this.viewer.foreach(
-        v => TryCast[I](newInput).foreach(i => subscribe(v, i)))
+    this.viewer.foreach(unsubscribe(_, newInput))
   }
 
-  protected def subscribe(viewer : A, input : I) = ()
-  protected def unsubscribe(viewer : A, input : I) = ()
+  protected def subscribe(viewer : A, input : AnyRef) = ()
+  protected def unsubscribe(viewer : A, input : AnyRef) = ()
 
-  override final def getElements(input : AnyRef) = input match {
-    case i : I => actuallyGetElements(i).toArray
-    case q => Array.empty
-  }
-  def actuallyGetElements(input : I) : Seq[AnyRef]
+  override final def getElements(input : AnyRef) =
+    actuallyGetElements(input).toArray
+  def actuallyGetElements(input : AnyRef) : Seq[AnyRef] =
+    actuallyGetChildren(input)
+
+  override final def getChildren(element : AnyRef) =
+    actuallyGetChildren(element).toArray
+  def actuallyGetChildren(element : AnyRef) : Seq[AnyRef]
+
+  override def hasChildren(element : AnyRef) =
+    !actuallyGetChildren(element).isEmpty
+
+  override def getParent(element : AnyRef) = null
 }
 
-class MonomaniacalLabelProvider[I <: AnyRef](
-    implicit a0 : Manifest[I]) extends LabelProvider {
-  override def getText(element : AnyRef) =
-    TryCast[I](element).map(actuallyGetText).orNull
-  def actuallyGetText(element : I) : String = null
+class FuturisticLabelProvider extends LabelProvider {
+  override def getText(element : AnyRef) = actuallyGetText(element).orNull
+  def actuallyGetText(element : AnyRef) : Option[String] = None
 
   override def dispose() = {
     for ((_, image) <- cache)
@@ -629,20 +645,21 @@ class MonomaniacalLabelProvider[I <: AnyRef](
   }
 
   import org.eclipse.swt.graphics.Image
-  private var cache : Map[I, Image] = Map()
-  override def getImage(element : AnyRef) = element match {
-    case i : I => cache.get(i) match {
+  private var cache : Map[AnyRef, Image] = Map()
+  override def getImage(element : AnyRef) =
+    cache.get(element) match {
       case Some(image) => image
-      case None =>
-        val (image, manage) = actuallyGetImage(i)
-        if (manage)
-          cache += (i -> image)
-        image
+      case None => actuallyGetImage(element) match {
+        case Some((image, manage)) =>
+          if (manage)
+            cache += (element -> image)
+          image
+        case _ => null
+      }
     }
-    case _ => null
-  }
 
   /* Returns an image and a boolean specifying whether or not this image should
    * be cached and automatically disposed */
-  def actuallyGetImage(element : I) : (Image, Boolean) = (null, false)
+  def actuallyGetImage(
+      element : AnyRef) : Option[(Image, Boolean)] = None
 }
