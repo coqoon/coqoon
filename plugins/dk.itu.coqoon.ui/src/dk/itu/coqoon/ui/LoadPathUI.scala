@@ -496,7 +496,19 @@ class NLPAbstractEntryPage extends NLPWizardPage(
         TryCast[IStructuredSelection](ev.getSelection).map(
             _.getFirstElement) match {
           case Some(i : AbstractLoadPathImplementation) =>
-            at.setText(i.getIdentifier)
+            import AbstractLoadPathImplementation._
+            i.getStatus match {
+              case Available =>
+                setErrorMessage(null)
+                at.setText(i.getIdentifier)
+              case VersionMismatch =>
+                setErrorMessage(i.getName + " is installed, " +
+                    "but is not compatible with the version you requested")
+              case Broken =>
+                setErrorMessage(i.getName + " is installed, but doesn't work")
+              case _ : NotInstalled =>
+                setErrorMessage(i.getName + " is not installed")
+            }
           case _ =>
         }
     })
