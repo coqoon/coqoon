@@ -153,7 +153,8 @@ case class ExternalLoadPath(val fsPath : IPath, val dir : Option[String])
 case class AbstractLoadPath(
     val identifier : String) extends ICoqLoadPathProvider {
   override def getLoadPath =
-    getProvider.map(_.getLoadPath(identifier)).getOrElse(Nil)
+    getProvider.flatMap(_.getImplementation(identifier)).flatMap(
+        _.getLoadPath.right.toOption).getOrElse(Nil)
 
   def getProvider() =
     AbstractLoadPathManager.getInstance.getProviderFor(identifier)
@@ -161,7 +162,44 @@ case class AbstractLoadPath(
 
 trait AbstractLoadPathProvider {
   def getName() : String
-  def getLoadPath(id : String) : Seq[CoqLoadPath]
+
+  /* Returns a best-match load path implementation for the given identifier,
+   * if there is one.
+   *
+   * Note that the resulting implementation is not required to work! There are
+   * lots of reasons why a provider might not be able to provide a working
+   * implementation for a given identifier; see the Status class below. */
+  def getImplementation(id : String) : Option[AbstractLoadPathImplementation]
+
+  def getImplementations() : Seq[AbstractLoadPathImplementation]
+}
+
+trait AbstractLoadPathImplementation {
+  def getIdentifier() : String
+
+  def getName() : String
+  def getAuthor() : String
+  def getDescription() : String
+
+  import AbstractLoadPathImplementation.Status
+  def getStatus() : Status
+  def getLoadPath() : Either[Status, Seq[CoqLoadPath]]
+}
+object AbstractLoadPathImplementation {
+  sealed abstract class Status
+  sealed abstract class Installed extends Status
+  /* Installed and working */
+  final case object Available extends Installed
+  /* Installed but not working */
+  final case object Broken extends Installed
+  /* Installed and (potentially) working, but not compatible with the requested
+   * version constraint */
+  final case object VersionMismatch extends Installed
+  sealed abstract class NotInstalled extends Status
+  /* Not installed, but (potentially) installable */
+  final case object Installable extends NotInstalled
+  /* Not installed and not installable */
+  final case object NotInstallable extends NotInstalled
 }
 
 class AbstractLoadPathManager {
@@ -172,7 +210,8 @@ class AbstractLoadPathManager {
 
   def getProviderFor(
       identifier : String) : Option[AbstractLoadPathProvider] = {
-    for (i <- getProviders if i.getLoadPath(identifier) != Nil)
+    for (i <- getProviders;
+         j <- i.getImplementation(identifier))
       return Some(i)
     None
   }
@@ -199,20 +238,43 @@ object AbstractLoadPathManager {
 class Coq84Library extends AbstractLoadPathProvider {
   override def getName = "Coq 8.4 standard library"
 
-  override def getLoadPath(id : String) =
+  override def getImplementation(id : String) =
     if (Coq84Library.ID == id) {
-      CoqProgram("coqtop").run(Seq("-where")).readAll match {
-        case (0, libraryPath_) =>
-          val libraryPath = new Path(libraryPath_.trim)
-          Seq(CoqLoadPath(libraryPath.append("theories"), Some("Coq"), true),
-              CoqLoadPath(libraryPath.append("plugins"), Some("Coq"), true),
-              CoqLoadPath(libraryPath.append("user-contrib"), None, true))
-        case _ => Nil
-      }
-    } else Nil
+      Some(new Coq84Library.Implementation(id))
+    } else None
+
+  override def getImplementations : Seq[AbstractLoadPathImplementation] =
+    Seq(new Coq84Library.Implementation)
 }
 object Coq84Library {
   final val ID = "dk.itu.sdg.kopitiam/lp/coq/8.4"
+
+  private class Implementation(
+      id : String = ID) extends AbstractLoadPathImplementation {
+    import AbstractLoadPathImplementation._
+    override def getIdentifier = id
+    override def getName = "Coq 8.4 standard library"
+    override def getAuthor = "Coq development team <coqdev@inria.fr>"
+    override def getDescription = "The standard library of Coq 8.4."
+    override def getStatus =
+      if (id == ID) {
+        CoqProgram("coqtop").run(Seq("-where")).readAll match {
+          case (0, _) => Available
+          case _ => Broken
+        }
+      } else VersionMismatch
+    override def getLoadPath =
+      getStatus match {
+        case Available =>
+          val (_, path_) = CoqProgram("coqtop").run(Seq("-where")).readAll
+          val path = new Path(path_.trim)
+          Right(Seq(
+              CoqLoadPath(path.append("theories"), Some("Coq"), true),
+              CoqLoadPath(path.append("plugins"), Some("Coq"), true),
+              CoqLoadPath(path.append("user-contrib"), None, true)))
+        case f => Left(f)
+      }
+  }
 }
 
 trait ICoqProject extends ICoqElement with IParent {

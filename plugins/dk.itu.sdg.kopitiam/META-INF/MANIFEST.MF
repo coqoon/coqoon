@@ -29,3 +29,4 @@ Export-Package-Alarming-Disclaimer:
  neither intended nor designed for general use
 Export-Package: dk.itu.sdg.kopitiam
 Bundle-ActivationPolicy: lazy
+Bundle-Vendor: IT University of Copenhagen
