@@ -455,6 +455,9 @@ class NLPAbstractEntryPage extends NLPWizardPage(
           case p : AbstractLoadPathProvider => p.getImplementations
           case _ => Seq()
         }
+      override def getParent(element : AnyRef) =
+        TryCast[AbstractLoadPathImplementation](
+            element).map(_.getProvider).orNull
     })
     lv.setLabelProvider(new FuturisticLabelProvider {
       override def actuallyGetText(element : AnyRef) = element match {
@@ -643,7 +646,7 @@ abstract class FuturisticContentProvider[A <: Viewer](
   override def hasChildren(element : AnyRef) =
     !actuallyGetChildren(element).isEmpty
 
-  override def getParent(element : AnyRef) = null
+  override def getParent(element : AnyRef) : AnyRef = null
 }
 
 class FuturisticLabelProvider extends LabelProvider {

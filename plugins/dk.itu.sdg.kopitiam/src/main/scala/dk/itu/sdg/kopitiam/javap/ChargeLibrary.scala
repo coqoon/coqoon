@@ -11,24 +11,27 @@ class ChargeLibrary extends AbstractLoadPathProvider {
 
   override def getImplementation(id : String) =
     if (ChargeLibrary.ID == id) {
-      Some(new ChargeLibrary.Implementation(id))
+      Some(new ChargeLibrary.Implementation(this, id))
     } else None
 
   override def getImplementations : Seq[AbstractLoadPathImplementation] =
-    Seq(new ChargeLibrary.Implementation)
+    Seq(new ChargeLibrary.Implementation(this))
 }
 object ChargeLibrary {
   final val ID = "dk.itu.sdg.kopitiam/lp/charge/0.1"
 
   import dk.itu.coqoon.core.model.AbstractLoadPathImplementation
-  private class Implementation(
+  private class Implementation(provider : AbstractLoadPathProvider,
       id : String = ID) extends AbstractLoadPathImplementation {
-    import AbstractLoadPathImplementation._
+    override def getProvider = provider
     override def getIdentifier = id
+
     override def getName = "Charge! for Java"
     override def getAuthor = "Jesper Bengtson <jebe@itu.dk>"
     override def getDescription =
       "The Charge! separation logic framework, for verifying Java programs."
+
+    import AbstractLoadPathImplementation._
     override def getStatus =
       if (id == ID) {
         Activator.getDefault.getPreferenceStore.getString("loadpath") match {

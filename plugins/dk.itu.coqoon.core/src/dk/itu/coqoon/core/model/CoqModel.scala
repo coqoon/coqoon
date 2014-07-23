@@ -175,6 +175,7 @@ trait AbstractLoadPathProvider {
 }
 
 trait AbstractLoadPathImplementation {
+  def getProvider() : AbstractLoadPathProvider
   def getIdentifier() : String
 
   def getName() : String
@@ -240,22 +241,25 @@ class Coq84Library extends AbstractLoadPathProvider {
 
   override def getImplementation(id : String) =
     if (Coq84Library.ID == id) {
-      Some(new Coq84Library.Implementation(id))
+      Some(new Coq84Library.Implementation(this, id))
     } else None
 
   override def getImplementations : Seq[AbstractLoadPathImplementation] =
-    Seq(new Coq84Library.Implementation)
+    Seq(new Coq84Library.Implementation(this))
 }
 object Coq84Library {
   final val ID = "dk.itu.sdg.kopitiam/lp/coq/8.4"
 
-  private class Implementation(
+  private class Implementation(provider : AbstractLoadPathProvider,
       id : String = ID) extends AbstractLoadPathImplementation {
-    import AbstractLoadPathImplementation._
+    override def getProvider = provider
+
     override def getIdentifier = id
     override def getName = "Coq 8.4 standard library"
     override def getAuthor = "Coq development team <coqdev@inria.fr>"
     override def getDescription = "The standard library of Coq 8.4."
+
+    import AbstractLoadPathImplementation._
     override def getStatus =
       if (id == ID) {
         CoqProgram("coqtop").run(Seq("-where")).readAll match {
