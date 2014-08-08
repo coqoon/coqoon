@@ -21,8 +21,16 @@ trait Scanner[A] {
   def unread()
 }
 
-class SequenceScanner[A](seq : Seq[A]) extends Scanner[A] {
+trait SeekableScanner[A] extends Scanner[A] {
+  def getOffset() : Int
+  def setOffset(o : Int)
+}
+
+class SequenceScanner[A](seq : Seq[A]) extends SeekableScanner[A] {
   private var position = 0
+
+  override def getOffset = position
+  override def setOffset(o : Int) = (position = o)
 
   override def read() =
     if (position < seq.length) {
@@ -70,7 +78,7 @@ class StateRule[I, T, N <: TokenState[I, T, N]](
     default
   }
 
-  override def toString = "BasicRule(" + label + ")"
+  override def toString = "StateRule(" + label + ")"
 }
 object StateRule {
   trait State[Input, NextState <: State[Input, NextState]] {
