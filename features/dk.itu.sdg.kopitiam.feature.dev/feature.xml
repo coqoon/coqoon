@@ -2,7 +2,7 @@
 <feature
       id="dk.itu.sdg.feature.kopitiam.dev"
       label="Kopitiam"
-      version="0.4.5"
+      version="0.4.5.1"
       provider-name="IT University of Copenhagen">
 
    <description>

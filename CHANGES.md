@@ -1,3 +1,12 @@
+Coqoon 0.4.5.1
+==============
+
+8th August 2014
+
+This minor release fixes a Scala 2.11 compatibility problem and a bug in the
+project importer, and adds a few extra sanity checks to address issues in
+the automatic indentation and Coq model package fragment code.
+
 Coqoon 0.4.5
 ============
 
