@@ -14,7 +14,7 @@ class CoqAutoEditStrategy extends IAutoEditStrategy {
   override def customizeDocumentCommand(
       d : IDocument, c : DocumentCommand) = {
     val t = Option(c.text)
-    if (c.length == 0 &&
+    if (c.length == 0 && c.offset < d.getLength &&
         t.exists(TU.endsWith(d.getLegalLineDelimiters, _) != -1) &&
         CoqoonUIPreferences.AutomaticFormatting.get)
       CoqAutoEditStrategy.adjustIndentation(d, c)
@@ -32,6 +32,11 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
   }
 
   def quickScanBack(d : IDocument, offset : Int) : (Int, String) = {
+    /* Filter out offset == 0 (FindReplaceDocumentAdapter does funny things
+     * when startOffset is -1) */
+    if (offset == 0)
+      return (0, "")
+
     import org.eclipse.jface.text.FindReplaceDocumentAdapter
     val findAdapter = new FindReplaceDocumentAdapter(d)
 
