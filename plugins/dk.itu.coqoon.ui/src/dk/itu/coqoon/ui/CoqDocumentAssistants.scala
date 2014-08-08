@@ -7,6 +7,22 @@
 
 package dk.itu.coqoon.ui
 
+import dk.itu.coqoon.core.model.StateRule
+import org.eclipse.jface.text.rules.IToken
+
+sealed abstract class PartitionState
+      extends StateRule.TokenState[Char, IToken, PartitionState]
+          with StateRule.FallbackState[Char, PartitionState]
+sealed abstract class PartitionFinalState(
+    token : IToken) extends PartitionState {
+  setToken(Option(token))
+
+  /* Returns the length of the character sequence that leads into this state.
+   * (This value is used to make sure that lead-in sequences correctly
+   * terminate a partition without becoming part of it.) */
+  def getLeadCount() : Int
+}
+
 import org.eclipse.jface.text.IDocument
 import org.eclipse.jface.text.rules.{
   IPartitionTokenScanner, BufferedRuleBasedScanner}
@@ -41,7 +57,10 @@ object CoqPartitions {
     new FastPartitioner(new CoqPartitionScanner, CoqPartitions.TYPES)
 }
 
-class CoqPartitionScanner extends IPartitionTokenScanner {
+abstract class PartitionStateScanner(
+    default : PartitionFinalState) extends IPartitionTokenScanner {
+  def convertContentType(ct : String) : PartitionFinalState
+
   private var document : Option[IDocument] = None
   private var contentType : Option[String] = None
 
@@ -52,19 +71,14 @@ class CoqPartitionScanner extends IPartitionTokenScanner {
     this.end = offset + length
     lastEnd = 0
     lastStart = 0
-    lastFinalState = States.Coq
+    lastFinalState = default
   }
 
   override def setPartialRange(document : IDocument, offset : Int,
       length : Int, contentType : String, partitionOffset : Int) : Unit = {
     setRange(document, offset, length)
     if (contentType != null && partitionOffset != -1) {
-      lastFinalState = contentType match {
-        case CoqPartitions.Types.COQ => States.Coq
-        case CoqPartitions.Types.COMMENT => States.Comment
-        case CoqPartitions.Types.STRING => States.String
-        case _ => States.Coq
-      }
+      lastFinalState = convertContentType(contentType)
       lastEnd = partitionOffset
     }
   }
@@ -73,9 +87,7 @@ class CoqPartitionScanner extends IPartitionTokenScanner {
 
   import org.eclipse.jface.text.rules.{Token, IToken}
 
-  import States._
-
-  private var lastFinalState : PartitionFinalState = Coq
+  private var lastFinalState : PartitionFinalState = default
 
   private var (lastStart, lastEnd) = (-1, 0)
 
@@ -118,22 +130,20 @@ class CoqPartitionScanner extends IPartitionTokenScanner {
   override def getTokenLength() = lastEnd - lastStart
 }
 
-private object States {
-  import dk.itu.coqoon.core.model.StateRule
-  import org.eclipse.jface.text.rules.{Token, IToken}
-  sealed abstract class PartitionState
-      extends StateRule.TokenState[Char, IToken, PartitionState]
-          with StateRule.FallbackState[Char, PartitionState]
-  sealed abstract class PartitionFinalState(
-      token : IToken) extends PartitionState {
-    setToken(Option(token))
+class CoqPartitionScanner
+    extends PartitionStateScanner(CoqPartitionScanner.Coq) {
+  import CoqPartitionScanner._
 
-    /* Returns the length of the character sequence that leads into this state:
-     * one for strings, '"', and two for comments, '(*'. (This value is used
-     * to make sure that lead-in sequences correctly terminate a token without
-     * becoming part of it.) */
-    def getLeadCount() : Int
-  }
+  override def convertContentType(ct : String) =
+    ct match {
+      case CoqPartitions.Types.COQ => Coq
+      case CoqPartitions.Types.COMMENT => Comment
+      case CoqPartitions.Types.STRING => String
+      case _ => Coq
+    }
+}
+object CoqPartitionScanner {
+  import org.eclipse.jface.text.rules.Token
 
   case object Coq extends PartitionFinalState(
       new Token(CoqPartitions.Types.COQ)) {
