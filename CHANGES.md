@@ -1,3 +1,12 @@
+Coqoon 0.4.5.2
+==============
+
+12th August 2014
+
+This minor release fixes a bug that could cause syntax highlighting and code
+folding updates to be sent to the wrong editor, which could potentially lead
+to mysterious crashes in background threads.
+
 Coqoon 0.4.5.1
 ==============
 
