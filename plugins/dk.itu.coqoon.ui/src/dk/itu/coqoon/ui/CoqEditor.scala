@@ -266,19 +266,8 @@ import org.eclipse.jface.text.rules.RuleBasedScanner
 import org.eclipse.jface.text.TextAttribute
 import org.eclipse.jface.text.rules.{Token, IToken}
 
-object CoqTokenScanner extends RuleBasedScanner {
-  import org.eclipse.swt.SWT.{BOLD, ITALIC}
-
-  //Console.println("Initializing CoqTokenScanner")
-
-  private[ui] val black = UIUtils.Color(0, 0, 0)
-  private[ui] val white = UIUtils.Color(255, 255, 255)
-
-  private val keywordToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, BOLD))
-  private val definerToken : IToken = new Token(new TextAttribute(UIUtils.Color.fromPreference("coqKeywordFg"), white, BOLD))
-  private val opToken : IToken = new Token(new TextAttribute(UIUtils.Color(0, 0, 128), white, 0))
-  private val optionToken : IToken = new Token(new TextAttribute(UIUtils.Color(200, 0, 100), white, 0))
-  private val otherToken : IToken = new Token(new TextAttribute(black, white, 0))
+class CoqTokenScanner extends RuleBasedScanner {
+  import CoqTokenScanner._
 
   private val keyword =
     Seq("Axiom", "Conjecture", "Parameter", "Parameters", "Variable",
@@ -340,27 +329,49 @@ object CoqTokenScanner extends RuleBasedScanner {
 
   setRules(Array(optionRule, wordRule, opRule))
 }
+private object CoqTokenScanner {
+  import org.eclipse.swt.SWT.{BOLD, ITALIC}
 
-object CommentTokenScanner extends RuleBasedScanner {
-  import org.eclipse.swt.SWT
+  val black = UIUtils.Color(0, 0, 0)
+  val white = UIUtils.Color(255, 255, 255)
 
-  private val commentToken : IToken = new Token(new TextAttribute(
-      UIUtils.Color(63, 127, 95), CoqTokenScanner.white, SWT.ITALIC))
+  val keywordToken : IToken = new Token(new TextAttribute(
+      UIUtils.Color.fromPreference("coqKeywordFg"), white, BOLD))
+  val definerToken : IToken = new Token(new TextAttribute(
+      UIUtils.Color.fromPreference("coqKeywordFg"), white, BOLD))
+  val opToken : IToken = new Token(
+      new TextAttribute(UIUtils.Color(0, 0, 128), white, 0))
+  val optionToken : IToken = new Token(
+      new TextAttribute(UIUtils.Color(200, 0, 100), white, 0))
+  val otherToken : IToken = new Token(new TextAttribute(black, white, 0))
+}
+
+class CommentTokenScanner extends RuleBasedScanner {
+  import CommentTokenScanner._
 
   private val commentRule = new BasicRule("!comment")
   commentRule.getStartState.setFallback(Some(commentRule.getStartState))
   commentRule.getStartState.setToken(Some(commentToken))
   setRules(Array(commentRule))
 }
+private object CommentTokenScanner {
+  import org.eclipse.swt.SWT
 
-object StringTokenScanner extends RuleBasedScanner {
-  private val stringToken : IToken = new Token(new TextAttribute(
-      UIUtils.Color(0, 0, 255), CoqTokenScanner.white, 0))
+  val commentToken : IToken = new Token(new TextAttribute(
+      UIUtils.Color(63, 127, 95), CoqTokenScanner.white, SWT.ITALIC))
+}
+
+class StringTokenScanner extends RuleBasedScanner {
+  import StringTokenScanner._
 
   private val stringRule = new BasicRule("!string")
   stringRule.getStartState.setFallback(Some(stringRule.getStartState))
   stringRule.getStartState.setToken(Some(stringToken))
   setRules(Array(stringRule))
+}
+private object StringTokenScanner {
+  val stringToken : IToken = new Token(new TextAttribute(
+      UIUtils.Color(0, 0, 255), CoqTokenScanner.white, 0))
 }
 
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
@@ -452,23 +463,14 @@ object CoqSourceViewerConfiguration {
   import org.eclipse.jface.text.rules.DefaultDamagerRepairer
   import org.eclipse.jface.text.presentation.PresentationReconciler
 
-  import dk.itu.coqoon.core.utilities.CacheSlot
-  private val coqScanner =
-    CacheSlot { new DefaultDamagerRepairer(CoqTokenScanner) }
-  private val commentScanner =
-    CacheSlot { new DefaultDamagerRepairer(CommentTokenScanner) }
-  private val stringScanner =
-    CacheSlot { new DefaultDamagerRepairer(StringTokenScanner) }
-
-  def getCoqScanner() = coqScanner.get
-  def getCommentScanner() = commentScanner.get
-  def getStringScanner() = stringScanner.get
-
   def addDamagerRepairers(pr : PresentationReconciler) = {
     for ((typ, scanner) <- Seq(
-        (CoqPartitions.Types.COQ, getCoqScanner),
-        (CoqPartitions.Types.COMMENT, getCommentScanner),
-        (CoqPartitions.Types.STRING, getStringScanner))) {
+        (CoqPartitions.Types.COQ,
+            new DefaultDamagerRepairer(new CoqTokenScanner)),
+        (CoqPartitions.Types.COMMENT,
+            new DefaultDamagerRepairer(new CommentTokenScanner)),
+        (CoqPartitions.Types.STRING,
+            new DefaultDamagerRepairer(new StringTokenScanner)))) {
       pr.setDamager(scanner, typ)
       pr.setRepairer(scanner, typ)
     }
