@@ -375,6 +375,9 @@ class NewLoadPathWizard extends Wizard {
 
 class NLPSelectionPage extends WizardPage(
     "nlpSP", "Selection", null) {
+  setDescription(
+      "Select a kind of load path entry to add to this project.")
+
   setPageComplete(false)
   val subpages = Array(
       new NLPAbstractEntryPage,
@@ -395,12 +398,15 @@ class NLPSelectionPage extends WizardPage(
         case _ => Array.empty
       }
     })
+    lv.setLabelProvider(new LabelProvider {
+      override def getText(element : Any) = TryCast[NLPWizardPage](
+          element).map(_.getTitle).getOrElse(super.getText(element))
+    })
     lv.addSelectionChangedListener(new ISelectionChangedListener {
       override def selectionChanged(ev : SelectionChangedEvent) = {
         nextPage = TryCast[IStructuredSelection](ev.getSelection).map(
             _.getFirstElement).flatMap(TryCast[NLPWizardPage])
         nextPage.foreach(_.setWizard(getWizard))
-        setErrorMessage("Aaaaaargh, next page is now " + nextPage)
         setPageComplete(nextPage != None)
         getContainer.updateButtons()
       }
@@ -413,8 +419,8 @@ class NLPSelectionPage extends WizardPage(
 import org.eclipse.jface.resource.ImageDescriptor
 
 abstract class NLPWizardPage(
-    id : String, name : String, descriptor : ImageDescriptor = null)
-        extends WizardPage(id, name, descriptor) {
+    name : String, title : String, descriptor : ImageDescriptor = null)
+        extends WizardPage(name, title, descriptor) {
   /* Calling this method should be basically free, so it also serves as the
    * implementation of isPageComplete */
   def createLoadPathEntry() : Option[ICoqLoadPathProvider]
@@ -422,7 +428,10 @@ abstract class NLPWizardPage(
 }
 
 class NLPAbstractEntryPage extends NLPWizardPage(
-    "nlpAEP", "Abstract") {
+    "nlpAEP", "Abstract dependency") {
+  setDescription(
+      "Add an identifier for a dependency which the environment must provide.")
+
   private var identifier : Option[String] = None
   override def createLoadPathEntry = identifier.map(AbstractLoadPath)
 
@@ -431,15 +440,8 @@ class NLPAbstractEntryPage extends NLPWizardPage(
     val c = new Composite(parent, SWT.NONE)
     c.setLayout(GridLayoutFactory.fillDefaults.create)
 
-    val description = new Label(c, SWT.WRAP)
-    description.setText(
-        "Abstract dependencies are used to specify complex dependencies " +
-        "whose paths and command-line options would otherwise be unportable.")
-    description.setLayoutData(GDF.fillDefaults.grab(true, false).
-        align(SWT.FILL, SWT.FILL).hint(100, SWT.DEFAULT).create)
-
     val b1 = new Button(c, SWT.RADIO)
-    b1.setText("Select from a list of available abstract dependencies")
+    b1.setText("Select from the list of available abstract dependencies")
     b1.setLayoutData(GDF.fillDefaults.grab(true, false).
         align(SWT.FILL, SWT.FILL).create)
     val lv = new TreeViewer(c, SWT.SINGLE | SWT.BORDER)
@@ -479,7 +481,7 @@ class NLPAbstractEntryPage extends NLPWizardPage(
     lv.setInput(AbstractLoadPathManager.getInstance)
 
     val b2 = new Button(c, SWT.RADIO)
-    b2.setText("Manually specify an abstract dependency")
+    b2.setText("Manually specify the identifier of an abstract dependency")
     b2.setLayoutData(
         GDF.fillDefaults.grab(true, false).align(SWT.FILL, SWT.FILL).create)
 
@@ -521,7 +523,10 @@ class NLPAbstractEntryPage extends NLPWizardPage(
 }
 
 class NLPSourceEntryPage extends NLPWizardPage(
-    "nlpSEP", "Source folder") {
+    "nlpSEP", "Another source folder in this project") {
+  setDescription(
+      "Add an additional source folder to this project.")
+
   import org.eclipse.core.resources.IFolder
   private var folder : Option[IFolder] = None
   private var output : Option[IFolder] = None
@@ -547,7 +552,9 @@ class NLPSourceEntryPage extends NLPWizardPage(
 }
 
 class NLPProjectEntryPage extends NLPWizardPage(
-    "nlpPEP", "Coqoon project") {
+    "nlpPEP", "Another Coqoon project") {
+  setDescription(
+      "Add a dependency on another Coqoon project in the workspace.")
   private var project : Option[IProject] = None
   override def createLoadPathEntry = project.map(ProjectLoadPath)
 
@@ -596,6 +603,9 @@ class NLPProjectEntryPage extends NLPWizardPage(
 
 class NLPExternalEntryPage extends NLPWizardPage(
     "nlpEEP", "External development") {
+  setDescription(
+      "Add a dependency on a Coq development built outside of Coqoon.")
+
   import org.eclipse.core.runtime.IPath
   private var fspath : Option[IPath] = None
   private var dir : Option[String] = None
