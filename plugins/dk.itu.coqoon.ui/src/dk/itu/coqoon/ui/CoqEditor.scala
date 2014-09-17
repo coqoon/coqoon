@@ -14,13 +14,7 @@ import org.eclipse.ui.editors.text.TextEditor
 
 import org.eclipse.jface.text.IDocument
 
-class CoqEditor extends TextEditor with CoqTopEditorContainer {
-  import org.eclipse.ui.editors.text.EditorsUI
-  import org.eclipse.ui.texteditor.ChainedPreferenceStore
-  setPreferenceStore(new ChainedPreferenceStore(Array(
-      Activator.getDefault.getPreferenceStore,
-      EditorsUI.getPreferenceStore)))
-
+class CoqEditor extends BaseCoqEditor with CoqTopEditorContainer {
   private object ModelListener extends CoqElementChangeListener {
     override def coqElementChanged(ev : CoqElementEvent) = ev match {
       case CoqProjectLoadPathChangedEvent(project)
@@ -73,6 +67,15 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
     new MonoReconciler(new CoqProofReconcilingStrategy(this), true)
   reconciler.setDelay(1)
 
+  import org.eclipse.swt.widgets.Composite
+  import org.eclipse.jface.text.source.IVerticalRuler
+  override protected def createSourceViewer(
+      parent : Composite, ruler : IVerticalRuler, styles : Int) = {
+    val viewer = super.createSourceViewer(parent, ruler, styles)
+    reconciler.install(viewer)
+    viewer
+  }
+
   override def dispose = {
     if (coqTopV != null) {
       coqTopV.kill
@@ -85,74 +88,9 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
 
   final def getViewer = super.getSourceViewer
 
-  import org.eclipse.jface.text.source.{Annotation, ISourceViewer, IVerticalRuler}
-  import org.eclipse.jface.text.Position
-  import org.eclipse.swt.widgets.Composite
-  import org.eclipse.ui.IEditorInput
-  import org.eclipse.ui.views.contentoutline.{ContentOutlinePage, IContentOutlinePage}
-  import org.eclipse.jface.text.source.projection.{ProjectionAnnotation, ProjectionAnnotationModel}
-
-  var annotationModel : Option[ProjectionAnnotationModel] = None
-
-  import org.eclipse.ui.editors.text.{
-    TextFileDocumentProvider, ForwardingDocumentProvider}
-  import org.eclipse.core.filebuffers.IDocumentSetupParticipant
-
-  object CoqDocumentSetupParticipant extends IDocumentSetupParticipant {
-    override def setup(doc : IDocument) =
-      CoqPartitions.installPartitioner(doc, CoqPartitions.COQ)
-  }
-
-  override protected def initializeEditor () : Unit = {
-    setDocumentProvider(new ForwardingDocumentProvider(
-      CoqPartitions.COQ, CoqDocumentSetupParticipant,
-      new TextFileDocumentProvider {
-        override def getDefaultEncoding() = "UTF-8"
-      }))
+  override protected def initializeEditor() = {
+    super.initializeEditor
     setSourceViewerConfiguration(new CoqSourceViewerConfiguration(this))
-    super.initializeEditor()
-  }
-
-  private var parent : Composite = null
-  override def createPartControl (par : Composite) : Unit = {
-    import org.eclipse.jface.text.source.projection.{ProjectionSupport, ProjectionViewer}
-    super.createPartControl(par)
-
-    parent = par
-    //Create the necessary infrastructure for code folding
-    val projViewer : ProjectionViewer = getSourceViewer.asInstanceOf[ProjectionViewer]
-    val projectionSupport = new ProjectionSupport(projViewer, getAnnotationAccess(), getSharedColors())
-    projectionSupport.install()
-
-    //turn projection mode on
-    projViewer.doOperation(ProjectionViewer.TOGGLE)
-
-    annotationModel = Option(projViewer.getProjectionAnnotationModel)
-    updateFolding()
-  }
-
-  //Create the source viewer as one that supports folding
-  override def createSourceViewer (parent : Composite, ruler : IVerticalRuler, styles : Int) : ISourceViewer = {
-    import org.eclipse.jface.text.source.projection.ProjectionViewer
-    val viewer : ISourceViewer = new ProjectionViewer(
-        parent, ruler, getOverviewRuler(), isOverviewRulerVisible(), styles)
-    getSourceViewerDecorationSupport(viewer)
-    reconciler.install(viewer)
-    viewer
-  }
-
-  import org.eclipse.ui.texteditor.SourceViewerDecorationSupport
-  import org.eclipse.jface.text.source.DefaultCharacterPairMatcher
-  override def configureSourceViewerDecorationSupport(
-      support : SourceViewerDecorationSupport) = {
-    import CoqoonUIPreferences._
-    import org.eclipse.jface.text.IDocumentExtension3
-    super.configureSourceViewerDecorationSupport(support)
-    support.setCharacterPairMatcher(new DefaultCharacterPairMatcher(
-        Array('(', ')', '{', '}', '<', '>', '[', ']'),
-        CoqPartitions.COQ, true))
-    support.setMatchingCharacterPainterPreferenceKeys(
-        MATCHING_BRACKETS, MATCHING_BRACKETS_COLOR)
   }
 
   private def addAnnotations (first : Int, second : Int) : Unit =
@@ -167,6 +105,7 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
   override def initializeKeyBindingScopes =
     setKeyBindingScopes(Array("dk.itu.coqoon.ui.contexts.coq"))
 
+  import org.eclipse.ui.views.contentoutline.IContentOutlinePage
   // Support getting outline pages
   var outlinePage : Option[CoqContentOutlinePage] = None
   private def createOutlinePage() : CoqContentOutlinePage = {
@@ -181,46 +120,6 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
         outlinePage = Some(createOutlinePage)
       outlinePage.orNull
     } else super.getAdapter(adapter)
-
-  import dk.itu.coqoon.core.utilities.CacheSlot
-  val workingCopy = CacheSlot[IDetachedCoqVernacFile] {
-    ICoqModel.getInstance.toCoqElement(file.get).flatMap(
-        TryCast[ICoqVernacFile]).get.detach
-  }
-
-  override def doSetInput (input : IEditorInput) : Unit = {
-    super.doSetInput(input)
-    /* XXX: flush outline page */
-  }
-
-  var oldAnnotations : Array[Annotation] = Array()
-  def updateFolding() : Unit = {
-    import dk.itu.coqoon.core.utilities.Substring
-
-    import scala.collection.JavaConversions._
-    var positions : Seq[Position] = Seq()
-    workingCopy.get.accept(_ match {
-      case f : ICoqScriptGroup
-          if f.getChildren.size > 1 =>
-        val padding = f.getText.takeWhile(_.isWhitespace).length
-        if (Substring(f.getText, padding).count(_ == '\n') < 3) {
-          false
-        } else {
-          positions +:=
-            new Position(f.getOffset + padding, f.getLength - padding)
-          true
-        }
-      case f : IParent => true
-      case _ => false
-    })
-
-    val newAnnotations = Map(positions.map(
-        p => (new ProjectionAnnotation -> p)) : _*)
-
-    annotationModel.foreach(
-        _.modifyAnnotations(oldAnnotations, newAnnotations, null))
-    oldAnnotations = newAnnotations.map(_._1).toArray
-  }
 }
 object CoqEditor {
   final val FLAG_INITIALISED = "CoqEditor.initialised"
