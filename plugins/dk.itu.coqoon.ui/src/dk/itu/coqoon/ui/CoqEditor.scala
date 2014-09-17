@@ -169,16 +169,18 @@ class CoqEditor extends TextEditor with CoqTopEditorContainer {
 
   // Support getting outline pages
   var outlinePage : Option[CoqContentOutlinePage] = None
-  override def getAdapter (required : java.lang.Class[_]) : AnyRef = {
-    //Console.println("Getting adapter for " + required + " on CoqEditor")
-    if (required == classOf[IContentOutlinePage]) {
-      outlinePage = outlinePage.orElse(
-          file.flatMap(ICoqModel.getInstance.toCoqElement).flatMap(
-              TryCast[ICoqVernacFile]).map(new CoqContentOutlinePage(_)))
-      outlinePage.get
-    }
-    else super.getAdapter(required)
+  private def createOutlinePage() : CoqContentOutlinePage = {
+    val page = new CoqContentOutlinePage
+    page.setInput(workingCopy.get)
+    page
   }
+
+  override def getAdapter(adapter : Class[_]) =
+    if (adapter == classOf[IContentOutlinePage]) {
+      if (outlinePage == None && getSourceViewer != null)
+        outlinePage = Some(createOutlinePage)
+      outlinePage.orNull
+    } else super.getAdapter(adapter)
 
   import dk.itu.coqoon.core.utilities.CacheSlot
   val workingCopy = CacheSlot[IDetachedCoqVernacFile] {
@@ -385,7 +387,6 @@ class CoqWorkingCopyReconcilingStrategy(var document : IDocument,
   override def reconcile(partition : IRegion) = UIUtils.asyncExec {
     editor.workingCopy.get.setContents(document.get)
     editor.updateFolding
-    editor.outlinePage.foreach(_.setElement(editor.workingCopy.get))
   }
 
   override def setDocument(doc : IDocument) = (document = doc)
@@ -548,8 +549,7 @@ class CoqContentAssistantProcessor(
 
 import org.eclipse.ui.views.contentoutline.ContentOutlinePage
 
-class CoqContentOutlinePage(
-    private var element : ICoqElement) extends ContentOutlinePage {
+class CoqContentOutlinePage extends ContentOutlinePage {
   import org.eclipse.jface.viewers.{
     TreeViewer, SelectionChangedEvent, IStructuredSelection}
   import org.eclipse.swt.widgets.Composite
@@ -571,13 +571,13 @@ class CoqContentOutlinePage(
     val viewer = getTreeViewer()
     viewer.setContentProvider(new ModelContentProvider)
     viewer.setLabelProvider(new ModelLabelProvider)
-
-    setElement(element)
+    viewer.setInput(input.orNull)
   }
 
-  def setElement(element : ICoqElement) = {
-    this.element = element
-    Option(getTreeViewer).foreach(_.setInput(element))
+  private var input : Option[ICoqElement] = None
+  def setInput(input : ICoqElement) = {
+    this.input = Option(input)
+    Option(getTreeViewer).foreach(_.setInput(input))
   }
 }
 
