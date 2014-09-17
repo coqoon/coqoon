@@ -561,6 +561,9 @@ private class DetachedCoqVernacFileImpl(
   override def setContents(contents : String) = {
     content.set(Option(contents))
     getCache.sentences.clear
+    /* XXX: should it be possible to distinguish between multiple detached
+     * versions of a single file? */
+    notifyListeners(CoqFileContentChangedEvent(this))
   }
 }
 
