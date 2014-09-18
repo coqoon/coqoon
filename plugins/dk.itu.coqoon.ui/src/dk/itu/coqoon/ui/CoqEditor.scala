@@ -104,22 +104,6 @@ class CoqEditor extends BaseCoqEditor with CoqTopEditorContainer {
 
   override def initializeKeyBindingScopes =
     setKeyBindingScopes(Array("dk.itu.coqoon.ui.contexts.coq"))
-
-  import org.eclipse.ui.views.contentoutline.IContentOutlinePage
-  // Support getting outline pages
-  var outlinePage : Option[CoqContentOutlinePage] = None
-  private def createOutlinePage() : CoqContentOutlinePage = {
-    val page = new CoqContentOutlinePage
-    page.setInput(workingCopy.get)
-    page
-  }
-
-  override def getAdapter(adapter : Class[_]) =
-    if (adapter == classOf[IContentOutlinePage]) {
-      if (outlinePage == None && getSourceViewer != null)
-        outlinePage = Some(createOutlinePage)
-      outlinePage.orNull
-    } else super.getAdapter(adapter)
 }
 object CoqEditor {
   final val FLAG_INITIALISED = "CoqEditor.initialised"
@@ -161,40 +145,6 @@ private class CoqProofReconcilingStrategy(
   private var doc : Option[IDocument] = None
   override def setDocument(newDocument : IDocument) =
     doc = Option(newDocument)
-}
-
-import org.eclipse.ui.views.contentoutline.ContentOutlinePage
-
-class CoqContentOutlinePage extends ContentOutlinePage {
-  import org.eclipse.jface.viewers.{
-    TreeViewer, SelectionChangedEvent, IStructuredSelection}
-  import org.eclipse.swt.widgets.Composite
-
-  override def selectionChanged(event : SelectionChangedEvent) : Unit = {
-    super.selectionChanged(event)
-
-    TryCast[IStructuredSelection](
-        event.getSelection).flatMap(sel => Option(sel.getFirstElement)) match {
-      case Some(e : ICoqScriptElement) =>
-        OpenDeclarationHandler.highlightElement(e)
-      case _ =>
-    }
-  }
-
-  override def createControl(parent : Composite) : Unit = {
-    super.createControl(parent)
-
-    val viewer = getTreeViewer()
-    viewer.setContentProvider(new ModelContentProvider)
-    viewer.setLabelProvider(new ModelLabelProvider)
-    viewer.setInput(input.orNull)
-  }
-
-  private var input : Option[ICoqElement] = None
-  def setInput(input : ICoqElement) = {
-    this.input = Option(input)
-    Option(getTreeViewer).foreach(_.setInput(input))
-  }
 }
 
 // Provide a Coq option in the New menu
