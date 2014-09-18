@@ -27,6 +27,9 @@ abstract class BaseCoqEditor extends TextEditor {
             TryCast[ICoqVernacFile]).get.detach
   }
 
+  import org.eclipse.jface.text.source.SourceViewerConfiguration
+  protected def createSourceViewerConfiguration() : SourceViewerConfiguration
+
   import org.eclipse.ui.editors.text.{
     TextFileDocumentProvider, ForwardingDocumentProvider}
   import org.eclipse.core.filebuffers.IDocumentSetupParticipant
@@ -44,6 +47,7 @@ abstract class BaseCoqEditor extends TextEditor {
       new TextFileDocumentProvider {
         override def getDefaultEncoding() = "UTF-8"
       }))
+    setSourceViewerConfiguration(createSourceViewerConfiguration)
     super.initializeEditor
   }
 

@@ -88,10 +88,8 @@ class CoqEditor extends BaseCoqEditor with CoqTopEditorContainer {
 
   final def getViewer = super.getSourceViewer
 
-  override protected def initializeEditor() = {
-    super.initializeEditor
-    setSourceViewerConfiguration(new CoqSourceViewerConfiguration(this))
-  }
+  override protected def createSourceViewerConfiguration =
+    new CoqSourceViewerConfiguration(this)
 
   private def addAnnotations (first : Int, second : Int) : Unit =
     doConnectedToAnnotationModel(model =>
