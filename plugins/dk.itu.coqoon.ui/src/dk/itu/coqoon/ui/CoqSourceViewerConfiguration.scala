@@ -5,14 +5,13 @@ package dk.itu.coqoon.ui
 
 import org.eclipse.ui.editors.text.TextSourceViewerConfiguration
 
-class CoqSourceViewerConfiguration(
-    editor : CoqEditor) extends TextSourceViewerConfiguration {
+class BaseCoqSourceViewerConfiguration(
+    editor : BaseCoqEditor) extends TextSourceViewerConfiguration {
   import org.eclipse.jface.text.presentation.{IPresentationReconciler, PresentationReconciler}
   import org.eclipse.jface.text.{TextAttribute,IDocument}
   import org.eclipse.jface.text.reconciler.{IReconciler, MonoReconciler}
   import org.eclipse.swt.graphics.{Color,RGB}
   import org.eclipse.jface.text.source.ISourceViewer
-  import org.eclipse.jface.text.contentassist.{IContentAssistant,ContentAssistant}
 
   override def getAutoEditStrategies(v : ISourceViewer, contentType : String) =
     contentType match {
@@ -24,15 +23,6 @@ class CoqSourceViewerConfiguration(
          * shadow realm whose content type is IDocument.DEFAULT_CONTENT_TYPE */
         Array(new CoqAutoEditStrategy)
     }
-
-  override def getContentAssistant(v : ISourceViewer) : IContentAssistant = {
-    val assistant = new ContentAssistant
-    assistant.setDocumentPartitioning(CoqPartitions.COQ)
-    val assistantProcessor = new CoqContentAssistantProcessor(editor)
-    assistant.setContentAssistProcessor(
-        assistantProcessor, CoqPartitions.Types.COQ)
-    assistant
-  }
 
   import org.eclipse.jface.text.formatter.{
     MultiPassContentFormatter, IContentFormatter}
@@ -58,10 +48,10 @@ class CoqSourceViewerConfiguration(
   override def getConfiguredDocumentPartitioning(v : ISourceViewer) =
     CoqPartitions.COQ
 
-  override def getPresentationReconciler (v : ISourceViewer) : IPresentationReconciler = {
+  override def getPresentationReconciler(v : ISourceViewer) = {
     val pr = new PresentationReconciler
     pr.setDocumentPartitioning(CoqPartitions.COQ)
-    CoqSourceViewerConfiguration.addDamagerRepairers(pr)
+    BaseCoqSourceViewerConfiguration.addDamagerRepairers(pr)
   }
 
   import org.eclipse.jface.text.quickassist.QuickAssistAssistant
@@ -72,7 +62,7 @@ class CoqSourceViewerConfiguration(
     qa
   }
 }
-object CoqSourceViewerConfiguration {
+object BaseCoqSourceViewerConfiguration {
   import org.eclipse.jface.text.rules.DefaultDamagerRepairer
   import org.eclipse.jface.text.presentation.PresentationReconciler
 
@@ -207,7 +197,7 @@ private object StringTokenScanner {
 import org.eclipse.jface.text.IDocument
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
 class CoqWorkingCopyReconcilingStrategy(var document : IDocument,
-    editor : CoqEditor) extends IReconcilingStrategy {
+    editor : BaseCoqEditor) extends IReconcilingStrategy {
   import org.eclipse.jface.text.{IRegion, Position}
   import org.eclipse.jface.text.reconciler._
 
@@ -219,72 +209,4 @@ class CoqWorkingCopyReconcilingStrategy(var document : IDocument,
   }
 
   override def setDocument(doc : IDocument) = (document = doc)
-}
-
-import org.eclipse.jface.text.contentassist.{
-  ICompletionProposal, IContentAssistProcessor}
-
-class CoqContentAssistantProcessor(
-    container : CoqTopContainer) extends IContentAssistProcessor {
-  import org.eclipse.jface.text.contentassist.{IContextInformationValidator,IContextInformation,CompletionProposal,ContextInformation}
-  import org.eclipse.jface.text.ITextViewer
-  import java.text.MessageFormat
-  import scala.collection.mutable.HashMap
-
-  private val staticCompletions = Array("Admitted","apply","assumption","compute","Defined","destruct","Fixpoint","induction","intros","inversion","Lemma","reflexivity","rewrite","simpl","Theorem","unfold")
-
-  def getPrefix (doc : IDocument, offset : Int) : String = {
-    val prefix = new StringBuffer
-    if (doc != null && doc.getLength > 0) {
-      var index = offset - 1
-      while (index >= 0 && Character.isWhitespace(doc.getChar(index)) == false) {
-        prefix.insert(0, doc.getChar(index))
-        index -= 1
-      }
-    }
-    prefix.toString
-  }
-
-  def getCompletionProposal (completion : String, moreinfo : String, prefix : String, offset : Int) : ICompletionProposal = {
-    val info = new ContextInformation(completion, MessageFormat.format("CompletionProcessor.Proposal.ContextInfo.pattern"))
-    val more = if (moreinfo == null) completion else completion + " : " + moreinfo
-    new CompletionProposal(completion, offset - prefix.length, prefix.length, completion.length(), null, more, info, MessageFormat.format("CompletionProcessor.Proposal.hoverinfo.pattern"))
-  }
-
-  def computeCompletionProposals (viewer : ITextViewer, documentOffset : Int) : Array[ICompletionProposal] = {
-    val prefix = getPrefix(viewer.getDocument, documentOffset)
-
-    import dk.itu.coqoon.core.coqtop.CoqTypes._
-
-    val results =
-      if (prefix.length > 1) {
-        container.coqTop.search(List(
-    	    (Name_Pattern("^" + prefix), true))) match {
-    	  case Good(results) =>
-    	    results.map(a => {
-    	      (a.coq_object_qualid.mkString("."),
-    	          a.coq_object_object.replaceAll("\\s+", " "))
-    	    })
-    	  case _ => List()
-    	}
-      } else List()
-
-    val tst : String => Boolean = prefix.length == 0 || _.startsWith(prefix)
-
-    val filteredStatic = staticCompletions.filter(tst)
-    val proposals = new Array[ICompletionProposal](filteredStatic.size + results.size)
-    val mid = filteredStatic.length
-    Range(0, mid).map(x => proposals(x) = getCompletionProposal(filteredStatic(x), null, prefix, documentOffset))
-    Range(mid, proposals.length).map(x => {
-      val pr = results(x - mid)
-      proposals(x) = getCompletionProposal(pr._1, pr._2, prefix, documentOffset)
-    })
-    proposals
-  }
-
-  def computeContextInformation (viewer : ITextViewer, offset : Int) : Array[IContextInformation] = null
-  def getCompletionProposalAutoActivationCharacters () : Array[Char] = Array('.')
-  def getContextInformationAutoActivationCharacters () : Array[Char] = null
-  def getContextInformationValidator () : IContextInformationValidator = null
-  def getErrorMessage () : String = "not yet implemented"
 }

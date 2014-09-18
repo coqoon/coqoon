@@ -193,3 +193,86 @@ class NewCoqFileWizard extends Wizard with INewWizard {
     !file.isEmpty
   }
 }
+
+class CoqSourceViewerConfiguration(
+    editor : CoqEditor) extends BaseCoqSourceViewerConfiguration(editor) {
+  import org.eclipse.jface.text.source.ISourceViewer
+  import org.eclipse.jface.text.contentassist.{
+    IContentAssistant,ContentAssistant}
+  override def getContentAssistant(v : ISourceViewer) : IContentAssistant = {
+    val assistant = new ContentAssistant
+    assistant.setDocumentPartitioning(CoqPartitions.COQ)
+    val assistantProcessor = new CoqContentAssistantProcessor(editor)
+    assistant.setContentAssistProcessor(
+        assistantProcessor, CoqPartitions.Types.COQ)
+    assistant
+  }
+}
+
+import org.eclipse.jface.text.contentassist.{
+  ICompletionProposal, IContentAssistProcessor}
+
+class CoqContentAssistantProcessor(
+    container : CoqTopContainer) extends IContentAssistProcessor {
+  import org.eclipse.jface.text.contentassist.{IContextInformationValidator,IContextInformation,CompletionProposal,ContextInformation}
+  import org.eclipse.jface.text.ITextViewer
+  import java.text.MessageFormat
+  import scala.collection.mutable.HashMap
+
+  private val staticCompletions = Array("Admitted","apply","assumption","compute","Defined","destruct","Fixpoint","induction","intros","inversion","Lemma","reflexivity","rewrite","simpl","Theorem","unfold")
+
+  def getPrefix (doc : IDocument, offset : Int) : String = {
+    val prefix = new StringBuffer
+    if (doc != null && doc.getLength > 0) {
+      var index = offset - 1
+      while (index >= 0 && Character.isWhitespace(doc.getChar(index)) == false) {
+        prefix.insert(0, doc.getChar(index))
+        index -= 1
+      }
+    }
+    prefix.toString
+  }
+
+  def getCompletionProposal (completion : String, moreinfo : String, prefix : String, offset : Int) : ICompletionProposal = {
+    val info = new ContextInformation(completion, MessageFormat.format("CompletionProcessor.Proposal.ContextInfo.pattern"))
+    val more = if (moreinfo == null) completion else completion + " : " + moreinfo
+    new CompletionProposal(completion, offset - prefix.length, prefix.length, completion.length(), null, more, info, MessageFormat.format("CompletionProcessor.Proposal.hoverinfo.pattern"))
+  }
+
+  def computeCompletionProposals (viewer : ITextViewer, documentOffset : Int) : Array[ICompletionProposal] = {
+    val prefix = getPrefix(viewer.getDocument, documentOffset)
+
+    import dk.itu.coqoon.core.coqtop.CoqTypes._
+
+    val results =
+      if (prefix.length > 1) {
+        container.coqTop.search(List(
+            (Name_Pattern("^" + prefix), true))) match {
+          case Good(results) =>
+            results.map(a => {
+              (a.coq_object_qualid.mkString("."),
+                  a.coq_object_object.replaceAll("\\s+", " "))
+            })
+          case _ => List()
+        }
+      } else List()
+
+    val tst : String => Boolean = prefix.length == 0 || _.startsWith(prefix)
+
+    val filteredStatic = staticCompletions.filter(tst)
+    val proposals = new Array[ICompletionProposal](filteredStatic.size + results.size)
+    val mid = filteredStatic.length
+    Range(0, mid).map(x => proposals(x) = getCompletionProposal(filteredStatic(x), null, prefix, documentOffset))
+    Range(mid, proposals.length).map(x => {
+      val pr = results(x - mid)
+      proposals(x) = getCompletionProposal(pr._1, pr._2, prefix, documentOffset)
+    })
+    proposals
+  }
+
+  def computeContextInformation (viewer : ITextViewer, offset : Int) : Array[IContextInformation] = null
+  def getCompletionProposalAutoActivationCharacters () : Array[Char] = Array('.')
+  def getContextInformationAutoActivationCharacters () : Array[Char] = null
+  def getContextInformationValidator () : IContextInformationValidator = null
+  def getErrorMessage () : String = "not yet implemented"
+}
