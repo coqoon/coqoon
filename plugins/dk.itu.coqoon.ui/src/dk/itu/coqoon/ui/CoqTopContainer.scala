@@ -3,24 +3,37 @@ package dk.itu.coqoon.ui
 import dk.itu.coqoon.core.coqtop.{CoqTypes, CoqTopIdeSlave_v20120710}
 import dk.itu.coqoon.core.utilities.TryCast
 
-trait CoqTopContainer {
+trait CoqContainer {
   private val lock = new Object
 
-  def coqTop : CoqTopIdeSlave_v20120710
+  import org.eclipse.ui.IPropertyListener
+  private var listeners = Set[IPropertyListener]()
+  def addListener(l : IPropertyListener) =
+    lock synchronized (listeners += l)
+  def removeListener(l : IPropertyListener) =
+    lock synchronized (listeners -= l)
+  def fireChange(propertyID : Int) : Unit =
+    lock synchronized { listeners }.map(_.propertyChanged(this, propertyID))
+}
+
+trait CoqGoalsContainer extends CoqContainer {
+  private val lock = new Object
 
   private var goals_ : Option[CoqTypes.goals] = None
   def goals = lock synchronized { goals_ }
   def setGoals(g : Option[CoqTypes.goals]) = {
     lock synchronized { goals_ = g }
-    fireChange(CoqTopContainer.PROPERTY_GOALS)
+    fireChange(CoqGoalsContainer.PROPERTY_GOALS)
   }
+}
+object CoqGoalsContainer {
+  final val PROPERTY_GOALS = 1979
+}
 
-  import org.eclipse.ui.IPropertyListener
-  private var listeners = Set[IPropertyListener]()
-  def addListener(l : IPropertyListener) = lock synchronized (listeners += l)
-  def removeListener(l : IPropertyListener) = lock synchronized (listeners -= l)
-  def fireChange(propertyID : Int) : Unit =
-    lock synchronized { listeners }.map(_.propertyChanged(this, propertyID))
+trait CoqTopContainer extends CoqContainer with CoqGoalsContainer {
+  private val lock = new Object
+
+  def coqTop : CoqTopIdeSlave_v20120710
 
   private var busy_ : Boolean = false
   def busy : Boolean = lock synchronized { busy_ }
@@ -42,7 +55,8 @@ trait CoqTopContainer {
 }
 object CoqTopContainer {
   final val PROPERTY_BUSY = 979
-  final val PROPERTY_GOALS = 1979
+  @deprecated("Use CoqGoalsContainer.PROPERTY_GOALS instead", "0.4.6")
+  final val PROPERTY_GOALS = CoqGoalsContainer.PROPERTY_GOALS
 }
 
 trait CoqTopEditorContainer extends CoqTopContainer {
