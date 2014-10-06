@@ -89,7 +89,7 @@ The views and conclusions contained in the software and documentation are those 
          unpack="false"/>
 
    <plugin
-         id="org.scala-ide.scala.library"
+         id="org.scala-lang.scala-library"
          download-size="0"
          install-size="0"
          version="0.0.0"

@@ -21,7 +21,6 @@ Require-Bundle:
  dk.itu.sdg.kopitiamaspects;bundle-version="0.0.5",
  dk.itu.coqoon.core;bundle-version="0.4.0",
  dk.itu.coqoon.ui;bundle-version="0.4.0",
- org.scala-ide.scala.library;bundle-version="2.10.4";resolution:=optional,
  org.scala-lang.scala-library;bundle-version="2.11.2";resolution:=optional
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ClassPath: .
