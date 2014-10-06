@@ -55,8 +55,6 @@ trait CoqTopContainer extends CoqContainer with CoqGoalsContainer {
 }
 object CoqTopContainer {
   final val PROPERTY_BUSY = 979
-  @deprecated("Use CoqGoalsContainer.PROPERTY_GOALS instead", "0.4.6")
-  final val PROPERTY_GOALS = CoqGoalsContainer.PROPERTY_GOALS
 }
 
 trait CoqTopEditorContainer extends CoqTopContainer {

@@ -308,13 +308,13 @@ abstract class AttentiveViewPart[A](
 }
 
 class GoalViewer
-    extends AttentiveViewPart[CoqTopContainer] with IPropertyListener {
+    extends AttentiveViewPart[CoqGoalsContainer] with IPropertyListener {
   import org.eclipse.swt.layout.{FormData,FormLayout,FormAttachment}
 
   override def propertyChanged (source : Object, propID : Int) = {
-    if (source.isInstanceOf[CoqTopContainer] &&
-        propID == CoqTopContainer.PROPERTY_GOALS)
-      writeGoal(source.asInstanceOf[CoqTopContainer].goals)
+    if (source.isInstanceOf[CoqGoalsContainer] &&
+        propID == CoqGoalsContainer.PROPERTY_GOALS)
+      writeGoal(source.asInstanceOf[CoqGoalsContainer].goals)
   }
 
   override def dispose = {
@@ -322,12 +322,12 @@ class GoalViewer
     super.dispose
   }
 
-  override protected def detach(part : CoqTopContainer) = {
+  override protected def detach(part : CoqGoalsContainer) = {
     part.removeListener(this)
     writeGoal(None)
   }
 
-  override protected def attach(part : CoqTopContainer) = {
+  override protected def attach(part : CoqGoalsContainer) = {
     part.addListener(this)
     writeGoal(part.goals)
   }
