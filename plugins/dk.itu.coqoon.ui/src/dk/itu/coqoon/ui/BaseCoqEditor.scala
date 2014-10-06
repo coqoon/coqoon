@@ -28,7 +28,8 @@ abstract class BaseCoqEditor extends TextEditor {
   }
 
   import org.eclipse.jface.text.source.SourceViewerConfiguration
-  protected def createSourceViewerConfiguration() : SourceViewerConfiguration
+  protected def createSourceViewerConfiguration() : SourceViewerConfiguration =
+    new BaseCoqSourceViewerConfiguration(this)
 
   import org.eclipse.ui.editors.text.{
     TextFileDocumentProvider, ForwardingDocumentProvider}
