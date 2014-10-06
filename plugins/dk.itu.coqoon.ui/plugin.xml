@@ -155,6 +155,17 @@
                contentTypeId="dk.itu.coqoon.core.CoqFile">
          </contentTypeBinding>
       </editor>
+      <editor
+            class="dk.itu.coqoon.ui.PIDECoqEditor"
+            contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
+            extensions="v"
+            icon="icons/coqfileblue_obj.gif"
+            id="dk.itu.coqoon.ui.PIDECoqEditor"
+            name="PIDE Coq Editor">
+         <contentTypeBinding
+               contentTypeId="dk.itu.coqoon.core.CoqFile">
+         </contentTypeBinding>
+      </editor>
    </extension>
    <extension
          point="org.eclipse.ui.views">
