@@ -90,13 +90,32 @@ class PIDECoqEditor extends BaseCoqEditor {
     }
   }
 
+  import dk.itu.coqoon.core.utilities.TryCast
+  import org.eclipse.core.resources.IFile
+  protected[ui] def getFile() : Option[IFile] =
+    TryCast[IFileEditorInput](getEditorInput).map(_.getFile)
   protected[ui] def getName() : Option[String] =
-    getEditorInput match {
-      case f : IFileEditorInput =>
-        Some(f.getFile.getName)
-      case _ => None
-    }
+    getFile.map(_.getName)
   protected[ui] var lastDocument : Option[String] = None
+}
+object PIDECoqEditor {
+  import isabelle._
+  import dk.itu.coqoon.core.coqtop.CoqTypes
+  private def extractMarkup(snapshot : Document.Snapshot,
+      command : isabelle.Command) : Seq[XML.Elem] = {
+    val markupTree =
+      snapshot.state.command_markup(snapshot.version, command,
+          Command.Markup_Index.markup, command.range, Markup.Elements.full)
+    (for ((range, entry) <- markupTree.branches;
+          markup <- entry.markup)
+       yield markup).toSeq
+  }
+  private def extractResults(snapshot : Document.Snapshot,
+      command : isabelle.Command) : Seq[Command.Results.Entry] = {
+    val results =
+      snapshot.state.command_results(snapshot.version, command)
+    results.iterator.toSeq
+  }
 }
 
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
