@@ -63,8 +63,10 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
       val allResults =
         CommandsLock synchronized {
           for ((offset, i) <- commands)
-            yield (offset, i, PIDECoqEditor.extractResults(lastSnapshot.get, i))
+            yield (offset, i,
+                PIDECoqEditor.extractResults(lastSnapshot.get, i))
         }
+
       /* Extract and display error messages */
       for ((offset, command, results) <- allResults;
            (_, tree) <- results) {
@@ -76,6 +78,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
               (propertyMap.get("offset").map(Integer.parseInt(_, 10)),
                propertyMap.get("end_offset").map(Integer.parseInt(_, 10)))
             val msg = f.body(0).asInstanceOf[Text].content
+            println((msg, errStart, errEnd))
             (getFile, errStart, errEnd) match {
               case (Some(f), Some(start), Some(end)) =>
                 CreateErrorMarkerJob(f,
@@ -105,8 +108,9 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
         lastSnapshot.foreach(snapshot =>
           commands =
             (for (command <- snapshot.node.commands;
-                 offset <- snapshot.node.command_start(command))
-              yield (offset, command)).toSeq)
+                  offset <- snapshot.node.command_start(command)
+                    if offset >= ibLength)
+              yield (offset - ibLength, command)).toSeq)
       }
       commandsUpdated()
     case _ =>
@@ -132,7 +136,13 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
     input match {
       case f : IFileEditorInput =>
         val file = f.getFile
-        import dk.itu.coqoon.core
+
+        import dk.itu.coqoon.core.model.ICoqModel
+        val cp = ICoqModel.toCoqProject(file.getProject)
+        val initialisationBlock =
+          cp.getLoadPath.map(_.asCommand).mkString("", "\n", "\n")
+        ibLength = initialisationBlock.length
+
         val text = TotalReader.read(file.getContents)
         lastDocument = Option(text)
         session.update(
@@ -140,7 +150,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
             List[Document.Edit_Text](
                 Document.Node.Name(file.getName) ->
                     Document.Node.Edits(List(
-                        Text.Edit.insert(0, text)))))
+                        Text.Edit.insert(0, initialisationBlock + text)))))
       case _ =>
     }
   }
@@ -152,6 +162,8 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   protected[ui] def getName() : Option[String] =
     getFile.map(_.getName)
   protected[ui] var lastDocument : Option[String] = None
+
+  protected[ui] var ibLength : Int = 0
 }
 object PIDECoqEditor {
   import isabelle._
@@ -225,11 +237,13 @@ private class PIDEReconcilingStrategy(
       val edits : Document.Node.Edits[Text.Edit, Text.Perspective] =
           dr.getType match {
         case DirtyRegion.INSERT =>
-          Document.Node.Edits(List(Text.Edit.insert(dr.getOffset, dr.getText)))
+          Document.Node.Edits(List(Text.Edit.insert(
+              editor.ibLength + dr.getOffset, dr.getText)))
         case DirtyRegion.REMOVE =>
           /* The region doesn't actually carry the deleted text, so retrieve it
            * from the last known state of the document */
-          Document.Node.Edits(List(Text.Edit.remove(dr.getOffset,
+          Document.Node.Edits(List(Text.Edit.remove(
+              editor.ibLength + dr.getOffset,
               editor.lastDocument.get.substring(
                   dr.getOffset, dr.getOffset + dr.getLength))))
       }
