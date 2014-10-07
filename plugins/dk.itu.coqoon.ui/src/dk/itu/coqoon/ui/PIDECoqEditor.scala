@@ -100,8 +100,11 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   private var lastSnapshot : Option[Document.Snapshot] = None
   private var commands : Seq[(Int, isabelle.Command)] = Seq()
 
+  import dk.itu.coqoon.core.CoqoonPreferences.PrintIdeslaveTraffic
   session.commands_changed += Session.Consumer[Any]("Coqoon") {
     case changed : Session.Commands_Changed =>
+      if (PrintIdeslaveTraffic.get)
+        println(s"! ${changed}")
       CommandsLock synchronized {
         lastSnapshot = getName.map(
             n => session.snapshot(Document.Node.Name(n)))
@@ -113,8 +116,13 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
               yield (offset - ibLength, command)).toSeq)
       }
       commandsUpdated()
-    case _ =>
+    case q =>
+      if (PrintIdeslaveTraffic.get)
+        println(s"! ${q}")
   }
+  session.all_messages += Session.Consumer("Coqoon")(q =>
+    if (PrintIdeslaveTraffic.get)
+      println(s"? ${q}"))
 
   session.start("Coq", Nil)
 
