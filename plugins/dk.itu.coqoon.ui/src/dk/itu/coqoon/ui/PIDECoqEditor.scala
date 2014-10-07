@@ -1,6 +1,6 @@
 package dk.itu.coqoon.ui
 
-class PIDECoqEditor extends BaseCoqEditor {
+class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   import org.eclipse.jface.text.reconciler.MonoReconciler
   private val reconciler =
     new MonoReconciler(new PIDEReconcilingStrategy(this), true)
@@ -31,12 +31,24 @@ class PIDECoqEditor extends BaseCoqEditor {
   import dk.itu.coqoon.ui.utilities.UIUtils.asyncExec
   private def caretPing() =
     asyncExec {
-      val offset = getViewer.getTextWidget.getCaretOffset
-      val selectedCommand = CommandsLock synchronized {
-        commands.find(
-            q => (offset >= q._1 && offset <= (q._1 + q._2.length)))
+      val caret = getViewer.getTextWidget.getCaretOffset
+      val commandAndMarkup = CommandsLock synchronized {
+        val c = commands.find(
+            q => (caret >= q._1 && caret <= (q._1 + q._2.length)))
+        lastSnapshot.flatMap(snapshot => c.map(
+            c => (c, PIDECoqEditor.extractMarkup(snapshot, c._2))))
       }
-      println(selectedCommand)
+      commandAndMarkup match {
+        case Some(((offset, command), markup)) =>
+          markup.find(_.name == "goals") match {
+            case Some(el) =>
+              setGoals(PIDECoqEditor.extractGoals(el))
+            case _ =>
+              setGoals(None)
+          }
+        case _ =>
+          setGoals(None)
+      }
     }
 
   private def commandsUpdated() =
@@ -64,7 +76,6 @@ class PIDECoqEditor extends BaseCoqEditor {
               (propertyMap.get("offset").map(Integer.parseInt(_, 10)),
                propertyMap.get("end_offset").map(Integer.parseInt(_, 10)))
             val msg = f.body(0).asInstanceOf[Text].content
-            println(errStart, errEnd, msg)
             (getFile, errStart, errEnd) match {
               case (Some(f), Some(start), Some(end)) =>
                 CreateErrorMarkerJob(f,
@@ -159,6 +170,40 @@ object PIDECoqEditor {
     val results =
       snapshot.state.command_results(snapshot.version, command)
     results.iterator.toSeq
+  }
+
+  import isabelle.XML.{Elem, Text, Tree}
+  /* For the time being, we convert exciting new PIDE data into boring old
+   * -ideslave-8.4 data, to make it easier to support both at once. */
+  private object GoalAssist {
+    import dk.itu.coqoon.core.coqtop.CoqTypes
+    def extractGoalList(e : Tree) : List[CoqTypes.goal] = e match {
+      case e : Elem =>
+        e.body.flatMap(extractGoal)
+      case _ => List()
+    }
+    def extractGoal(e : Tree) : Option[CoqTypes.goal] = e match {
+      case e : Elem if e.name == "goal" =>
+        val propertyMap = e.markup.properties.toMap
+        Some(CoqTypes.goal(
+            propertyMap.get("id").getOrElse("(unknown)"),
+            extractHypotheses(e.body(0)),
+            e.body(1).asInstanceOf[Elem].body(0).asInstanceOf[Text].content))
+      case _ => None
+    }
+    import dk.itu.coqoon.core.utilities.TryCast
+    def extractHypotheses(e : Tree) : List[String] = e match {
+      case e : Elem if e.name == "hypotheses" =>
+        for (hypothesis <- e.body.flatMap(TryCast[Elem]);
+             text <- TryCast[Text](hypothesis.body(0)))
+          yield text.content
+      case _ => List()
+    }
+  }
+  private def extractGoals(e : Tree) = e match {
+    case e : Elem if e.name == "goals" =>
+      Some(CoqTypes.goals(GoalAssist.extractGoalList(e.body(0)), List()))
+    case _ => None
   }
 }
 
