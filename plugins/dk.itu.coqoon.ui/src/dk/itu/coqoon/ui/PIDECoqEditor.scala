@@ -39,21 +39,65 @@ class PIDECoqEditor extends BaseCoqEditor {
       println(selectedCommand)
     }
 
+  private def commandsUpdated() =
+    asyncExec {
+      /* Clear all old error messages */
+      import dk.itu.coqoon.core
+      import org.eclipse.core.resources.IResource
+      getFile.foreach(file => new DeleteMarkersJob(file,
+          core.ManifestIdentifiers.MARKER_PROBLEM, true,
+          IResource.DEPTH_ZERO).schedule)
+
+      val allResults =
+        CommandsLock synchronized {
+          for ((offset, i) <- commands)
+            yield (offset, i, PIDECoqEditor.extractResults(lastSnapshot.get, i))
+        }
+      /* Extract and display error messages */
+      for ((offset, command, results) <- allResults;
+           (_, tree) <- results) {
+        import XML._
+        tree match {
+          case f : Elem if f.name == "error_message" =>
+            val propertyMap = f.markup.properties.toMap
+            val (errStart, errEnd) =
+              (propertyMap.get("offset").map(Integer.parseInt(_, 10)),
+               propertyMap.get("end_offset").map(Integer.parseInt(_, 10)))
+            val msg = f.body(0).asInstanceOf[Text].content
+            println(errStart, errEnd, msg)
+            (getFile, errStart, errEnd) match {
+              case (Some(f), Some(start), Some(end)) =>
+                CreateErrorMarkerJob(f,
+                    (offset + start - 1, offset + end - 1),
+                    msg).schedule
+              case (Some(f), _, _) =>
+                CreateErrorMarkerJob(f,
+                    (offset, offset + command.source.length), msg).schedule
+              case _ =>
+            }
+          case _ =>
+        }
+      }
+
+      caretPing
+    }
+
   private object CommandsLock
+  private var lastSnapshot : Option[Document.Snapshot] = None
   private var commands : Seq[(Int, isabelle.Command)] = Seq()
 
   session.commands_changed += Session.Consumer[Any]("Coqoon") {
     case changed : Session.Commands_Changed =>
-      val snapshot_ = getName.map(
-          n => session.snapshot(Document.Node.Name(n)))
-      val snapshot = snapshot_.get
       CommandsLock synchronized {
-        commands =
-          (for (command <- snapshot.node.commands;
-               offset <- snapshot.node.command_start(command))
-            yield (offset, command)).toSeq
+        lastSnapshot = getName.map(
+            n => session.snapshot(Document.Node.Name(n)))
+        lastSnapshot.foreach(snapshot =>
+          commands =
+            (for (command <- snapshot.node.commands;
+                 offset <- snapshot.node.command_start(command))
+              yield (offset, command)).toSeq)
       }
-      caretPing()
+      commandsUpdated()
     case _ =>
   }
 
