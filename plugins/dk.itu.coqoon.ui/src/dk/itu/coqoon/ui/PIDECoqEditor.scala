@@ -29,26 +29,42 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
     override def caretMoved(ev : CaretEvent) = caretPing()
   }
 
+  private var lastCommand : Option[isabelle.Command] = None
+
   import dk.itu.coqoon.ui.utilities.UIUtils.asyncExec
   private def caretPing() =
     asyncExec {
       val caret = getViewer.getTextWidget.getCaretOffset
-      val commandAndMarkup = CommandsLock synchronized {
+      val commandResultsAndMarkup = CommandsLock synchronized {
         val c = commands.find(
             q => (caret >= q._1 && caret <= (q._1 + q._2.length)))
         lastSnapshot.flatMap(snapshot => c.map(
-            c => (c, PIDECoqEditor.extractMarkup(snapshot, c._2))))
+            c => (c,
+                PIDECoqEditor.extractResults(snapshot, c._2),
+                PIDECoqEditor.extractMarkup(snapshot, c._2))))
       }
-      commandAndMarkup match {
-        case Some(((offset, command), markup)) =>
+      commandResultsAndMarkup match {
+        case Some(((_, command), _, _))
+            if lastCommand.contains(command) =>
+          /* do nothing */
+        case Some(((offset, command), results, markup)) =>
           markup.find(_.name == "goals") match {
             case Some(el) =>
               setGoals(PIDECoqEditor.extractGoals(el))
             case _ =>
               setGoals(None)
           }
+          import isabelle.XML.{Elem, Text}
+          for ((_, tree) <- results) tree match {
+            case f : Elem if f.name == "writeln_message" =>
+              import dk.itu.coqoon.ui.utilities.EclipseConsole
+              EclipseConsole.out.println(f.body(0).asInstanceOf[Text].content)
+            case _ =>
+          }
+          lastCommand = Option(command)
         case _ =>
           setGoals(None)
+          lastCommand = None
       }
     }
 
