@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: PIDE container for Coqoon
 Bundle-SymbolicName: dk.itu.coqoon.pide
-Bundle-Version: 0.0.1.58502-072a809ced37
+Bundle-Version: 0.0.2.58512-f4975f427e68
 Bundle-ClassPath: Pure.jar
 Require-Bundle: 
  org.scala-lang.scala-library;bundle-version="2.11.2";resolution:=optional

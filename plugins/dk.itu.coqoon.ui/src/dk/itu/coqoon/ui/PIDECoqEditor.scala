@@ -21,7 +21,8 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   import isabelle._
   protected[ui] val syntax = new Coq_Syntax
   protected[ui] val resources = new Coq_Resources(syntax)
-  protected[ui] val session = new Session(resources)
+  protected[ui] val session = new Session
+  session.register_resources("coq", resources)
 
   import org.eclipse.swt.custom.{CaretEvent, CaretListener}
   object DocumentCaretListener extends CaretListener {
@@ -124,7 +125,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
     if (PrintIdeslaveTraffic.get)
       println(s"? ${q}"))
 
-  session.start("Coq", Nil)
+  session.start("coq", Nil)
 
   while (!session.is_ready && session.phase != Session.Failed)
     Thread.sleep(500)
@@ -132,7 +133,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
     println("Oh, no")
 
   override def dispose = {
-    session.stop
+    session.stop("coq")
     super.dispose
   }
 
@@ -158,7 +159,8 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
             List[Document.Edit_Text](
                 Document.Node.Name(file.getName) ->
                     Document.Node.Edits(List(
-                        Text.Edit.insert(0, initialisationBlock + text)))))
+                        Text.Edit.insert(0, initialisationBlock + text)))),
+            "coq")
       case _ =>
     }
   }
@@ -257,7 +259,7 @@ private class PIDEReconcilingStrategy(
       }
       editor.getName.foreach(name => editor.session.update(
           Document.Blobs.empty,
-          List[Document.Edit_Text](Document.Node.Name(name) -> edits)))
+          List[Document.Edit_Text](Document.Node.Name(name) -> edits), "coq"))
     } finally editor.lastDocument = Option(editor.getViewer.getDocument.get)
   }
 
