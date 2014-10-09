@@ -9,7 +9,7 @@ Require-Bundle:
  org.eclipse.ui,
  org.eclipse.core.runtime,
  org.eclipse.core.resources;bundle-version="3.6.0",
- org.scala-lang.scala-library;bundle-version="2.11.2";resolution:=optional
+ org.scala-lang.scala-library;bundle-version="2.11.2"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
 Export-Package: dk.itu.coqoon.core,
@@ -21,4 +21,4 @@ Bundle-NativeCode:
  lib/i686/WindowsConsoleUtilities_Native.dll; processor=x86; osname=Win32,
  lib/x86_64/WindowsConsoleUtilities_Native.dll; processor=x86-64; osname=Win32,
  *
-Import-Package: scala.xml;resolution:=optional
+Import-Package: scala.xml
