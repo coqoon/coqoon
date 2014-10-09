@@ -19,8 +19,13 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   def getViewer = super.getSourceViewer
 
   import isabelle._
+  import dk.itu.coqoon.core.CoqoonPreferences
   protected[ui] val syntax = new Coq_Syntax
-  protected[ui] val resources = new Coq_Resources(syntax)
+  protected[ui] val resources = new Coq_Resources(syntax,
+      CoqoonPreferences.CoqPath.get match {
+        case Some(path) => path + java.io.File.separator + "coqtop"
+        case _ => "coqtop"
+      })
   protected[ui] val session = new Session
   session.register_resources("coq", resources)
 
