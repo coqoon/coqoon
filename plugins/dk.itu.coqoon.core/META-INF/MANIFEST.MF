@@ -2,14 +2,15 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Coqoon core
 Bundle-SymbolicName: dk.itu.coqoon.core;singleton:=true
-Bundle-Version: 0.4.5.2
+Bundle-Version: 0.4.6
 Bundle-Activator: dk.itu.coqoon.core.Activator
 Bundle-Vendor: IT University of Copenhagen
 Require-Bundle: 
  org.eclipse.ui,
  org.eclipse.core.runtime,
  org.eclipse.core.resources;bundle-version="3.6.0",
- org.scala-lang.scala-library;bundle-version="2.11.2"
+ org.scala-lang.scala-library;bundle-version="2.11.2",
+ org.scala-lang.modules.scala-xml;bundle-version="1.0.2"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
 Export-Package: dk.itu.coqoon.core,
@@ -21,4 +22,3 @@ Bundle-NativeCode:
  lib/i686/WindowsConsoleUtilities_Native.dll; processor=x86; osname=Win32,
  lib/x86_64/WindowsConsoleUtilities_Native.dll; processor=x86-64; osname=Win32,
  *
-Import-Package: scala.xml

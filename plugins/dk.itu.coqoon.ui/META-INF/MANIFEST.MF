@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Coqoon UI
 Bundle-SymbolicName: dk.itu.coqoon.ui;singleton:=true
-Bundle-Version: 0.4.5.2
+Bundle-Version: 0.4.6
 Bundle-Activator: dk.itu.coqoon.ui.Activator
 Bundle-Vendor: IT University of Copenhagen
 Require-Bundle: 
@@ -17,7 +17,7 @@ Require-Bundle:
  org.eclipse.help;bundle-version="3.5.0",
  org.eclipse.ui.views;bundle-version="3.5.0",
  org.eclipse.ui.navigator,
- dk.itu.coqoon.core;bundle-version="0.4.0",
+ dk.itu.coqoon.core;bundle-version="0.4.6",
  org.eclipse.ui.navigator.resources,
  org.scala-lang.scala-library;bundle-version="2.11.2",
  dk.itu.coqoon.pide;bundle-version="0.0.3"

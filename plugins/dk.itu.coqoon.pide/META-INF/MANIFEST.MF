@@ -5,9 +5,7 @@ Bundle-SymbolicName: dk.itu.coqoon.pide
 Bundle-Version: 0.0.3.58513-3809e538c662
 Bundle-ClassPath: Pure.jar
 Require-Bundle: 
- org.scala-lang.scala-library;bundle-version="2.11.2"
+ org.scala-lang.scala-library;bundle-version="2.11.2",
+ org.scala-lang.modules.scala-parser-combinators;bundle-version="1.0.2"
 Export-Package: isabelle;version="0.0.3.58513-3809e538c662"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
-Import-Package: 
- scala.util.parsing.combinator;version="1.0.1",
- scala.util.parsing.input;version="1.0.1"

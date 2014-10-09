@@ -1,3 +1,19 @@
+Coqoon 0.4.6
+============
+
+9th October 2014
+
+This release introduces a new user interface for configuring project load
+paths, and adds tentative support for using the PIDE protocol to interact
+with Coq. (This protocol is not yet supported by any released version of Coq.)
+
+Other significant changes
+-------------------------
+
+* Scala library version bump
+
+  Coqoon now depends on Scala 2.11.
+
 Coqoon 0.4.5.2
 ==============
 
