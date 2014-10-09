@@ -169,7 +169,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
         ibLength = initialisationBlock.length
 
         val text = TotalReader.read(file.getContents)
-        lastDocument = Option(text)
+        lastDocument = text
         session.update(
             Document.Blobs.empty,
             List[Document.Edit_Text](
@@ -187,7 +187,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
     TryCast[IFileEditorInput](getEditorInput).map(_.getFile)
   protected[ui] def getName() : Option[String] =
     getFile.map(_.getName)
-  protected[ui] var lastDocument : Option[String] = None
+  protected[ui] var lastDocument : String = ""
 
   protected[ui] var ibLength : Int = 0
 }
@@ -259,24 +259,40 @@ private class PIDEReconcilingStrategy(
   override def reconcile(dr : DirtyRegion, r : IRegion) = {
     import isabelle._
 
-    try {
-      val edits : Document.Node.Edits[Text.Edit, Text.Perspective] =
-          dr.getType match {
-        case DirtyRegion.INSERT =>
+    val edits : Document.Node.Edits[Text.Edit, Text.Perspective] =
+        dr.getType match {
+      case DirtyRegion.INSERT =>
+        val text = dr.getText
+        try {
           Document.Node.Edits(List(Text.Edit.insert(
-              editor.ibLength + dr.getOffset, dr.getText)))
-        case DirtyRegion.REMOVE =>
-          /* The region doesn't actually carry the deleted text, so retrieve it
-           * from the last known state of the document */
+              editor.ibLength + dr.getOffset, text)))
+        } finally {
+          editor.lastDocument =
+              editor.lastDocument.substring(0, dr.getOffset) +
+              text +
+              (if (dr.getOffset < editor.lastDocument.length)
+                 editor.lastDocument.substring(dr.getOffset)
+               else "")
+        }
+      case DirtyRegion.REMOVE =>
+        /* The region doesn't actually carry the deleted text, so retrieve it
+         * from the last known state of the document */
+        try {
           Document.Node.Edits(List(Text.Edit.remove(
               editor.ibLength + dr.getOffset,
-              editor.lastDocument.get.substring(
+              editor.lastDocument.substring(
                   dr.getOffset, dr.getOffset + dr.getLength))))
-      }
-      editor.getName.foreach(name => editor.session.update(
-          Document.Blobs.empty,
-          List[Document.Edit_Text](Document.Node.Name(name) -> edits), "coq"))
-    } finally editor.lastDocument = Option(editor.getViewer.getDocument.get)
+        } finally {
+          editor.lastDocument =
+              editor.lastDocument.substring(0, dr.getOffset) +
+              (if (dr.getOffset + dr.getLength < editor.lastDocument.length)
+                 editor.lastDocument.substring(dr.getOffset + dr.getLength)
+               else "")
+        }
+    }
+    editor.getName.foreach(name => editor.session.update(
+        Document.Blobs.empty,
+        List[Document.Edit_Text](Document.Node.Name(name) -> edits), "coq"))
   }
 
   private var doc : Option[IDocument] = None
