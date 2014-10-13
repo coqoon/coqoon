@@ -756,4 +756,16 @@
             class="dk.itu.coqoon.ui.CoqoonUIPreferences">
       </initializer>
    </extension>
+   <extension
+         point="org.eclipse.ui.perspectiveExtensions">
+      <perspectiveExtension
+            targetID="dk.itu.sdg.kopitiam.CoqPerspective">
+         <newWizardShortcut
+               id="Kopitiam.newCoqFileWizard">
+         </newWizardShortcut>
+         <newWizardShortcut
+               id="Kopitiam.newCoqProjectWizard">
+         </newWizardShortcut>
+      </perspectiveExtension>
+   </extension>
 </plugin>
