@@ -95,18 +95,12 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
         import XML._
         tree match {
           case f : Elem if f.name == "error_message" =>
-            val propertyMap = f.markup.properties.toMap
-            val (errStart, errEnd) =
-              (propertyMap.get("offset").map(Integer.parseInt(_, 10)),
-               propertyMap.get("end_offset").map(Integer.parseInt(_, 10)))
-            val msg = f.body(0).asInstanceOf[Text].content
-            println((msg, errStart, errEnd))
-            (getFile, errStart, errEnd) match {
-              case (Some(f), Some(start), Some(end)) =>
+            (getFile, PIDECoqEditor.extractError(f)) match {
+              case (Some(f), Some((msg, Some(start), Some(end)))) =>
                 CreateErrorMarkerJob(f,
                     (offset + start - 1, offset + end - 1),
                     msg).schedule
-              case (Some(f), _, _) =>
+              case (Some(f), Some((msg, _, _))) =>
                 CreateErrorMarkerJob(f,
                     (offset, offset + command.source.length), msg).schedule
               case _ =>
@@ -246,6 +240,16 @@ object PIDECoqEditor {
   private def extractGoals(e : Tree) = e match {
     case e : Elem if e.name == "goals" =>
       Some(CoqTypes.goals(GoalAssist.extractGoalList(e.body(0)), List()))
+    case _ => None
+  }
+  private def extractError(e : Tree) = e match {
+    case f : Elem if f.name == "error_message" =>
+      val propertyMap = f.markup.properties.toMap
+      val (errStart, errEnd) =
+        (propertyMap.get("offset").map(Integer.parseInt(_, 10)),
+         propertyMap.get("end_offset").map(Integer.parseInt(_, 10)))
+      val msg = f.body(0).asInstanceOf[Text].content
+      Some(msg, errStart, errEnd)
     case _ => None
   }
 }
