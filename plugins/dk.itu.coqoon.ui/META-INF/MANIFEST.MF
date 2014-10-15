@@ -20,7 +20,7 @@ Require-Bundle:
  dk.itu.coqoon.core;bundle-version="0.4.6",
  org.eclipse.ui.navigator.resources,
  org.scala-lang.scala-library;bundle-version="2.11.2",
- dk.itu.coqoon.pide;bundle-version="0.0.3"
+ dk.itu.coqoon.pide;bundle-version="0.0.4"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
 Export-Package: dk.itu.coqoon.ui,
