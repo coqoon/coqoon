@@ -1,3 +1,14 @@
+Coqoon 0.4.6.1
+==============
+
+15th October 2014
+
+This minor release fixes a bug that caused some compilation errors to lose
+their location information, adds support for printing errors when the PIDE
+editor caret moves, puts Coq-specific options in the "New" menu when using
+the Coq perspective, and updates the embedded version of the PIDE client to
+fix a deficiency in its Coq parser.
+
 Coqoon 0.4.6
 ============
 
