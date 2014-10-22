@@ -86,32 +86,59 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
           core.ManifestIdentifiers.MARKER_PROBLEM, true,
           IResource.DEPTH_ZERO).schedule)
 
-      val allResults =
+      val allResultsAndMarkup =
         CommandsLock synchronized {
           for ((offset, i) <- commands)
             yield (offset, i,
-                PIDECoqEditor.extractResults(lastSnapshot.get, i))
+                PIDECoqEditor.extractResults(lastSnapshot.get, i),
+                PIDECoqEditor.extractMarkup(lastSnapshot.get, i))
         }
 
-      /* Extract and display error messages */
-      for ((offset, command, results) <- allResults;
-           (_, tree) <- results) {
-        import XML._
-        tree match {
-          case f : Elem if f.name == "error_message" =>
-            (getFile, PIDECoqEditor.extractError(f)) match {
-              case (Some(f), Some((msg, Some(start), Some(end)))) =>
-                CreateErrorMarkerJob(f,
-                    (offset + start - 1, offset + end - 1),
-                    msg).schedule
-              case (Some(f), Some((msg, _, _))) =>
-                CreateErrorMarkerJob(f,
-                    (offset, offset + command.source.length), msg).schedule
+      val am = Option(getDocumentProvider.getAnnotationModel(getEditorInput))
+      am.foreach(model => {
+        model.connect(getViewer.getDocument)
+        var t = model.getAnnotationIterator
+        while (t.hasNext)
+          model.removeAnnotation(t.next.asInstanceOf[
+            org.eclipse.jface.text.source.Annotation])
+      })
+      try {
+        for ((offset, command, results, markup) <- allResultsAndMarkup) {
+          var complete = markup.exists(_.name == "finished")
+
+          /* Extract and display error messages */
+          for ((_, tree) <- results) {
+            import XML._
+            tree match {
+              case f : Elem if f.name == "error_message" =>
+                (getFile, PIDECoqEditor.extractError(f)) match {
+                  case (Some(f), Some((msg, Some(start), Some(end)))) =>
+                    CreateErrorMarkerJob(f,
+                        (offset + start - 1, offset + end - 1),
+                        msg).schedule
+                  case (Some(f), Some((msg, _, _))) =>
+                    CreateErrorMarkerJob(f,
+                        (offset, offset + command.source.length), msg).schedule
+                  case _ =>
+                }
               case _ =>
             }
-          case _ =>
+          }
+          am.foreach(model => {
+            import org.eclipse.jface.text.Position
+            import org.eclipse.jface.text.source.Annotation
+            if (!complete)
+              model.addAnnotation(
+                new Annotation(
+                    ManifestIdentifiers.ANNOTATION_PROCESSING,
+                    false, "Processing proof"),
+                new Position(offset, command.source.length))
+          })
         }
-      }
+      } finally am.foreach(model => {
+        model.disconnect(getViewer.getDocument)
+        getSourceViewer.invalidateTextPresentation
+      })
 
       caretPing
     }
