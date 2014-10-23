@@ -104,7 +104,8 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
       })
       try {
         for ((offset, command, results, markup) <- allResultsAndMarkup) {
-          var complete = markup.exists(_.name == "finished")
+          var complete =
+            Protocol.Status.make(markup.map(_.markup).iterator).is_finished
 
           /* Extract and display error messages */
           for ((_, tree) <- results) {
