@@ -368,22 +368,28 @@ class CoqBuilder extends IncrementalProjectBuilder {
     None
   }
 
+  private var depSources = Map[IFile, Map[String, ICoqScriptSentence]]()
   private def generateDeps(file : IFile) : Seq[Dependency] = {
     var deps = Seq.newBuilder[Dependency]
     deps +=
         ("(self)", (_ : String) => Some(file.getLocation), Option.empty[IPath])
+    var sources = Map[String, ICoqScriptSentence]()
     ICoqModel.getInstance.toCoqElement(file).flatMap(
         TryCast[ICoqVernacFile]).foreach(_.accept(_ match {
       case l : ICoqLoadSentence =>
         deps += (l.getIdent(), resolveLoad(_), Option.empty[IPath])
+        sources += (l.getIdent() -> l)
         false
       case r : ICoqRequireSentence =>
-        for (f <- r.getQualid)
+        for (f <- r.getQualid) {
           deps += (f, resolveRequire(_), Option.empty[IPath])
+          sources += (f -> r)
+        }
         false
       case e : IParent => true
       case _ => false
     }))
+    depSources += (file -> sources)
     deps.result
   }
 
