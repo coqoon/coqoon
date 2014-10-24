@@ -63,7 +63,9 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
           import dk.itu.coqoon.ui.utilities.EclipseConsole
           import isabelle.XML.{Elem, Text}
           for ((_, tree) <- results) tree match {
-            case f : Elem if f.name == "writeln_message" =>
+            case f : Elem
+                if f.name == "writeln_message" &&
+                   f.markup.properties.toMap.get("source") != Some("goal") =>
               EclipseConsole.out.println(f.body(0).asInstanceOf[Text].content)
             case f : Elem if f.name == "error_message" =>
               PIDECoqEditor.extractError(f).map(_._1).foreach(
