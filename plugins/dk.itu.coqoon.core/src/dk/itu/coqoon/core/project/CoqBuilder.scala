@@ -339,15 +339,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
     for ((_, location) <- completeLoadPath) {
       val p = new Path(location.getAbsolutePath).
           append(t).addFileExtension("v")
-      val deps = dt.getDependencies(p)
-      if (!deps.isEmpty) {
-        if (deps.exists(a => a._2 == None)) {
-          /* This source file is the best candidate, but its dependencies
-           * haven't been resolved yet, so we should try it again later (when
-           * it's more likely to work properly) */
-          return None
-        } else return Some(p)
-      }
+      val f = p.toFile
+      if (f.exists || deps.get.hasDependencies(p))
+        return Some(p)
     }
     return None
   }
