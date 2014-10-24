@@ -243,14 +243,15 @@ class CoqBuilder extends IncrementalProjectBuilder {
          j :: Nil <- Some(objectToSource(i));
          f <- makePathRelativeFile(j);
          dep <- dt.getDependencies(i).filter(_._3 == None).map(_._1)) {
+      val errorMessage = s"Cannot find library ${dep} in loadpath"
       depSources.get(f).flatMap(_.get(dep)) match {
         case Some(l) =>
           val leadingWhitespace = l.getText.takeWhile(_.isWhitespace).size
-          createRegionErrorMarker(f, s"Unresolved dependency: ${dep}.",
+          createRegionErrorMarker(f, errorMessage,
               (l.getOffset + leadingWhitespace,
                l.getOffset + l.getLength))
         case None =>
-          createResourceErrorMarker(f, s"Unresolved dependency: ${dep}.")
+          createResourceErrorMarker(f, errorMessage)
       }
     }
 
