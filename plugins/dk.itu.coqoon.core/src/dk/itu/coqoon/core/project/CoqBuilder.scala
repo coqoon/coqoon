@@ -241,9 +241,18 @@ class CoqBuilder extends IncrementalProjectBuilder {
     /* Create error markers for the files that never became build candidates */
     for (i <- dt.getUnresolved;
          j :: Nil <- Some(objectToSource(i));
-         f <- makePathRelativeFile(j))
-      createResourceErrorMarker(f, "Unresolved dependencies: " +
-          dt.getDependencies(i).filter(_._3 == None).map(_._1).mkString(", "))
+         f <- makePathRelativeFile(j);
+         dep <- dt.getDependencies(i).filter(_._3 == None).map(_._1)) {
+      depSources.get(f).flatMap(_.get(dep)) match {
+        case Some(l) =>
+          val leadingWhitespace = l.getText.takeWhile(_.isWhitespace).size
+          createRegionErrorMarker(f, s"Unresolved dependency: ${dep}.",
+              (l.getOffset + leadingWhitespace,
+               l.getOffset + l.getLength))
+        case None =>
+          createResourceErrorMarker(f, s"Unresolved dependency: ${dep}.")
+      }
+    }
 
     /* Generate a new project makefile */
     CoqMakefile.generateMakefile(getProject, dt)
@@ -396,6 +405,17 @@ class CoqBuilder extends IncrementalProjectBuilder {
   override def toString = "(CoqBuilder for " + getProject + ")"
 }
 private object CoqBuilder {
+  def createRegionErrorMarker(
+      r : IResource, s : String, region : (Int, Int)) = {
+    import scala.collection.JavaConversions._
+    Option(r).filter(_.exists).foreach(
+        _.createMarker(ManifestIdentifiers.MARKER_PROBLEM).setAttributes(Map(
+            (IMarker.MESSAGE, s),
+            (IMarker.SEVERITY, IMarker.SEVERITY_ERROR),
+            (IMarker.CHAR_START, region._1),
+            (IMarker.CHAR_END, region._2))))
+  }
+
   def createResourceErrorMarker(r : IResource, s : String) = {
     import scala.collection.JavaConversions._
     Option(r).filter(_.exists).foreach(
