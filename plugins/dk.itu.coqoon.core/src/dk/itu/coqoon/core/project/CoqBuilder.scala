@@ -412,6 +412,7 @@ private object CoqBuilder {
         _.createMarker(ManifestIdentifiers.MARKER_PROBLEM).setAttributes(Map(
             (IMarker.MESSAGE, s),
             (IMarker.SEVERITY, IMarker.SEVERITY_ERROR),
+            (IMarker.LOCATION, s"offset ${region._1}"),
             (IMarker.CHAR_START, region._1),
             (IMarker.CHAR_END, region._2))))
   }

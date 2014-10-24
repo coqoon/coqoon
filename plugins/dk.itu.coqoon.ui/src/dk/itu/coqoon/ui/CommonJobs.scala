@@ -56,6 +56,7 @@ class CreateMarkerJob(
     resource.createMarker(type_).setAttributes(Map(
         (IMarker.MESSAGE, message.replaceAll("\\s+", " ").trim),
         (IMarker.SEVERITY, severity),
+        (IMarker.LOCATION, s"offset ${region._1}"),
         (IMarker.CHAR_START, region._1),
         (IMarker.CHAR_END, region._2),
         (IMarker.TRANSIENT, true)))
