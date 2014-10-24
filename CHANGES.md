@@ -1,3 +1,12 @@
+Coqoon 0.4.6.2
+=============
+
+24th October 2014
+
+This minor release adds support for processing annotations to the PIDE editor,
+stops copying goal data onto the Eclipse console, and adds more location
+information error marker to error markers.
+
 Coqoon 0.4.6.1
 ==============
 
