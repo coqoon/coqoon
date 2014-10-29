@@ -1,0 +1,3 @@
+#!/bin/sh
+
+coq_makefile Sleep.ml4 > Makefile
