@@ -79,6 +79,9 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
       }
     }
 
+  import org.eclipse.jface.text.source.Annotation
+  private var annotations : Map[Command, Annotation] = Map()
+
   private def commandsUpdated(changed : Seq[Command]) =
     asyncExec {
       /* Clear all old error messages */
@@ -99,13 +102,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
         }
 
       val am = Option(getDocumentProvider.getAnnotationModel(getEditorInput))
-      am.foreach(model => {
-        model.connect(getViewer.getDocument)
-        var t = model.getAnnotationIterator
-        while (t.hasNext)
-          model.removeAnnotation(t.next.asInstanceOf[
-            org.eclipse.jface.text.source.Annotation])
-      })
+      am.foreach(_.connect(getViewer.getDocument))
       try {
         for (i <- changedResultsAndMarkup) i match {
           case (Some(offset), command, results, markup) =>
@@ -134,14 +131,29 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
             am.foreach(model => {
               import org.eclipse.jface.text.Position
               import org.eclipse.jface.text.source.Annotation
-              if (!complete)
-                model.addAnnotation(
-                  new Annotation(
+              import org.eclipse.jface.text.source.IAnnotationModelExtension
+              (complete, annotations.get(command)) match {
+                case (false, None) =>
+                  val an = new Annotation(
                       ManifestIdentifiers.ANNOTATION_PROCESSING,
-                      false, "Processing proof"),
-                  new Position(offset, command.source.length))
+                      false, "Processing proof")
+                  model.addAnnotation(
+                      an, new Position(offset, command.source.length))
+                  annotations += (command -> an)
+                case (false, Some(an)) =>
+                  model.asInstanceOf[IAnnotationModelExtension].
+                      modifyAnnotationPosition(
+                          an, new Position(offset, command.source.length))
+                case (true, Some(an)) =>
+                  model.removeAnnotation(an)
+                  annotations -= command
+                case _ =>
+              }
             })
           case (None, command, _, _) =>
+            annotations.get(command).foreach(
+                an => am.foreach(_.removeAnnotation(an)))
+            annotations -= command
         }
       } finally am.foreach(model => {
         model.disconnect(getViewer.getDocument)
