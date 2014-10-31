@@ -79,7 +79,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
       }
     }
 
-  private def commandsUpdated() =
+  private def commandsUpdated(changed : Seq[Command]) =
     asyncExec {
       /* Clear all old error messages */
       import dk.itu.coqoon.core
@@ -165,8 +165,8 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
                     if offset >= ibLength)
               yield (offset - ibLength, command)).toSeq)
       }
-      commandsUpdated()
-    case q =>
+      commandsUpdated(changed.commands.toSeq)
+      case q =>
       if (PrintIdeslaveTraffic.get)
         println(s"! ${q}")
   }
