@@ -88,12 +88,14 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
           core.ManifestIdentifiers.MARKER_PROBLEM, true,
           IResource.DEPTH_ZERO).schedule)
 
-      val allResultsAndMarkup =
+      val changedResultsAndMarkup =
         CommandsLock synchronized {
-          for ((offset, i) <- commands)
-            yield (offset, i,
-                PIDECoqEditor.extractResults(lastSnapshot.get, i),
-                PIDECoqEditor.extractMarkup(lastSnapshot.get, i))
+          val ls = lastSnapshot.get
+          for (c <- changed)
+            yield (
+                ls.node.command_start(c).map(_ - ibLength), c,
+                PIDECoqEditor.extractResults(ls, c),
+                PIDECoqEditor.extractMarkup(ls, c))
         }
 
       val am = Option(getDocumentProvider.getAnnotationModel(getEditorInput))
@@ -105,38 +107,41 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
             org.eclipse.jface.text.source.Annotation])
       })
       try {
-        for ((offset, command, results, markup) <- allResultsAndMarkup) {
-          var complete =
-            Protocol.Status.make(markup.map(_.markup).iterator).is_finished
+        for (i <- changedResultsAndMarkup) i match {
+          case (Some(offset), command, results, markup) =>
+            val complete =
+              Protocol.Status.make(markup.map(_.markup).iterator).is_finished
 
-          /* Extract and display error messages */
-          for ((_, tree) <- results) {
-            import XML._
-            tree match {
-              case f : Elem if f.name == "error_message" =>
-                (getFile, PIDECoqEditor.extractError(f)) match {
-                  case (Some(f), Some((msg, Some(start), Some(end)))) =>
-                    CreateErrorMarkerJob(f,
-                        (offset + start - 1, offset + end - 1),
-                        msg).schedule
-                  case (Some(f), Some((msg, _, _))) =>
-                    CreateErrorMarkerJob(f,
-                        (offset, offset + command.source.length), msg).schedule
-                  case _ =>
-                }
-              case _ =>
+            /* Extract and display error messages */
+            for ((_, tree) <- results) {
+              import XML._
+              tree match {
+                case f : Elem if f.name == "error_message" =>
+                  (getFile, PIDECoqEditor.extractError(f)) match {
+                    case (Some(f), Some((msg, Some(start), Some(end)))) =>
+                      CreateErrorMarkerJob(f,
+                          (offset + start - 1, offset + end - 1),
+                          msg).schedule
+                    case (Some(f), Some((msg, _, _))) =>
+                      CreateErrorMarkerJob(f,
+                          (offset, offset + command.source.length),
+                          msg).schedule
+                    case _ =>
+                  }
+                case _ =>
+              }
             }
-          }
-          am.foreach(model => {
-            import org.eclipse.jface.text.Position
-            import org.eclipse.jface.text.source.Annotation
-            if (!complete)
-              model.addAnnotation(
-                new Annotation(
-                    ManifestIdentifiers.ANNOTATION_PROCESSING,
-                    false, "Processing proof"),
-                new Position(offset, command.source.length))
-          })
+            am.foreach(model => {
+              import org.eclipse.jface.text.Position
+              import org.eclipse.jface.text.source.Annotation
+              if (!complete)
+                model.addAnnotation(
+                  new Annotation(
+                      ManifestIdentifiers.ANNOTATION_PROCESSING,
+                      false, "Processing proof"),
+                  new Position(offset, command.source.length))
+            })
+          case (None, command, _, _) =>
         }
       } finally am.foreach(model => {
         model.disconnect(getViewer.getDocument)
