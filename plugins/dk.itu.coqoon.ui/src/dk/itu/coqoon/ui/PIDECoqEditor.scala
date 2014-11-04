@@ -198,7 +198,8 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   while (!session.is_ready && session.phase != Session.Failed)
     Thread.sleep(500)
   if (session.phase == Session.Failed)
-    println("Oh, no")
+    dk.itu.coqoon.ui.utilities.EclipseConsole.err.println(
+        session.syslog_content.trim)
 
   override def dispose = {
     session.stop
