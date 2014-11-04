@@ -21,10 +21,10 @@ abstract class BaseCoqEditor extends TextEditor {
   import dk.itu.coqoon.core.model._
   import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot}
   import org.eclipse.ui.IFileEditorInput
-  protected[ui] val workingCopy = CacheSlot[IDetachedCoqVernacFile] {
+  protected[ui] val workingCopy = CacheSlot[Option[IDetachedCoqVernacFile]] {
     TryCast[IFileEditorInput](getEditorInput).map(_.getFile).flatMap(
         ICoqModel.getInstance.toCoqElement).flatMap(
-            TryCast[ICoqVernacFile]).get.detach
+            TryCast[ICoqVernacFile]).map(_.detach)
   }
 
   import org.eclipse.jface.text.source.SourceViewerConfiguration
@@ -59,7 +59,7 @@ abstract class BaseCoqEditor extends TextEditor {
 
     import scala.collection.JavaConversions._
     var positions : Seq[Position] = Seq()
-    workingCopy.get.accept(_ match {
+    workingCopy.get.foreach(_.accept(_ match {
       case f : ICoqScriptGroup
           if f.getChildren.size > 1 =>
         val padding = f.getText.takeWhile(_.isWhitespace).length
@@ -72,7 +72,7 @@ abstract class BaseCoqEditor extends TextEditor {
         }
       case f : IParent => true
       case _ => false
-    })
+    }))
 
     val newAnnotations = Map(positions.map(
         p => (new ProjectionAnnotation -> p)) : _*)
@@ -130,7 +130,7 @@ abstract class BaseCoqEditor extends TextEditor {
   var outlinePage : Option[CoqContentOutlinePage] = None
   private def createOutlinePage() : CoqContentOutlinePage = {
     val page = new CoqContentOutlinePage
-    page.setInput(workingCopy.get)
+    workingCopy.get.foreach(page.setInput)
     page
   }
 

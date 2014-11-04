@@ -204,7 +204,7 @@ class CoqWorkingCopyReconcilingStrategy(var document : IDocument,
   override def reconcile(dr : DirtyRegion, r : IRegion) = reconcile(dr)
 
   override def reconcile(partition : IRegion) = UIUtils.asyncExec {
-    editor.workingCopy.get.setContents(document.get)
+    editor.workingCopy.get.foreach(_.setContents(document.get))
     editor.updateFolding
   }
 
