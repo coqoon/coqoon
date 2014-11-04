@@ -1,5 +1,19 @@
+Coqoon 0.4.6.3
+==============
+
+4th November 2014
+
+This minor release improves the performance of PIDE processing annotations.
+
+Bug fixes
+---------
+
+* The editor shouldn't break when opening a Coq source file not covered by the
+  model (issue #85)
+* Coqoon no longer waits forever when `coqtop` fails to start (issue #82)
+
 Coqoon 0.4.6.2
-=============
+==============
 
 24th October 2014
 

@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Kopitiam
 Bundle-SymbolicName: dk.itu.sdg.kopitiam;singleton:=true
-Bundle-Version: 0.4.6.2
+Bundle-Version: 0.4.6.3
 Bundle-Activator: dk.itu.sdg.kopitiam.Activator
 Require-Bundle: 
  org.eclipse.core.filesystem;bundle-version="1.3.0",
