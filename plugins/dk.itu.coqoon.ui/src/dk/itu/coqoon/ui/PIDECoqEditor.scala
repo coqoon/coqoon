@@ -21,11 +21,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   import isabelle._
   import dk.itu.coqoon.core.CoqoonPreferences
   protected[ui] val syntax = new Coq_Syntax
-  protected[ui] val resources = new Coq_Resources(syntax,
-      CoqoonPreferences.CoqPath.get match {
-        case Some(path) => path + java.io.File.separator + "coqtop"
-        case _ => "coqtop"
-      })
+  protected[ui] val resources = new Coq_Resources(syntax)
   protected[ui] val session = new Session
   session.register_resources("coq", resources)
 
@@ -185,7 +181,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
               yield (offset - ibLength, command)).toSeq)
       }
       commandsUpdated(changed.commands.toSeq)
-      case q =>
+    case q =>
       if (PrintIdeslaveTraffic.get)
         println(s"! ${q}")
   }
@@ -193,7 +189,11 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
     if (PrintIdeslaveTraffic.get)
       println(s"? ${q}"))
 
-  session.start("coq", Nil)
+  session.start("coq",
+      CoqoonPreferences.CoqPath.get match {
+        case Some(path) => path + java.io.File.separator + "coqtop"
+        case _ => "coqtop"
+      }, Nil)
 
   while (!session.is_ready && session.phase != Session.Failed)
     Thread.sleep(500)
@@ -201,7 +201,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
     println("Oh, no")
 
   override def dispose = {
-    session.stop("coq")
+    session.stop
     super.dispose
   }
 
