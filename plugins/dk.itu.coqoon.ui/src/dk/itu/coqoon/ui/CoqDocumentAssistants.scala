@@ -80,6 +80,9 @@ abstract class PartitionStateScanner(
     if (contentType != null && partitionOffset != -1) {
       lastFinalState = convertContentType(contentType)
       lastEnd = partitionOffset
+      /* If we're at the start of this partition, skip lead-in characters */
+      if (offset == partitionOffset)
+        position += lastFinalState.getLeadCount
     }
   }
 
@@ -93,33 +96,42 @@ abstract class PartitionStateScanner(
 
   override def nextToken() : IToken = {
     val doc = document.get
-    if (position == end) {
-      lastStart = doc.getLength
-      lastEnd = lastStart
-      return Token.EOF
+    if (position >= end) {
+      return (lastFinalState.getToken match {
+        case Some(t) if lastEnd != end =>
+          /* We do actually have a (partial) token ready, so return it */
+          lastStart = lastEnd
+          lastEnd = end
+          t
+        case _ =>
+          /* No characters left and no partial token to return. We're
+           * officially done */
+          Token.EOF
+      })
     }
-    position += lastFinalState.getLeadCount
     var state : PartitionState = lastFinalState
     while (position < end) {
       val c = doc.getChar(position)
       state.get(Some(c)) match {
         case Some(f : PartitionFinalState)
             if f != lastFinalState =>
-          position += 1 - f.getLeadCount()
+          position += 1
           try {
             lastStart = lastEnd
-            lastEnd = position
+            lastEnd = position - f.getLeadCount
             if (lastEnd - lastStart > 0)
               return lastFinalState.getToken.get
           } finally {
             state = f
             lastFinalState = f
           }
-        case Some(s : PartitionState) =>
+        case Some(s : PartitionState)
+            if state != s =>
           state = s
+          position += 1
         case _ =>
+          position += 1
       }
-      position += 1
     }
     lastStart = lastEnd
     lastEnd = position
