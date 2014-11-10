@@ -1,3 +1,13 @@
+Coqoon 0.4.6.4
+==============
+
+10th November 2014
+
+This minor release makes syntax highlighting for Coq code more reliable and
+introduces a new option controlling annotations in the PIDE editor. (As these
+annotations are known to cause serious performance problems on some platforms,
+this option is off by default.)
+
 Coqoon 0.4.6.3
 ==============
 
