@@ -10,20 +10,23 @@ class CoqoonColorPreferencePage
     extends FEPP(FEPP.GRID) with IWorkbenchPreferencePage {
   import org.eclipse.ui.IWorkbench
 
-  override def init (workbench : IWorkbench) : Unit = {
-    setPreferenceStore(Activator.getDefault.getPreferenceStore)
-  }
+  override def init(workbench : IWorkbench) =
+    setPreferenceStore(CoqoonUIPreferences.store)
 
-  import org.eclipse.jface.preference.ColorFieldEditor
+  import org.eclipse.jface.preference._
   override def createFieldEditors () : Unit = {
-    val fields = List(
-      ("coqSentBg", "Coq Sent Background"),
-      ("coqSentProcessBg", "Coq Processing Background"),
-      ("coqKeywordFg", "Keyword Foreground")
-    )
-    for ((pref, label) <- fields)
-      addField(new ColorFieldEditor(pref, label, getFieldEditorParent))
- }
+    import CoqoonUIPreferences._
+
+    addField(new ColorFieldEditor(COQ_SENT_BACKGROUND,
+        "Coq Sent Background", getFieldEditorParent))
+    addField(new ColorFieldEditor(COQ_PROCESSING_BACKGROUND,
+        "Coq Processing Background", getFieldEditorParent))
+    addField(new ColorFieldEditor(KEYWORD_COLOR,
+        "Keyword Foreground", getFieldEditorParent))
+
+    addField(new BooleanFieldEditor(ProcessingAnnotations.ID,
+        "Enable PIDE processing annotations", getFieldEditorParent))
+  }
 }
 
 class CoqoonFormattingPreferencePage
@@ -70,6 +73,8 @@ class CoqoonUIPreferences extends AbstractPreferenceInitializer {
 
     node.putInt(SpacesPerIndentationLevel.ID, 2)
     node.putBoolean(AutomaticFormatting.ID, true)
+
+    node.putBoolean(ProcessingAnnotations.ID, false)
   }
 }
 object CoqoonUIPreferences {
@@ -79,13 +84,20 @@ object CoqoonUIPreferences {
   val MATCHING_BRACKETS = "matchingBrackets"
   val MATCHING_BRACKETS_COLOR = "matchingBracketsColor"
 
+  private[ui] def store = Activator.getDefault.getPreferenceStore
+
   object SpacesPerIndentationLevel {
-    val ID = "spacesPerIndentationLevel"
-    def get() = Activator.getDefault.getPreferenceStore.getInt(ID)
+    final val ID = "spacesPerIndentationLevel"
+    def get() = store.getInt(ID)
   }
 
   object AutomaticFormatting {
-    val ID = "automaticFormatting"
-    def get() = Activator.getDefault.getPreferenceStore.getBoolean(ID)
+    final val ID = "automaticFormatting"
+    def get() = store.getBoolean(ID)
+  }
+
+  object ProcessingAnnotations {
+    final val ID = "enableProcessing"
+    def get() = store.getBoolean(ID)
   }
 }
