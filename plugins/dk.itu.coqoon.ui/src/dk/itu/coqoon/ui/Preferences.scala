@@ -24,8 +24,15 @@ class CoqoonColorPreferencePage
     addField(new ColorFieldEditor(KEYWORD_COLOR,
         "Keyword Foreground", getFieldEditorParent))
 
-    addField(new BooleanFieldEditor(ProcessingAnnotations.ID,
-        "Enable PIDE processing annotations", getFieldEditorParent))
+    addField({
+      val parent = getFieldEditorParent
+      val ed = new BooleanFieldEditor(ProcessingAnnotations.ID,
+          "Enable PIDE processing annotations (experimental)", parent)
+      ed.getDescriptionControl(parent).setToolTipText(
+          "Highlight commands that haven't yet been executed in the " +
+          "PIDE editor. (This option is known to have performance problems.)")
+      ed
+    })
   }
 }
 
