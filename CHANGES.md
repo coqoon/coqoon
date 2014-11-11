@@ -1,3 +1,11 @@
+Coqoon 0.4.6.5
+==============
+
+11th November 2014
+
+This *incredibly* minor release makes the annotation control option work
+properly.
+
 Coqoon 0.4.6.4
 ==============
 
