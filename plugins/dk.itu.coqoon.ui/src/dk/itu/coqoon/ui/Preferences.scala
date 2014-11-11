@@ -81,7 +81,7 @@ class CoqoonUIPreferences extends AbstractPreferenceInitializer {
     node.putInt(SpacesPerIndentationLevel.ID, 2)
     node.putBoolean(AutomaticFormatting.ID, true)
 
-    node.putBoolean(ProcessingAnnotations.ID, false)
+    node.putBoolean(ProcessingAnnotations.ID, true)
   }
 }
 object CoqoonUIPreferences {
