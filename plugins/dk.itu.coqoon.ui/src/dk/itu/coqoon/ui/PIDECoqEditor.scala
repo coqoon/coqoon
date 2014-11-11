@@ -104,6 +104,11 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
         } else None
       am.foreach(
           model => Option(getViewer).map(_.getDocument).foreach(model.connect))
+
+      import org.eclipse.jface.text.Position
+      var toDelete : Seq[(Command, Annotation)] = Seq()
+      var toAdd : Seq[(Command, Annotation, Position)] = Seq()
+
       try {
         for (i <- changedResultsAndMarkup) i match {
           case (Some(offset), command, results, markup) =>
@@ -138,25 +143,48 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
                   val an = new Annotation(
                       ManifestIdentifiers.ANNOTATION_PROCESSING,
                       false, "Processing proof")
-                  model.addAnnotation(
+                  toAdd :+= (command,
                       an, new Position(offset, command.source.length))
-                  annotations += (command -> an)
                 case (false, Some(an)) =>
-                  model.asInstanceOf[IAnnotationModelExtension].
-                      modifyAnnotationPosition(
-                          an, new Position(offset, command.source.length))
+                  toDelete :+= (command, an)
+                  toAdd :+= (command,
+                      an, new Position(offset, command.source.length))
                 case (true, Some(an)) =>
-                  model.removeAnnotation(an)
-                  annotations -= command
+                  toDelete :+= (command, an)
                 case _ =>
               }
             })
           case (None, command, _, _) =>
-            annotations.get(command).foreach(
-                an => am.foreach(_.removeAnnotation(an)))
-            annotations -= command
+            annotations.get(command).foreach(an => toDelete :+= (command, an))
         }
       } finally am.foreach(model => {
+        import org.eclipse.jface.text.source.IAnnotationModelExtension
+        model match {
+          case m : IAnnotationModelExtension =>
+            import scala.collection.JavaConversions._
+            val del =
+              for ((command, annotation) <- toDelete)
+                yield {
+                  annotations -= command
+                  annotation
+                }
+            val add =
+              (for ((command, annotation, position) <- toAdd)
+                yield {
+                  annotations += (command -> annotation)
+                  (annotation -> position)
+                }).toMap
+            m.replaceAnnotations(del.toArray, add)
+          case m =>
+            for ((command, annotation) <- toDelete) {
+              m.removeAnnotation(annotation)
+              annotations -= command
+            }
+            for ((command, annotation, position) <- toAdd) {
+              m.addAnnotation(annotation, position)
+              annotations += (command -> annotation)
+            }
+        }
         model.disconnect(getViewer.getDocument)
         getSourceViewer.invalidateTextPresentation
       })
