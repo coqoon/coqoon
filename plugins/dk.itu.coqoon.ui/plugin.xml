@@ -196,7 +196,7 @@
             category="dk.itu.coqoon.core.pref"
             class="dk.itu.coqoon.ui.CoqoonColorPreferencePage"
             id="dk.itu.coqoon.ui.pref.color"
-            name="Color">
+            name="Interface">
       </page>
       <page
             category="dk.itu.coqoon.core.pref"
