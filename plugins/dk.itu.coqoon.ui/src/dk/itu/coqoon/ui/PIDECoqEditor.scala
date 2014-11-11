@@ -97,8 +97,11 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
                 PIDECoqEditor.extractMarkup(ls, c))
         }
 
-      val am = Option(getDocumentProvider).flatMap(
-          p => Option(p.getAnnotationModel(getEditorInput)))
+      val am =
+        if (CoqoonUIPreferences.ProcessingAnnotations.get) {
+          Option(getDocumentProvider).flatMap(
+              p => Option(p.getAnnotationModel(getEditorInput)))
+        } else None
       am.foreach(
           model => Option(getViewer).map(_.getDocument).foreach(model.connect))
       try {
