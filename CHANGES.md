@@ -1,6 +1,8 @@
 Coqoon 0.4.6.6
 ==============
 
+11th November 2014
+
 This minor release fixes the performance problems when using annotations in
 the PIDE editor. (Accordingly, the option that controls these annotations is
 now on by default.)
