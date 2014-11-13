@@ -182,25 +182,24 @@ trait AbstractLoadPathImplementation {
   def getAuthor() : String
   def getDescription() : String
 
-  import AbstractLoadPathImplementation.Status
-  def getStatus() : Status
-  def getLoadPath() : Either[Status, Seq[CoqLoadPath]]
+  import AbstractLoadPathImplementation.Excuse
+  def getLoadPath() : Either[Excuse, Seq[CoqLoadPath]]
 }
 object AbstractLoadPathImplementation {
-  sealed abstract class Status
-  sealed abstract class Installed extends Status
-  /* Installed and working */
-  final case object Available extends Installed
+  sealed abstract class Excuse
+
+  sealed abstract class Available extends Excuse
   /* Installed but not working */
-  final case object Broken extends Installed
+  final case object Broken extends Available
   /* Installed and (potentially) working, but not compatible with the requested
    * version constraint */
-  final case object VersionMismatch extends Installed
-  sealed abstract class NotInstalled extends Status
+  final case object VersionMismatch extends Available
+
+  sealed abstract class NotAvailable extends Excuse
   /* Not installed, but (potentially) installable */
-  final case object Installable extends NotInstalled
+  final case object Retrievable extends NotAvailable
   /* Not installed and not installable */
-  final case object NotInstallable extends NotInstalled
+  final case object NotRetrievable extends NotAvailable
 }
 
 class AbstractLoadPathManager {
@@ -260,24 +259,19 @@ object Coq84Library {
     override def getDescription = "The standard library of Coq 8.4."
 
     import AbstractLoadPathImplementation._
-    override def getStatus =
+    override def getLoadPath =
       if (id == ID) {
         CoqProgram("coqtop").run(Seq("-where")).readAll match {
-          case (0, _) => Available
-          case _ => Broken
+          case (0, _) =>
+            val (_, path_) = CoqProgram("coqtop").run(Seq("-where")).readAll
+            val path = new Path(path_.trim)
+            Right(Seq(
+                CoqLoadPath(path.append("theories"), Some("Coq"), true),
+                CoqLoadPath(path.append("plugins"), Some("Coq"), true),
+                CoqLoadPath(path.append("user-contrib"), None, true)))
+          case _ => Left(Broken)
         }
-      } else VersionMismatch
-    override def getLoadPath =
-      getStatus match {
-        case Available =>
-          val (_, path_) = CoqProgram("coqtop").run(Seq("-where")).readAll
-          val path = new Path(path_.trim)
-          Right(Seq(
-              CoqLoadPath(path.append("theories"), Some("Coq"), true),
-              CoqLoadPath(path.append("plugins"), Some("Coq"), true),
-              CoqLoadPath(path.append("user-contrib"), None, true)))
-        case f => Left(f)
-      }
+      } else Left(VersionMismatch)
   }
 }
 

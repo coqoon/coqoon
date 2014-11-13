@@ -32,19 +32,14 @@ object ChargeLibrary {
       "The Charge! separation logic framework, for verifying Java programs."
 
     import AbstractLoadPathImplementation._
-    override def getStatus =
+    override def getLoadPath =
       if (id == ID) {
         Activator.getDefault.getPreferenceStore.getString("loadpath") match {
-          case p if p.length > 0 => Available
-          case _ => Broken
+          case p if p.length > 0 =>
+            Right(Seq(CoqLoadPath(new Path(p), None)))
+          case _ =>
+            Left(Broken)
         }
-      } else VersionMismatch
-    override def getLoadPath =
-      getStatus match {
-        case Available =>
-          val p = Activator.getDefault.getPreferenceStore.getString("loadpath")
-          Right(Seq(CoqLoadPath(new Path(p), None)))
-        case f => Left(f)
-      }
+      } else Left(VersionMismatch)
   }
 }

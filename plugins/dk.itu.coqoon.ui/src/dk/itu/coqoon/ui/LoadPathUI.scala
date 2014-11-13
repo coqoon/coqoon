@@ -502,16 +502,16 @@ class NLPAbstractEntryPage extends NLPWizardPage(
             _.getFirstElement) match {
           case Some(i : AbstractLoadPathImplementation) =>
             import AbstractLoadPathImplementation._
-            i.getStatus match {
-              case Available =>
+            i.getLoadPath match {
+              case Right(_) =>
                 setErrorMessage(null)
                 at.setText(i.getIdentifier)
-              case VersionMismatch =>
+              case Left(VersionMismatch) =>
                 setErrorMessage(i.getName + " is installed, " +
                     "but is not compatible with the version you requested")
-              case Broken =>
+              case Left(Broken) =>
                 setErrorMessage(i.getName + " is installed, but doesn't work")
-              case _ : NotInstalled =>
+              case Left(_ : NotAvailable) =>
                 setErrorMessage(i.getName + " is not installed")
             }
           case _ =>
