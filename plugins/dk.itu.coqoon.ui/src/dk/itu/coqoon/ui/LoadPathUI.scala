@@ -37,8 +37,8 @@ protected object LoadPathModel {
   }
 
   /* Load path model entries backed directly by an ICoqLoadPathProvider */
-  abstract class LPProvider(parent : Option[LPProvider],
-      cl : ICoqLoadPathProvider, index : Int) extends LPBase(parent) {
+  abstract class LPProvider(
+      parent : Option[LPProvider], index : Int) extends LPBase(parent) {
     def getIndex() = index
   }
 
@@ -46,7 +46,7 @@ protected object LoadPathModel {
    * children should represent namespaces and locations */
   abstract class LPNSChild(parent : Option[LPProvider],
       cl : ICoqLoadPathProvider, index : Int)
-          extends LPProvider(parent, cl, index) {
+          extends LPProvider(parent, index) {
     override def getChildren = {
       var result = Seq[LPBase]()
       var children = cl.getLoadPath
@@ -70,17 +70,17 @@ protected object LoadPathModel {
       index : Int) extends LPNSChild(parent, cl, index)
 
   case class SourceLPE(parent : Option[LPProvider], cl : SourceLoadPath,
-      index : Int) extends LPProvider(parent, cl, index) {
+      index : Int) extends LPProvider(parent, index) {
     override def getChildren = Seq(OutputSLPE(Some(this), cl))
     override def hasChildren = true
   }
 
   case class DefaultOutputLPE(parent : Option[LPProvider],
       cl : DefaultOutputLoadPath, index : Int)
-          extends LPProvider(parent, cl, index)
+          extends LPProvider(parent, index)
 
   case class ProjectLPE(parent : Option[LPProvider], cl : ProjectLoadPath,
-      index : Int) extends LPProvider(parent, cl, index) {
+      index : Int) extends LPProvider(parent, index) {
     override def getChildren = Option(
         ICoqModel.toCoqProject(cl.project)).toSeq.map(
             _.getLoadPathProviders).flatMap(translate(Some(this), _))
@@ -88,7 +88,7 @@ protected object LoadPathModel {
   }
 
   case class ExternalLPE(parent : Option[LPProvider], cl : ExternalLoadPath,
-      index : Int) extends LPProvider(parent, cl, index)
+      index : Int) extends LPProvider(parent, index)
 
   case class OutputSLPE(
       parent : Option[LPProvider], cl : SourceLoadPath) extends LPBase(parent)
@@ -107,11 +107,11 @@ protected object LoadPathModel {
   def translate(parent : Option[LPProvider],
       provider : ICoqLoadPathProvider, index : Int) : LPProvider =
     provider match {
-      case p : AbstractLoadPath => AbstractLPE(parent, p, index)
-      case p : SourceLoadPath => SourceLPE(parent, p, index)
-      case p : DefaultOutputLoadPath => DefaultOutputLPE(parent, p, index)
-      case p : ProjectLoadPath => ProjectLPE(parent, p, index)
-      case p : ExternalLoadPath => ExternalLPE(parent, p, index)
+      case p @ AbstractLoadPath(_) => AbstractLPE(parent, p, index)
+      case p @ SourceLoadPath(_, _) => SourceLPE(parent, p, index)
+      case p @ DefaultOutputLoadPath(_) => DefaultOutputLPE(parent, p, index)
+      case p @ ProjectLoadPath(_) => ProjectLPE(parent, p, index)
+      case p @ ExternalLoadPath(_, _) => ExternalLPE(parent, p, index)
     }
 }
 

@@ -262,7 +262,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     cleanProject(coqProject.get)
 
     coqProject.get.getLoadPathProviders.collect {
-      case pl : ProjectLoadPath => pl.project
+      case ProjectLoadPath(p) => p
     }.toArray
   }
 
@@ -299,7 +299,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     val description = getProject.getDescription
     val descriptionDependencies = description.getReferencedProjects.toSet
     val currentDependencies = coqProject.get.getLoadPathProviders.collect {
-      case pl : ProjectLoadPath => pl.project
+      case ProjectLoadPath(p) => p
     }.toSet
     if (descriptionDependencies != currentDependencies) {
       description.setReferencedProjects(currentDependencies.toArray)

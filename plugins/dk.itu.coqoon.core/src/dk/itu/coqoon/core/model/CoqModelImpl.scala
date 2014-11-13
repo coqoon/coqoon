@@ -226,22 +226,22 @@ private class CoqProjectImpl(
           val res = CoqProjectImpl.this.res.get
           CoqProjectFile.shellTokenise(value) match {
             case "DefaultOutput" :: bindir :: Nil =>
-              new DefaultOutputLoadPath(res.getFolder(bindir)) +: _util(tail)
+              DefaultOutputLoadPath(res.getFolder(bindir)) +: _util(tail)
             case "ProjectLoadPath" :: project :: Nil =>
-              new ProjectLoadPath(
+              ProjectLoadPath(
                 res.getWorkspace.getRoot.getProject(project)) +: _util(tail)
             case "SourceLoadPath" :: srcdir :: Nil =>
-              new SourceLoadPath(res.getFolder(srcdir)) +: _util(tail)
+              SourceLoadPath(res.getFolder(srcdir)) +: _util(tail)
             case "SourceLoadPath" :: srcdir :: bindir :: Nil =>
-              new SourceLoadPath(res.getFolder(srcdir),
+              SourceLoadPath(res.getFolder(srcdir),
                 Option(res.getFolder(bindir))) +: _util(tail)
             case "ExternalLoadPath" :: physical :: Nil =>
-              new ExternalLoadPath(new Path(physical), None) +: _util(tail)
+              ExternalLoadPath(new Path(physical), None) +: _util(tail)
             case "ExternalLoadPath" :: physical :: logical :: Nil =>
-              new ExternalLoadPath(
-                new Path(physical), Some(logical)) +: _util(tail)
+              ExternalLoadPath(
+                  new Path(physical), Some(logical)) +: _util(tail)
             case "AbstractLoadPath" :: identifier :: Nil =>
-              new AbstractLoadPath(identifier) +: _util(tail)
+              AbstractLoadPath(identifier) +: _util(tail)
             case _ => _util(tail)
           }
         case _ :: tail => _util(tail)
