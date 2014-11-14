@@ -42,14 +42,15 @@ protected object LoadPathModel {
     def getIndex() = index
   }
 
-  /* Load path model entries backed directly by an ICoqLoadPathProvider whose
-   * children should represent namespaces and locations */
-  abstract class LPNSChild(parent : Option[LPProvider],
-      cl : ICoqLoadPathProvider, index : Int)
-          extends LPProvider(parent, index) {
+  /* Load path model entries backed by an ICoqLoadPathProvider whose children
+   * represent namespaces and locations */
+  abstract class LPNSChild(parent : Option[LPProvider], index : Int)
+      extends LPProvider(parent, index) {
+    def getLoadPath() : Seq[CoqLoadPath]
+
     override def getChildren = {
       var result = Seq[LPBase]()
-      var children = cl.getLoadPath
+      var children = getLoadPath
       while (children != Nil) children = children match {
         case Nil =>
           Nil
@@ -63,41 +64,44 @@ protected object LoadPathModel {
       }
       result
     }
-    override def hasChildren = cl.getLoadPath.size > 0
+    override def hasChildren = getLoadPath.size > 0
   }
 
-  case class AbstractLPE(parent : Option[LPProvider], cl : AbstractLoadPath,
-      index : Int) extends LPNSChild(parent, cl, index)
+  case class AbstractLPE(parent : Option[LPProvider], identifier : String,
+      index : Int) extends LPNSChild(parent, index) {
+    override def getLoadPath = AbstractLoadPath(identifier).getLoadPath
+  }
 
-  case class SourceLPE(parent : Option[LPProvider], cl : SourceLoadPath,
-      index : Int) extends LPProvider(parent, index) {
-    override def getChildren = Seq(OutputSLPE(Some(this), cl))
+  import org.eclipse.core.resources.IFolder
+  case class SourceLPE(parent : Option[LPProvider], folder : IFolder,
+      output : Option[IFolder], index : Int)
+      extends LPProvider(parent, index) {
+    override def getChildren = Seq(OutputSLPE(Some(this), output))
     override def hasChildren = true
   }
 
   case class DefaultOutputLPE(parent : Option[LPProvider],
-      cl : DefaultOutputLoadPath, index : Int)
-          extends LPProvider(parent, index)
+      folder : IFolder, index : Int) extends LPProvider(parent, index)
 
-  case class ProjectLPE(parent : Option[LPProvider], cl : ProjectLoadPath,
+  case class ProjectLPE(parent : Option[LPProvider], project : IProject,
       index : Int) extends LPProvider(parent, index) {
     override def getChildren = Option(
-        ICoqModel.toCoqProject(cl.project)).toSeq.map(
+        ICoqModel.toCoqProject(project)).toSeq.map(
             _.getLoadPathProviders).flatMap(translate(Some(this), _))
     override def hasChildren = getChildren.size > 0
   }
 
-  case class ExternalLPE(parent : Option[LPProvider], cl : ExternalLoadPath,
-      index : Int) extends LPProvider(parent, index)
+  import org.eclipse.core.runtime.IPath
+  case class ExternalLPE(parent : Option[LPProvider], fsPath : IPath,
+      dir : Option[String], index : Int) extends LPProvider(parent, index)
 
-  case class OutputSLPE(
-      parent : Option[LPProvider], cl : SourceLoadPath) extends LPBase(parent)
-  case class NamespaceSLPE(
-      parent : Option[LPProvider], cl : CoqLoadPath) extends LPBase(parent)
-  case class LocationSLPE(
-      parent : Option[LPProvider], cl : CoqLoadPath) extends LPBase(parent)
-  case class SeparatorSLPE(
-      parent : Option[LPProvider]) extends LPBase(parent)
+  case class OutputSLPE(parent : Option[LPProvider],
+      output : Option[IFolder]) extends LPBase(parent)
+  case class NamespaceSLPE(parent : Option[LPProvider],
+      cl : CoqLoadPath) extends LPBase(parent)
+  case class LocationSLPE(parent : Option[LPProvider],
+      cl : CoqLoadPath) extends LPBase(parent)
+  case class SeparatorSLPE(parent : Option[LPProvider]) extends LPBase(parent)
 
   def translate(parent : Option[LPProvider],
       providers : Seq[ICoqLoadPathProvider]) : Seq[LPProvider] =
@@ -107,11 +111,11 @@ protected object LoadPathModel {
   def translate(parent : Option[LPProvider],
       provider : ICoqLoadPathProvider, index : Int) : LPProvider =
     provider match {
-      case p @ AbstractLoadPath(_) => AbstractLPE(parent, p, index)
-      case p @ SourceLoadPath(_, _) => SourceLPE(parent, p, index)
-      case p @ DefaultOutputLoadPath(_) => DefaultOutputLPE(parent, p, index)
-      case p @ ProjectLoadPath(_) => ProjectLPE(parent, p, index)
-      case p @ ExternalLoadPath(_, _) => ExternalLPE(parent, p, index)
+      case AbstractLoadPath(a) => AbstractLPE(parent, a, index)
+      case SourceLoadPath(a, b) => SourceLPE(parent, a, b, index)
+      case DefaultOutputLoadPath(a) => DefaultOutputLPE(parent, a, index)
+      case ProjectLoadPath(a) => ProjectLPE(parent, a, index)
+      case ExternalLoadPath(a, b) => ExternalLPE(parent, a, b, index)
     }
 }
 
@@ -123,37 +127,37 @@ private class LoadPathLabelProvider extends StyledCellLabelProvider {
     case l : LPBase =>
       val s = new StyledString
       l match {
-        case AbstractLPE(_, lpe, i) =>
+        case AbstractLPE(_, identifier, i) =>
           s.append(s"${i}. Library: ")
-          lpe.getProvider match {
+          AbstractLoadPath(identifier).getProvider match {
             case Some(provider) =>
               s.append(provider.getName, ColourStyler(VALID))
             case None =>
-              s.append(lpe.identifier, ColourStyler(ERROR))
+              s.append(identifier, ColourStyler(ERROR))
           }
-        case SourceLPE(_, lpe, i) =>
+        case SourceLPE(_, folder, _, i) =>
           s.append(s"${i}. Source folder: ")
           s.append(
-              lpe.folder.getProjectRelativePath.addTrailingSeparator.toString,
+              folder.getProjectRelativePath.addTrailingSeparator.toString,
               ColourStyler(VALID))
-        case DefaultOutputLPE(_, lpe, i) =>
+        case DefaultOutputLPE(_, folder, i) =>
           s.append(s"${i}. Default output folder: ")
           s.append(
-              lpe.folder.getProjectRelativePath.addTrailingSeparator.toString,
+              folder.getProjectRelativePath.addTrailingSeparator.toString,
               ColourStyler(VALID))
-        case ProjectLPE(_, lpe, i) =>
+        case ProjectLPE(_, project, i) =>
           import dk.itu.coqoon.core.{ManifestIdentifiers => CMI}
           s.append(s"${i}. Project: ")
           val styler = ColourStyler(
-            if (lpe.project.exists() && lpe.project.hasNature(CMI.NATURE_COQ))
+            if (project.exists() && project.hasNature(CMI.NATURE_COQ))
               VALID else ERROR)
-          s.append(lpe.project.getName.toString, styler)
-        case ExternalLPE(_, lpe, i) =>
+          s.append(project.getName.toString, styler)
+        case ExternalLPE(_, fsPath, _, i) =>
           import dk.itu.coqoon.core.project.CoqNature
           s.append(s"${i}. External development: ")
           val styler =
-            ColourStyler(if (lpe.fsPath.toFile.exists) VALID else ERROR)
-          s.append(lpe.fsPath.addTrailingSeparator.toString, styler)
+            ColourStyler(if (fsPath.toFile.exists) VALID else ERROR)
+          s.append(fsPath.addTrailingSeparator.toString, styler)
 
         case NamespaceSLPE(_, lpe) =>
           s.append("Namespace: ")
@@ -161,9 +165,9 @@ private class LoadPathLabelProvider extends StyledCellLabelProvider {
         case LocationSLPE(_, lpe) =>
           s.append("Location: ")
           s.append(lpe.path.toString, ColourStyler(NSLOC))
-        case OutputSLPE(_, lpe) =>
+        case OutputSLPE(_, output) =>
           s.append("Output folder: ")
-          s.append(lpe.output.map(
+          s.append(output.map(
                   _.getProjectRelativePath.toString).getOrElse("(default)"),
               ColourStyler(NSLOC))
         case SeparatorSLPE(_) =>
@@ -433,7 +437,7 @@ class NLPAbstractEntryPage extends NLPWizardPage(
       "Add an identifier for a dependency which the environment must provide.")
 
   private var identifier : Option[String] = None
-  override def createLoadPathEntry = identifier.map(AbstractLoadPath)
+  override def createLoadPathEntry = identifier.map(AbstractLoadPath(_))
 
   override def createControl(parent : Composite) = {
     import org.eclipse.jface.layout.{GridDataFactory => GDF, GridLayoutFactory}
@@ -556,7 +560,7 @@ class NLPProjectEntryPage extends NLPWizardPage(
   setDescription(
       "Add a dependency on another Coqoon project in the workspace.")
   private var project : Option[IProject] = None
-  override def createLoadPathEntry = project.map(ProjectLoadPath)
+  override def createLoadPathEntry = project.map(ProjectLoadPath(_))
 
   override def createControl(parent : Composite) = {
     import org.eclipse.swt.layout.{GridData, GridLayout}
