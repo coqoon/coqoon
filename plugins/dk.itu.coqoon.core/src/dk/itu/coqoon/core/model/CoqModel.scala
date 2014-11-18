@@ -89,7 +89,7 @@ case class CoqFileContentChangedEvent(
 case class CoqProjectLoadPathChangedEvent(
     override val element : ICoqProject) extends CoqElementChangedEvent(element)
 
-final case class CoqLoadPath(
+final case class LoadPathEntry(
     path : IPath, coqdir : Option[String], alwaysExpand : Boolean = false) {
   import dk.itu.coqoon.core.CoqoonPreferences
 
@@ -125,7 +125,7 @@ final case class CoqLoadPath(
 }
 
 sealed trait ICoqLoadPathProvider {
-  def getLoadPath() : Seq[CoqLoadPath]
+  def getLoadPath() : Seq[LoadPathEntry]
 }
 
 case class ProjectLoadPath(
@@ -136,18 +136,18 @@ case class ProjectLoadPath(
 
 case class SourceLoadPath(val folder : IFolder,
     val output : Option[IFolder] = None) extends ICoqLoadPathProvider {
-  override def getLoadPath = List(CoqLoadPath(folder.getLocation, None)) ++
-      output.map(a => CoqLoadPath(a.getLocation, None))
+  override def getLoadPath = List(LoadPathEntry(folder.getLocation, None)) ++
+      output.map(a => LoadPathEntry(a.getLocation, None))
 }
 
 case class DefaultOutputLoadPath(
     val folder : IFolder) extends ICoqLoadPathProvider {
-  override def getLoadPath = List(CoqLoadPath(folder.getLocation, None))
+  override def getLoadPath = List(LoadPathEntry(folder.getLocation, None))
 }
 
 case class ExternalLoadPath(val fsPath : IPath, val dir : Option[String])
     extends ICoqLoadPathProvider {
-  override def getLoadPath = List(CoqLoadPath(fsPath, dir))
+  override def getLoadPath = List(LoadPathEntry(fsPath, dir))
 }
 
 case class AbstractLoadPath(
@@ -183,7 +183,7 @@ trait AbstractLoadPathImplementation {
   def getDescription() : String
 
   import AbstractLoadPathImplementation.Excuse
-  def getLoadPath() : Either[Excuse, Seq[CoqLoadPath]]
+  def getLoadPath() : Either[Excuse, Seq[LoadPathEntry]]
 }
 object AbstractLoadPathImplementation {
   sealed abstract class Excuse
@@ -266,9 +266,9 @@ object Coq84Library {
             val (_, path_) = CoqProgram("coqtop").run(Seq("-where")).readAll
             val path = new Path(path_.trim)
             Right(Seq(
-                CoqLoadPath(path.append("theories"), Some("Coq"), true),
-                CoqLoadPath(path.append("plugins"), Some("Coq"), true),
-                CoqLoadPath(path.append("user-contrib"), None, true)))
+                LoadPathEntry(path.append("theories"), Some("Coq"), true),
+                LoadPathEntry(path.append("plugins"), Some("Coq"), true),
+                LoadPathEntry(path.append("user-contrib"), None, true)))
           case _ => Left(Broken)
         }
       } else Left(VersionMismatch)
@@ -279,7 +279,7 @@ trait ICoqProject extends ICoqElement with IParent {
   override def getParent : Option[ICoqModel]
   override def getCorrespondingResource : Option[IProject]
 
-  def getLoadPath() : Seq[CoqLoadPath]
+  def getLoadPath() : Seq[LoadPathEntry]
 
   def getLoadPathProviders() : Seq[ICoqLoadPathProvider]
   def setLoadPathProviders(

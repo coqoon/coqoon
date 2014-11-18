@@ -258,7 +258,7 @@ private class CoqProjectImpl(
     }
 
     private[CoqProjectImpl] final val loadPath =
-        CacheSlot[Seq[CoqLoadPath]] {
+        CacheSlot[Seq[LoadPathEntry]] {
       loadPathProviders.get.flatMap(_.getLoadPath)
     }
   }

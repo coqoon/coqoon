@@ -46,7 +46,7 @@ protected object LoadPathModel {
    * represent namespaces and locations */
   abstract class LPNSChild(parent : Option[LPProvider], index : Int)
       extends LPProvider(parent, index) {
-    def getLoadPath() : Seq[CoqLoadPath]
+    def getLoadPath() : Seq[LoadPathEntry]
 
     override def getChildren = {
       var result = Seq[LPBase]()
@@ -98,9 +98,9 @@ protected object LoadPathModel {
   case class OutputSLPE(parent : Option[LPProvider],
       output : Option[IFolder]) extends LPBase(parent)
   case class NamespaceSLPE(parent : Option[LPProvider],
-      cl : CoqLoadPath) extends LPBase(parent)
+      cl : LoadPathEntry) extends LPBase(parent)
   case class LocationSLPE(parent : Option[LPProvider],
-      cl : CoqLoadPath) extends LPBase(parent)
+      cl : LoadPathEntry) extends LPBase(parent)
   case class SeparatorSLPE(parent : Option[LPProvider]) extends LPBase(parent)
 
   def translate(parent : Option[LPProvider],

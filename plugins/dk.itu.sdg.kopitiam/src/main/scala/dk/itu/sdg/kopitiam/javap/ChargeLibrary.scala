@@ -1,7 +1,7 @@
 package dk.itu.sdg.kopitiam.javap
 
 import dk.itu.sdg.kopitiam.Activator
-import dk.itu.coqoon.core.model.{CoqLoadPath, AbstractLoadPathManager,
+import dk.itu.coqoon.core.model.{LoadPathEntry, AbstractLoadPathManager,
   AbstractLoadPathProvider, AbstractLoadPathImplementation}
 
 import org.eclipse.core.runtime.Path
@@ -36,7 +36,7 @@ object ChargeLibrary {
       if (id == ID) {
         Activator.getDefault.getPreferenceStore.getString("loadpath") match {
           case p if p.length > 0 =>
-            Right(Seq(CoqLoadPath(new Path(p), None)))
+            Right(Seq(LoadPathEntry(new Path(p), None)))
           case _ =>
             Left(Broken)
         }
