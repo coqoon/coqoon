@@ -454,7 +454,7 @@ class NLPAbstractEntryPage extends NLPWizardPage(
     lv.setContentProvider(new FuturisticContentProvider[TreeViewer] {
       override def actuallyGetChildren(element : AnyRef) =
         element match {
-          case a : AbstractLoadPathManager =>
+          case a : LoadPathManager =>
             for (i <- a.getProviders;
                  f <- Some(i.getImplementations))
               yield (if (f.size == 1) f.head else i)

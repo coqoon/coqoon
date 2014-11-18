@@ -202,7 +202,7 @@ object AbstractLoadPathImplementation {
   final case object NotRetrievable extends NotAvailable
 }
 
-class AbstractLoadPathManager {
+class LoadPathManager {
   private var providers : Seq[AbstractLoadPathProvider] = Seq()
   def getProviders() = providers
   def addProvider(provider : AbstractLoadPathProvider) =
@@ -217,8 +217,8 @@ class AbstractLoadPathManager {
   }
 }
 object AbstractLoadPathManager {
-  private final val instance = new AbstractLoadPathManager
-  def getInstance() : AbstractLoadPathManager = instance
+  private final val instance = new LoadPathManager
+  def getInstance() = instance
 
   import org.eclipse.core.runtime.{CoreException, RegistryFactory}
 
