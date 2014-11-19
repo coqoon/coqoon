@@ -236,10 +236,10 @@ private class CoqProjectImpl(
               SourceLoadPath(res.getFolder(srcdir),
                 Option(res.getFolder(bindir))) +: _util(tail)
             case "ExternalLoadPath" :: physical :: Nil =>
-              ExternalLoadPath(new Path(physical), None) +: _util(tail)
+              ExternalLoadPath(new Path(physical), Nil) +: _util(tail)
             case "ExternalLoadPath" :: physical :: logical :: Nil =>
               ExternalLoadPath(
-                  new Path(physical), Some(logical)) +: _util(tail)
+                  new Path(physical), logical.split(".")) +: _util(tail)
             case "AbstractLoadPath" :: identifier :: Nil =>
               AbstractLoadPath(identifier) +: _util(tail)
             case _ => _util(tail)
@@ -298,14 +298,14 @@ private class CoqProjectImpl(
           val path = bin.getProjectRelativePath.toString
           coqPart :+= RecursiveEntry(path, "")
           Seq("DefaultOutput", bin.getProjectRelativePath.toString)
-        case ExternalLoadPath(path_, None) =>
+        case ExternalLoadPath(path_, Nil) =>
           val path = path_.toString
           coqPart :+= RecursiveEntry(path, "")
           Seq("ExternalLoadPath", path)
-        case ExternalLoadPath(path_, Some(coqdir)) =>
+        case ExternalLoadPath(path_, coqdir) =>
           val path = path_.toString
-          coqPart :+= RecursiveEntry(path, coqdir)
-          Seq("ExternalLoadPath", path, coqdir)
+          coqPart :+= RecursiveEntry(path, coqdir.mkString("."))
+          Seq("ExternalLoadPath", path, coqdir.mkString("."))
         case ProjectLoadPath(project) =>
           val path = project.getName
           Seq("ProjectLoadPath", project.getName)

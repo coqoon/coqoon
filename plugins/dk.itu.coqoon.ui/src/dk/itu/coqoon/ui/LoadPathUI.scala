@@ -93,7 +93,7 @@ protected object LoadPathModel {
 
   import org.eclipse.core.runtime.IPath
   case class ExternalLPE(parent : Option[LPProvider], fsPath : IPath,
-      dir : Option[String], index : Int) extends LPProvider(parent, index)
+      dir : Seq[String], index : Int) extends LPProvider(parent, index)
 
   case class OutputSLPE(parent : Option[LPProvider],
       output : Option[IFolder]) extends LPBase(parent)
@@ -161,7 +161,11 @@ private class LoadPathLabelProvider extends StyledCellLabelProvider {
 
         case NamespaceSLPE(_, lpe) =>
           s.append("Namespace: ")
-          s.append(lpe.coqdir.getOrElse("(root)"), ColourStyler(NSLOC))
+          val label =
+            if (lpe != Nil) {
+              lpe.coqdir.mkString(".")
+            } else "(root)"
+          s.append(label, ColourStyler(NSLOC))
         case LocationSLPE(_, lpe) =>
           s.append("Location: ")
           s.append(lpe.path.toString, ColourStyler(NSLOC))
@@ -612,8 +616,9 @@ class NLPExternalEntryPage extends NLPWizardPage(
 
   import org.eclipse.core.runtime.IPath
   private var fspath : Option[IPath] = None
-  private var dir : Option[String] = None
-  override def createLoadPathEntry = fspath.map(ExternalLoadPath(_, dir))
+  private var dir : Option[Seq[String]] = None
+  override def createLoadPathEntry =
+    fspath.map(ExternalLoadPath(_, dir.getOrElse(Seq())))
 
   override def createControl(parent : Composite) = {
     import org.eclipse.swt.layout.{GridData, GridLayout}

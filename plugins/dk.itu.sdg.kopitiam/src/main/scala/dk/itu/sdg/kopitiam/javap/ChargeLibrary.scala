@@ -36,7 +36,7 @@ object ChargeLibrary {
       if (id == ID) {
         Activator.getDefault.getPreferenceStore.getString("loadpath") match {
           case p if p.length > 0 =>
-            Right(Seq(LoadPathEntry(new Path(p), None)))
+            Right(Seq(LoadPathEntry(new Path(p), Nil)))
           case _ =>
             Left(Broken)
         }

@@ -55,7 +55,7 @@ include CoqoonMakefile.vars
 
     var identifiers = Map[String, ICoqLoadPathProvider]()
     def escape(lp : LoadPathEntry) = makePathRelative(lp.path).map(
-        a => Seq("-R", a.toString, lp.coqdir.getOrElse("")).map(
+        a => Seq("-R", a.toString, lp.coqdir.mkString(".")).map(
             CoqProjectEntry.escape)).get
     for (i <- cp.getLoadPathProviders) i match {
       case p @ DefaultOutputLoadPath(bin) =>
@@ -68,11 +68,15 @@ include CoqoonMakefile.vars
         sb ++= "override COQFLAGS += " +
             p.getLoadPath.flatMap(escape).mkString(" ") + "\n"
       case ExternalLoadPath(path, coqdir) =>
-        val name = getFirstIdent(coqdir.getOrElse("external") + "_path",
+        val base =
+          if (coqdir != Nil) {
+            coqdir.mkString(".")
+          } else "external"
+        val name = getFirstIdent(base + "_path",
             n => identifiers.contains(n))
         identifiers += (name -> i)
         sb ++= "override COQFLAGS += -R $(" + name + ") " +
-            CoqProjectEntry.escape(coqdir.getOrElse("")) + "\n"
+            CoqProjectEntry.escape(coqdir.mkString(".")) + "\n"
       case AbstractLoadPath(identifier) =>
         val name = getFirstIdent(identifier + "_flags",
             n => identifiers.contains(n))

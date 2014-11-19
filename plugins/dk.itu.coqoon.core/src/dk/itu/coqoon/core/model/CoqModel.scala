@@ -90,21 +90,21 @@ case class CoqProjectLoadPathChangedEvent(
     override val element : ICoqProject) extends CoqElementChangedEvent(element)
 
 final case class LoadPathEntry(
-    path : IPath, coqdir : Option[String], alwaysExpand : Boolean = false) {
+    path : IPath, coqdir : Seq[String], alwaysExpand : Boolean = false) {
   import dk.itu.coqoon.core.CoqoonPreferences
 
   def asCommand : String =
     (if (!alwaysExpand && CoqoonPreferences.EnforceNamespaces.get) {
       s"""Add LoadPath "${path.toOSString}" """
-    } else s"""Add Rec LoadPath "${path.toOSString}" """) + (coqdir match {
-      case Some(dir) => " as " + dir
-      case None => ""
-    }) + "."
+    } else s"""Add Rec LoadPath "${path.toOSString}" """) +
+    (if (coqdir != Nil) {
+      " as " + coqdir.mkString(".")
+    } else "") + "."
 
   def asArguments : Seq[String] =
     if (!alwaysExpand && CoqoonPreferences.EnforceNamespaces.get) {
       Seq("-I", path.toOSString) ++ coqdir.toSeq.flatMap(cd => Seq("-as", cd))
-    } else Seq("-R", path.toOSString, coqdir.getOrElse(""))
+    } else Seq("-R", path.toOSString, coqdir.mkString("."))
 
   import java.io.File
 
@@ -120,7 +120,7 @@ final case class LoadPathEntry(
             f => _recurse(coqdir :+ f.getName, f))
         } else Seq.empty) :+ (coqdir, f)
       }
-      _recurse(coqdir.map(_.split('.').toSeq).getOrElse(Seq()), path.toFile)
+      _recurse(coqdir, path.toFile)
     }
 }
 
@@ -136,16 +136,16 @@ case class ProjectLoadPath(
 
 case class SourceLoadPath(val folder : IFolder,
     val output : Option[IFolder] = None) extends ICoqLoadPathProvider {
-  override def getLoadPath = List(LoadPathEntry(folder.getLocation, None)) ++
-      output.map(a => LoadPathEntry(a.getLocation, None))
+  override def getLoadPath = List(LoadPathEntry(folder.getLocation, Nil)) ++
+      output.map(a => LoadPathEntry(a.getLocation, Nil))
 }
 
 case class DefaultOutputLoadPath(
     val folder : IFolder) extends ICoqLoadPathProvider {
-  override def getLoadPath = List(LoadPathEntry(folder.getLocation, None))
+  override def getLoadPath = List(LoadPathEntry(folder.getLocation, Nil))
 }
 
-case class ExternalLoadPath(val fsPath : IPath, val dir : Option[String])
+case class ExternalLoadPath(val fsPath : IPath, val dir : Seq[String])
     extends ICoqLoadPathProvider {
   override def getLoadPath = List(LoadPathEntry(fsPath, dir))
 }
@@ -266,9 +266,9 @@ object Coq84Library {
             val (_, path_) = CoqProgram("coqtop").run(Seq("-where")).readAll
             val path = new Path(path_.trim)
             Right(Seq(
-                LoadPathEntry(path.append("theories"), Some("Coq"), true),
-                LoadPathEntry(path.append("plugins"), Some("Coq"), true),
-                LoadPathEntry(path.append("user-contrib"), None, true)))
+                LoadPathEntry(path.append("theories"), Seq("Coq"), true),
+                LoadPathEntry(path.append("plugins"), Seq("Coq"), true),
+                LoadPathEntry(path.append("user-contrib"), Nil, true)))
           case _ => Left(Broken)
         }
       } else Left(VersionMismatch)
