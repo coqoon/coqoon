@@ -104,12 +104,12 @@ protected object LoadPathModel {
   case class SeparatorSLPE(parent : Option[LPProvider]) extends LPBase(parent)
 
   def translate(parent : Option[LPProvider],
-      providers : Seq[ICoqLoadPathProvider]) : Seq[LPProvider] =
+      providers : Seq[LoadPathProvider]) : Seq[LPProvider] =
     for ((provider, index) <- providers.zipWithIndex)
       yield translate(parent, provider, index)
 
   def translate(parent : Option[LPProvider],
-      provider : ICoqLoadPathProvider, index : Int) : LPProvider =
+      provider : LoadPathProvider, index : Int) : LPProvider =
     provider match {
       case AbstractLoadPath(a) => AbstractLPE(parent, a, index)
       case SourceLoadPath(a, b) => SourceLPE(parent, a, b, index)
@@ -207,7 +207,7 @@ private class LoadPathContentProvider extends ITreeContentProvider {
     viewer.refresh
 
   override def getElements(input : Any) = input match {
-    case s : Seq[ICoqLoadPathProvider] =>
+    case s : Seq[LoadPathProvider] =>
       translate(None, s).toArray
     case _ => Array.empty
   }
@@ -367,7 +367,7 @@ class NewLoadPathWizard extends Wizard {
   addPage(selectionPage)
   setForcePreviousAndNextButtons(true)
 
-  private var result : Option[ICoqLoadPathProvider] = None
+  private var result : Option[LoadPathProvider] = None
   def getResult() = result
 
   override def canFinish = selectionPage.isPageComplete &&
@@ -431,7 +431,7 @@ abstract class NLPWizardPage(
         extends WizardPage(name, title, descriptor) {
   /* Calling this method should be basically free, so it also serves as the
    * implementation of isPageComplete */
-  def createLoadPathEntry() : Option[ICoqLoadPathProvider]
+  def createLoadPathEntry() : Option[LoadPathProvider]
   override def isPageComplete() = (createLoadPathEntry != None)
 }
 

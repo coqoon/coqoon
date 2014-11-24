@@ -124,12 +124,8 @@ final case class LoadPathEntry(
     }
 }
 
-sealed trait ICoqLoadPathProvider {
-  def getLoadPath() : Seq[LoadPathEntry]
-}
-
-case class LoadPathProvider(identifier : String) extends ICoqLoadPathProvider {
-  override def getLoadPath =
+case class LoadPathProvider(identifier : String) {
+  def getLoadPath =
     getImplementation.flatMap(_.getLoadPath.right.toOption).getOrElse(Nil)
 
   def getProvider() =
@@ -316,9 +312,9 @@ trait ICoqProject extends ICoqElement with IParent {
 
   def getLoadPath() : Seq[LoadPathEntry]
 
-  def getLoadPathProviders() : Seq[ICoqLoadPathProvider]
+  def getLoadPathProviders() : Seq[LoadPathProvider]
   def setLoadPathProviders(
-      lp : Seq[ICoqLoadPathProvider], monitor : IProgressMonitor)
+      lp : Seq[LoadPathProvider], monitor : IProgressMonitor)
 
   def getDefaultOutputLocation : Option[IFolder]
 

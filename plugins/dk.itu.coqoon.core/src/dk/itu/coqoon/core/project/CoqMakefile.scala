@@ -53,7 +53,7 @@ include CoqoonMakefile.vars
       name
     }
 
-    var identifiers = Map[String, ICoqLoadPathProvider]()
+    var identifiers = Map[String, LoadPathProvider]()
     def escape(lp : LoadPathEntry) = makePathRelative(lp.path).map(
         a => Seq("-R", a.toString, lp.coqdir.mkString(".")).map(
             CoqProjectEntry.escape)).get

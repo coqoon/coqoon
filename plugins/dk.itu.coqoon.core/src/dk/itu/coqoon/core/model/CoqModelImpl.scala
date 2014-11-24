@@ -217,9 +217,9 @@ private class CoqProjectImpl(
     }
 
     private[CoqProjectImpl] final val loadPathProviders =
-        CacheSlot[Seq[ICoqLoadPathProvider]] {
+        CacheSlot[Seq[LoadPathProvider]] {
       def _util(
-        seq : Seq[CoqProjectEntry]) : Seq[ICoqLoadPathProvider] = seq match {
+        seq : Seq[CoqProjectEntry]) : Seq[LoadPathProvider] = seq match {
         /* XXX: also parse the -R options later? */
         case (q @ VariableEntry(name, value)) :: tail
             if name.startsWith("KOPITIAM_") =>
@@ -286,7 +286,7 @@ private class CoqProjectImpl(
   override def getLoadPath() = getCache.loadPath.get
 
   override def setLoadPathProviders(
-      lp : Seq[ICoqLoadPathProvider], monitor : IProgressMonitor) = {
+      lp : Seq[LoadPathProvider], monitor : IProgressMonitor) = {
     var coqPart : List[CoqProjectEntry] = Nil
     var kopitiamPart : List[CoqProjectEntry] = Nil
     var count = 0
@@ -324,7 +324,7 @@ private class CoqProjectImpl(
     }
     setProjectConfiguration(coqPart ++ kopitiamPart, monitor)
   }
-  override def getLoadPathProviders : Seq[ICoqLoadPathProvider] =
+  override def getLoadPathProviders : Seq[LoadPathProvider] =
     getCache.loadPathProviders.get
 
   override def getDefaultOutputLocation : Option[IFolder] = {
