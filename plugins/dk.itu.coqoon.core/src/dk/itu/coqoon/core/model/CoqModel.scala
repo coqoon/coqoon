@@ -128,36 +128,60 @@ sealed trait ICoqLoadPathProvider {
   def getLoadPath() : Seq[LoadPathEntry]
 }
 
-case class ProjectLoadPath(
-    val project : IProject) extends ICoqLoadPathProvider {
+case class LoadPathProvider(identifier : String) extends ICoqLoadPathProvider {
   override def getLoadPath =
-    Option(ICoqModel.toCoqProject(project)).map(_.getLoadPath).getOrElse(Seq())
-}
-
-case class SourceLoadPath(val folder : IFolder,
-    val output : Option[IFolder] = None) extends ICoqLoadPathProvider {
-  override def getLoadPath = List(LoadPathEntry(folder.getLocation, Nil)) ++
-      output.map(a => LoadPathEntry(a.getLocation, Nil))
-}
-
-case class DefaultOutputLoadPath(
-    val folder : IFolder) extends ICoqLoadPathProvider {
-  override def getLoadPath = List(LoadPathEntry(folder.getLocation, Nil))
-}
-
-case class ExternalLoadPath(val fsPath : IPath, val dir : Seq[String])
-    extends ICoqLoadPathProvider {
-  override def getLoadPath = List(LoadPathEntry(fsPath, dir))
-}
-
-case class AbstractLoadPath(
-    val identifier : String) extends ICoqLoadPathProvider {
-  override def getLoadPath =
-    getProvider.flatMap(_.getImplementation(identifier)).flatMap(
-        _.getLoadPath.right.toOption).getOrElse(Nil)
+    getImplementation.flatMap(_.getLoadPath.right.toOption).getOrElse(Nil)
 
   def getProvider() =
-    AbstractLoadPathManager.getInstance.getProviderFor(identifier)
+    LoadPathManager.getInstance.getProviderFor(identifier)
+  def getImplementation() =
+    getProvider.flatMap(_.getImplementation(identifier))
+}
+
+object ProjectLoadPath {
+  import ProjectLoadPathProvider._
+  def apply(project : IProject) =
+    LoadPathProvider(makeIdentifier(project))
+  def unapply(p : LoadPathProvider) =
+    p.getImplementation.flatMap(TryCast[Implementation]).map(
+        a => a.project)
+}
+
+object SourceLoadPath {
+  import SourceLoadPathProvider._
+  def apply(folder : IFolder, output : Option[IFolder] = None) =
+    LoadPathProvider(makeIdentifier(folder, output))
+  def unapply(p : LoadPathProvider) =
+    p.getImplementation.flatMap(TryCast[Implementation]).map(
+        a => (a.folder, a.output))
+}
+
+object DefaultOutputLoadPath {
+  import DefaultOutputLoadPathProvider._
+  def apply(folder : IFolder) =
+    LoadPathProvider(makeIdentifier(folder))
+  def unapply(p : LoadPathProvider) =
+    p.getImplementation.flatMap(TryCast[Implementation]).map(
+        a => a.folder)
+}
+
+object ExternalLoadPath {
+  import ExternalLoadPathProvider._
+  def apply(fsPath : IPath, dir : Seq[String]) =
+    LoadPathProvider(makeIdentifier(fsPath, dir))
+  def unapply(p : LoadPathProvider) =
+    p.getImplementation.flatMap(TryCast[Implementation]).map(
+        a => (a.fsPath, a.dir))
+}
+
+object AbstractLoadPath {
+  def apply(id : String) = LoadPathProvider(s"abstract:${id}")
+  def unapply(p : LoadPathProvider) =
+    p.getProvider match {
+      case Some(_ : InterimAbstractLoadPathProvider) =>
+        Some(p.identifier.drop("abstract:".length))
+      case _ => None
+    }
 }
 
 trait AbstractLoadPathProvider {
