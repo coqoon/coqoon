@@ -112,6 +112,108 @@ object SourceLoadPathProvider {
   }
 }
 
+class DefaultOutputLoadPathProvider extends AbstractLoadPathProvider {
+  import DefaultOutputLoadPathProvider._
+
+  def getImplementation(id : String) : Option[Implementation] =
+    if (id.startsWith("default-output:")) {
+      val rest = id.drop("default-output:".length)
+
+      import ProjectLoadPathProvider.getRoot
+      import dk.itu.coqoon.core.project.CoqProjectFile
+      CoqProjectFile.shellTokenise(rest) match {
+        case project :: folder :: Nil =>
+          val proj = getRoot.getProject(project)
+          Some(new Implementation(this, proj.getFolder(folder)))
+        case _ =>
+          None
+      }
+    } else None
+
+  def getImplementations() = Nil
+
+  override def getName() = "Default output"
+}
+object DefaultOutputLoadPathProvider {
+  import org.eclipse.core.resources.IFolder
+
+  case class Implementation(
+      private val provider : DefaultOutputLoadPathProvider,
+      val folder : IFolder) extends AbstractLoadPathImplementation {
+    override def getProvider() : DefaultOutputLoadPathProvider = provider
+
+    import dk.itu.coqoon.core.project.CoqProjectEntry.escape
+    override def getName() = folder.getName
+    override def getIdentifier() = {
+      val parts = Seq(folder.getProject.getName,
+          folder.getProjectRelativePath.toString)
+      s"default-output:" + parts.map(escape).mkString(" ")
+    }
+
+    override def getAuthor() = ""
+    override def getDescription() = ""
+
+    override def getLoadPath() =
+      Right(Seq(LoadPathEntry(folder.getLocation, Nil)))
+  }
+}
+
+class ExternalLoadPathProvider extends AbstractLoadPathProvider {
+  import ExternalLoadPathProvider._
+
+  def getImplementation(id : String) : Option[Implementation] =
+    if (id.startsWith("external:")) {
+      val rest = id.drop("external:".length)
+
+      import ProjectLoadPathProvider.getRoot
+      import dk.itu.coqoon.core.project.CoqProjectFile
+      CoqProjectFile.shellTokenise(rest) match {
+        case path :: rest =>
+          import org.eclipse.core.runtime.Path
+          val p = new Path(path)
+          rest match {
+            case coqdir :: Nil =>
+              Some(new Implementation(this, p, coqdir.split(".")))
+            case Nil =>
+              Some(new Implementation(this, p, Nil))
+            case _ =>
+              None
+          }
+        case _ =>
+          None
+      }
+    } else None
+
+  def getImplementations() = Nil
+
+  override def getName() = "External"
+}
+object ExternalLoadPathProvider {
+  import org.eclipse.core.resources.IFolder
+
+  import org.eclipse.core.runtime.IPath
+  case class Implementation(private val provider : ExternalLoadPathProvider,
+      val fsPath : IPath, val dir : Seq[String])
+          extends AbstractLoadPathImplementation {
+    override def getProvider() : ExternalLoadPathProvider = provider
+
+    import dk.itu.coqoon.core.project.CoqProjectEntry.escape
+    override def getName() = fsPath.toString
+    override def getIdentifier() = {
+      val parts = Seq(fsPath.toString) ++
+        (if (dir == Nil) {
+           Nil
+         } else Seq(dir.mkString(".")))
+      s"external:" + parts.map(escape).mkString(" ")
+    }
+
+    override def getAuthor() = ""
+    override def getDescription() = ""
+
+    override def getLoadPath() = Right(Seq(LoadPathEntry(fsPath, dir)))
+  }
+}
+
 class InterimAbstractLoadPathProvider extends AbstractLoadPathProvider {
   def getImplementation(id : String) =
     if (id.startsWith("abstract:")) {
