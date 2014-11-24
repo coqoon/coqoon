@@ -250,9 +250,9 @@ private class CoqProjectImpl(
       projectFile.get match {
         case _ if res == None => Seq()
         case Nil => List(
-          new SourceLoadPath(res.get.getFolder("src")),
-          new DefaultOutputLoadPath(res.get.getFolder("bin")),
-          new AbstractLoadPath(Coq84Library.ID))
+          SourceLoadPath(res.get.getFolder("src")),
+          DefaultOutputLoadPath(res.get.getFolder("bin")),
+          AbstractLoadPath(Coq84Library.ID))
         case pc => _util(pc)
       }
     }
@@ -328,9 +328,8 @@ private class CoqProjectImpl(
     getCache.loadPathProviders.get
 
   override def getDefaultOutputLocation : Option[IFolder] = {
-    for (i <- getLoadPathProviders;
-         j <- TryCast[DefaultOutputLoadPath](i))
-      return Some(j.folder)
+    for (DefaultOutputLoadPath(folder) <- getLoadPathProviders)
+      return Some(folder)
     res.map(_.getFolder("bin"))
   }
 
