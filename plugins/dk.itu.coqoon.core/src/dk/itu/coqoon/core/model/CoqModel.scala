@@ -216,6 +216,17 @@ class LoadPathManager {
     None
   }
 }
+object LoadPathManager {
+  private final val instance = new LoadPathManager
+  def getInstance() = instance
+
+  getInstance.addProvider(new ProjectLoadPathProvider)
+  getInstance.addProvider(new SourceLoadPathProvider)
+  getInstance.addProvider(new DefaultOutputLoadPathProvider)
+  getInstance.addProvider(new ExternalLoadPathProvider)
+  getInstance.addProvider(new InterimAbstractLoadPathProvider)
+}
+
 object AbstractLoadPathManager {
   private final val instance = new LoadPathManager
   def getInstance() = instance
