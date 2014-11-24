@@ -40,7 +40,7 @@ object ProjectLoadPathProvider {
     override def getProvider() : AbstractLoadPathProvider = provider
 
     override def getName() = project.getName
-    override def getIdentifier() = s"coqoon:project:${getName}"
+    override def getIdentifier() = makeIdentifier(project)
     
     override def getAuthor() = ""
     override def getDescription() = ""
@@ -52,6 +52,8 @@ object ProjectLoadPathProvider {
         Right(ICoqModel.toCoqProject(project).getLoadPath)
       } else Left(Broken)
   }
+
+  def makeIdentifier(project : IProject) = s"project:${project.getName}"
 }
 
 class SourceLoadPathProvider extends AbstractLoadPathProvider {
@@ -92,14 +94,8 @@ object SourceLoadPathProvider {
       val output : Option[IFolder]) extends AbstractLoadPathImplementation {
     override def getProvider() : AbstractLoadPathProvider = provider
 
-    import dk.itu.coqoon.core.project.CoqProjectEntry.escape
     override def getName() = folder.getName
-    override def getIdentifier() = {
-      val parts = Seq(folder.getProject.getName,
-          folder.getProjectRelativePath.toString) ++
-          output.map(_.getProjectRelativePath.toString).toSeq
-      s"source:" + parts.map(escape).mkString(" ")
-    }
+    override def getIdentifier() = makeIdentifier(folder, output)
 
     override def getAuthor() = ""
     override def getDescription() = ""
@@ -109,6 +105,14 @@ object SourceLoadPathProvider {
       Right(
           Seq(LoadPathEntry(folder.getLocation, Nil)) ++
           output.map(of => LoadPathEntry(of.getLocation, Nil)))
+  }
+
+  import dk.itu.coqoon.core.project.CoqProjectEntry.escape
+  def makeIdentifier(folder : IFolder, output : Option[IFolder]) = {
+    val parts = Seq(folder.getProject.getName,
+        folder.getProjectRelativePath.toString) ++
+        output.map(_.getProjectRelativePath.toString).toSeq
+    s"source:" + parts.map(escape).mkString(" ")
   }
 }
 
@@ -144,17 +148,20 @@ object DefaultOutputLoadPathProvider {
 
     import dk.itu.coqoon.core.project.CoqProjectEntry.escape
     override def getName() = folder.getName
-    override def getIdentifier() = {
-      val parts = Seq(folder.getProject.getName,
-          folder.getProjectRelativePath.toString)
-      s"default-output:" + parts.map(escape).mkString(" ")
-    }
+    override def getIdentifier() = makeIdentifier(folder)
 
     override def getAuthor() = ""
     override def getDescription() = ""
 
     override def getLoadPath() =
       Right(Seq(LoadPathEntry(folder.getLocation, Nil)))
+  }
+
+  import dk.itu.coqoon.core.project.CoqProjectEntry.escape
+  def makeIdentifier(folder : IFolder) = {
+    val parts = Seq(folder.getProject.getName,
+        folder.getProjectRelativePath.toString)
+    s"default-output:" + parts.map(escape).mkString(" ")
   }
 }
 
@@ -199,18 +206,21 @@ object ExternalLoadPathProvider {
 
     import dk.itu.coqoon.core.project.CoqProjectEntry.escape
     override def getName() = fsPath.toString
-    override def getIdentifier() = {
-      val parts = Seq(fsPath.toString) ++
-        (if (dir == Nil) {
-           Nil
-         } else Seq(dir.mkString(".")))
-      s"external:" + parts.map(escape).mkString(" ")
-    }
+    override def getIdentifier() = makeIdentifier(fsPath, dir)
 
     override def getAuthor() = ""
     override def getDescription() = ""
 
     override def getLoadPath() = Right(Seq(LoadPathEntry(fsPath, dir)))
+  }
+
+  import dk.itu.coqoon.core.project.CoqProjectEntry.escape
+  def makeIdentifier(fsPath : IPath, dir : Seq[String]) = {
+    val parts = Seq(fsPath.toString) ++
+      (if (dir == Nil) {
+         Nil
+       } else Seq(dir.mkString(".")))
+    s"external:" + parts.map(escape).mkString(" ")
   }
 }
 
