@@ -135,7 +135,7 @@ case class LoadPathProvider(identifier : String) {
 }
 
 object ProjectLoadPath {
-  import ProjectLoadPathProvider._
+  import ProjectLoadPathFactory._
   def apply(project : IProject) =
     LoadPathProvider(makeIdentifier(project))
   def unapply(p : LoadPathProvider) =
@@ -144,7 +144,7 @@ object ProjectLoadPath {
 }
 
 object SourceLoadPath {
-  import SourceLoadPathProvider._
+  import SourceLoadPathFactory._
   def apply(folder : IFolder, output : Option[IFolder] = None) =
     LoadPathProvider(makeIdentifier(folder, output))
   def unapply(p : LoadPathProvider) =
@@ -153,7 +153,7 @@ object SourceLoadPath {
 }
 
 object DefaultOutputLoadPath {
-  import DefaultOutputLoadPathProvider._
+  import DefaultOutputLoadPathFactory._
   def apply(folder : IFolder) =
     LoadPathProvider(makeIdentifier(folder))
   def unapply(p : LoadPathProvider) =
@@ -162,7 +162,7 @@ object DefaultOutputLoadPath {
 }
 
 object ExternalLoadPath {
-  import ExternalLoadPathProvider._
+  import ExternalLoadPathFactory._
   def apply(fsPath : IPath, dir : Seq[String]) =
     LoadPathProvider(makeIdentifier(fsPath, dir))
   def unapply(p : LoadPathProvider) =
@@ -174,7 +174,7 @@ object AbstractLoadPath {
   def apply(id : String) = LoadPathProvider(s"abstract:${id}")
   def unapply(p : LoadPathProvider) =
     p.getProvider match {
-      case Some(_ : InterimAbstractLoadPathProvider) =>
+      case Some(_ : AbstractLoadPathFactory) =>
         Some(p.identifier.drop("abstract:".length))
       case _ => None
     }
@@ -240,11 +240,11 @@ object LoadPathManager {
   private final val instance = new LoadPathManager
   def getInstance() = instance
 
-  getInstance.addProvider(new ProjectLoadPathProvider)
-  getInstance.addProvider(new SourceLoadPathProvider)
-  getInstance.addProvider(new DefaultOutputLoadPathProvider)
-  getInstance.addProvider(new ExternalLoadPathProvider)
-  getInstance.addProvider(new InterimAbstractLoadPathProvider)
+  getInstance.addProvider(new ProjectLoadPathFactory)
+  getInstance.addProvider(new SourceLoadPathFactory)
+  getInstance.addProvider(new DefaultOutputLoadPathFactory)
+  getInstance.addProvider(new ExternalLoadPathFactory)
+  getInstance.addProvider(new AbstractLoadPathFactory)
 }
 
 object AbstractLoadPathManager {
