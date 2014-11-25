@@ -462,25 +462,25 @@ class NLPAbstractEntryPage extends NLPWizardPage(
             for (i <- a.getProviders;
                  f <- Some(i.getImplementations))
               yield (if (f.size == 1) f.head else i)
-          case p : AbstractLoadPathProvider => p.getImplementations
+          case p : LoadPathImplementationFactory => p.getImplementations
           case _ => Seq()
         }
       override def getParent(element : AnyRef) =
-        TryCast[AbstractLoadPathImplementation](
+        TryCast[LoadPathImplementation](
             element).map(_.getProvider).orNull
     })
     lv.setLabelProvider(new FuturisticLabelProvider {
       override def actuallyGetText(element : AnyRef) = element match {
-        case p : AbstractLoadPathProvider => Some(p.getName)
-        case i : AbstractLoadPathImplementation => Some(i.getName)
+        case p : LoadPathImplementationFactory => Some(p.getName)
+        case i : LoadPathImplementation => Some(i.getName)
         case _ => None
       }
       import org.eclipse.ui.ISharedImages
       override def actuallyGetImage(element : AnyRef) = element match {
-        case p : AbstractLoadPathProvider =>
+        case p : LoadPathImplementationFactory =>
           Some((UIUtils.getWorkbench.getSharedImages.getImage(
               ISharedImages.IMG_OBJ_FOLDER), false))
-        case i : AbstractLoadPathImplementation =>
+        case i : LoadPathImplementation =>
           Some((UIUtils.getWorkbench.getSharedImages.getImage(
               ISharedImages.IMG_OBJ_ELEMENT), false))
         case _ => None
@@ -508,8 +508,8 @@ class NLPAbstractEntryPage extends NLPWizardPage(
       override def selectionChanged(ev : SelectionChangedEvent) =
         TryCast[IStructuredSelection](ev.getSelection).map(
             _.getFirstElement) match {
-          case Some(i : AbstractLoadPathImplementation) =>
-            import AbstractLoadPathImplementation._
+          case Some(i : LoadPathImplementation) =>
+            import LoadPathImplementation._
             i.getLoadPath match {
               case Right(_) =>
                 setErrorMessage(null)

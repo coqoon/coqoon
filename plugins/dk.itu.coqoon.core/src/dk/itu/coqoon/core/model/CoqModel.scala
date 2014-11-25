@@ -180,7 +180,7 @@ object AbstractLoadPath {
     }
 }
 
-trait AbstractLoadPathProvider {
+trait LoadPathImplementationFactory {
   def getName() : String
 
   /* Returns a best-match load path implementation for the given identifier,
@@ -189,23 +189,23 @@ trait AbstractLoadPathProvider {
    * Note that the resulting implementation is not required to work! There are
    * lots of reasons why a provider might not be able to provide a working
    * implementation for a given identifier; see the Status class below. */
-  def getImplementation(id : String) : Option[AbstractLoadPathImplementation]
+  def getImplementation(id : String) : Option[LoadPathImplementation]
 
-  def getImplementations() : Seq[AbstractLoadPathImplementation]
+  def getImplementations() : Seq[LoadPathImplementation]
 }
 
-trait AbstractLoadPathImplementation {
-  def getProvider() : AbstractLoadPathProvider
+trait LoadPathImplementation {
+  def getProvider() : LoadPathImplementationFactory
   def getIdentifier() : String
 
   def getName() : String
   def getAuthor() : String
   def getDescription() : String
 
-  import AbstractLoadPathImplementation.Excuse
+  import LoadPathImplementation.Excuse
   def getLoadPath() : Either[Excuse, Seq[LoadPathEntry]]
 }
-object AbstractLoadPathImplementation {
+object LoadPathImplementation {
   sealed abstract class Excuse
 
   sealed abstract class Available extends Excuse
@@ -223,13 +223,13 @@ object AbstractLoadPathImplementation {
 }
 
 class LoadPathManager {
-  private var providers : Seq[AbstractLoadPathProvider] = Seq()
+  private var providers : Seq[LoadPathImplementationFactory] = Seq()
   def getProviders() = providers
-  def addProvider(provider : AbstractLoadPathProvider) =
+  def addProvider(provider : LoadPathImplementationFactory) =
     providers :+= provider
 
   def getProviderFor(
-      identifier : String) : Option[AbstractLoadPathProvider] = {
+      identifier : String) : Option[LoadPathImplementationFactory] = {
     for (i <- getProviders;
          j <- i.getImplementation(identifier))
       return Some(i)
@@ -257,7 +257,7 @@ object AbstractLoadPathManager {
            ManifestIdentifiers.EXTENSION_POINT_LOADPATH)
          if ice.getName == "provider") {
     val ex = try {
-      TryCast[AbstractLoadPathProvider](
+      TryCast[LoadPathImplementationFactory](
           ice.createExecutableExtension("provider"))
     } catch {
       case e : CoreException => None
@@ -266,7 +266,7 @@ object AbstractLoadPathManager {
   }
 }
 
-class Coq84Library extends AbstractLoadPathProvider {
+class Coq84Library extends LoadPathImplementationFactory {
   override def getName = "Coq 8.4 standard library"
 
   override def getImplementation(id : String) =
@@ -274,14 +274,14 @@ class Coq84Library extends AbstractLoadPathProvider {
       Some(new Coq84Library.Implementation(this, id))
     } else None
 
-  override def getImplementations : Seq[AbstractLoadPathImplementation] =
+  override def getImplementations : Seq[LoadPathImplementation] =
     Seq(new Coq84Library.Implementation(this))
 }
 object Coq84Library {
   final val ID = "dk.itu.sdg.kopitiam/lp/coq/8.4"
 
-  private class Implementation(provider : AbstractLoadPathProvider,
-      id : String = ID) extends AbstractLoadPathImplementation {
+  private class Implementation(provider : LoadPathImplementationFactory,
+      id : String = ID) extends LoadPathImplementation {
     override def getProvider = provider
 
     override def getIdentifier = id
@@ -289,7 +289,7 @@ object Coq84Library {
     override def getAuthor = "Coq development team <coqdev@inria.fr>"
     override def getDescription = "The standard library of Coq 8.4."
 
-    import AbstractLoadPathImplementation._
+    import LoadPathImplementation._
     override def getLoadPath =
       if (id == ID) {
         CoqProgram("coqtop").run(Seq("-where")).readAll match {

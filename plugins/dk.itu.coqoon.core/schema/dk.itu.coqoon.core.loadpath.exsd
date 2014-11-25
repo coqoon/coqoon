@@ -71,10 +71,10 @@
          <attribute name="provider" type="string" use="required">
             <annotation>
                <documentation>
-                  The class (implementing the &lt;code&gt;dk.itu.coqoon.core.model.AbstractLoadPathProvider&lt;/code&gt; trait) which provides the implementation of this load path provider.
+                  The class (implementing the &lt;code&gt;dk.itu.coqoon.core.model.LoadPathImplementationFactory&lt;/code&gt; trait) of this load path implementation factory.
                </documentation>
                <appinfo>
-                  <meta.attribute kind="java" basedOn=":dk.itu.coqoon.core.model.AbstractLoadPathProvider"/>
+                  <meta.attribute kind="java" basedOn=":dk.itu.coqoon.core.model.LoadPathImplementationFactory"/>
                </appinfo>
             </annotation>
          </attribute>

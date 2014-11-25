@@ -18,7 +18,7 @@ package dk.itu.coqoon.core.model
 
 import dk.itu.coqoon.core.ManifestIdentifiers
 
-class ProjectLoadPathProvider extends AbstractLoadPathProvider {
+class ProjectLoadPathProvider extends LoadPathImplementationFactory {
   import ProjectLoadPathProvider._
 
   def getImplementation(id : String) : Option[Implementation] =
@@ -36,8 +36,8 @@ object ProjectLoadPathProvider {
   private[model] def getRoot() = ResourcesPlugin.getWorkspace.getRoot
 
   case class Implementation(private val provider : ProjectLoadPathProvider,
-      val project : IProject) extends AbstractLoadPathImplementation {
-    override def getProvider() : AbstractLoadPathProvider = provider
+      val project : IProject) extends LoadPathImplementation {
+    override def getProvider() : LoadPathImplementationFactory = provider
 
     override def getName() = project.getName
     override def getIdentifier() = makeIdentifier(project)
@@ -45,7 +45,7 @@ object ProjectLoadPathProvider {
     override def getAuthor() = ""
     override def getDescription() = ""
 
-    import AbstractLoadPathImplementation._
+    import LoadPathImplementation._
     override def getLoadPath() =
       if (project.isOpen &&
           project.hasNature(ManifestIdentifiers.NATURE_COQ)) {
@@ -56,7 +56,7 @@ object ProjectLoadPathProvider {
   def makeIdentifier(project : IProject) = s"project:${project.getName}"
 }
 
-class SourceLoadPathProvider extends AbstractLoadPathProvider {
+class SourceLoadPathProvider extends LoadPathImplementationFactory {
   import SourceLoadPathProvider._
 
   def getImplementation(id : String) : Option[Implementation] =
@@ -91,8 +91,8 @@ object SourceLoadPathProvider {
 
   case class Implementation(
       private val provider : SourceLoadPathProvider, val folder : IFolder,
-      val output : Option[IFolder]) extends AbstractLoadPathImplementation {
-    override def getProvider() : AbstractLoadPathProvider = provider
+      val output : Option[IFolder]) extends LoadPathImplementation {
+    override def getProvider() : LoadPathImplementationFactory = provider
 
     override def getName() = folder.getName
     override def getIdentifier() = makeIdentifier(folder, output)
@@ -100,7 +100,7 @@ object SourceLoadPathProvider {
     override def getAuthor() = ""
     override def getDescription() = ""
 
-    import AbstractLoadPathImplementation._
+    import LoadPathImplementation._
     override def getLoadPath() =
       Right(
           Seq(LoadPathEntry(folder.getLocation, Nil)) ++
@@ -116,7 +116,7 @@ object SourceLoadPathProvider {
   }
 }
 
-class DefaultOutputLoadPathProvider extends AbstractLoadPathProvider {
+class DefaultOutputLoadPathProvider extends LoadPathImplementationFactory {
   import DefaultOutputLoadPathProvider._
 
   def getImplementation(id : String) : Option[Implementation] =
@@ -143,7 +143,7 @@ object DefaultOutputLoadPathProvider {
 
   case class Implementation(
       private val provider : DefaultOutputLoadPathProvider,
-      val folder : IFolder) extends AbstractLoadPathImplementation {
+      val folder : IFolder) extends LoadPathImplementation {
     override def getProvider() : DefaultOutputLoadPathProvider = provider
 
     import dk.itu.coqoon.core.project.CoqProjectEntry.escape
@@ -165,7 +165,7 @@ object DefaultOutputLoadPathProvider {
   }
 }
 
-class ExternalLoadPathProvider extends AbstractLoadPathProvider {
+class ExternalLoadPathProvider extends LoadPathImplementationFactory {
   import ExternalLoadPathProvider._
 
   def getImplementation(id : String) : Option[Implementation] =
@@ -201,7 +201,7 @@ object ExternalLoadPathProvider {
   import org.eclipse.core.runtime.IPath
   case class Implementation(private val provider : ExternalLoadPathProvider,
       val fsPath : IPath, val dir : Seq[String])
-          extends AbstractLoadPathImplementation {
+          extends LoadPathImplementation {
     override def getProvider() : ExternalLoadPathProvider = provider
 
     import dk.itu.coqoon.core.project.CoqProjectEntry.escape
@@ -224,7 +224,7 @@ object ExternalLoadPathProvider {
   }
 }
 
-class InterimAbstractLoadPathProvider extends AbstractLoadPathProvider {
+class InterimAbstractLoadPathProvider extends LoadPathImplementationFactory {
   def getImplementation(id : String) =
     if (id.startsWith("abstract:")) {
       val base = id.drop("abstract:".length)

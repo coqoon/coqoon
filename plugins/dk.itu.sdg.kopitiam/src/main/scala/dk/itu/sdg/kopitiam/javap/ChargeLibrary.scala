@@ -2,11 +2,11 @@ package dk.itu.sdg.kopitiam.javap
 
 import dk.itu.sdg.kopitiam.Activator
 import dk.itu.coqoon.core.model.{LoadPathEntry, AbstractLoadPathManager,
-  AbstractLoadPathProvider, AbstractLoadPathImplementation}
+  LoadPathImplementation, LoadPathImplementationFactory}
 
 import org.eclipse.core.runtime.Path
 
-class ChargeLibrary extends AbstractLoadPathProvider {
+class ChargeLibrary extends LoadPathImplementationFactory {
   override def getName = "Charge! for Java"
 
   override def getImplementation(id : String) =
@@ -14,15 +14,14 @@ class ChargeLibrary extends AbstractLoadPathProvider {
       Some(new ChargeLibrary.Implementation(this, id))
     } else None
 
-  override def getImplementations : Seq[AbstractLoadPathImplementation] =
+  override def getImplementations : Seq[LoadPathImplementation] =
     Seq(new ChargeLibrary.Implementation(this))
 }
 object ChargeLibrary {
   final val ID = "dk.itu.sdg.kopitiam/lp/charge/0.1"
 
-  import dk.itu.coqoon.core.model.AbstractLoadPathImplementation
-  private class Implementation(provider : AbstractLoadPathProvider,
-      id : String = ID) extends AbstractLoadPathImplementation {
+  private class Implementation(provider : LoadPathImplementationFactory,
+      id : String = ID) extends LoadPathImplementation {
     override def getProvider = provider
     override def getIdentifier = id
 
@@ -31,7 +30,7 @@ object ChargeLibrary {
     override def getDescription =
       "The Charge! separation logic framework, for verifying Java programs."
 
-    import AbstractLoadPathImplementation._
+    import LoadPathImplementation._
     override def getLoadPath =
       if (id == ID) {
         Activator.getDefault.getPreferenceStore.getString("loadpath") match {
