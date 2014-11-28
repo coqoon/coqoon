@@ -124,6 +124,38 @@ final case class LoadPathEntry(
     }
 }
 
+final case class IncompleteLoadPathEntry(
+    path : Seq[Either[IncompleteLoadPathEntry.Variable, String]],
+    coqdir : Seq[String], alwaysExpand : Boolean = false) {
+  import IncompleteLoadPathEntry._
+  def complete(p : VariableProvider) :
+      Either[IncompleteLoadPathEntry, LoadPathEntry] = {
+    val t =
+      for (i <- path)
+        yield (i match {
+          case e @ Left(l) =>
+            val v = p.getValue(l)
+            if (v != None) {
+              Right(v.get)
+            } else e
+          case e => e
+        })
+    if (t.forall(_.isRight)) {
+      Right(LoadPathEntry(
+          new Path(t.map(_.right.get).mkString("/")), coqdir, alwaysExpand))
+    } else Left(IncompleteLoadPathEntry(t, coqdir))
+  }
+}
+object IncompleteLoadPathEntry {
+  case class Variable(
+      name : String, description : String)
+  trait VariableProvider {
+    def getValue(v : Variable) : Option[String]
+  }
+
+  private final val _beginExpr = """^\$\(""".r
+}
+
 case class LoadPathProvider(identifier : String) {
   def getLoadPath =
     getImplementation.flatMap(_.getLoadPath.right.toOption).getOrElse(Nil)
