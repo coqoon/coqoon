@@ -46,11 +46,28 @@ object ProjectLoadPathFactory {
     override def getDescription() = ""
 
     import LoadPathImplementation._
-    override def getLoadPath() =
+    override def getIncompleteLoadPath() =
       if (project.isOpen &&
           project.hasNature(ManifestIdentifiers.NATURE_COQ)) {
-        Right(ICoqModel.toCoqProject(project).getLoadPath)
+        val impls = ICoqModel.toCoqProject(
+            project).getLoadPathProviders.flatMap(_.getImplementation)
+        val lpes = impls.map(_.getIncompleteLoadPath)
+        if (lpes.forall(_.isRight)) {
+          Right(lpes.map(_.right.get).flatten)
+        } else Left(Broken)
       } else Left(Broken)
+
+    import IncompleteLoadPathEntry.Variable
+    override def getValue(name : Variable) : Option[String] =
+      if (project.isOpen &&
+          project.hasNature(ManifestIdentifiers.NATURE_COQ)) {
+        val impls = ICoqModel.toCoqProject(
+            project).getLoadPathProviders.flatMap(_.getImplementation)
+        for (i <- impls;
+             v <- i.getValue(name))
+          return Some(v)
+        None
+      } else None
   }
 
   def makeIdentifier(project : IProject) = s"project:${project.getName}"
@@ -101,10 +118,29 @@ object SourceLoadPathFactory {
     override def getDescription() = ""
 
     import LoadPathImplementation._
-    override def getLoadPath() =
-      Right(
-          Seq(LoadPathEntry(folder.getLocation, Nil)) ++
-          output.map(of => LoadPathEntry(of.getLocation, Nil)))
+    override def getIncompleteLoadPath() =
+      Right(Seq(
+          IncompleteLoadPathEntry(
+              Seq(Left(ProjectLocation),
+                  Right(folder.getProjectRelativePath.toString)),
+              Nil, false)) ++
+          output.map(output => IncompleteLoadPathEntry(
+              Seq(Left(ProjectLocation),
+                  Right(output.getProjectRelativePath.toString)),
+              Nil, false)))
+
+    import IncompleteLoadPathEntry.Variable
+    def getValue(v : Variable) =
+      if (v == ProjectLocation) {
+        Some(folder.getProject.getLocation.toString)
+      } else None
+
+    final val ProjectLocation = {
+      val name = folder.getProject.getName
+      IncompleteLoadPathEntry.Variable(
+          name.toUpperCase.replaceAll("[^A-Z0-9]+", "_"),
+          "The path to the \"" + name + "\" project.")
+    }
   }
 
   import dk.itu.coqoon.core.project.CoqProjectEntry.escape
@@ -153,8 +189,26 @@ object DefaultOutputLoadPathFactory {
     override def getAuthor() = ""
     override def getDescription() = ""
 
-    override def getLoadPath() =
-      Right(Seq(LoadPathEntry(folder.getLocation, Nil)))
+    import LoadPathImplementation._
+    override def getIncompleteLoadPath() =
+      Right(Seq(
+          IncompleteLoadPathEntry(
+              Seq(Left(ProjectLocation),
+                  Right(folder.getProjectRelativePath.toString)),
+              Nil, false)))
+
+    import IncompleteLoadPathEntry.Variable
+    def getValue(v : Variable) =
+      if (v == ProjectLocation) {
+        Some(folder.getProject.getLocation.toString)
+      } else None
+
+    final val ProjectLocation = {
+      val name = folder.getProject.getName
+      IncompleteLoadPathEntry.Variable(
+          name.toUpperCase.replaceAll("[^A-Z0-9]+", "_"),
+          "The path to the \"" + name + "\" project.")
+    }
   }
 
   import dk.itu.coqoon.core.project.CoqProjectEntry.escape
@@ -210,7 +264,29 @@ object ExternalLoadPathFactory {
     override def getAuthor() = ""
     override def getDescription() = ""
 
-    override def getLoadPath() = Right(Seq(LoadPathEntry(fsPath, dir)))
+    import LoadPathImplementation._
+    override def getIncompleteLoadPath() =
+      Right(Seq(
+          IncompleteLoadPathEntry(
+              Seq(Left(ExternalPath)),
+              Nil, false)))
+
+    import IncompleteLoadPathEntry.Variable
+    def getValue(v : Variable) =
+      if (v == ExternalPath) {
+        Some(fsPath.toString)
+      } else None
+
+    final val ExternalPath = {
+      val name =
+        if (dir != Nil) {
+          dir.mkString(".")
+        } else Integer.toHexString(
+            System.identityHashCode(fsPath.toString))
+      IncompleteLoadPathEntry.Variable(
+          name.toUpperCase.replaceAll("[^A-Z0-9]+", "_"),
+          "The path to the directory containing the \"" + name + "\" library.")
+    }
   }
 
   import dk.itu.coqoon.core.project.CoqProjectEntry.escape

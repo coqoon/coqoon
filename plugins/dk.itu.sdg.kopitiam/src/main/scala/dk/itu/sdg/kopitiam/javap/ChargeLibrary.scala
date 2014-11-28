@@ -20,6 +20,7 @@ class ChargeLibrary extends LoadPathImplementationFactory {
 object ChargeLibrary {
   final val ID = "dk.itu.sdg.kopitiam/lp/charge/0.1"
 
+  import dk.itu.coqoon.core.model.IncompleteLoadPathEntry
   private class Implementation(provider : LoadPathImplementationFactory,
       id : String = ID) extends LoadPathImplementation {
     override def getProvider = provider
@@ -31,14 +32,24 @@ object ChargeLibrary {
       "The Charge! separation logic framework, for verifying Java programs."
 
     import LoadPathImplementation._
-    override def getLoadPath =
+    override def getIncompleteLoadPath =
       if (id == ID) {
+        Right(Seq(
+            IncompleteLoadPathEntry(Seq(
+                Left(ChargeLocation)), Nil, true)))
+      } else Left(VersionMismatch)
+
+    override def getValue(v : IncompleteLoadPathEntry.Variable) =
+      if (v == ChargeLocation) {
         Activator.getDefault.getPreferenceStore.getString("loadpath") match {
           case p if p.length > 0 =>
-            Right(Seq(LoadPathEntry(new Path(p), Nil)))
+            Some(p)
           case _ =>
-            Left(Broken)
+            None
         }
-      } else Left(VersionMismatch)
+      } else None
   }
+
+  final val ChargeLocation = IncompleteLoadPathEntry.Variable(
+      "CHARGE_LOCATION", "Path to the Charge! library")
 }

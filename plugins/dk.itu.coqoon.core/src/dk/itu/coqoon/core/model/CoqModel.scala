@@ -226,7 +226,8 @@ trait LoadPathImplementationFactory {
   def getImplementations() : Seq[LoadPathImplementation]
 }
 
-trait LoadPathImplementation {
+trait LoadPathImplementation
+    extends IncompleteLoadPathEntry.VariableProvider {
   def getProvider() : LoadPathImplementationFactory
   def getIdentifier() : String
 
@@ -234,8 +235,18 @@ trait LoadPathImplementation {
   def getAuthor() : String
   def getDescription() : String
 
-  import LoadPathImplementation.Excuse
-  def getLoadPath() : Either[Excuse, Seq[LoadPathEntry]]
+  import LoadPathImplementation._
+  final def getLoadPath() : Either[Excuse, Seq[LoadPathEntry]] =
+    getIncompleteLoadPath match {
+      case Right(r) =>
+        val c = r.map(_.complete(this))
+        if (c.forall(_.isRight)) {
+          Right(c.map(_.right.get))
+        } else Left(Broken)
+      case Left(e) => Left(e)
+    }
+
+  def getIncompleteLoadPath() : Either[Excuse, Seq[IncompleteLoadPathEntry]]
 }
 object LoadPathImplementation {
   sealed abstract class Excuse
@@ -322,20 +333,36 @@ object Coq84Library {
     override def getDescription = "The standard library of Coq 8.4."
 
     import LoadPathImplementation._
-    override def getLoadPath =
+    import IncompleteLoadPathEntry.Variable
+    override def getIncompleteLoadPath =
       if (id == ID) {
         CoqProgram("coqtop").run(Seq("-where")).readAll match {
           case (0, _) =>
-            val (_, path_) = CoqProgram("coqtop").run(Seq("-where")).readAll
-            val path = new Path(path_.trim)
             Right(Seq(
-                LoadPathEntry(path.append("theories"), Seq("Coq"), true),
-                LoadPathEntry(path.append("plugins"), Seq("Coq"), true),
-                LoadPathEntry(path.append("user-contrib"), Nil, true)))
+                IncompleteLoadPathEntry(
+                    Seq(Left(CoqLocation), Right("/theories")),
+                    Seq("Coq"), true),
+                IncompleteLoadPathEntry(
+                    Seq(Left(CoqLocation), Right("/plugins")),
+                    Seq("Coq"), true),
+                IncompleteLoadPathEntry(
+                    Seq(Left(CoqLocation), Right("/user-contrib")),
+                    Nil, true)))
           case _ => Left(Broken)
         }
       } else Left(VersionMismatch)
+
+    override def getValue(v : Variable) =
+      if (v == CoqLocation) {
+        CoqProgram("coqtop").run(Seq("-where")).readAll match {
+          case (0, path) => Some(path.trim)
+          case _ => None
+        }
+      } else None
   }
+
+  final val CoqLocation = IncompleteLoadPathEntry.Variable(
+      "COQ_LOCATION", "Path to the Coq standard library")
 }
 
 trait ICoqProject extends ICoqElement with IParent {
