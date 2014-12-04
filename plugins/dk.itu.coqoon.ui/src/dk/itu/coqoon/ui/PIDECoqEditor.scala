@@ -274,6 +274,47 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   protected[ui] var lastDocument : String = ""
 
   protected[ui] var ibLength : Int = 0
+
+  import dk.itu.coqoon.core.utilities.{UniqueRule, JobUtilities}
+  import org.eclipse.core.resources.WorkspaceJob
+  private class UpdateErrorsJob(
+      removed : Seq[Command], added : Seq[(Command, (Int, Int), String)])
+      extends WorkspaceJob("Update PIDE markers") {
+    setRule(JobUtilities.MultiRule(
+        getFile.map(f => f.getWorkspace.getRuleFactory.markerRule(f)).orNull,
+        UpdateErrorsJob.rule))
+    setSystem(true)
+
+    import org.eclipse.core.runtime.{Status, IProgressMonitor}
+    import org.eclipse.core.resources.{IMarker, IResource}
+    override def runInWorkspace(monitor : IProgressMonitor) = {
+      getFile.foreach(file => {
+        import dk.itu.coqoon.core
+        val m = file.findMarkers(core.ManifestIdentifiers.MARKER_PROBLEM,
+            false, IResource.DEPTH_ZERO)
+        for (i <- m if removed.exists(
+                           r => r.id.asInstanceOf[Int] ==
+                             i.getAttribute("__command")))
+          i.delete
+        import scala.collection.JavaConversions._
+        for ((c, (start, end), msg) <- added) {
+          val q = file.createMarker(core.ManifestIdentifiers.MARKER_PROBLEM)
+          q.setAttributes(Map(
+              IMarker.MESSAGE -> msg.replaceAll("\\s+", " ").trim,
+              IMarker.SEVERITY -> IMarker.SEVERITY_ERROR,
+              IMarker.LOCATION -> s"offset ${start}",
+              IMarker.CHAR_START -> start,
+              IMarker.CHAR_END -> end,
+              IMarker.TRANSIENT -> true,
+              "__command" -> c.id.asInstanceOf[Int]))
+        }
+      })
+      Status.OK_STATUS
+    }
+  }
+  private object UpdateErrorsJob {
+    val rule = new dk.itu.coqoon.core.utilities.UniqueRule
+  }
 }
 object PIDECoqEditor {
   import isabelle._
