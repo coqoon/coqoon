@@ -80,13 +80,6 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
 
   private def commandsUpdated(changed : Seq[Command]) =
     asyncExec {
-      /* Clear all old error messages */
-      import dk.itu.coqoon.core
-      import org.eclipse.core.resources.IResource
-      getFile.foreach(file => new DeleteMarkersJob(file,
-          core.ManifestIdentifiers.MARKER_PROBLEM, true,
-          IResource.DEPTH_ZERO).schedule)
-
       val changedResultsAndMarkup =
         CommandsLock synchronized {
           val ls = lastSnapshot.get
@@ -108,6 +101,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
       import org.eclipse.jface.text.Position
       var toDelete : Seq[(Command, Option[Annotation])] = Seq()
       var annotationsToAdd : Seq[(Command, Annotation, Position)] = Seq()
+      var errorsToAdd : Seq[(Command, (Int, Int), String)] = Seq()
 
       try {
         for (i <- changedResultsAndMarkup) i match {
@@ -122,13 +116,11 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
                 case f : Elem if f.name == "error_message" =>
                   (getFile, PIDECoqEditor.extractError(f)) match {
                     case (Some(f), Some((msg, Some(start), Some(end)))) =>
-                      CreateErrorMarkerJob(f,
-                          (offset + start - 1, offset + end - 1),
-                          msg).schedule
+                      errorsToAdd :+= (command,
+                          (offset + start - 1, offset + end - 1), msg)
                     case (Some(f), Some((msg, _, _))) =>
-                      CreateErrorMarkerJob(f,
-                          (offset, offset + command.source.length),
-                          msg).schedule
+                      errorsToAdd :+= (command,
+                          (offset, offset + command.source.length), msg)
                     case _ =>
                   }
                 case _ =>
@@ -157,37 +149,41 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
           case (None, command, _, _) =>
             toDelete :+= (command, annotations.get(command))
         }
-      } finally am.foreach(model => {
-        import org.eclipse.jface.text.source.IAnnotationModelExtension
-        model match {
-          case m : IAnnotationModelExtension =>
-            import scala.collection.JavaConversions._
-            val del =
-              for ((command, Some(annotation)) <- toDelete)
-                yield {
-                  annotations -= command
-                  annotation
-                }
-            val add =
-              (for ((command, annotation, position) <- annotationsToAdd)
-                yield {
-                  annotations += (command -> annotation)
-                  (annotation -> position)
-                }).toMap
-            m.replaceAnnotations(del.toArray, add)
-          case m =>
-            for ((command, Some(annotation)) <- toDelete) {
-              m.removeAnnotation(annotation)
-              annotations -= command
-            }
-            for ((command, annotation, position) <- annotationsToAdd) {
-              m.addAnnotation(annotation, position)
-              annotations += (command -> annotation)
-            }
-        }
-        model.disconnect(getViewer.getDocument)
-        getSourceViewer.invalidateTextPresentation
-      })
+      } finally {
+        am.foreach(model => {
+          import org.eclipse.jface.text.source.IAnnotationModelExtension
+          model match {
+            case m : IAnnotationModelExtension =>
+              import scala.collection.JavaConversions._
+              val del =
+                for ((command, Some(annotation)) <- toDelete)
+                  yield {
+                    annotations -= command
+                    annotation
+                  }
+              val add =
+                (for ((command, annotation, position) <- annotationsToAdd)
+                  yield {
+                    annotations += (command -> annotation)
+                    (annotation -> position)
+                  }).toMap
+              m.replaceAnnotations(del.toArray, add)
+            case m =>
+              for ((command, Some(annotation)) <- toDelete) {
+                m.removeAnnotation(annotation)
+                annotations -= command
+              }
+              for ((command, annotation, position) <- annotationsToAdd) {
+                m.addAnnotation(annotation, position)
+                annotations += (command -> annotation)
+              }
+          }
+          model.disconnect(getViewer.getDocument)
+          getSourceViewer.invalidateTextPresentation
+        })
+
+        new UpdateErrorsJob(toDelete.map(_._1), errorsToAdd).schedule
+      }
 
       caretPing
     }
