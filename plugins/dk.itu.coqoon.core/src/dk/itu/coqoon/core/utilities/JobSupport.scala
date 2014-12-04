@@ -66,6 +66,11 @@ case class ObjectRule(obj : AnyRef) extends ISchedulingRule {
   override def isConflicting(i : ISchedulingRule) = (this == i)
 }
 
+class UniqueRule extends ISchedulingRule {
+  override def contains(i : ISchedulingRule) = (this == i)
+  override def isConflicting(i : ISchedulingRule) = (this == i)
+}
+
 object JobUtilities {
   import org.eclipse.core.resources.ResourcesPlugin
   def getRuleFactory = ResourcesPlugin.getWorkspace().getRuleFactory()
