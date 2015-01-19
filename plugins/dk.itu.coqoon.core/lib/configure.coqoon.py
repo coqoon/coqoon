@@ -382,11 +382,18 @@ override _COQCMD = \\
 
 """ % (_configure_coqoon_version, gethostname(), formatdate(localtime = True)))
 
+		output_so_far = []
 		# Coqoon itself actually passes -R options instead of -I ones,
 		# but this works too (and we've already generated these paths
 		# for the dependency resolver)
 		for coqdir, location in complete_load_path:
-			file.write(u"""\
+			# There's no sense in generating the same flags over
+			# and over again! (In particular, most projects will
+			# depend on the Coq standard library, and we don't want
+			# to have multiple copies of /that/ mass of flags...)
+			if not (coqdir, location) in output_so_far:
+				output_so_far.append((coqdir, location))
+				file.write(u"""\
 override COQFLAGS += -I "%s" -as "%s"
 """ % (location, coqdir))
 
