@@ -77,10 +77,15 @@ class Path:
 		else:
 			return self
 
+	def isdir(self):
+		return os.path.isdir(str(self))
+	def isfile(self):
+		return os.path.isdir(str(self))
+
 	# Convenience file operations
 	def open(self, mode = "r", encoding = "utf_8"):
 		return io.open(str(self), mode = mode, encoding = encoding)
-	def utime(times):
+	def utime(self, times):
 		os.utime(str(self), times)
 
 	def __iter__(self):
@@ -117,6 +122,13 @@ default_output, configuration = load_coq_project_configuration("_CoqProject")
 # which produces a "configure.coqoon.vars" file specifying incomplete paths to
 # the Coq load path entries that are associated with the abstract load paths
 # required by this project
+
+variables = {} # Variable name -> user-specified value for variable
+for i in sys.argv[1:]:
+	match = re.match("^(\w+)=(.*)$", i, 0)
+	if match:
+		(var, value) = match.groups()
+		variables[var] = value
 
 def load_vars(path):
 	vs = []
@@ -171,46 +183,33 @@ vs = load_vars("configure.coqoon.vars")
 if len(vs) == 0:
 	warn("the \"configure.coqoon.vars\" file is missing, empty, or " +
 	     "unreadable; non-trivial dependency resolution may fail")
-expected_variables, alp_names, alp_directories_with_variables = \
-	structure_vars(vs)
 
-# XXX: what do we do about variables from other files incorporated by reference
-# (i.e. ProjectLoadPath)?
+def substitute_variables(expected_vars, alp_names, alp_dirs_with_vars):
+	for vn in expected_vars:
+		if not vn in variables:
+			affected_alps = []
+			for aid, directory, _, _ in alp_dirs_with_vars:
+				name = "\"%s\"" % alp_names.get(aid, aid)
+				if ("$(%s)" % vn) in directory and not name in affected_alps:
+					affected_alps.append(name)
+			aalps = None
+			if len(affected_alps) == 1:
+				aalps = affected_alps[0]
+			elif len(affected_alps) > 1:
+				aalps = ", ".join(affected_alps[0:-1]) + " and " + affected_alps[-1]
+			warn(("the variable %s is not defined; " +
+			      "dependencies on %s will not be resolved correctly") % (vn, aalps))
+	alp_dirs = {} # Abstract load path ID -> sequence of (possibly resolved
+	              # directory, coqdir, recursive)
+	for aid, directory, coqdir, recursive in alp_dirs_with_vars:
+		for vn, vv in variables.items():
+			directory = directory.replace("$(%s)" % vn, vv)
+		alp_elements = alp_dirs.get(aid, [])
+		alp_elements.append((directory, coqdir, recursive))
+		alp_dirs[aid] = alp_elements
+	return alp_dirs
 
-variables = {} # Variable name -> user-specified value for variable
-
-for i in sys.argv[1:]:
-	match = re.match("^(\w+)=(.*)$", i, 0)
-	if match:
-		(var, value) = match.groups()
-		if var in expected_variables:
-			variables[var] = value
-		else:
-			warn("ignoring unexpected variable %s" % var)
-
-for vn in expected_variables:
-	if not vn in variables:
-		affected_alps = []
-		for aid, directory, _, _ in alp_directories_with_variables:
-			name = "\"%s\"" % alp_names.get(aid, aid)
-			if ("$(%s)" % vn) in directory and not name in affected_alps:
-				affected_alps.append(name)
-		aalps = None
-		if len(affected_alps) == 1:
-			aalps = affected_alps[0]
-		elif len(affected_alps) > 1:
-			aalps = ", ".join(affected_alps[0:-1]) + " and " + affected_alps[-1]
-		warn(("the variable %s is not defined; " +
-		      "dependencies on %s will not be resolved correctly") % (vn, aalps))
-
-alp_directories = {} # Abstract load path ID -> sequence of (possibly resolved
-                     # directory, coqdir, recursive)
-for aid, directory, coqdir, recursive in alp_directories_with_variables:
-	for vn, vv in variables.items():
-		directory = directory.replace("$(%s)" % vn, vv)
-	alp_elements = alp_directories.get(aid, [])
-	alp_elements.append((directory, coqdir, recursive))
-	alp_directories[aid] = alp_elements
+alp_directories = substitute_variables(*structure_vars(vs))
 
 # Find all source directories and their corresponding output directories
 source_directories = [] # sequence of (source directory, output directory)
@@ -238,7 +237,7 @@ for srcdir, bindir in source_directories:
 	for current, dirs, files in os.walk(srcdir):
 		srcpath = Path(current)
 		binpath = binroot.append_path(srcpath.drop_first(len(srcroot)))
-		if not os.path.isdir(str(binpath)):
+		if not binpath.isdir():
 			# Although the Makefile will be able to create this
 			# folder, the load path expansion code needs it to
 			# exist in order to work properly -- so, like Coqoon,
@@ -256,7 +255,7 @@ for srcdir, bindir in source_directories:
 				ids = extract_dependency_identifiers(file)
 			to_be_resolved[(str(sf), str(bf))] = ids
 
-def expand_load_path(configuration):
+def expand_load_path(alp_dirs, configuration):
 	def expand_pair(coqdir, directory):
 		expansion = []
 		base = Path(directory)
@@ -285,7 +284,7 @@ def expand_load_path(configuration):
 			coqdir = i[2] if len(i) > 2 else ""
 			load_path.extend(expand_pair(directory, coqdir))
 		elif i[0] == "AbstractLoadPath":
-			alp_elements = alp_directories.get(i[1])
+			alp_elements = alp_dirs.get(i[1])
 			if alp_elements != None:
 				for d, cd, r in alp_elements:
 					if not os.path.isdir(d):
@@ -295,10 +294,35 @@ def expand_load_path(configuration):
 						load_path.append((cd, d))
 					else:
 						load_path.extend(expand_pair(cd, d))
+		elif i[0] == "ProjectLoadPath":
+			# XXX: this doesn't work properly yet because cfg will
+			# contain relative paths
+			pn = i[1]
+			pn_var = "%s_PROJECT_PATH" % pn.upper()
+
+			path = None
+			if pn_var in variables:
+				path = Path(variables[pn_var])
+			elif "WORKSPACE" in variables:
+				path = Path(variables["WORKSPACE"]).append(pn)
+			if path != None and path.isdir():
+				_, cfg = load_coq_project_configuration(str(path.append("_CoqProject")))
+				ads = substitute_variables(*structure_vars(load_vars(str(path.append("configure.coqoon.vars")))))
+				load_path.extend(expand_load_path(ads, cfg))
+			else:
+				warning = """\
+the project "%s" could not be found; dependencies on it will not be resolved \
+correctly""" % pn
+				if path == None:
+					warning += """ \
+(either specify its path with the %s variable or specify the path to its \
+parent directory with the WORKSPACE variable)""" % (pn_var)
+				warn(warning)
 	return load_path
 
-complete_load_path = expand_load_path(configuration) # sequence of (coqdir,
-                                                     # resolved directory)
+complete_load_path = expand_load_path( \
+	alp_directories, configuration) # sequence of (coqdir, resolved
+	                                # directory)
 
 # Now that we know the names of all the .vo files we're going to create, we
 # can use those -- along with the Coq load path -- to calculate the rest of the
