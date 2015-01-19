@@ -94,29 +94,46 @@ class Path:
 	def __str__(self):
 		return "/".join(self)
 
-def load_coq_project_configuration(path):
-	configuration = []
-	default_output = "bin"
-	try:
-		with io.open(path, mode = "r", encoding = "utf_8") as file:
-			for line in file:
-				if line.startswith("KOPITIAM_"):
-					split_line = shlex.split(line)
-					lp = shlex.split(split_line[2])
-					configuration.append(lp)
+	@staticmethod
+	def cwd():
+		return Path(os.getcwd())
 
-					if lp[0] == "DefaultOutput":
-						default_output = lp[1]
+def load_coq_project_configuration(cwd, path):
+	configuration = []
+	# When cwd is none, all the paths in configuration will be relative;
+	# note that this is only ever tolerable for paths known to be within
+	# this project
+	if cwd == None:
+		cwd = Path(None)
+	default_output = str(cwd.append("bin"))
+	try:
+		# We don't care whether path is absolute or relative as long as
+		# we can open it, but the paths that we read from it are
+		# guaranteed to be relative and we need them to be absolute
+		with io.open(path, mode = "r", encoding = "utf_8") as file:
+			for line in filter(lambda l: l.startswith("KOPITIAM_"), file):
+				split_line = shlex.split(line)
+				lp = shlex.split(split_line[2])
+				configuration.append(lp)
+
+				if lp[0] == "SourceLoadPath":
+					lp[1] = str(cwd.append(lp[1]))
+					if len(lp) > 2:
+						lp[2] = str(cwd.append(lp[2]))
+				elif lp[0] == "DefaultOutput":
+					lp[1] = str(cwd.append(lp[1]))
+					default_output = lp[1]
 	except IOError:
 		# If _CoqProject is missing, then use Coqoon's default settings
-		configuration = [["SourceLoadPath", "src"],
-		                 ["DefaultOutput", "bin"],
+		configuration = [["SourceLoadPath", str(cwd.append("src"))],
+		                 ["DefaultOutput", str(cwd.append("bin"))],
 		                 ["AbstractLoadPath",
 		                  "dk.itu.sdg.kopitiam/lp/coq/8.4"]]
 	return (default_output, configuration)
 
 # Read this project's configuration
-default_output, configuration = load_coq_project_configuration("_CoqProject")
+default_output, configuration = \
+	load_coq_project_configuration(None, "_CoqProject")
 
 # This script can only support abstract load paths with some help from Coqoon,
 # which produces a "configure.coqoon.vars" file specifying incomplete paths to
@@ -295,8 +312,6 @@ def expand_load_path(alp_dirs, configuration):
 					else:
 						load_path.extend(expand_pair(cd, d))
 		elif i[0] == "ProjectLoadPath":
-			# XXX: this doesn't work properly yet because cfg will
-			# contain relative paths
 			pn = i[1]
 			pn_var = "%s_PROJECT_PATH" % pn.upper()
 
@@ -306,7 +321,7 @@ def expand_load_path(alp_dirs, configuration):
 			elif "WORKSPACE" in variables:
 				path = Path(variables["WORKSPACE"]).append(pn)
 			if path != None and path.isdir():
-				_, cfg = load_coq_project_configuration(str(path.append("_CoqProject")))
+				_, cfg = load_coq_project_configuration(path, str(path.append("_CoqProject")))
 				ads = substitute_variables(*structure_vars(load_vars(str(path.append("configure.coqoon.vars")))))
 				load_path.extend(expand_load_path(ads, cfg))
 			else:
