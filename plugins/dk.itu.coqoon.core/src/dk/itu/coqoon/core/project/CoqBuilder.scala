@@ -255,8 +255,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
       }
     }
 
-    /* Generate a new project makefile */
-    CoqMakefile.generateMakefile(getProject, dt)
+    /* Copy the external build script into the project, if it's not there
+     * already (or if we're sure that it's outdated) */
+    CoqBuildScript.perhapsInstall(getProject)
 
     /* Remove any unused output directories */
     cleanProject(coqProject.get)
@@ -541,5 +542,44 @@ class CoqNature extends IProjectNature {
   override def deconfigure = {
     project.setDescription(
         ICoqProject.deconfigureDescription(project.getDescription), null)
+  }
+}
+
+private object CoqBuildScript {
+  final val currentVersion = 0
+  final val Version = """^_configure_coqoon_version = \d+$""".r
+  def perhapsInstall(project : IProject) : Boolean = {
+    import dk.itu.coqoon.core.Activator
+    import org.eclipse.core.runtime.FileLocator
+    val bsHandle = project.getFile("configure.coqoon.py")
+    var copyScript : Option[Boolean] = None
+    if (!bsHandle.exists) {
+      copyScript = Some(true)
+    } else {
+      import java.io.{BufferedReader, InputStreamReader}
+      val r = new BufferedReader(new InputStreamReader(bsHandle.getContents))
+      try {
+        var line : Option[String] = None
+        do {
+          line.foreach(line => {
+            line match {
+              case Version(version_) =>
+                val version = Integer.parseInt(version_)
+                copyScript = Some(version < currentVersion)
+              case _ =>
+            }
+          })
+          line = Option(r.readLine)
+        } while (copyScript == None && line != None)
+      } finally r.close
+    }
+    if (copyScript == Some(true)) {
+      val s = FileLocator.find(Activator.getDefault.getBundle,
+          new Path("lib/configure.coqoon.py"), null).openStream
+      if (bsHandle.exists) {
+        bsHandle.setContents(s, 0, null)
+      } else bsHandle.create(s, 0, null)
+    }
+    return copyScript.getOrElse(false)
   }
 }
