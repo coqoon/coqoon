@@ -258,6 +258,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     /* Copy the external build script into the project, if it's not there
      * already (or if we're sure that it's outdated) */
     CoqBuildScript.perhapsInstall(getProject)
+    CoqBuildScript.generateVars(coqProject.get)
 
     /* Remove any unused output directories */
     cleanProject(coqProject.get)
@@ -579,5 +580,56 @@ private object CoqBuildScript {
       } else bsHandle.create(s, 0, null)
     }
     return copyScript.getOrElse(false)
+  }
+
+  def generateVars(project : ICoqProject) = {
+    import java.io.{BufferedWriter, OutputStreamWriter}
+    val vfHandle = project.getCorrespondingResource.map(
+        _.getFile("configure.coqoon.vars"))
+    vfHandle.foreach(vf => {
+      /* We could have use the IncompleteLoadPathEntry.Variable type here, but
+       * using a Map automatically cleans up the duplicates for us */
+      var vars : Map[String, String] = Map()
+      var alpBits : Seq[(String, String, String)] = Seq()
+      var alpNames : Map[String, String] = Map()
+      project.getLoadPathProviders.foreach(_ match {
+        case q @ AbstractLoadPath(id) =>
+          q.getImplementation.foreach(impl => {
+            alpNames += (id -> impl.getName)
+            for (parts <- impl.getIncompleteLoadPath.right;
+                 part <- parts) {
+              val stringisedPath =
+                part.path.foldLeft("")((s, a) => s + (a match {
+                  case Left(v) =>
+                    vars += (v.name -> v.description)
+                    "$(" + v.name + ")"
+                  case Right(s) =>
+                    s
+                }))
+              alpBits :+= ((id, part.coqdir.mkString("."), stringisedPath))
+            }
+          })
+        case _ =>
+      })
+      if (vars.size != 0 && alpBits.length != 0) {
+        var document =
+"""# Manipulating this project using Coqoon may cause this file to be overwritten
+# without warning: any local changes you may have made will not be preserved.
+
+"""
+        for ((name, description) <- vars)
+          document += s"""var "${name}" "${description}"\n"""
+        for ((aid, name) <- alpNames)
+          document += s"""alp "${aid}" name "${name}"\n"""
+        for ((aid, coqdir, path) <- alpBits)
+          document += s"""alp "${aid}" include-recursive "${path}" "${coqdir}"\n"""
+
+        import java.io.ByteArrayInputStream
+        val is = new ByteArrayInputStream(document.getBytes("UTF-8"))
+        if (vf.exists) {
+          vf.setContents(is, 0, null)
+        } else vf.create(is, 0, null)
+      }
+    })
   }
 }
