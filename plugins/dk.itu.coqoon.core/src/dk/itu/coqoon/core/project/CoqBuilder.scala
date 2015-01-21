@@ -547,7 +547,7 @@ class CoqNature extends IProjectNature {
 
 private object CoqBuildScript {
   final val currentVersion = 0
-  final val Version = """^_configure_coqoon_version = \d+$""".r
+  final val Version = """^_configure_coqoon_version = (\d+)$""".r
   def perhapsInstall(project : IProject) : Boolean = {
     import dk.itu.coqoon.core.Activator
     import org.eclipse.core.runtime.FileLocator
@@ -561,13 +561,11 @@ private object CoqBuildScript {
       try {
         var line : Option[String] = None
         do {
-          line.foreach(line => {
-            line match {
-              case Version(version_) =>
-                val version = Integer.parseInt(version_)
-                copyScript = Some(version < currentVersion)
-              case _ =>
-            }
+          line.foreach(_ match {
+            case Version(version_) =>
+              val version = Integer.parseInt(version_)
+              copyScript = Some(version < currentVersion)
+            case _ =>
           })
           line = Option(r.readLine)
         } while (copyScript == None && line != None)
