@@ -77,8 +77,9 @@ class CoqCompilerRunner(source : IFile,
           _.getParent).flatMap(_.getCorrespondingResource).get.getFullPath
       val qualifiedName = myPath.removeFirstSegments(
           containingRootPath.segmentCount).removeFileExtension.segments
+      /* Keep this in sync with the Python build script */
       for (i <- qualifiedName;
-           j <- i if j.isWhitespace)
+           j <- i if j.isWhitespace || j == '.')
         fail(new Status(IStatus.ERROR, ManifestIdentifiers.PLUGIN,
             "\"" + i + "\" is not a valid part of a Coq qualified name"))
     })

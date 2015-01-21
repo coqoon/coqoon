@@ -11,7 +11,7 @@
 # Manipulating this project using Coqoon may cause this file to be overwritten
 # without warning: any local changes you may have made will not be preserved.
 
-_configure_coqoon_version = 0
+_configure_coqoon_version = 1
 
 import io, os, re, sys, shlex, codecs
 
@@ -245,6 +245,13 @@ def extract_dependency_identifiers(f):
 			identifiers.extend(shlex.split(ids))
 	return identifiers
 
+def is_name_valid(name):
+	# Keep this in sync with CoqCompiler.scala
+	for c in name:
+		if c.isspace() or c == '.':
+			return False
+	return True
+
 # Populate the dependency map with the basics: .vo files depend on their source
 deps = {} # Target path -> sequence of dependency paths
 to_be_resolved = {}
@@ -252,6 +259,9 @@ for srcdir, bindir in source_directories:
 	srcroot = Path(srcdir)
 	binroot = Path(bindir)
 	for current, dirs, files in os.walk(srcdir):
+		curbase = os.path.basename(current)
+		if not is_name_valid(curbase):
+			continue
 		srcpath = Path(current)
 		binpath = binroot.append_path(srcpath.drop_first(len(srcroot)))
 		if not binpath.isdir():
@@ -277,6 +287,9 @@ def expand_load_path(alp_dirs, configuration):
 		expansion = []
 		base = Path(directory)
 		for current, _, _ in os.walk(directory):
+			curbase = os.path.basename(current)
+			if not is_name_valid(curbase):
+				continue
 			relative = Path(current).drop_first(len(base))
 			sub = ".".join(relative)
 			full = None
