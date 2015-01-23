@@ -167,7 +167,7 @@ case class LoadPathProvider(identifier : String) {
 }
 
 object ProjectLoadPath {
-  import ProjectLoadPathFactory._
+  import ProjectLoadPathProvider._
   def apply(project : IProject) =
     LoadPathProvider(makeIdentifier(project))
   def unapply(p : LoadPathProvider) =
@@ -176,7 +176,7 @@ object ProjectLoadPath {
 }
 
 object SourceLoadPath {
-  import SourceLoadPathFactory._
+  import SourceLoadPathProvider._
   def apply(folder : IFolder, output : Option[IFolder] = None) =
     LoadPathProvider(makeIdentifier(folder, output))
   def unapply(p : LoadPathProvider) =
@@ -185,7 +185,7 @@ object SourceLoadPath {
 }
 
 object DefaultOutputLoadPath {
-  import DefaultOutputLoadPathFactory._
+  import DefaultOutputLoadPathProvider._
   def apply(folder : IFolder) =
     LoadPathProvider(makeIdentifier(folder))
   def unapply(p : LoadPathProvider) =
@@ -194,7 +194,7 @@ object DefaultOutputLoadPath {
 }
 
 object ExternalLoadPath {
-  import ExternalLoadPathFactory._
+  import ExternalLoadPathProvider._
   def apply(fsPath : IPath, dir : Seq[String]) =
     LoadPathProvider(makeIdentifier(fsPath, dir))
   def unapply(p : LoadPathProvider) =
@@ -206,13 +206,13 @@ object AbstractLoadPath {
   def apply(id : String) = LoadPathProvider(s"abstract:${id}")
   def unapply(p : LoadPathProvider) =
     p.getProvider match {
-      case Some(_ : AbstractLoadPathFactory) =>
+      case Some(_ : AbstractLoadPathProvider) =>
         Some(p.identifier.drop("abstract:".length))
       case _ => None
     }
 }
 
-trait LoadPathImplementationFactory {
+trait LoadPathImplementationProvider {
   def getName() : String
 
   /* Returns a best-match load path implementation for the given identifier,
@@ -228,7 +228,7 @@ trait LoadPathImplementationFactory {
 
 trait LoadPathImplementation
     extends IncompleteLoadPathEntry.VariableProvider {
-  def getProvider() : LoadPathImplementationFactory
+  def getProvider() : LoadPathImplementationProvider
   def getIdentifier() : String
 
   def getName() : String
@@ -266,13 +266,13 @@ object LoadPathImplementation {
 }
 
 class LoadPathManager {
-  private var providers : Seq[LoadPathImplementationFactory] = Seq()
+  private var providers : Seq[LoadPathImplementationProvider] = Seq()
   def getProviders() = providers
-  def addProvider(provider : LoadPathImplementationFactory) =
+  def addProvider(provider : LoadPathImplementationProvider) =
     providers :+= provider
 
   def getProviderFor(
-      identifier : String) : Option[LoadPathImplementationFactory] = {
+      identifier : String) : Option[LoadPathImplementationProvider] = {
     for (i <- getProviders;
          j <- i.getImplementation(identifier))
       return Some(i)
@@ -283,11 +283,11 @@ object LoadPathManager {
   private final val instance = new LoadPathManager
   def getInstance() = instance
 
-  getInstance.addProvider(new ProjectLoadPathFactory)
-  getInstance.addProvider(new SourceLoadPathFactory)
-  getInstance.addProvider(new DefaultOutputLoadPathFactory)
-  getInstance.addProvider(new ExternalLoadPathFactory)
-  getInstance.addProvider(new AbstractLoadPathFactory)
+  getInstance.addProvider(new ProjectLoadPathProvider)
+  getInstance.addProvider(new SourceLoadPathProvider)
+  getInstance.addProvider(new DefaultOutputLoadPathProvider)
+  getInstance.addProvider(new ExternalLoadPathProvider)
+  getInstance.addProvider(new AbstractLoadPathProvider)
 }
 
 object AbstractLoadPathManager {
@@ -300,7 +300,7 @@ object AbstractLoadPathManager {
            ManifestIdentifiers.EXTENSION_POINT_LOADPATH)
          if ice.getName == "provider") {
     val ex = try {
-      TryCast[LoadPathImplementationFactory](
+      TryCast[LoadPathImplementationProvider](
           ice.createExecutableExtension("provider"))
     } catch {
       case e : CoreException => None
@@ -309,7 +309,7 @@ object AbstractLoadPathManager {
   }
 }
 
-class Coq84Library extends LoadPathImplementationFactory {
+class Coq84Library extends LoadPathImplementationProvider {
   override def getName = "Coq 8.4 standard library"
 
   override def getImplementation(id : String) =
@@ -323,7 +323,7 @@ class Coq84Library extends LoadPathImplementationFactory {
 object Coq84Library {
   final val ID = "dk.itu.sdg.kopitiam/lp/coq/8.4"
 
-  private class Implementation(provider : LoadPathImplementationFactory,
+  private class Implementation(provider : LoadPathImplementationProvider,
       id : String = ID) extends LoadPathImplementation {
     override def getProvider = provider
 

@@ -18,8 +18,8 @@ package dk.itu.coqoon.core.model
 
 import dk.itu.coqoon.core.ManifestIdentifiers
 
-class ProjectLoadPathFactory extends LoadPathImplementationFactory {
-  import ProjectLoadPathFactory._
+class ProjectLoadPathProvider extends LoadPathImplementationProvider {
+  import ProjectLoadPathProvider._
 
   def getImplementation(id : String) : Option[Implementation] =
     if (id.startsWith("project:")) {
@@ -31,13 +31,13 @@ class ProjectLoadPathFactory extends LoadPathImplementationFactory {
 
   override def getName() = "Project"
 }
-object ProjectLoadPathFactory {
+object ProjectLoadPathProvider {
   import org.eclipse.core.resources.{IProject, ResourcesPlugin}
   private[model] def getRoot() = ResourcesPlugin.getWorkspace.getRoot
 
-  case class Implementation(private val provider : ProjectLoadPathFactory,
+  case class Implementation(private val provider : ProjectLoadPathProvider,
       val project : IProject) extends LoadPathImplementation {
-    override def getProvider() : LoadPathImplementationFactory = provider
+    override def getProvider() : LoadPathImplementationProvider = provider
 
     override def getName() = project.getName
     override def getIdentifier() = makeIdentifier(project)
@@ -73,14 +73,14 @@ object ProjectLoadPathFactory {
   def makeIdentifier(project : IProject) = s"project:${project.getName}"
 }
 
-class SourceLoadPathFactory extends LoadPathImplementationFactory {
-  import SourceLoadPathFactory._
+class SourceLoadPathProvider extends LoadPathImplementationProvider {
+  import SourceLoadPathProvider._
 
   def getImplementation(id : String): Option[Implementation] =
     if (id.startsWith("source:")) {
       val rest = id.drop("source:".length)
 
-      import ProjectLoadPathFactory.getRoot
+      import ProjectLoadPathProvider.getRoot
       import dk.itu.coqoon.core.project.CoqProjectFile
       CoqProjectFile.shellTokenise(rest) match {
         case project :: tail =>
@@ -103,13 +103,13 @@ class SourceLoadPathFactory extends LoadPathImplementationFactory {
 
   override def getName() = "Source"
 }
-object SourceLoadPathFactory {
+object SourceLoadPathProvider {
   import org.eclipse.core.resources.IFolder
 
   case class Implementation(
-      private val provider : SourceLoadPathFactory, val folder : IFolder,
+      private val provider : SourceLoadPathProvider, val folder : IFolder,
       val output : Option[IFolder]) extends LoadPathImplementation {
-    override def getProvider() : LoadPathImplementationFactory = provider
+    override def getProvider() : LoadPathImplementationProvider = provider
 
     override def getName() = folder.getName
     override def getIdentifier() = makeIdentifier(folder, output)
@@ -152,14 +152,14 @@ object SourceLoadPathFactory {
   }
 }
 
-class DefaultOutputLoadPathFactory extends LoadPathImplementationFactory {
-  import DefaultOutputLoadPathFactory._
+class DefaultOutputLoadPathProvider extends LoadPathImplementationProvider {
+  import DefaultOutputLoadPathProvider._
 
   def getImplementation(id : String): Option[Implementation] =
     if (id.startsWith("default-output:")) {
       val rest = id.drop("default-output:".length)
 
-      import ProjectLoadPathFactory.getRoot
+      import ProjectLoadPathProvider.getRoot
       import dk.itu.coqoon.core.project.CoqProjectFile
       CoqProjectFile.shellTokenise(rest) match {
         case project :: folder :: Nil =>
@@ -174,13 +174,13 @@ class DefaultOutputLoadPathFactory extends LoadPathImplementationFactory {
 
   override def getName() = "Default output"
 }
-object DefaultOutputLoadPathFactory {
+object DefaultOutputLoadPathProvider {
   import org.eclipse.core.resources.IFolder
 
   case class Implementation(
-      private val provider : DefaultOutputLoadPathFactory,
+      private val provider : DefaultOutputLoadPathProvider,
       val folder : IFolder) extends LoadPathImplementation {
-    override def getProvider(): DefaultOutputLoadPathFactory = provider
+    override def getProvider(): DefaultOutputLoadPathProvider = provider
 
     import dk.itu.coqoon.core.project.CoqProjectEntry.escape
     override def getName() = folder.getName
@@ -219,14 +219,14 @@ object DefaultOutputLoadPathFactory {
   }
 }
 
-class ExternalLoadPathFactory extends LoadPathImplementationFactory {
-  import ExternalLoadPathFactory._
+class ExternalLoadPathProvider extends LoadPathImplementationProvider {
+  import ExternalLoadPathProvider._
 
   def getImplementation(id : String): Option[Implementation] =
     if (id.startsWith("external:")) {
       val rest = id.drop("external:".length)
 
-      import ProjectLoadPathFactory.getRoot
+      import ProjectLoadPathProvider.getRoot
       import dk.itu.coqoon.core.project.CoqProjectFile
       CoqProjectFile.shellTokenise(rest) match {
         case path :: rest =>
@@ -249,13 +249,13 @@ class ExternalLoadPathFactory extends LoadPathImplementationFactory {
 
   override def getName() = "External"
 }
-object ExternalLoadPathFactory {
+object ExternalLoadPathProvider {
   import org.eclipse.core.resources.IFolder
   import org.eclipse.core.runtime.IPath
-  case class Implementation(private val provider : ExternalLoadPathFactory,
+  case class Implementation(private val provider : ExternalLoadPathProvider,
       val fsPath : IPath, val dir : Seq[String])
           extends LoadPathImplementation {
-    override def getProvider(): ExternalLoadPathFactory = provider
+    override def getProvider(): ExternalLoadPathProvider = provider
 
     import dk.itu.coqoon.core.project.CoqProjectEntry.escape
     override def getName() = fsPath.toString
@@ -299,7 +299,7 @@ object ExternalLoadPathFactory {
   }
 }
 
-class AbstractLoadPathFactory extends LoadPathImplementationFactory {
+class AbstractLoadPathProvider extends LoadPathImplementationProvider {
   def getImplementation(id : String) =
     if (id.startsWith("abstract:")) {
       val base = id.drop("abstract:".length)

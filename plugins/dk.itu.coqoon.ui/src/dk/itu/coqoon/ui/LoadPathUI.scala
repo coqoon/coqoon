@@ -462,7 +462,7 @@ class NLPAbstractEntryPage extends NLPWizardPage(
             for (i <- a.getProviders;
                  f <- Some(i.getImplementations))
               yield (if (f.size == 1) f.head else i)
-          case p : LoadPathImplementationFactory => p.getImplementations
+          case p : LoadPathImplementationProvider => p.getImplementations
           case _ => Seq()
         }
       override def getParent(element : AnyRef) =
@@ -471,13 +471,13 @@ class NLPAbstractEntryPage extends NLPWizardPage(
     })
     lv.setLabelProvider(new FuturisticLabelProvider {
       override def actuallyGetText(element : AnyRef) = element match {
-        case p : LoadPathImplementationFactory => Some(p.getName)
+        case p : LoadPathImplementationProvider => Some(p.getName)
         case i : LoadPathImplementation => Some(i.getName)
         case _ => None
       }
       import org.eclipse.ui.ISharedImages
       override def actuallyGetImage(element : AnyRef) = element match {
-        case p : LoadPathImplementationFactory =>
+        case p : LoadPathImplementationProvider =>
           Some((UIUtils.getWorkbench.getSharedImages.getImage(
               ISharedImages.IMG_OBJ_FOLDER), false))
         case i : LoadPathImplementation =>
