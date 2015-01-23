@@ -11,12 +11,29 @@
 # Manipulating this project using Coqoon may cause this file to be overwritten
 # without warning: any local changes you may have made will not be preserved.
 
-_configure_coqoon_version = 1
+_configure_coqoon_version = 2
 
 import io, os, re, sys, shlex, codecs
+from argparse import ArgumentParser
+
+parser = ArgumentParser(
+	description = "Generate a site-specific Makefile to compile this " +
+	              "Coqoon project.")
+parser.add_argument(
+	"vars",
+	metavar = "NAME=VALUE",
+	help = "the name and value for a variable specifying the path to an " +
+	       "external dependency",
+	nargs = '*')
+parser.add_argument(
+	"-v", "--version",
+	action = "version",
+	version = "%(prog)s v" + str(_configure_coqoon_version))
+
+args = parser.parse_args()
 
 def warn(warning):
-	sys.stderr.write("configure.coqoon.py: warning: %s\n" % warning)
+	sys.stderr.write("%s: warning: %s\n" % (parser.prog, warning))
 
 def striplist(l):
 	return map(lambda s: s.rstrip("/"), l)
@@ -141,7 +158,7 @@ default_output, configuration = \
 # required by this project
 
 variables = {} # Variable name -> user-specified value for variable
-for i in sys.argv[1:]:
+for i in args.vars:
 	match = re.match("^(\w+)=(.*)$", i, 0)
 	if match:
 		(var, value) = match.groups()
