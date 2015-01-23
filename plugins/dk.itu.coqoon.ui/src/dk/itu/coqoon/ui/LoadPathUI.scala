@@ -17,6 +17,7 @@ import org.eclipse.jface.viewers._
 
 import org.eclipse.swt.SWT
 import org.eclipse.swt.layout.FillLayout
+import org.eclipse.swt.events._
 import org.eclipse.swt.widgets.{
   Text, Composite, Button, Label, TabFolder, TabItem}
 import org.eclipse.core.runtime.IAdaptable
@@ -240,7 +241,7 @@ class LoadPathConfigurationPage
   override def getElement : IProject = TryCast[IProject](element).get
   override def setElement(element : IAdaptable) = (this.element = element)
   override def createContents(c : Composite) = {
-    import org.eclipse.swt.events._, org.eclipse.swt.layout._
+    import org.eclipse.swt.layout._
     import org.eclipse.ui.dialogs.{
       ElementTreeSelectionDialog, ISelectionStatusValidator}
     import org.eclipse.core.runtime.IStatus
@@ -303,6 +304,7 @@ class LoadPathConfigurationPage
     edb.setText("Edit...")
     edb.setLayoutData(GridDataFactory.swtDefaults.span(2, 1).
         align(SWT.FILL, SWT.FILL).create)
+    edb.setEnabled(false)
 
     val upb = new Button(c1r, SWT.NONE)
     upb.setText("Up")
@@ -493,13 +495,36 @@ class NLPAbstractEntryPage extends NLPWizardPage(
     b2.setLayoutData(
         GDF.fillDefaults.grab(true, false).align(SWT.FILL, SWT.FILL).create)
 
-    import org.eclipse.swt.events.{ModifyEvent, ModifyListener}
     val at = new Text(c, SWT.BORDER)
     at.setLayoutData(
         GDF.fillDefaults.grab(true, false).align(SWT.FILL, SWT.FILL).create)
     at.addModifyListener(new ModifyListener {
       override def modifyText(ev : ModifyEvent) = {
-        identifier = Option(at.getText).map(_.trim).filter(_.length > 0)
+        val identifier = at.getText.trim
+        var success = false
+        if (!identifier.isEmpty) {
+          val impl = AbstractLoadPath(at.getText.trim).getImplementation
+          import LoadPathImplementation._
+          impl.map(_.getIncompleteLoadPath()) match {
+            case Some(Right(_)) =>
+              success = true
+            case Some(Left(VersionMismatch)) =>
+              setErrorMessage(impl.get.getName + " is installed, " +
+                  "but is not compatible with the version you requested")
+            case Some(Left(Broken)) =>
+              setErrorMessage(impl.get.getName + " is installed, " +
+                  "but doesn't work")
+            case Some(Left(_ : NotAvailable)) =>
+              setErrorMessage(impl.get.getName + " is not installed")
+            case None =>
+              setErrorMessage(s"""No implementation could be found for "${identifier}"""")
+          }
+        }
+        NLPAbstractEntryPage.this.identifier =
+          if (success) {
+            setErrorMessage(null)
+            Some(identifier)
+          } else None
         getContainer.updateButtons
       }
     })
@@ -509,22 +534,27 @@ class NLPAbstractEntryPage extends NLPWizardPage(
         TryCast[IStructuredSelection](ev.getSelection).map(
             _.getFirstElement) match {
           case Some(i : LoadPathImplementation) =>
-            import LoadPathImplementation._
-            i.getLoadPath match {
-              case Right(_) =>
-                setErrorMessage(null)
-                at.setText(i.getIdentifier)
-              case Left(VersionMismatch) =>
-                setErrorMessage(i.getName + " is installed, " +
-                    "but is not compatible with the version you requested")
-              case Left(Broken) =>
-                setErrorMessage(i.getName + " is installed, but doesn't work")
-              case Left(_ : NotAvailable) =>
-                setErrorMessage(i.getName + " is not installed")
-            }
+            at.setText(i.getIdentifier)
           case _ =>
         }
     })
+
+    b1.addSelectionListener(new SelectionAdapter {
+      override def widgetSelected(ev : SelectionEvent) = {
+        lv.getControl.setEnabled(true);
+        at.setEnabled(false);
+      }
+    });
+    b1.setSelection(true)
+
+    b2.addSelectionListener(new SelectionAdapter {
+      override def widgetSelected(ev : SelectionEvent) = {
+        at.setEnabled(true);
+        lv.getControl.setEnabled(false);
+      }
+    });
+
+    at.setEnabled(false);
 
     setControl(c)
   }
