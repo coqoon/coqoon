@@ -11,7 +11,7 @@
 # Manipulating this project using Coqoon may cause this file to be overwritten
 # without warning: any local changes you may have made will not be preserved.
 
-_configure_coqoon_version = 2
+_configure_coqoon_version = 3
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -29,11 +29,26 @@ parser.add_argument(
 	"-v", "--version",
 	action = "version",
 	version = "%(prog)s v" + str(_configure_coqoon_version))
+parser.add_argument(
+	"-p", "--prompt",
+	action = "store_true",
+	dest = "prompt",
+	help = "prompt the user to specify values for any missing variables")
+parser.add_argument(
+	"-k", "--keep-going",
+	action = "store_true",
+	dest = "persevere",
+	help = "generate a Makefile even if some dependencies could not be " +
+	       "resolved")
 
 args = parser.parse_args()
 
 def warn(warning):
 	sys.stderr.write("%s: warning: %s\n" % (parser.prog, warning))
+
+def err(error):
+	sys.stderr.write("%s: error: %s\n" % (parser.prog, error))
+	sys.exit(1)
 
 def striplist(l):
 	return map(lambda s: s.rstrip("/"), l)
@@ -220,6 +235,16 @@ if len(vs) == 0:
 
 def substitute_variables(expected_vars, alp_names, alp_dirs_with_vars):
 	for vn in expected_vars:
+		if not vn in variables and args.prompt:
+			print "Specify a value for \"%s\"." % expected_vars[vn]
+			val = None
+			try:
+				val = raw_input("%s: " % vn)
+			except EOFError:
+				pass
+			if val != None and len(val) > 0:
+				variables[vn] = val
+
 		if not vn in variables:
 			affected_alps = []
 			for aid, directory, _, _ in alp_dirs_with_vars:
@@ -369,6 +394,8 @@ complete_load_path = expand_load_path( \
 	alp_directories, configuration) # sequence of (coqdir, resolved
 	                                # directory)
 
+doomed = False
+
 # Now that we know the names of all the .vo files we're going to create, we
 # can use those -- along with the Coq load path -- to calculate the rest of the
 # dependencies
@@ -393,6 +420,14 @@ for (sf, bf), identifiers in to_be_resolved.iteritems():
 				break
 		else:
 			warn("%s: couldn't resolve dependency \"%s\"" % (str(sf), ident))
+			doomed = True
+
+if doomed:
+	if not args.persevere:
+		err("dependency resolution failed, aborting")
+	else:
+		warn("dependency resolution failed, but continuing anyway " +
+		     "as you requested")
 
 try:
 	from socket import gethostname
