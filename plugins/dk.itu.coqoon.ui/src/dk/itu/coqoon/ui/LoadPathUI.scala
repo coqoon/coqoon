@@ -129,9 +129,9 @@ private class LoadPathLabelProvider extends StyledCellLabelProvider {
       l match {
         case AbstractLPE(_, identifier, i) =>
           s.append(s"${i}. Library: ")
-          AbstractLoadPath(identifier).getProvider match {
-            case Some(provider) =>
-              s.append(provider.getName, ColourStyler(VALID))
+          AbstractLoadPath(identifier).getImplementation match {
+            case Some(impl) =>
+              s.append(impl.getName, ColourStyler(VALID))
             case None =>
               s.append(identifier, ColourStyler(ERROR))
           }
