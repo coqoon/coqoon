@@ -242,8 +242,6 @@ class LoadPathConfigurationPage
   override def setElement(element : IAdaptable) = (this.element = element)
   override def createContents(c : Composite) = {
     import org.eclipse.swt.layout._
-    import org.eclipse.ui.dialogs.{
-      ElementTreeSelectionDialog, ISelectionStatusValidator}
     import org.eclipse.core.runtime.IStatus
     import org.eclipse.core.resources.IFolder
     import org.eclipse.jface.layout._
@@ -271,7 +269,7 @@ class LoadPathConfigurationPage
         align(SWT.FILL, SWT.FILL).create)
     afb.addSelectionListener(new SelectionAdapter {
       override def widgetSelected(ev : SelectionEvent) = {
-        val wiz = new NewLoadPathWizard
+        val wiz = new NewLoadPathWizard(getElement)
         if (new WizardDialog(c.getShell, wiz).open == Window.OK) {
           wiz.getResult.foreach(loadPath.get.append(_))
           tv1.refresh()
@@ -364,7 +362,7 @@ class LoadPathConfigurationPage
   }
 }
 
-class NewLoadPathWizard extends Wizard {
+class NewLoadPathWizard(val project : IProject) extends Wizard {
   private val selectionPage = new NLPSelectionPage
   addPage(selectionPage)
   setForcePreviousAndNextButtons(true)
@@ -431,6 +429,9 @@ import org.eclipse.jface.resource.ImageDescriptor
 abstract class NLPWizardPage(
     name : String, title : String, descriptor : ImageDescriptor = null)
         extends WizardPage(name, title, descriptor) {
+  override def getWizard() : NewLoadPathWizard =
+    super.getWizard.asInstanceOf[NewLoadPathWizard]
+
   /* Calling this method should be basically free, so it also serves as the
    * implementation of isPageComplete */
   def createLoadPathEntry() : Option[LoadPathProvider]
