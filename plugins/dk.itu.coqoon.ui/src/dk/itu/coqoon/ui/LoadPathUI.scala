@@ -94,7 +94,11 @@ protected object LoadPathModel {
 
   import org.eclipse.core.runtime.IPath
   case class ExternalLPE(parent : Option[LPProvider], fsPath : IPath,
-      dir : Seq[String], index : Int) extends LPProvider(parent, index)
+      dir : Seq[String], index : Int) extends LPProvider(parent, index) {
+    override def getChildren =
+      Seq(NamespaceSLPE(Some(this), LoadPathEntry(fsPath, dir)))
+    override def hasChildren = true
+  }
 
   case class OutputSLPE(parent : Option[LPProvider],
       output : Option[IFolder]) extends LPBase(parent)
