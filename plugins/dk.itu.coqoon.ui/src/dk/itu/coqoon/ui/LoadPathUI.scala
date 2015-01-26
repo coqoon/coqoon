@@ -362,6 +362,24 @@ class LoadPathConfigurationPage
     inl.setText("Higher entries take priority over lower ones. " +
         "Use the Up and Down buttons to reorder entries.")
 
+    tv1.addSelectionChangedListener(new ISelectionChangedListener {
+      override def selectionChanged(ev : SelectionChangedEvent) = {
+        val selection =
+          Option(ev.getSelection.asInstanceOf[TreeSelection].getFirstElement)
+        selection match {
+          case Some(_ : DefaultOutputLPE) =>
+            /* Deleting default output entries is really not a good idea */
+            dfb.setEnabled(false)
+          case _ =>
+            dfb.setEnabled(true)
+        }
+        selection.flatMap(TryCast[LPProvider]).foreach(p => {
+          upb.setEnabled(p.getIndex != 0);
+          dob.setEnabled(p.getIndex != loadPath.get.length - 1)
+        })
+      }
+    })
+
     c1
   }
 }
