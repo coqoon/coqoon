@@ -167,7 +167,7 @@ private class LoadPathLabelProvider extends StyledCellLabelProvider {
         case NamespaceSLPE(_, lpe) =>
           s.append("Namespace: ")
           val label =
-            if (lpe != Nil) {
+            if (lpe.coqdir != Nil) {
               lpe.coqdir.mkString(".")
             } else "(root)"
           s.append(label, ColourStyler(NSLOC))
