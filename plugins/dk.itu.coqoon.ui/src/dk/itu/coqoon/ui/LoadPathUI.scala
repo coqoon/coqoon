@@ -275,7 +275,8 @@ class LoadPathConfigurationPage
       override def widgetSelected(ev : SelectionEvent) = {
         val wiz = new NewLoadPathWizard(getElement)
         if (new WizardDialog(c.getShell, wiz).open == Window.OK) {
-          wiz.getResult.foreach(loadPath.get.append(_))
+          val lp = loadPath.get
+          wiz.getResult.filter(r => !lp.contains(r)).foreach(lp.append(_))
           tv1.refresh()
         }
       }
