@@ -1,3 +1,12 @@
+Coqoon 0.4.7
+============
+
+26th January 2015
+
+This release replaces the old Makefile generation code with a Python
+reimplementation of the Coqoon build system and completes the implementation
+of the new load path user interface.
+
 Coqoon 0.4.6.6
 ==============
 
