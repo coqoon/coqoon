@@ -133,7 +133,7 @@ private class LoadPathLabelProvider extends StyledCellLabelProvider {
       val s = new StyledString
       l match {
         case AbstractLPE(_, identifier, i) =>
-          s.append(s"${i}. Library: ")
+          s.append(s"${i + 1}. Library: ")
           AbstractLoadPath(identifier).getImplementation match {
             case Some(impl) =>
               s.append(impl.getName, ColourStyler(VALID))
@@ -141,25 +141,25 @@ private class LoadPathLabelProvider extends StyledCellLabelProvider {
               s.append(identifier, ColourStyler(ERROR))
           }
         case SourceLPE(_, folder, _, i) =>
-          s.append(s"${i}. Source folder: ")
+          s.append(s"${i + 1}. Source folder: ")
           s.append(
               folder.getProjectRelativePath.addTrailingSeparator.toString,
               ColourStyler(VALID))
         case DefaultOutputLPE(_, folder, i) =>
-          s.append(s"${i}. Default output folder: ")
+          s.append(s"${i + 1}. Default output folder: ")
           s.append(
               folder.getProjectRelativePath.addTrailingSeparator.toString,
               ColourStyler(VALID))
         case ProjectLPE(_, project, i) =>
           import dk.itu.coqoon.core.{ManifestIdentifiers => CMI}
-          s.append(s"${i}. Project: ")
+          s.append(s"${i + 1}. Project: ")
           val styler = ColourStyler(
             if (project.exists() && project.hasNature(CMI.NATURE_COQ))
               VALID else ERROR)
           s.append(project.getName.toString, styler)
         case ExternalLPE(_, fsPath, _, i) =>
           import dk.itu.coqoon.core.project.CoqNature
-          s.append(s"${i}. External development: ")
+          s.append(s"${i + 1}. External development: ")
           val styler =
             ColourStyler(if (fsPath.toFile.exists) VALID else ERROR)
           s.append(fsPath.addTrailingSeparator.toString, styler)
