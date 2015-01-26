@@ -568,6 +568,7 @@ class NLPAbstractEntryPage extends NLPWizardPage(
 class NLPSourceEntryPage extends NLPWizardPage(
     "nlpSEP", "Another source folder in this project") {
   import org.eclipse.core.runtime.Path
+
   setDescription(
       "Add an additional source folder to this project.")
 
@@ -718,6 +719,8 @@ class NLPProjectEntryPage extends NLPWizardPage(
 
 class NLPExternalEntryPage extends NLPWizardPage(
     "nlpEEP", "External development") {
+  import org.eclipse.core.runtime.Path
+
   setDescription(
       "Add a dependency on a Coq development built outside of Coqoon.")
 
@@ -733,13 +736,65 @@ class NLPExternalEntryPage extends NLPWizardPage(
     c.setLayout(new GridLayout(3, false))
 
     new Label(c, SWT.NONE).setText("Folder: ")
-    new Text(c, SWT.BORDER).setLayoutData(new GridData(
-        SWT.FILL, SWT.FILL, true, false))
-    new Button(c, SWT.PUSH).setText("Browse...")
+    val ft = new Text(c, SWT.BORDER)
+    ft.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false))
+    ft.addModifyListener(new ModifyListener {
+      override def modifyText(ev : ModifyEvent) = {
+        val path = ft.getText.trim
+        fspath =
+          if (path.length > 0) {
+            Some(new Path(path))
+          } else None
+        fspath match {
+          case Some(f : IPath) if f.toFile.exists =>
+            setErrorMessage(null)
+          case _ =>
+            fspath = None
+            setErrorMessage(
+                "The path \"" + path + "\" does not exist")
+        }
+        getContainer.updateButtons
+      }
+    })
+    val fb = new Button(c, SWT.PUSH)
+    fb.setText("Browse...")
+    fb.addSelectionListener(new SelectionAdapter {
+      override def widgetSelected(ev : SelectionEvent) = {
+        import org.eclipse.swt.widgets.DirectoryDialog
+        val ed = new DirectoryDialog(fb.getShell, SWT.OPEN)
+        Option(ed.open) match {
+          case Some(p : String) =>
+            ft.setText(p)
+          case _ =>
+        }
+      }
+    })
 
     new Label(c, SWT.NONE).setText("Coq namespace:")
-    new Text(c, SWT.BORDER).setLayoutData(new GridData(
-        SWT.FILL, SWT.FILL, true, false, 2, 1))
+    val nt = new Text(c, SWT.BORDER)
+    nt.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false, 2, 1))
+    nt.addModifyListener(new ModifyListener {
+      override def modifyText(ev : ModifyEvent) = {
+        val coqdir = nt.getText.trim
+        val split = coqdir.split(".")
+
+        var error : Option[String] = None
+        for (part <- split if error == None) {
+          if (part.length == 0) {
+            error = Some("Coq namespace components cannot be empty")
+          } else if (!part.head.isLetter || !part.forall(_.isLetterOrDigit)) {
+            error = Some("The Coq namespace component \"" + part + "\" is invalid")
+          }
+        }
+
+        error.foreach(setErrorMessage)
+        dir =
+          if (error == None) {
+            Some(split)
+          } else None
+        getContainer.updateButtons
+      }
+    })
 
     setControl(c)
   }
