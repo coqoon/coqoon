@@ -563,28 +563,100 @@ class NLPAbstractEntryPage extends NLPWizardPage(
 
 class NLPSourceEntryPage extends NLPWizardPage(
     "nlpSEP", "Another source folder in this project") {
+  import org.eclipse.core.runtime.Path
   setDescription(
       "Add an additional source folder to this project.")
 
   import org.eclipse.core.resources.IFolder
   private var folder : Option[IFolder] = None
   private var output : Option[IFolder] = None
-  override def createLoadPathEntry = folder.map(SourceLoadPath(_, output))
+  override def createLoadPathEntry =
+    (folder, output) match {
+      case (Some(f), Some(o)) if o.exists() =>
+        Some(SourceLoadPath(f, Some(o)))
+      case (Some(f), None) =>
+        Some(SourceLoadPath(f, None))
+      case _ =>
+        None
+    }
 
   override def createControl(parent : Composite) = {
+    import org.eclipse.ui.dialogs.ISelectionStatusValidator
     import org.eclipse.swt.layout.{GridData, GridLayout}
+    import org.eclipse.jface.window.Window
     val c = new Composite(parent, SWT.NONE)
     c.setLayout(new GridLayout(3, false))
 
     new Label(c, SWT.NONE).setText("Source folder: ")
-    new Text(c, SWT.BORDER).setLayoutData(new GridData(
-        SWT.FILL, SWT.FILL, true, false))
-    new Button(c, SWT.PUSH).setText("Browse...")
+    val st = new Text(c, SWT.BORDER)
+    st.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false))
+    st.addModifyListener(new ModifyListener {
+      override def modifyText(ev : ModifyEvent) = {
+        val path = st.getText.trim
+        folder =
+          if (path.length > 0) {
+            Some(getWizard.project.getFolder(new Path(path)))
+          } else None
+        folder match {
+          case Some(f : IFolder) if f.exists =>
+            setErrorMessage(null)
+          case _ =>
+            folder = None
+            setErrorMessage(
+                "The folder \"" + path + "\" does not exist in this project")
+        }
+        getContainer.updateButtons
+      }
+    })
+    val sb = new Button(c, SWT.PUSH)
+    sb.setText("Browse...")
+    sb.addSelectionListener(new SelectionAdapter {
+      override def widgetSelected(ev : SelectionEvent) = {
+        val ed = UIUtils.createWorkspaceElementDialog(sb.getShell)
+        ed.addFilter(new OnlyFoldersFilter)
+        ed.setInput(getWizard.project)
+        if (ed.open == Window.OK)
+          Option(ed.getFirstResult) match {
+            case Some(f : IFolder) =>
+              st.setText(f.getProjectRelativePath.toString)
+            case _ =>
+          }
+      }
+    })
 
     new Label(c, SWT.NONE).setText("Output folder:")
-    new Text(c, SWT.BORDER).setLayoutData(new GridData(
-        SWT.FILL, SWT.FILL, true, false))
-    new Button(c, SWT.PUSH).setText("Browse...")
+    val ot = new Text(c, SWT.BORDER)
+    ot.addModifyListener(new ModifyListener {
+      override def modifyText(ev : ModifyEvent) = {
+        val path = ot.getText.trim
+        val folder =
+          if (path.length > 0) {
+            Some(getWizard.project.getFolder(new Path(path)))
+          } else None
+        output = folder
+        if (!folder.forall(_.exists())) {
+          setErrorMessage(
+                "The folder \"" + path + "\" does not exist in this project")
+        } else setErrorMessage(null)
+        getContainer.updateButtons
+      }
+    })
+    ot.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false))
+    val ob = new Button(c, SWT.PUSH)
+    ob.setText("Browse...")
+    ob.addSelectionListener(new SelectionAdapter {
+      override def widgetSelected(ev : SelectionEvent) = {
+        val ed = UIUtils.createWorkspaceElementDialog(ob.getShell)
+        ed.addFilter(new OnlyFoldersFilter)
+        ed.setInput(getWizard.project)
+        if (ed.open == Window.OK)
+          Option(ed.getFirstResult) match {
+            case Some(f : IFolder) =>
+              ot.setText(f.getProjectRelativePath.toString)
+            case _ =>
+          }
+      }
+    })
 
     setControl(c)
   }
