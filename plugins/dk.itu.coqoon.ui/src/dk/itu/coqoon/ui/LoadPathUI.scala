@@ -795,7 +795,7 @@ class NLPExternalEntryPage extends NLPWizardPage(
     nt.addModifyListener(new ModifyListener {
       override def modifyText(ev : ModifyEvent) = {
         val coqdir = nt.getText.trim
-        val split = coqdir.split(".")
+        val split = coqdir.split('.')
 
         var error : Option[String] = None
         for (part <- split if error == None) {
