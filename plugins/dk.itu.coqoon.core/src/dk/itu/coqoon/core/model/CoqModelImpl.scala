@@ -239,7 +239,7 @@ private class CoqProjectImpl(
               ExternalLoadPath(new Path(physical), Nil) +: _util(tail)
             case "ExternalLoadPath" :: physical :: logical :: Nil =>
               ExternalLoadPath(
-                  new Path(physical), logical.split(".")) +: _util(tail)
+                  new Path(physical), logical.split('.')) +: _util(tail)
             case "AbstractLoadPath" :: identifier :: Nil =>
               AbstractLoadPath(identifier) +: _util(tail)
             case _ => _util(tail)
