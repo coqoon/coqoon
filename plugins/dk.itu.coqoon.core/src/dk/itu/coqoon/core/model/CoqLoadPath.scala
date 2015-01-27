@@ -228,18 +228,12 @@ class ExternalLoadPathProvider extends LoadPathImplementationProvider {
 
       import ProjectLoadPathProvider.getRoot
       import dk.itu.coqoon.core.project.CoqProjectFile
+      import org.eclipse.core.runtime.Path
       CoqProjectFile.shellTokenise(rest) match {
-        case path :: rest =>
-          import org.eclipse.core.runtime.Path
-          val p = new Path(path)
-          rest match {
-            case coqdir :: Nil =>
-              Some(new Implementation(this, p, coqdir.split(".")))
-            case Nil =>
-              Some(new Implementation(this, p, Nil))
-            case _ =>
-              None
-          }
+        case path :: Nil =>
+          Some(new Implementation(this, new Path(path), Nil))
+        case path :: coqdir :: _ =>
+          Some(new Implementation(this, new Path(path), coqdir.split('.')))
         case _ =>
           None
       }
@@ -269,7 +263,7 @@ object ExternalLoadPathProvider {
       Right(Seq(
           IncompleteLoadPathEntry(
               Seq(Left(ExternalPath)),
-              Nil, false)))
+              dir, false)))
 
     import IncompleteLoadPathEntry.Variable
     def getValue(v : Variable) =
@@ -291,7 +285,7 @@ object ExternalLoadPathProvider {
 
   import dk.itu.coqoon.core.project.CoqProjectEntry.escape
   def makeIdentifier(fsPath : IPath, dir : Seq[String]) = {
-    val parts = Seq(fsPath.toString) ++
+    val parts = fsPath.toString +:
       (if (dir == Nil) {
          Nil
        } else Seq(dir.mkString(".")))
