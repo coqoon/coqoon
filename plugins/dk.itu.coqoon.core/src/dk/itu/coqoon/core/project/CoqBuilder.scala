@@ -305,7 +305,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }.toSet
     if (descriptionDependencies != currentDependencies) {
       description.setReferencedProjects(currentDependencies.toArray)
-      getProject.setDescription(description, IResource.KEEP_HISTORY, monitor_)
+      getProject.setDescription(description,
+          IResource.AVOID_NATURE_CONFIG | IResource.KEEP_HISTORY, monitor_)
 
       needRebuild()
       rememberLastBuiltState()
