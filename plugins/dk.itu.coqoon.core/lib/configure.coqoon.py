@@ -11,7 +11,7 @@
 # Manipulating this project using Coqoon may cause this file to be overwritten
 # without warning: any local changes you may have made will not be preserved.
 
-_configure_coqoon_version = 3
+_configure_coqoon_version = 4
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -46,8 +46,11 @@ args = parser.parse_args()
 def warn(warning):
     sys.stderr.write("%s: warning: %s\n" % (parser.prog, warning))
 
-def err(error):
-    sys.stderr.write("%s: error: %s\n" % (parser.prog, error))
+def err(error, usage = True):
+    prog = parser.prog
+    sys.stderr.write("%s: error: %s\n" % (prog, error))
+    if usage:
+        sys.stderr.write("Try \"%s --help\" for more information.\n" % prog)
     sys.exit(1)
 
 def striplist(l):
@@ -130,7 +133,18 @@ class Path:
     def cwd():
         return Path(os.getcwd())
 
+variables = {} # Variable name -> user-specified value for variable
+for i in args.vars:
+    match = re.match("^(\w+)=(.*)$", i, 0)
+    if match:
+        (var, value) = match.groups()
+        variables[var] = value
+
 def prompt_for(vn, prompt, default = None):
+    if vn in variables:
+        return variables[vn]
+    elif not args.prompt:
+        return default
     print prompt
     try:
         pn = None
@@ -144,6 +158,8 @@ def prompt_for(vn, prompt, default = None):
     except EOFError:
         pass
     return default
+
+doomed = False
 
 def load_coq_project_configuration(cwd, path):
     configuration = []
@@ -160,6 +176,7 @@ def load_coq_project_configuration(cwd, path):
         with io.open(path, mode = "r", encoding = "utf_8") as file:
             for line in filter(lambda l: l.startswith("KOPITIAM_"), file):
                 split_line = shlex.split(line)
+                num = split_line[0][len("KOPITIAM_"):]
                 lp = shlex.split(split_line[2])
                 configuration.append(lp)
 
@@ -170,6 +187,22 @@ def load_coq_project_configuration(cwd, path):
                 elif lp[0] == "DefaultOutput":
                     lp[1] = str(cwd.append(lp[1]))
                     default_output = lp[1]
+                elif lp[0] == "ExternalLoadPath":
+                    if os.path.isdir(lp[1]):
+                        pass
+                    else:
+                        elp_name = lp[2] if len(lp) > 2 else "(unknown)"
+                        # Deriving the variable name from the position in the
+                        # _CoqProject file is hardly ideal, but we don't have
+                        # much else to go on for external load paths...
+                        lp[1] = prompt_for("EXT_" + num,
+                                           ("Specify the path to the \"%s\" " +
+                                            "library.") % elp_name, lp[1])
+                        if not os.path.isdir(lp[1]):
+                            warn("""\
+the library "%s" (EXT_%s) could not be found; dependencies on it will not be \
+resolved correctly""" % (elp_name, num))
+                            doomed = True
     except IOError:
         # If _CoqProject is missing, then use Coqoon's default settings
         configuration = [["SourceLoadPath", str(cwd.append("src"))],
@@ -186,13 +219,6 @@ default_output, configuration = \
 # which produces a "configure.coqoon.vars" file specifying incomplete paths to
 # the Coq load path entries that are associated with the abstract load paths
 # required by this project
-
-variables = {} # Variable name -> user-specified value for variable
-for i in args.vars:
-    match = re.match("^(\w+)=(.*)$", i, 0)
-    if match:
-        (var, value) = match.groups()
-        variables[var] = value
 
 def load_vars(path):
     vs = []
@@ -248,11 +274,9 @@ if len(vs) == 0:
 
 def substitute_variables(expected_vars, alp_names, alp_dirs_with_vars):
     for vn in expected_vars:
-        if not vn in variables and args.prompt:
-            val = prompt_for(vn,
-                             "Specify a value for \"%s\"." % expected_vars[vn])
-            if val != None:
-                variables[vn] = val
+        val = prompt_for(vn, "Specify a value for \"%s\"." % expected_vars[vn])
+        if val != None:
+            variables[vn] = val
 
         if not vn in variables:
             affected_alps = []
@@ -402,8 +426,6 @@ parent directory with the WORKSPACE variable)""" % (pn_var)
 complete_load_path = expand_load_path( \
     alp_directories, configuration) # sequence of (coqdir, resolved
                                     # directory)
-
-doomed = False
 
 # Now that we know the names of all the .vo files we're going to create, we
 # can use those -- along with the Coq load path -- to calculate the rest of the
