@@ -130,6 +130,21 @@ class Path:
     def cwd():
         return Path(os.getcwd())
 
+def prompt_for(vn, prompt, default = None):
+    print prompt
+    try:
+        pn = None
+        if default == None:
+            pn = "%s: " % vn
+        else:
+            pn = "%s [%s]: " % (vn, default)
+        val = raw_input(pn)
+        if len(val) > 0:
+            return val
+    except EOFError:
+        pass
+    return default
+
 def load_coq_project_configuration(cwd, path):
     configuration = []
     # When cwd is none, all the paths in configuration will be relative;
@@ -234,13 +249,9 @@ if len(vs) == 0:
 def substitute_variables(expected_vars, alp_names, alp_dirs_with_vars):
     for vn in expected_vars:
         if not vn in variables and args.prompt:
-            print "Specify a value for \"%s\"." % expected_vars[vn]
-            val = None
-            try:
-                val = raw_input("%s: " % vn)
-            except EOFError:
-                pass
-            if val != None and len(val) > 0:
+            val = prompt_for(vn,
+                             "Specify a value for \"%s\"." % expected_vars[vn])
+            if val != None:
                 variables[vn] = val
 
         if not vn in variables:
