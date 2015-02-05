@@ -121,8 +121,9 @@ sealed abstract class CoqCompilerResult(val source : IFile)
 case class CoqCompilerSuccess(override val source : IFile,
     result : Array[Byte]) extends CoqCompilerResult(source) {
   import java.io.ByteArrayInputStream
+  def makeStream() = new ByteArrayInputStream(result)
   def save(output : IFile, monitor : IProgressMonitor) = {
-    val is = new ByteArrayInputStream(result)
+    val is = makeStream
     if (output.exists) {
       output.setContents(is, IResource.NONE, monitor)
     } else output.create(is, IResource.NONE, monitor)
