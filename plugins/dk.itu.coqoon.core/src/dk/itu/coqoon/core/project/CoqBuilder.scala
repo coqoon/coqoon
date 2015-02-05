@@ -139,10 +139,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
         taskMonitor.notifyAll
       }
 
-      override def run() = setResult(try {
-        objectToSource(out) match {
-          case in :: Nil =>
-            try {
+      override def run() = setResult(
+        try {
+          objectToSource(out) match {
+            case in :: Nil =>
               val inF = makePathRelativeFile(in)
               val vernac = inF.flatMap(coqProject.get.getModel.toCoqElement)
               (inF, vernac) match {
@@ -156,13 +156,12 @@ class CoqBuilder extends IncrementalProjectBuilder {
                   println(":-( " + f)
                   Error("Couldn't retrieve source file handle for " + out)
               }
-            }
-          case Nil => Error("Not enough source files for " + out)
-          case _ => Error("Too many source files for " + out)
-        }
-      } catch {
-        case e : CoreException => Error(e.getStatus.getMessage.trim)
-      })
+            case Nil => Error("Not enough source files for " + out)
+            case _ => Error("Too many source files for " + out)
+          }
+        } catch {
+          case e : CoreException => Error(e.getStatus.getMessage.trim)
+        })
     }
     object BuildTask {
       sealed abstract class Result
@@ -194,21 +193,24 @@ class CoqBuilder extends IncrementalProjectBuilder {
           last = now
         }
 
-        for (i <- tasks) {
-          val source = objectToSource(i.out).flatMap(makePathRelativeFile)
+        for (i <- tasks;
+             inPath :: Nil <- Option(objectToSource(i.out))) {
+          val (in, out) =
+            (makePathRelativeFile(inPath),
+                makePathRelativeFile(i.out))
           i.getResult match {
             case CompilerDone(s : CoqCompilerSuccess) =>
-              makePathRelativeFile(i.out).foreach(p => s.save(p, null))
+              out.foreach(p => s.save(p, null))
             case CompilerDone(CoqCompilerFailure(
                 _, _, CompilationError(_, line, _, _, message))) =>
-              source.foreach(
+              in.foreach(
                 createLineErrorMarker(_, line.toInt, message.trim))
             case CompilerDone(CoqCompilerFailure(_, _, GeneralError(text))) =>
-              source.foreach(createResourceErrorMarker(_, text.trim))
+              in.foreach(createResourceErrorMarker(_, text.trim))
             case CompilerDone(CoqCompilerFailure(_, _, text)) =>
-              source.foreach(createResourceErrorMarker(_, text.trim))
+              in.foreach(createResourceErrorMarker(_, text.trim))
             case Error(text) =>
-              source.foreach(createResourceErrorMarker(_, text.trim))
+              in.foreach(createResourceErrorMarker(_, text.trim))
           }
         }
       }
