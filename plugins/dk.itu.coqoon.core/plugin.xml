@@ -65,7 +65,7 @@
    <extension
          point="dk.itu.coqoon.core.loadpath">
       <provider
-            provider="dk.itu.coqoon.core.model.Coq84Library">
+            provider="dk.itu.coqoon.core.model.CoqStandardLibrary">
       </provider>
    </extension>
    <extension

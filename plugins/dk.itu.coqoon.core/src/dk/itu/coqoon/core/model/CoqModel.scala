@@ -309,18 +309,18 @@ object AbstractLoadPathManager {
   }
 }
 
-class Coq84Library extends LoadPathImplementationProvider {
-  override def getName = "Coq 8.4 standard library"
+class CoqStandardLibrary extends LoadPathImplementationProvider {
+  override def getName = "Coq standard library"
 
   override def getImplementation(id : String) =
-    if (Coq84Library.ID == id) {
-      Some(new Coq84Library.Implementation(this, id))
+    if (CoqStandardLibrary.ID == id) {
+      Some(new CoqStandardLibrary.Implementation(this, id))
     } else None
 
   override def getImplementations : Seq[LoadPathImplementation] =
-    Seq(new Coq84Library.Implementation(this))
+    Seq(new CoqStandardLibrary.Implementation(this))
 }
-object Coq84Library {
+object CoqStandardLibrary {
   final val ID = "dk.itu.sdg.kopitiam/lp/coq/8.4"
 
   private class Implementation(provider : LoadPathImplementationProvider,
@@ -328,9 +328,9 @@ object Coq84Library {
     override def getProvider = provider
 
     override def getIdentifier = id
-    override def getName = "Coq 8.4 standard library"
+    override def getName = "Coq standard library"
     override def getAuthor = "Coq development team <coqdev@inria.fr>"
-    override def getDescription = "The standard library of Coq 8.4."
+    override def getDescription = "The standard library of Coq."
 
     import LoadPathImplementation._
     import IncompleteLoadPathEntry.Variable
