@@ -569,7 +569,7 @@ class CoqNature extends IProjectNature {
 }
 
 private object CoqBuildScript {
-  final val currentVersion = 4
+  final val currentVersion = 5
   final val Version = """^_configure_coqoon_version = (\d+)$""".r
   def perhapsInstall(project : IProject) : Boolean = {
     import dk.itu.coqoon.core.Activator

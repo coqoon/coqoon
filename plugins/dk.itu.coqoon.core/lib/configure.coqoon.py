@@ -11,7 +11,7 @@
 # Manipulating this project using Coqoon may cause this file to be overwritten
 # without warning: any local changes you may have made will not be preserved.
 
-_configure_coqoon_version = 4
+_configure_coqoon_version = 5
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -359,6 +359,9 @@ for srcdir, bindir in source_directories:
 
 def expand_load_path(alp_dirs, configuration):
     def expand_pair(coqdir, directory):
+        if not os.path.isdir(directory):
+            warn("couldn't find directory \"%s\"" % directory)
+            return []
         expansion = []
         base = Path(directory)
         for current, _, _ in os.walk(directory):
@@ -394,6 +397,7 @@ def expand_load_path(alp_dirs, configuration):
                 for d, cd, r in alp_elements:
                     if not os.path.isdir(d):
                         # Unresolved directory; skip it
+                        warn("couldn't find directory \"%s\"" % d)
                         continue
                     elif not r:
                         load_path.append((cd, d))
