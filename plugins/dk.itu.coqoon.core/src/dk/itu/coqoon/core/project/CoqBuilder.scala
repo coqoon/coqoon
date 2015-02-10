@@ -569,6 +569,29 @@ class CoqNature extends IProjectNature {
 }
 
 private object CoqBuildScript {
+  import org.eclipse.core.runtime.{CoreException, QualifiedName}
+  object WriteBuildScript {
+    final private val ID = new QualifiedName(
+        ManifestIdentifiers.PLUGIN, "writeBuildScript")
+
+    def get(project : IProject) : Option[Boolean] =
+      try {
+        Option(project.getPersistentProperty(ID)).map(
+            java.lang.Boolean.getBoolean)
+      } catch {
+        case c : CoreException =>
+          None
+      }
+
+    def set(project : IProject, b : Option[Boolean]) =
+      try {
+        project.setPersistentProperty(ID, b.map(_.toString).orNull)
+      } catch {
+        case c : CoreException =>
+          /* do nothing */
+      }
+  }
+
   final val currentVersion = 5
   final val Version = """^_configure_coqoon_version = (\d+)$""".r
   def perhapsInstall(project : IProject) : Boolean = {
