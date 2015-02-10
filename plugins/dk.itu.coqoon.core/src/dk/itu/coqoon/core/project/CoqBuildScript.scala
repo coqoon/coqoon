@@ -19,7 +19,7 @@ package dk.itu.coqoon.core.project
 import dk.itu.coqoon.core.ManifestIdentifiers
 import dk.itu.coqoon.core.model.{ICoqProject, AbstractLoadPath}
 import org.eclipse.core.runtime.Path
-import org.eclipse.core.resources.IProject
+import org.eclipse.core.resources.{IProject, IResource}
 
 object CoqBuildScript {
   import org.eclipse.core.runtime.{CoreException, QualifiedName}
@@ -50,7 +50,7 @@ object CoqBuildScript {
 
   def extractScriptVersion(project : IProject) : Option[Int] = {
     val bsHandle = project.getFile("configure.coqoon.py")
-    if (bsHandle.exists) {
+    if (bsHandle.exists && bsHandle.isSynchronized(IResource.DEPTH_ZERO)) {
       import java.io.{BufferedReader, InputStreamReader}
       val r = new BufferedReader(new InputStreamReader(bsHandle.getContents))
       try {
@@ -74,7 +74,6 @@ object CoqBuildScript {
 
   def perhapsInstall(project : IProject) : Boolean = {
     val bsHandle = project.getFile("configure.coqoon.py")
-    println(extractScriptVersion(project))
     val copyScript =
       if (!bsHandle.exists) {
         /* If the file doesn't exist, then always create it */
