@@ -1,3 +1,31 @@
+Coqoon 0.5.0
+============
+
+10th February 2015
+
+This release switches the Coq editor to use PIDE by default and adds support
+for external load paths to the Python configure script.
+
+The old `-ideslave`-based editor is still present (to use
+it, right-click a file and select the *Open With &rarr; Coq Editor (-ideslave,
+v8.4)* menu option), but it is known not to work with Coq 8.5 and **will be
+removed in a future release**.
+
+Other significant features
+--------------------------
+
+* New build script preferences page
+
+  Projects now have an additional preferences page for managing and updating
+  the Python configure script and its metadata.
+
+Bug fixes
+---------
+
+* Made coqdir handling in external load paths work properly again
+* Acquire the right scheduling rule when configuring new inter-project
+  dependencies
+
 Coqoon 0.4.7
 ============
 
