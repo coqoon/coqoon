@@ -87,6 +87,12 @@ object CoqBuildScript {
       install(project)
       /* Take responsibility for updating the build script in future */
       WriteBuildScript.set(project, Some(true))
+    } else if (WriteBuildScript.get(project) == Some(true)) {
+      /* We have responsibility for updating the build script, but it's already
+       * up-to-date -- so just update configure.coqoon.vars in case it's
+       * changed. (XXX: we ought to do something cleverer here...) */
+      import dk.itu.coqoon.core.model.ICoqModel
+      generateVars(ICoqModel.toCoqProject(project))
     }
     return copyScript
   }
@@ -102,7 +108,6 @@ object CoqBuildScript {
     } else bsHandle.create(s, 0, null)
 
     import dk.itu.coqoon.core.model.ICoqModel
-    /* XXX: we should do something when configure.coqoon.vars is outdated */
     generateVars(ICoqModel.toCoqProject(project))
   }
 

@@ -7,6 +7,7 @@
 
 package dk.itu.coqoon.ui
 
+import dk.itu.coqoon.core.model.ICoqModel
 import dk.itu.coqoon.core.utilities.TryCast
 import org.eclipse.ui.IWorkbenchPropertyPage
 import org.eclipse.swt.SWT
@@ -71,9 +72,13 @@ class BuildScriptManagementPage
     mr.setToolTipText("The most recent version of the build script known to " +
                       "this version of Coqoon.")
 
-    val upd = new Button(c1, SWT.NONE)
-    upd.setLayoutData(GridDataFactory.fillDefaults.align(SWT.RIGHT, SWT.TOP).
+    val c2 = new Composite(c1, SWT.NONE)
+    c2.setLayoutData(GridDataFactory.fillDefaults.align(SWT.RIGHT, SWT.TOP).
         grab(true, false).span(2, 1).create)
+    c2.setLayout(RowLayoutFactory.fillDefaults.create)
+
+    val upd = new Button(c2, SWT.NONE)
+    upd.setLayoutData(RowDataFactory.swtDefaults.create)
     upd.addSelectionListener(new SelectionAdapter {
       override def widgetSelected(ev : SelectionEvent) =
         if (getElement != null) {
@@ -82,6 +87,15 @@ class BuildScriptManagementPage
         }
     })
     updateButton = Some(upd)
+
+    val reb = new Button(c2, SWT.NONE)
+    reb.setText("Update configure.coqoon.vars")
+    reb.setLayoutData(RowDataFactory.swtDefaults.create)
+    reb.addSelectionListener(new SelectionAdapter {
+      override def widgetSelected(ev : SelectionEvent) =
+        if (getElement != null)
+          performVarsUpdate
+    })
 
     new Label(c1, SWT.HORIZONTAL | SWT.SEPARATOR).setLayoutData(
         GridDataFactory.fillDefaults.grab(true, false).span(2, 1).create)
@@ -104,14 +118,20 @@ class BuildScriptManagementPage
     c1
   }
 
+  private def performInstall() =
+    runUnderProject(CoqBuildScript.install(getElement))
+  private def performVarsUpdate() =
+    runUnderProject(CoqBuildScript.generateVars(
+        ICoqModel.toCoqProject(getElement)))
+
   /* This blocks for the duration, which isn't always ideal */
-  private def performInstall() = {
+  private def runUnderProject(f : => Unit) = {
     import org.eclipse.core.runtime.IProgressMonitor
     import org.eclipse.core.resources.{
       IWorkspace, ResourcesPlugin, IWorkspaceRunnable}
     ResourcesPlugin.getWorkspace().run(new IWorkspaceRunnable {
       override def run(monitor : IProgressMonitor) =
-        CoqBuildScript.install(getElement)
+        f
       }, getElement, IWorkspace.AVOID_UPDATE, null)
   }
 
@@ -125,10 +145,10 @@ class BuildScriptManagementPage
             updateButton.foreach(upd => {
               if (v < CoqBuildScript.currentVersion) {
                 upd.setEnabled(true)
-                upd.setText("Update build script")
+                upd.setText("Update script")
               } else {
                 upd.setEnabled(false)
-                upd.setText("Already up-to-date")
+                upd.setText("Script is already up-to-date")
               }
             })
           case _ =>
@@ -139,13 +159,14 @@ class BuildScriptManagementPage
                * exist */
               if (p.getFile("configure.coqoon.py").exists) {
                 upd.setEnabled(false)
-                upd.setText("Unrecognised version")
+                upd.setText("Script version is unrecognised")
               } else {
                 upd.setEnabled(true)
-                upd.setText("Add build script")
+                upd.setText("Add script")
               }
             })
         }
+        updateButton.foreach(_.getShell.pack)
         automaticCheckbox.foreach(autob => {
           val auto = CoqBuildScript.WriteBuildScript.get(p).getOrElse(false)
           if (autob.getSelection != auto)
