@@ -42,16 +42,13 @@ object UIUtils {
   })
 
   object Dialog {
-    protected def bindStockDialog[A](
-        f : (Shell, String, String) => A) : (String, String) => A =
-      f(getDisplay.getActiveShell, _ : String, _ : String)
-
-    import org.eclipse.jface.dialogs.MessageDialog
-    def confirm = bindStockDialog(MessageDialog.openConfirm)
-    def error = bindStockDialog(MessageDialog.openError)
-    def information = bindStockDialog(MessageDialog.openInformation)
-    def question = bindStockDialog(MessageDialog.openQuestion)
-    def warning = bindStockDialog(MessageDialog.openWarning)
+    import org.eclipse.jface.dialogs.MessageDialog._
+    def confirm(t : String, m : String) = openConfirm(getActiveShell, t, m)
+    def error(t : String, m : String) = openError(getActiveShell, t, m)
+    def information(t : String, m : String) =
+      openInformation(getActiveShell, t, m)
+    def question(t : String, m : String) = openQuestion(getActiveShell, t, m)
+    def warning(t : String, m : String) = openWarning(getActiveShell, t, m)
   }
 
   import org.eclipse.ui.IEditorPart
