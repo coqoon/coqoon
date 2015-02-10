@@ -31,6 +31,7 @@ class BuildScriptManagementPage
   override def getElement : IProject = TryCast[IProject](element).get
   override def setElement(element : IAdaptable) = (this.element = element)
   override def createContents(c : Composite) = {
+    import org.eclipse.swt.events._
     import org.eclipse.swt.layout._
     import org.eclipse.core.runtime.IStatus
     import org.eclipse.jface.layout._
@@ -62,6 +63,19 @@ class BuildScriptManagementPage
     val upd = new Button(c1, SWT.NONE)
     upd.setLayoutData(GridDataFactory.fillDefaults.align(SWT.RIGHT, SWT.TOP).
         grab(true, false).span(2, 1).create)
+    upd.addSelectionListener(new SelectionAdapter {
+      override def widgetSelected(ev : SelectionEvent) =
+        if (getElement != null) {
+          import org.eclipse.core.runtime.IProgressMonitor
+          import org.eclipse.core.resources.{
+            IWorkspace, ResourcesPlugin, IWorkspaceRunnable}
+          ResourcesPlugin.getWorkspace().run(new IWorkspaceRunnable {
+            override def run(monitor : IProgressMonitor) =
+              CoqBuildScript.install(getElement)
+          }, getElement, IWorkspace.AVOID_UPDATE, null)
+          updateControls
+        }
+    })
     updateButton = Some(upd)
 
     new Label(c1, SWT.HORIZONTAL | SWT.SEPARATOR).setLayoutData(
