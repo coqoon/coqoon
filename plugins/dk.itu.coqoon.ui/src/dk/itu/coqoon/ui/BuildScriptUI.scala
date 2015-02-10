@@ -28,7 +28,7 @@ class BuildScriptManagementPage
       if (currentValue != newValue) {
         CoqBuildScript.WriteBuildScript.set(getElement, newValue)
         if (newValue == Some(true))
-          (/* XXX: trigger a build operation immediately */)
+          performInstall
       }
     })
     true
@@ -77,13 +77,7 @@ class BuildScriptManagementPage
     upd.addSelectionListener(new SelectionAdapter {
       override def widgetSelected(ev : SelectionEvent) =
         if (getElement != null) {
-          import org.eclipse.core.runtime.IProgressMonitor
-          import org.eclipse.core.resources.{
-            IWorkspace, ResourcesPlugin, IWorkspaceRunnable}
-          ResourcesPlugin.getWorkspace().run(new IWorkspaceRunnable {
-            override def run(monitor : IProgressMonitor) =
-              CoqBuildScript.install(getElement)
-          }, getElement, IWorkspace.AVOID_UPDATE, null)
+          performInstall
           updateControls
         }
     })
@@ -91,7 +85,7 @@ class BuildScriptManagementPage
 
     new Label(c1, SWT.HORIZONTAL | SWT.SEPARATOR).setLayoutData(
         GridDataFactory.fillDefaults.grab(true, false).span(2, 1).create)
-    
+
     val autob = new Button(c1, SWT.CHECK)
     autob.setLayoutData(GridDataFactory.fillDefaults.grab(true, false).
         span(2, 1).create)
@@ -108,6 +102,17 @@ class BuildScriptManagementPage
     updateControls
 
     c1
+  }
+
+  /* This blocks for the duration, which isn't always ideal */
+  private def performInstall() = {
+    import org.eclipse.core.runtime.IProgressMonitor
+    import org.eclipse.core.resources.{
+      IWorkspace, ResourcesPlugin, IWorkspaceRunnable}
+    ResourcesPlugin.getWorkspace().run(new IWorkspaceRunnable {
+      override def run(monitor : IProgressMonitor) =
+        CoqBuildScript.install(getElement)
+      }, getElement, IWorkspace.AVOID_UPDATE, null)
   }
 
   private def updateControls() =
