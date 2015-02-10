@@ -79,13 +79,16 @@ object CoqBuildScript {
       if (!bsHandle.exists) {
         /* If the file doesn't exist, then always create it */
         true
-      } else {
-        /* If the file *does* exist, then only overwrite it if we have a more
-         * recent version */
+      } else if (WriteBuildScript.get(project) == Some(true)){
+        /* If the file *does* exist, then only overwrite it if we're supposed
+         * to and we have a more recent version */
         extractScriptVersion(project).exists(v => v < currentVersion)
-      }
-    if (copyScript)
+      } else false
+    if (copyScript) {
       install(project)
+      /* Take responsibility for updating the build script in future */
+      WriteBuildScript.set(project, Some(true))
+    }
     return copyScript
   }
 
