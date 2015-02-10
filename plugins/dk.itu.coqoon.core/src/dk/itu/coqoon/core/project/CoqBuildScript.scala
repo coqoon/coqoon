@@ -46,38 +46,58 @@ object CoqBuildScript {
   }
 
   final val currentVersion = 5
-  final val Version = """^_configure_coqoon_version = (\d+)$""".r
-  def perhapsInstall(project : IProject) : Boolean = {
-    import dk.itu.coqoon.core.Activator
-    import org.eclipse.core.runtime.FileLocator
+  private final val Version = """^_configure_coqoon_version = (\d+)$""".r
+
+  def extractScriptVersion(project : IProject) : Option[Int] = {
     val bsHandle = project.getFile("configure.coqoon.py")
-    var copyScript : Option[Boolean] = None
-    if (!bsHandle.exists) {
-      copyScript = Some(true)
-    } else {
+    if (bsHandle.exists) {
       import java.io.{BufferedReader, InputStreamReader}
       val r = new BufferedReader(new InputStreamReader(bsHandle.getContents))
       try {
+        /* We only bother scanning the first 20-ish lines of the file (the
+         * version number should be somewhere around line 14) */
+        var count = 0
         var line : Option[String] = None
         do {
           line.foreach(_ match {
-            case Version(version_) =>
-              val version = Integer.parseInt(version_)
-              copyScript = Some(version < currentVersion)
+            case Version(version) =>
+              return Some(Integer.parseInt(version))
             case _ =>
           })
           line = Option(r.readLine)
-        } while (copyScript == None && line != None)
+          count += 1
+        } while (line != None && count < 20)
+        None
       } finally r.close
-    }
-    if (copyScript == Some(true)) {
-      val s = FileLocator.find(Activator.getDefault.getBundle,
-          new Path("lib/configure.coqoon.py"), null).openStream
-      if (bsHandle.exists) {
-        bsHandle.setContents(s, 0, null)
-      } else bsHandle.create(s, 0, null)
-    }
-    return copyScript.getOrElse(false)
+    } else None
+  }
+
+  def perhapsInstall(project : IProject) : Boolean = {
+    val bsHandle = project.getFile("configure.coqoon.py")
+    println(extractScriptVersion(project))
+    val copyScript =
+      if (!bsHandle.exists) {
+        /* If the file doesn't exist, then always create it */
+        true
+      } else {
+        /* If the file *does* exist, then only overwrite it if we have a more
+         * recent version */
+        extractScriptVersion(project).exists(v => v < currentVersion)
+      }
+    if (copyScript)
+      install(project)
+    return copyScript
+  }
+
+  def install(project : IProject) = {
+    import dk.itu.coqoon.core.Activator
+    import org.eclipse.core.runtime.FileLocator
+    val bsHandle = project.getFile("configure.coqoon.py")
+    val s = FileLocator.find(Activator.getDefault.getBundle,
+        new Path("lib/configure.coqoon.py"), null).openStream
+    if (bsHandle.exists) {
+      bsHandle.setContents(s, 0, null)
+    } else bsHandle.create(s, 0, null)
   }
 
   def generateVars(project : ICoqProject) = {
