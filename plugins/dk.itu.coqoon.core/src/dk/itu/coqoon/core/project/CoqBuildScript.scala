@@ -30,7 +30,7 @@ object CoqBuildScript {
     def get(project : IProject) : Option[Boolean] =
       try {
         Option(project.getPersistentProperty(ID)).map(
-            java.lang.Boolean.getBoolean)
+            _.equalsIgnoreCase("true"))
       } catch {
         case c : CoreException =>
           None
