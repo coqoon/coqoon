@@ -21,7 +21,18 @@ class BuildScriptManagementPage
 
   import dk.itu.coqoon.core.project.CoqBuildScript
 
-  override def performOk() = true
+  override def performOk() = {
+    automaticCheckbox.foreach(autob => {
+      val currentValue = CoqBuildScript.WriteBuildScript.get(getElement)
+      val newValue = Some(autob.getSelection)
+      if (currentValue != newValue) {
+        CoqBuildScript.WriteBuildScript.set(getElement, newValue)
+        if (newValue == Some(true))
+          (/* XXX: trigger a build operation immediately */)
+      }
+    })
+    true
+  }
 
   private var projectVersionLabel : Option[Label] = None
   private var updateButton : Option[Button] = None
