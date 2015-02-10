@@ -200,12 +200,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
                 makePathRelativeFile(i.out))
           i.getResult match {
             case CompilerDone(s : CoqCompilerSuccess) =>
-              var save =
-                if (out.exists(_.exists)) {
-                  !compareStreams(out.get.getContents, s.makeStream)
-                } else true
-              if (save)
-                out.foreach(p => s.save(p, null))
+              out.foreach(p => s.save(p, null))
             case CompilerDone(CoqCompilerFailure(
                 _, _, CompilationError(_, line, _, _, message))) =>
               in.foreach(
@@ -236,6 +231,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
           Nil
         case (can, cannot) => can.partition(mustBuild) match {
           case (need, needNot) =>
+            need.flatMap(makePathRelativeFile).foreach(
+                _.delete(IResource.NONE, null))
             completed ++= needNot
             monitor.setWorkRemaining(need.size + cannot.size)
             need.take(2)
@@ -516,22 +513,6 @@ private object CoqBuilder {
 
   def derivedFilter[A <: IResource](der : Boolean)(r : A) : Option[A] =
     Option(r).filter(_.isDerived == der)
-
-  import java.io.InputStream
-  def compareStreams(is1 : InputStream, is2 : InputStream) : Boolean =
-    try {
-      var (r1, r2) = (-1, -1)
-      do {
-        if (r1 != r2)
-          return false
-        r1 = is1.read
-        r2 = is2.read
-      } while (r1 != -1 || r2 != -1)
-      return true
-    } finally {
-      is1.close
-      is2.close
-    }
 }
 
 class FolderCreationRunner(a : IResource) extends JobRunner[Unit] {
