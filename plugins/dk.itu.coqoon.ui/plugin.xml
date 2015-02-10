@@ -147,10 +147,11 @@
       <editor
             class="dk.itu.coqoon.ui.CoqEditor"
             contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
+            default="false"
             extensions="v"
             icon="icons/coqfile_obj.gif"
             id="kopitiam.CoqEditor"
-            name="Coq Editor">
+            name="Coq Editor (v8.4, -ideslave)">
          <contentTypeBinding
                contentTypeId="dk.itu.coqoon.core.CoqFile">
          </contentTypeBinding>
@@ -158,10 +159,11 @@
       <editor
             class="dk.itu.coqoon.ui.PIDECoqEditor"
             contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
+            default="true"
             extensions="v"
             icon="icons/coqfileblue_obj.gif"
             id="dk.itu.coqoon.ui.PIDECoqEditor"
-            name="PIDE Coq Editor">
+            name="Coq Editor (v8.5+, PIDE)">
          <contentTypeBinding
                contentTypeId="dk.itu.coqoon.core.CoqFile">
          </contentTypeBinding>
