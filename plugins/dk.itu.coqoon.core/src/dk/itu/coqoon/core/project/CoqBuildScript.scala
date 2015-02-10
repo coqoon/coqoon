@@ -101,6 +101,10 @@ object CoqBuildScript {
     if (bsHandle.exists) {
       bsHandle.setContents(s, 0, null)
     } else bsHandle.create(s, 0, null)
+
+    import dk.itu.coqoon.core.model.ICoqModel
+    /* XXX: we should do something when configure.coqoon.vars is outdated */
+    generateVars(ICoqModel.toCoqProject(project))
   }
 
   def generateVars(project : ICoqProject) = {

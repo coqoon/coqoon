@@ -257,10 +257,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
       }
     }
 
-    /* Copy the external build script into the project, if it's not there
-     * already (or if we're sure that it's outdated) */
     CoqBuildScript.perhapsInstall(getProject)
-    CoqBuildScript.generateVars(coqProject.get)
 
     /* Remove any unused output directories */
     cleanProject(coqProject.get)
