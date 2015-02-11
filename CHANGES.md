@@ -1,3 +1,11 @@
+Coqoon 0.5.1
+============
+
+11th February 2015
+
+This minor release restores and improves support for displaying goals in the
+PIDE editor.
+
 Coqoon 0.5.0
 ============
 
