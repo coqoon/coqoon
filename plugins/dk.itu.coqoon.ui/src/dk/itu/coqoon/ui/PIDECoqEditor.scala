@@ -45,30 +45,32 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
                 PIDECoqEditor.extractMarkup(snapshot, c._2))))
       }
       commandResultsAndMarkup match {
-        case Some(((_, command), _, _))
-            if lastCommand.contains(command) =>
-          /* do nothing */
         case Some(((offset, command), results, markup)) =>
+          val sameCommand = lastCommand.contains(command)
+
           markup.find(_.name == "goals") match {
-            case Some(el) =>
+            case Some(el)
+                if !sameCommand || goals == None =>
               setGoals(PIDECoqEditor.extractGoals(el))
-            case _ =>
-              setGoals(None)
+            case Some(el) => /* do nothing? */
+            case None => setGoals(None)
           }
 
-          import dk.itu.coqoon.ui.utilities.EclipseConsole
-          import isabelle.XML.{Elem, Text}
-          for ((_, tree) <- results) tree match {
-            case f : Elem
-                if f.name == "writeln_message" &&
-                   f.markup.properties.toMap.get("source") != Some("goal") =>
-              EclipseConsole.out.println(f.body(0).asInstanceOf[Text].content)
-            case f : Elem if f.name == "error_message" =>
-              PIDECoqEditor.extractError(f).map(_._1).foreach(
-                  EclipseConsole.err.println)
-            case _ =>
+          if (!sameCommand) {
+            import dk.itu.coqoon.ui.utilities.EclipseConsole
+            import isabelle.XML.{Elem, Text}
+            for ((_, tree) <- results) tree match {
+              case f : Elem
+                  if f.name == "writeln_message" &&
+                     f.markup.properties.toMap.get("source") != Some("goal") =>
+                EclipseConsole.out.println(f.body(0).asInstanceOf[Text].content)
+              case f : Elem if f.name == "error_message" =>
+                PIDECoqEditor.extractError(f).map(_._1).foreach(
+                    EclipseConsole.err.println)
+              case _ =>
+            }
+            lastCommand = Option(command)
           }
-          lastCommand = Option(command)
         case _ =>
           setGoals(None)
           lastCommand = None
