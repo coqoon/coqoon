@@ -255,7 +255,9 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
             List[Document.Edit_Text](
                 Document.Node.Name(file.getName) ->
                     Document.Node.Edits(List(
-                        Text.Edit.insert(0, initialisationBlock + text)))),
+                        Text.Edit.insert(0, initialisationBlock + text))),
+                Document.Node.Name(file.getName) ->
+                    Perspective.createDummy),
             "coq")
       case _ =>
     }
