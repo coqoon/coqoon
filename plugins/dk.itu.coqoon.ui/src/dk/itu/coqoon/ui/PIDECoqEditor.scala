@@ -376,6 +376,13 @@ object PIDECoqEditor {
   }
 }
 
+private object Perspective {
+  import isabelle.{Text, Document}
+  def createDummy() =
+    Document.Node.Perspective[Text.Edit, Text.Perspective](true,
+        Text.Perspective.full, Document.Node.Overlays.empty)
+}
+
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy
 
 private class PIDEReconcilingStrategy(
@@ -423,7 +430,9 @@ private class PIDEReconcilingStrategy(
     }
     editor.getName.foreach(name => editor.session.update(
         Document.Blobs.empty,
-        List[Document.Edit_Text](Document.Node.Name(name) -> edits), "coq"))
+        List[Document.Edit_Text](
+            Document.Node.Name(name) -> edits,
+            Document.Node.Name(name) -> Perspective.createDummy), "coq"))
   }
 
   private var doc : Option[IDocument] = None
