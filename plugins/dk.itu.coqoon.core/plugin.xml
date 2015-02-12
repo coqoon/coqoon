@@ -61,6 +61,12 @@
             id="dk.itu.coqoon.core.pref"
             name="Coqoon">
       </page>
+      <page
+            category="dk.itu.coqoon.core.pref"
+            class="dk.itu.coqoon.core.debug.CoqoonDebugPreferencesPage"
+            id="dk.itu.coqoon.core.debug.pref"
+            name="Debug">
+      </page>
    </extension>
    <extension
          point="dk.itu.coqoon.core.loadpath">
@@ -72,6 +78,9 @@
          point="org.eclipse.core.runtime.preferences">
       <initializer
             class="dk.itu.coqoon.core.CoqoonPreferences">
+      </initializer>
+      <initializer
+            class="dk.itu.coqoon.core.debug.CoqoonDebugPreferences">
       </initializer>
    </extension>
 </plugin>
