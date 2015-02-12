@@ -15,6 +15,7 @@ Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
 Export-Package: dk.itu.coqoon.core,
  dk.itu.coqoon.core.coqtop,
+ dk.itu.coqoon.core.debug,
  dk.itu.coqoon.core.model,
  dk.itu.coqoon.core.project,
  dk.itu.coqoon.core.utilities
