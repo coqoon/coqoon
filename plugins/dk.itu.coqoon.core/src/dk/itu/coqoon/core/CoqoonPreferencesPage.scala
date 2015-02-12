@@ -46,16 +46,6 @@ class CoqoonPreferencesPage
           "dependencies.")
       ed
     })
-    addField({
-      val parent = getFieldEditorParent
-      val ed = new BooleanFieldEditor(
-          CoqoonPreferences.PrintIdeslaveTraffic.ID,
-          "Show -ideslave traffic (debug)", parent)
-      ed.getDescriptionControl(parent).setToolTipText(
-          "Write messages to standard output when coqtop is started and " +
-          "when XML protocol messages are sent and received.")
-      ed
-    })
   }
 
   override def performOk = {
@@ -79,7 +69,6 @@ class CoqoonPreferences extends AbstractPreferenceInitializer {
 
     node.put(CoqPath.ID, CoqPath.tryCandidates.getOrElse(""))
     node.putBoolean(EnforceNamespaces.ID, false)
-    node.putBoolean(PrintIdeslaveTraffic.ID, false)
   }
 }
 object CoqoonPreferences {
@@ -107,11 +96,6 @@ object CoqoonPreferences {
 
   object EnforceNamespaces {
     final val ID = "enforce"
-    def get() = Activator.getDefault.getPreferenceStore.getBoolean(ID)
-  }
-
-  object PrintIdeslaveTraffic {
-    final val ID = "printIdeslaveTraffic"
     def get() = Activator.getDefault.getPreferenceStore.getBoolean(ID)
   }
 }
