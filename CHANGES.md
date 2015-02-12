@@ -1,3 +1,12 @@
+Coqoon 0.5.2
+============
+
+12th February 2015
+
+This minor release fixes a bug that was causing Coqoon project configuration
+files to be ignored by version control plug-ins and makes the debugging output
+more configurable.
+
 Coqoon 0.5.1
 ============
 
