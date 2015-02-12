@@ -17,6 +17,7 @@
 package dk.itu.coqoon.core.model
 
 import dk.itu.coqoon.core.{Activator, ManifestIdentifiers}
+import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
 import dk.itu.coqoon.core.coqtop.CoqProgram
 import dk.itu.coqoon.core.utilities.TryCast
 
@@ -120,7 +121,10 @@ final case class LoadPathEntry(
             f => _recurse(coqdir :+ f.getName, f))
         } else Seq.empty) :+ (coqdir, f)
       }
-      _recurse(coqdir, path.toFile)
+      val r = _recurse(coqdir, path.toFile)
+      CoqoonDebugPreferences.LoadPathExpansion.log(
+          s"${this} -> ${r}")
+      r
     }
 }
 
@@ -140,10 +144,13 @@ final case class IncompleteLoadPathEntry(
             } else e
           case e => e
         })
-    if (t.forall(_.isRight)) {
-      Right(LoadPathEntry(
-          new Path(t.map(_.right.get).mkString("/")), coqdir, alwaysExpand))
-    } else Left(IncompleteLoadPathEntry(t, coqdir))
+    val v =
+      if (t.forall(_.isRight)) {
+        Right(LoadPathEntry(
+            new Path(t.map(_.right.get).mkString("/")), coqdir, alwaysExpand))
+      } else Left(IncompleteLoadPathEntry(t, coqdir))
+    CoqoonDebugPreferences.LoadPathResolution.log(s"${this} -> ${v}")
+    v
   }
 }
 object IncompleteLoadPathEntry {

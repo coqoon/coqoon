@@ -85,9 +85,24 @@ object CoqoonDebugPreferences {
       "PIDE protocol messages",
       "Log debugging messages whenever PIDE protocol messages are sent and " +
       "received.")
+  object LoadPathResolution extends ChannelPreference("debug/resolution",
+      "Load path resolution",
+      "Log debugging messages whenever resolution is attempted on an " +
+      "incomplete load path entry.")
+  object LoadPathExpansion extends ChannelPreference("debug/expansion",
+      "Load path expansion",
+      "Log debugging messages whenever a complete load path entry is " +
+      "expanded.")
+  object ProjectBuild extends ChannelPreference("debug/project",
+      "Project build",
+      "Log debugging messages whenever a project build operation starts or " +
+      "stops.")
 
   val allPrefs = Seq(
       PrintProcessInvocations,
       PrintIdeslaveTraffic,
-      PrintPIDETraffic)
+      PrintPIDETraffic,
+      LoadPathResolution,
+      LoadPathExpansion,
+      ProjectBuild)
 }

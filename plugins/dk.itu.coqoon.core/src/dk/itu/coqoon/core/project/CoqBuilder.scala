@@ -18,6 +18,7 @@ package dk.itu.coqoon.core.project
 
 import dk.itu.coqoon.core.ManifestIdentifiers
 import dk.itu.coqoon.core.model._
+import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
 import dk.itu.coqoon.core.coqtop.CoqProgram
 import dk.itu.coqoon.core.coqtop.CoqSentence
 import dk.itu.coqoon.core.utilities.{
@@ -81,6 +82,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
       createResourceErrorMarker(getProject, "Can't find the Coq compiler")
       return Array()
     }
+
+    CoqoonDebugPreferences.ProjectBuild.log(
+        s"Build for ${getProject} started: changed files are ${files}")
     val dt = deps.get
 
     /* Delete any objects in the output folders that don't have a corresponding
@@ -261,6 +265,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
 
     /* Remove any unused output directories */
     cleanProject(coqProject.get)
+
+    CoqoonDebugPreferences.ProjectBuild.log(
+        s"Build for ${getProject} finished; dependency state is ${dt}")
 
     coqProject.get.getLoadPathProviders.collect {
       case ProjectLoadPath(p) => p
