@@ -75,8 +75,9 @@ object CoqBuildScript {
   def perhapsInstall(project : IProject) : Boolean = {
     val bsHandle = project.getFile("configure.coqoon.py")
     val copyScript =
-      if (!bsHandle.exists) {
-        /* If the file doesn't exist, then always create it */
+      if (!bsHandle.exists && WriteBuildScript.get(project) != Some(false)) {
+        /* If the file doesn't exist, then create it (unless we know we're not
+         * supposed to) */
         true
       } else if (WriteBuildScript.get(project) == Some(true)){
         /* If the file *does* exist, then only overwrite it if we're supposed
