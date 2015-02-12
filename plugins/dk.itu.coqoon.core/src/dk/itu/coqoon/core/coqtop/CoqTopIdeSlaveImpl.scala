@@ -16,11 +16,13 @@
 
 package dk.itu.coqoon.core.coqtop
 
+import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
+
 private class CoqProgramInstanceImpl(argv : Seq[String],
     start : ProcessBuilder => Process) extends CoqProgramInstance {
   import dk.itu.coqoon.core.CoqoonPreferences
-  if (CoqoonPreferences.PrintIdeslaveTraffic.get)
-    println("RUN " + argv.mkString("[", ", ", "]"))
+  CoqoonDebugPreferences.PrintProcessInvocations.log(
+      "RUN " + argv.mkString("[", ", ", "]"))
 
   protected val (in, out, pr) = {
     import java.io.{InputStreamReader, OutputStreamWriter}
@@ -149,8 +151,7 @@ private class CoqTopIdeSlaveImpl(
     }
     pr.get.stdin.write(n.toString())
     pr.get.stdin.flush()
-    if (CoqoonPreferences.PrintIdeslaveTraffic.get)
-      println("TO   " + n.toString())
+    CoqoonDebugPreferences.PrintIdeslaveTraffic.log("TO   " + n.toString)
     var t = new String()
     @scala.annotation.tailrec def _util : Elem = {
       val count = pr.get.stdout.read(buf)
@@ -162,8 +163,8 @@ private class CoqTopIdeSlaveImpl(
       } else _util
     }
     val x = _util
-    if (CoqoonPreferences.PrintIdeslaveTraffic.get)
-      println("FROM " + Option(x).map(_.toString).getOrElse("(null)"))
+    CoqoonDebugPreferences.PrintIdeslaveTraffic.log(
+        "FROM " + Option(x).map(_.toString).getOrElse("(null)"))
     x
   }
 
