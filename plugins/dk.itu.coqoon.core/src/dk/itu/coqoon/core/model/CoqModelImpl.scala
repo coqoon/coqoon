@@ -274,7 +274,7 @@ private class CoqProjectImpl(
         CoqProjectFile.toString(cfg).getBytes)
       if (f.exists) {
         f.setContents(contents, IResource.NONE, monitor)
-      } else f.create(contents, IResource.DERIVED, monitor)
+      } else f.create(contents, IResource.NONE, monitor)
     } else if (f.exists) {
       f.delete(IResource.KEEP_HISTORY, monitor)
     }
