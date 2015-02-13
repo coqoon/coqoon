@@ -1,3 +1,11 @@
+Coqoon 0.5.4
+============
+
+13th February 2015
+
+This minor release simplifies the process by which the builder chooses new
+build candidates.
+
 Coqoon 0.5.3
 ============
 
