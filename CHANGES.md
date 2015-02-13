@@ -1,3 +1,12 @@
+Coqoon 0.5.3
+============
+
+13th February 2015
+
+This minor release fixes a bug that caused anonymous external dependencies to
+be misresolved when a project depended on another project that had such a
+dependency.
+
 Coqoon 0.5.2
 ============
 
