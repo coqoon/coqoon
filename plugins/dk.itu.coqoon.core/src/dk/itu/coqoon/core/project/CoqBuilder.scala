@@ -114,20 +114,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
     getProject.deleteMarkers(
         ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_INFINITE)
 
-    def isUpToDate(path : IPath) : Boolean = {
-      val f = path.toFile
-      if (f.exists) {
-        val lm = f.lastModified
-        dt.getDependencies(path).flatMap(_._3).forall(
-            d => isUpToDate(d) && d.toFile.lastModified < lm)
-      } else false
-    }
-
-    def canBuild(path : IPath) =
-      dt.getDependencies(path).flatMap(_._3).forall(isUpToDate)
+    def canBuild(path : IPath) : Boolean =
+      dt.getDependencies(path).flatMap(_._3).forall(
+          p => canBuild(p) && !mustBuild(p))
     def mustBuild(path : IPath) = {
       val lm = path.toFile.lastModified
-      dt.getDependencies(path).flatMap(_._3).exists(_.toFile.lastModified > lm)
+      dt.getDependencies(path).flatMap(_._3).exists(
+          p => lm < p.toFile.lastModified)
     }
 
     val taskMonitor = new Object
