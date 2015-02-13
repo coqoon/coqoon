@@ -275,8 +275,7 @@ object ExternalLoadPathProvider {
       val name =
         if (dir != Nil) {
           dir.mkString(".")
-        } else Integer.toHexString(
-            System.identityHashCode(fsPath.toString))
+        } else Integer.toHexString(fsPath.hashCode)
       IncompleteLoadPathEntry.Variable(
           name.toUpperCase.replaceAll("[^A-Z0-9]+", "_"),
           "The path to the directory containing the \"" + name + "\" library.")
