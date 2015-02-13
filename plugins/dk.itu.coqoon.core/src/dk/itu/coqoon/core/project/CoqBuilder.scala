@@ -109,7 +109,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
     for ((path, _) <- dt.getDependencies;
          file <- makePathRelativeFile(path))
       new FolderCreationRunner(file).run(null)
+
+    /* Expand the project load path and use it to resolve all the
+     * dependencies */
     completeLoadPath = coqProject.get.getLoadPath.flatMap(_.expand)
+    dt.resolveDependencies
 
     getProject.deleteMarkers(
         ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_INFINITE)
@@ -212,7 +216,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
         }
       }
       completed ++= candidates
-      dt.resolveDependencies
 
       candidates = dt.getResolved().filter(
           a => !completed.contains(a)).partition(canBuild) match {
