@@ -240,12 +240,12 @@ class CoqBuilder extends IncrementalProjectBuilder {
       }
     } while (candidates.size != 0 && !isInterrupted && !monitor.isCanceled)
 
-    /* Create error markers for the files that never became build candidates */
+    /* Create error markers for files with unsatisfied dependencies */
     for (i <- dt.getUnresolved;
          j :: Nil <- Some(objectToSource(i));
          f <- makePathRelativeFile(j);
          dep <- dt.getDependencies(i).filter(_._3 == None).map(_._1)) {
-      val errorMessage = s"Cannot find library ${dep} in loadpath"
+      val errorMessage = s"""Couldn't find library "${dep}" in load path"""
       depSources.get(f).flatMap(_.get(dep)) match {
         case Some(l) =>
           val leadingWhitespace = l.getText.takeWhile(_.isWhitespace).size
