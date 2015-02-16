@@ -1,3 +1,11 @@
+Coqoon 0.5.5
+============
+
+16th February 2015
+
+This minor release adds support for detecting dependency cycles to the Coq
+project builder.
+
 Coqoon 0.5.4
 ============
 
