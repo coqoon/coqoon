@@ -58,11 +58,13 @@ class DependencyTracker {
 
   def getDependencies() = dependencies
   def getDependencies(from : IPath) = dependencies.getOrElse(from, Seq())
+  def hasDependencies() = (!dependencies.isEmpty)
   def hasDependencies(from : IPath) = (dependencies.get(from) != None)
   def addDependency(from : IPath, to : Dependency) =
     (dependencies = dependencies + (from -> (getDependencies(from) :+ to)))
   def setDependencies(from : IPath, to : Seq[Dependency]) =
     (dependencies = dependencies + (from -> to))
+  def clearDependencies() = (dependencies = Map())
   def clearDependencies(from : IPath) = (dependencies = dependencies - from)
 
   override def toString = getDependencies.map(
