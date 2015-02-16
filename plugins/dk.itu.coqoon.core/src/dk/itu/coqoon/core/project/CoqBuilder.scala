@@ -256,10 +256,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
       val errorMessage = s"""Couldn't find library "${dep}" in load path"""
       depSources.get(f).flatMap(_.get(dep)) match {
         case Some(l) =>
-          val leadingWhitespace = l.getText.takeWhile(_.isWhitespace).size
-          createRegionErrorMarker(f, errorMessage,
-              (l.getOffset + leadingWhitespace,
-               l.getOffset + l.getLength))
+          createSentenceErrorMarker(l, errorMessage)
         case None =>
           createResourceErrorMarker(f, errorMessage)
       }
@@ -418,6 +415,15 @@ class CoqBuilder extends IncrementalProjectBuilder {
 }
 private object CoqBuilder {
   type TrackerT = DependencyTracker[IPath, String]
+
+  def createSentenceErrorMarker(
+      l : ICoqScriptSentence, errorMessage : String) =
+    l.getContainingResource.foreach(r => {
+      val leadingWhitespace = l.getText.takeWhile(_.isWhitespace).size
+      createRegionErrorMarker(r, errorMessage,
+          (l.getOffset + leadingWhitespace,
+           l.getOffset + l.getLength))
+    })
 
   def createRegionErrorMarker(
       r : IResource, s : String, region : (Int, Int)) = {
