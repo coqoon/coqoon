@@ -252,15 +252,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
     for (i <- deps.getUnresolved;
          j :: Nil <- Some(objectToSource(i));
          f <- makePathRelativeFile(j);
-         dep <- deps.getDependencies(i).filter(_._3 == None).map(_._1)) {
-      val errorMessage = s"""Couldn't find library "${dep._2}" in load path"""
-      depSources.get(f).flatMap(_.get(dep._2)) match {
-        case Some(l) =>
-          createSentenceErrorMarker(l, errorMessage)
-        case None =>
-          createResourceErrorMarker(f, errorMessage)
-      }
-    }
+         ((Some(sentence), identifier), _, None) <- deps.getDependencies(i))
+      createSentenceErrorMarker(sentence,
+          s"""Couldn't find library "${identifier}" in load path""")
 
     CoqBuildScript.perhapsInstall(getProject)
 
@@ -396,28 +390,23 @@ class CoqBuilder extends IncrementalProjectBuilder {
 
   private final val emptyPath = Option.empty[IPath]
 
-  private var depSources = Map[IFile, Map[String, ICoqScriptSentence]]()
   private def generateDeps(file : IFile) : Seq[TrackerT#Dependency] = {
     var deps = Seq.newBuilder[TrackerT#Dependency]
     deps +=
         ((None, "(self)"), resolveDummy(file.getLocation)(_), emptyPath)
-    var sources = Map[String, ICoqScriptSentence]()
     ICoqModel.getInstance.toCoqElement(file).flatMap(
         TryCast[ICoqVernacFile]).foreach(_.accept(_ match {
       case l : ICoqLoadSentence =>
         deps += ((Some(l), l.getIdent()), resolveLoad(_), emptyPath)
-        sources += (l.getIdent() -> l)
         false
       case r : ICoqRequireSentence =>
         for (f <- r.getQualid) {
           deps += ((Some(r), f), resolveRequire(_), emptyPath)
-          sources += (f -> r)
         }
         false
       case e : IParent => true
       case _ => false
     }))
-    depSources += (file -> sources)
     deps.result
   }
 
