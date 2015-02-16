@@ -253,8 +253,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
          j :: Nil <- Some(objectToSource(i));
          f <- makePathRelativeFile(j);
          dep <- deps.getDependencies(i).filter(_._3 == None).map(_._1)) {
-      val errorMessage = s"""Couldn't find library "${dep}" in load path"""
-      depSources.get(f).flatMap(_.get(dep)) match {
+      val errorMessage = s"""Couldn't find library "${dep._2}" in load path"""
+      depSources.get(f).flatMap(_.get(dep._2)) match {
         case Some(l) =>
           createSentenceErrorMarker(l, errorMessage)
         case None =>
@@ -353,7 +353,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
   }
 
-  private def resolveLoad(t : String) : Option[IPath] = {
+  private def resolveLoad(
+      t_ : (Option[ICoqScriptSentence], String)) : Option[IPath] = {
+    val (_, t) = t_
     for ((_, location) <- completeLoadPath) {
       val p = new Path(location.getAbsolutePath).
           append(t).addFileExtension("v")
@@ -364,7 +366,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
     return None
   }
 
-  private def resolveRequire(t : String) : Option[IPath] = {
+  private def resolveDummy(
+      p : IPath)(t : (Option[ICoqScriptSentence], String)) =
+    Option(p)
+
+  private def resolveRequire(
+      t_ : (Option[ICoqScriptSentence], String)) : Option[IPath] = {
+    val (_, t) = t_
     val (libdir, libname) = {
       val i = t.split('.').toSeq
       (i.init, i.last)
@@ -386,21 +394,23 @@ class CoqBuilder extends IncrementalProjectBuilder {
     None
   }
 
+  private final val emptyPath = Option.empty[IPath]
+
   private var depSources = Map[IFile, Map[String, ICoqScriptSentence]]()
   private def generateDeps(file : IFile) : Seq[TrackerT#Dependency] = {
     var deps = Seq.newBuilder[TrackerT#Dependency]
     deps +=
-        ("(self)", (_ : String) => Some(file.getLocation), Option.empty[IPath])
+        ((None, "(self)"), resolveDummy(file.getLocation)(_), emptyPath)
     var sources = Map[String, ICoqScriptSentence]()
     ICoqModel.getInstance.toCoqElement(file).flatMap(
         TryCast[ICoqVernacFile]).foreach(_.accept(_ match {
       case l : ICoqLoadSentence =>
-        deps += (l.getIdent(), resolveLoad(_), Option.empty[IPath])
+        deps += ((Some(l), l.getIdent()), resolveLoad(_), emptyPath)
         sources += (l.getIdent() -> l)
         false
       case r : ICoqRequireSentence =>
         for (f <- r.getQualid) {
-          deps += (f, resolveRequire(_), Option.empty[IPath])
+          deps += ((Some(r), f), resolveRequire(_), emptyPath)
           sources += (f -> r)
         }
         false
@@ -414,7 +424,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
   override def toString = "(CoqBuilder for " + getProject + ")"
 }
 private object CoqBuilder {
-  type TrackerT = DependencyTracker[IPath, String]
+  type TrackerT =
+    DependencyTracker[IPath, (Option[ICoqScriptSentence], String)]
 
   def createSentenceErrorMarker(
       l : ICoqScriptSentence, errorMessage : String) =
