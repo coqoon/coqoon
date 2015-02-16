@@ -118,9 +118,18 @@ class CoqBuilder extends IncrementalProjectBuilder {
     getProject.deleteMarkers(
         ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_INFINITE)
 
-    def canBuild(path : IPath) : Boolean =
-      dt.getDependencies(path).flatMap(_._3).forall(
-          p => canBuild(p) && !mustBuild(p))
+    def canBuild(path : IPath, chain : Seq[IPath] = Seq()) : Boolean =
+      dt.getDependencies(path).flatMap(_._3).forall(p => {
+        val nextChain = (chain :+ p)
+        if (chain.contains(p)) {
+          val cycle = nextChain.flatMap(makePathRelative)
+          objectToSource(chain.head).flatMap(makePathRelativeFile).foreach(
+              createResourceErrorMarker(_,
+                  "Dependency cycle detected: " +
+                  cycle.mkString(" -> ") + "."))
+          false
+        } else canBuild(p, nextChain) && !mustBuild(p)
+      })
     def mustBuild(path : IPath) = {
       val lm = path.toFile.lastModified
       dt.getDependencies(path).flatMap(_._3).exists(
@@ -218,7 +227,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
       completed ++= candidates
 
       candidates = dt.getResolved().filter(
-          a => !completed.contains(a)).partition(canBuild) match {
+          a => !completed.contains(a)).partition(
+              a => canBuild(a, Seq(a))) match {
         case (Nil, Nil) => Nil
         case (Nil, cannot) =>
           /* This should only happen if there's a broken dependency on
