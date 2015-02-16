@@ -331,8 +331,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
       case _ =>
     }
 
-    getProject.deleteMarkers(
-        ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_ZERO)
     val monitor = SubMonitor.convert(monitor_, "Building", 1)
     val args = scala.collection.JavaConversions.mapAsScalaMap(args_).toMap
     try {
