@@ -16,15 +16,13 @@
 
 package dk.itu.coqoon.core.project
 
-import org.eclipse.core.runtime.IPath
+import org.eclipse.core.runtime.Path
 
-class DependencyTracker {
-  import DependencyTracker._
+class DependencyTracker[Path, Identifier] {
+  private var dependencies : Map[Path, Seq[Dependency]] = Map()
 
-  private var dependencies : Map[IPath, Seq[Dependency]] = Map()
-
-  def resolveDependencies() : Set[IPath] = {
-    var resolutions = Set[IPath]()
+  def resolveDependencies() : Set[Path] = {
+    var resolutions = Set[Path]()
     for ((path, deps) <- dependencies if !isResolved(path))
       setDependencies(path, deps.map(_ match {
         case d @ (_, _, Some(_)) => d
@@ -37,47 +35,45 @@ class DependencyTracker {
     resolutions
   }
 
-  def unresolveDependencies(from_ : IPath*) =
+  def unresolveDependencies(from_ : Path*) =
     dependencies =
       for ((from, deps) <- dependencies)
         yield (from, if (!from_.contains(from)) deps
             else deps.map(d => (d._1, d._2, None)))
-  def unresolveDependenciesUpon(to : IPath*) =
+  def unresolveDependenciesUpon(to : Path*) =
     dependencies =
       for ((from, deps) <- dependencies)
         yield (from, deps.map(dep => (dep._1, dep._2,
             if (dep._3.exists(to.contains)) None else dep._3)))
 
-  def isResolved(path : IPath) = dependencies.get(path).map(
+  def isResolved(path : Path) = dependencies.get(path).map(
       deps => !deps.exists(_._3 == None)).getOrElse(false)
 
-  def getResolved() : Seq[IPath] =
+  def getResolved() : Seq[Path] =
     dependencies.toSeq.map(a => a._1).filter(a => isResolved(a))
-  def getUnresolved() : Seq[IPath] =
+  def getUnresolved() : Seq[Path] =
     dependencies.toSeq.map(a => a._1).filter(a => !isResolved(a))
 
   def getDependencies() = dependencies
-  def getDependencies(from : IPath) = dependencies.getOrElse(from, Seq())
+  def getDependencies(from : Path) = dependencies.getOrElse(from, Seq())
   def hasDependencies() = (!dependencies.isEmpty)
-  def hasDependencies(from : IPath) = (dependencies.get(from) != None)
-  def addDependency(from : IPath, to : Dependency) =
+  def hasDependencies(from : Path) = (dependencies.get(from) != None)
+  def addDependency(from : Path, to : Dependency) =
     (dependencies = dependencies + (from -> (getDependencies(from) :+ to)))
-  def setDependencies(from : IPath, to : Seq[Dependency]) =
+  def setDependencies(from : Path, to : Seq[Dependency]) =
     (dependencies = dependencies + (from -> to))
   def clearDependencies() = (dependencies = Map())
-  def clearDependencies(from : IPath) = (dependencies = dependencies - from)
+  def clearDependencies(from : Path) = (dependencies = dependencies - from)
 
   override def toString = getDependencies.map(
-      a => (Seq(a._1.toPortableString) ++ a._2.map(dependencyToString)).
+      a => (Seq(a._1.toString) ++ a._2.map(dependencyToString)).
           mkString("\n\t\t")).mkString("DG\n\t", "\n\t", "")
-}
-object DependencyTracker {
-  type Identifier = String
-  type Resolver = Identifier => Option[IPath]
-  type Dependency = (Identifier, Resolver, Option[IPath])
+
+  type Dependency =
+    (Identifier, Identifier => Option[Path], Option[Path])
 
   def dependencyToString(d : Dependency) = d match {
     case d @ (identifier, _, None) => "[X] " + identifier
-    case d @ (_, _, Some(path)) => "[O] " + path.toPortableString
+    case d @ (_, _, Some(r)) => "[O] " + r.toString
   }
 }

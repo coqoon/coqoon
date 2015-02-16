@@ -34,7 +34,6 @@ import org.eclipse.core.resources.IProjectNature
 class CoqBuilder extends IncrementalProjectBuilder {
   import java.util.{Map => JMap}
   import CoqBuilder._
-  import DependencyTracker._
 
   override protected def getRule(
       type_ : Int, args : JMap[String, String]) = getProject
@@ -43,11 +42,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
     ICoqModel.toCoqProject(getProject)
   }
 
-  private var deps : Option[DependencyTracker] = None
+  private var deps = new TrackerT
 
   private def partBuild(
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
-    if (deps == None)
+    if (!deps.hasDependencies)
       return fullBuild(args, monitor)
 
     var changedFiles = Set[IFile]()
@@ -85,7 +84,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
 
     CoqoonDebugPreferences.ProjectBuild.log(
         s"Build for ${getProject} started: changed files are ${files}")
-    val dt = deps.get
 
     /* Delete any objects in the output folders that don't have a corresponding
      * source file */
@@ -99,27 +97,27 @@ class CoqBuilder extends IncrementalProjectBuilder {
     for (i <- files;
          j <- sourceToObject(i.getLocation)) {
       if (i.exists) {
-        dt.setDependencies(j, generateDeps(i))
-      } else dt.clearDependencies(j)
-      dt.unresolveDependenciesUpon(i.getLocation, j)
+        deps.setDependencies(j, generateDeps(i))
+      } else deps.clearDependencies(j)
+      deps.unresolveDependenciesUpon(i.getLocation, j)
     }
 
     /* Pre-create all of the possible output directories so that the complete
      * load path is actually complete */
-    for ((path, _) <- dt.getDependencies;
+    for ((path, _) <- deps.getDependencies;
          file <- makePathRelativeFile(path))
       new FolderCreationRunner(file).run(null)
 
     /* Expand the project load path and use it to resolve all the
      * dependencies */
     completeLoadPath = coqProject.get.getLoadPath.flatMap(_.expand)
-    dt.resolveDependencies
+    deps.resolveDependencies
 
     getProject.deleteMarkers(
         ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_INFINITE)
 
     def canBuild(path : IPath, chain : Seq[IPath] = Seq()) : Boolean =
-      dt.getDependencies(path).flatMap(_._3).forall(p => {
+      deps.getDependencies(path).flatMap(_._3).forall(p => {
         val nextChain = (chain :+ p)
         if (chain.contains(p)) {
           val cycle = nextChain.flatMap(makePathRelative)
@@ -132,7 +130,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
       })
     def mustBuild(path : IPath) = {
       val lm = path.toFile.lastModified
-      dt.getDependencies(path).flatMap(_._3).exists(
+      deps.getDependencies(path).flatMap(_._3).exists(
           p => lm < p.toFile.lastModified)
     }
 
@@ -181,7 +179,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
 
     monitor.beginTask(
-        "Building " + getProject.getName, dt.getDependencies().size)
+        "Building " + getProject.getName, deps.getDependencies().size)
 
     var completed = Set[IPath]()
     var candidates : Seq[IPath] = Seq()
@@ -226,7 +224,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
       }
       completed ++= candidates
 
-      candidates = dt.getResolved().filter(
+      candidates = deps.getResolved().filter(
           a => !completed.contains(a)).partition(
               a => canBuild(a, Seq(a))) match {
         case (Nil, Nil) => Nil
@@ -236,8 +234,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
            * able to find in another project has been deleted). Re-resolve the
            * dependencies so that the error handling code below will have
            * something to show */
-          dt.unresolveDependencies(cannot : _*)
-          dt.resolveDependencies
+          deps.unresolveDependencies(cannot : _*)
+          deps.resolveDependencies
           Nil
         case (can, cannot) => can.partition(mustBuild) match {
           case (need, needNot) =>
@@ -251,10 +249,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
     } while (candidates.size != 0 && !isInterrupted && !monitor.isCanceled)
 
     /* Create error markers for files with unsatisfied dependencies */
-    for (i <- dt.getUnresolved;
+    for (i <- deps.getUnresolved;
          j :: Nil <- Some(objectToSource(i));
          f <- makePathRelativeFile(j);
-         dep <- dt.getDependencies(i).filter(_._3 == None).map(_._1)) {
+         dep <- deps.getDependencies(i).filter(_._3 == None).map(_._1)) {
       val errorMessage = s"""Couldn't find library "${dep}" in load path"""
       depSources.get(f).flatMap(_.get(dep)) match {
         case Some(l) =>
@@ -273,7 +271,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     cleanProject(coqProject.get)
 
     CoqoonDebugPreferences.ProjectBuild.log(
-        s"Build for ${getProject} finished; dependency state is ${dt}")
+        s"Build for ${getProject} finished; dependency state is ${deps}")
 
     coqProject.get.getLoadPathProviders.collect {
       case ProjectLoadPath(p) => p
@@ -282,13 +280,12 @@ class CoqBuilder extends IncrementalProjectBuilder {
 
   private def fullBuild(
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
-    val dt = new DependencyTracker
-    deps = Some(dt)
+    deps.clearDependencies
 
     traverse[IFile](getProject,
         a => TryCast[IFile](a).flatMap(extensionFilter("v")),
         a => sourceToObject(a.getLocation).foreach(
-            b => dt.setDependencies(b, generateDeps(a))))
+            b => deps.setDependencies(b, generateDeps(a))))
     buildFiles(Set(), args, monitor)
   }
 
@@ -297,7 +294,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
       traverse[IFile](f,
           a => TryCast[IFile](a).flatMap(extensionFilter("vo")),
           a => a.delete(IResource.NONE, monitor))
-    deps = None
+    deps.clearDependencies
     getProject.deleteMarkers(
         ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_INFINITE)
     for (i <- coqProject.get.getLoadPathProviders) i match {
@@ -360,12 +357,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
   }
 
   private def resolveLoad(t : String) : Option[IPath] = {
-    val dt = deps.get
     for ((_, location) <- completeLoadPath) {
       val p = new Path(location.getAbsolutePath).
           append(t).addFileExtension("v")
       val f = p.toFile
-      if (f.exists || deps.get.hasDependencies(p))
+      if (f.exists || deps.hasDependencies(p))
         return Some(p)
     }
     return None
@@ -387,15 +383,15 @@ class CoqBuilder extends IncrementalProjectBuilder {
       val p = new Path(location.getAbsolutePath).append(
           adjusted.mkString("/")).append(libname).addFileExtension("vo")
       val f = p.toFile
-      if (f.exists || deps.get.hasDependencies(p))
+      if (f.exists || deps.hasDependencies(p))
         return Some(p)
     }
     None
   }
 
   private var depSources = Map[IFile, Map[String, ICoqScriptSentence]]()
-  private def generateDeps(file : IFile) : Seq[Dependency] = {
-    var deps = Seq.newBuilder[Dependency]
+  private def generateDeps(file : IFile) : Seq[TrackerT#Dependency] = {
+    var deps = Seq.newBuilder[TrackerT#Dependency]
     deps +=
         ("(self)", (_ : String) => Some(file.getLocation), Option.empty[IPath])
     var sources = Map[String, ICoqScriptSentence]()
@@ -421,6 +417,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
   override def toString = "(CoqBuilder for " + getProject + ")"
 }
 private object CoqBuilder {
+  type TrackerT = DependencyTracker[IPath, String]
+
   def createRegionErrorMarker(
       r : IResource, s : String, region : (Int, Int)) = {
     import scala.collection.JavaConversions._
