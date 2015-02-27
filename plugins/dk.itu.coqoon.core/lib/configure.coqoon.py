@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-# configure.coqoon, a configure script for Coqoon projects
+# configure.coqoon.py, a configure script for Coqoon projects
 # A component of Coqoon, an integrated development environment for Coq proofs
 # Copyright © 2014, 2015 Alexander Faithfull
 #
@@ -163,16 +163,16 @@ doomed = False
 
 def load_coq_project_configuration(cwd, path):
     configuration = []
-    # When cwd is none, all the paths in configuration will be relative;
-    # note that this is only ever tolerable for paths known to be within
-    # this project
+    # When cwd is none, all the relative paths in @configuration will remain
+    # relative; note that this is only ever tolerable for paths known to be
+    # within this project
     if cwd == None:
         cwd = Path(None)
     default_output = str(cwd.append("bin"))
     try:
-        # We don't care whether path is absolute or relative as long as
-        # we can open it, but the paths that we read from it are
-        # guaranteed to be relative and we need them to be absolute
+        # We don't care whether @path is absolute or relative as long as we can
+        # open it, but the paths that we read from it are guaranteed to be
+        # relative and we need them to be absolute
         with io.open(path, mode = "r", encoding = "utf_8") as file:
             for line in filter(lambda l: l.startswith("KOPITIAM_"), file):
                 split_line = shlex.split(line)
@@ -195,9 +195,8 @@ def load_coq_project_configuration(cwd, path):
                         # Deriving the variable name from the position in the
                         # _CoqProject file is hardly ideal, but we don't have
                         # much else to go on for external load paths...
-                        lp[1] = prompt_for("EXT_" + num,
-                                           ("Specify the path to the \"%s\" " +
-                                            "library.") % elp_name, lp[1])
+                        lp[1] = prompt_for("EXT_" + num, """\
+Specify the path to the \"%s\" library.""" % elp_name, lp[1])
                         if not os.path.isdir(lp[1]):
                             warn("""\
 the library "%s" (EXT_%s) could not be found; dependencies on it will not be \
@@ -239,8 +238,8 @@ def load_vars(path):
                 else:
                     tokens = tokens[1:]
             else:
-                # Skip this token in the hope that we'll
-                # eventually get back in sync
+                # Skip this token in the hope that we'll eventually get back in
+                # sync
                 tokens = tokens[1:]
             if v != None:
                 vs.append(v)
@@ -252,8 +251,8 @@ def structure_vars(vs):
     expected_vars = {} # Variable name -> human-readable description of
                        # variable
     alp_names = {} # Abstract load path ID -> human-readable name
-    alp_dirs_with_vars = [] # sequence of (abstract load path ID,
-                            # directory, coqdir, recursive)
+    alp_dirs_with_vars = [] # sequence of (abstract load path ID, directory,
+                            # coqdir, recursive)
     for i in vs:
         if i[0] == "var":
             expected_vars[i[1]] = i[2]
@@ -269,8 +268,9 @@ def structure_vars(vs):
 
 vs = load_vars("configure.coqoon.vars")
 if len(vs) == 0:
-    warn("the \"configure.coqoon.vars\" file is missing, empty, or " +
-         "unreadable; non-trivial dependency resolution may fail")
+    warn("""\
+the "configure.coqoon.vars" file is missing, empty, or unreadable; \
+non-trivial dependency resolution may fail""")
 
 def substitute_variables(expected_vars, alp_names, alp_dirs_with_vars):
     for vn in expected_vars:
@@ -289,8 +289,9 @@ def substitute_variables(expected_vars, alp_names, alp_dirs_with_vars):
                 aalps = affected_alps[0]
             elif len(affected_alps) > 1:
                 aalps = ", ".join(affected_alps[0:-1]) + " and " + affected_alps[-1]
-            warn(("the variable %s is not defined; " +
-                  "dependencies on %s will not be resolved correctly") % (vn, aalps))
+            warn("""\
+the variable %s is not defined; dependencies on %s will not be resolved \
+correctly""" % (vn, aalps))
     alp_dirs = {} # Abstract load path ID -> sequence of (possibly resolved
                   # directory, coqdir, recursive)
     for aid, directory, coqdir, recursive in alp_dirs_with_vars:
@@ -314,9 +315,9 @@ def extract_dependency_identifiers(f):
     identifiers = []
     for line in iter(f.readline, ""):
         for (_, ids) in re.findall("(?s)Require\\s+(Import\\s+|Export\\s+|)(.*?)\\s*\\.[$\\s]", line, 0):
-            # Using shlex.split here is /technically/ cheating, but
-            # it means we can handle both quoted identifiers and
-            # multiple identifiers with the same code
+            # Using shlex.split here is /technically/ cheating, but it means we
+            # can handle both quoted identifiers and multiple identifiers with
+            # the same code
             identifiers.extend(shlex.split(ids))
     return identifiers
 
@@ -340,18 +341,17 @@ for srcdir, bindir in source_directories:
         srcpath = Path(current)
         binpath = binroot.append_path(srcpath.drop_first(len(srcroot)))
         if not binpath.isdir():
-            # Although the Makefile will be able to create this
-            # folder, the load path expansion code needs it to
-            # exist in order to work properly -- so, like Coqoon,
-            # we create it in advance
+            # Although the Makefile will be able to create this folder, the
+            # load path expansion code needs it to exist in order to work
+            # properly -- so, like Coqoon, we create it in advance
             os.makedirs(str(binpath))
         for sf_ in filter(lambda f: f.endswith(".v"), files):
             sf = srcpath.append(sf_)
             bf = binpath.append(sf_ + "o")
             deps[str(bf)] = [str(sf)]
 
-            # While we're here, stash away the identifiers of the
-            # dependencies of this source file
+            # While we're here, stash away the identifiers of the dependencies
+            # of this source file
             ids = None
             with sf.open() as file:
                 ids = extract_dependency_identifiers(file)
@@ -428,8 +428,7 @@ parent directory with the WORKSPACE variable)""" % (pn_var)
     return load_path
 
 complete_load_path = expand_load_path( \
-    alp_directories, configuration) # sequence of (coqdir, resolved
-                                    # directory)
+    alp_directories, configuration) # sequence of (coqdir, resolved directory)
 
 # Now that we know the names of all the .vo files we're going to create, we
 # can use those -- along with the Coq load path -- to calculate the rest of the
@@ -461,8 +460,8 @@ if doomed:
     if not args.persevere:
         err("dependency resolution failed, aborting")
     else:
-        warn("dependency resolution failed, but continuing anyway " +
-             "as you requested")
+        warn("""\
+dependency resolution failed, but continuing anyway as you requested""")
 
 try:
     from socket import gethostname
@@ -483,14 +482,14 @@ override _COQCMD = \\
 """ % (_configure_coqoon_version, gethostname(), formatdate(localtime = True)))
 
         output_so_far = []
-        # Coqoon itself actually passes -R options instead of -I ones,
-        # but this works too (and we've already generated these paths
-        # for the dependency resolver)
+        # Coqoon itself actually passes -R options instead of -I ones, but this
+        # works too (and we've already generated these paths for the dependency
+        # resolver)
         for coqdir, location in complete_load_path:
-            # There's no sense in generating the same flags over
-            # and over again! (In particular, most projects will
-            # depend on the Coq standard library, and we don't want
-            # to have multiple copies of /that/ mass of flags...)
+            # There's no sense in generating the same flags over and over
+            # again! (In particular, most projects will depend on the Coq
+            # standard library, and we don't want to have multiple copies of
+            # /that/ mass of flags...)
             if not (coqdir, location) in output_so_far:
                 output_so_far.append((coqdir, location))
                 file.write(u"""\
