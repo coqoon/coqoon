@@ -1,3 +1,11 @@
+Coqoon 0.5.6
+============
+
+27th February 2015
+
+This minor release fixes a bug in the Python configure script triggered by
+using external load path entries.
+
 Coqoon 0.5.5
 ============
 
