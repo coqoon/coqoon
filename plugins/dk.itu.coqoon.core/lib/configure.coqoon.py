@@ -11,7 +11,7 @@
 # Manipulating this project using Coqoon may cause this file to be overwritten
 # without warning: any local changes you may have made will not be preserved.
 
-_configure_coqoon_version = 5
+_configure_coqoon_version = 6
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -390,7 +390,7 @@ def expand_load_path(alp_dirs, configuration):
         elif i[0] == "ExternalLoadPath":
             directory = i[1]
             coqdir = i[2] if len(i) > 2 else ""
-            load_path.extend(expand_pair(directory, coqdir))
+            load_path.extend(expand_pair(coqdir, directory))
         elif i[0] == "AbstractLoadPath":
             alp_elements = alp_dirs.get(i[1])
             if alp_elements != None:
