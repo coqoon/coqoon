@@ -85,6 +85,10 @@ object CoqoonDebugPreferences {
       "PIDE protocol messages",
       "Log debugging messages whenever PIDE protocol messages are sent and " +
       "received.")
+  object PIDEMarkers extends ChannelPreference("debug/pide-markers",
+      "PIDE error markers",
+      "Log debugging messages whenever PIDE error markers are created or " +
+      "deleted.")
   object LoadPathResolution extends ChannelPreference("debug/resolution",
       "Load path resolution",
       "Log debugging messages whenever resolution is attempted on an " +
@@ -102,6 +106,7 @@ object CoqoonDebugPreferences {
       PrintProcessInvocations,
       PrintIdeslaveTraffic,
       PrintPIDETraffic,
+      PIDEMarkers,
       LoadPathResolution,
       LoadPathExpansion,
       ProjectBuild)
