@@ -303,20 +303,35 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
           removed.map(_.id.asInstanceOf[Int]) ++
               added.map(_._1.id.asInstanceOf[Int])
         /* Delete all errors associated with these commands */
-        for (i <- m if ids.contains(i.getAttribute("__command", Int.MaxValue)))
-          i.delete
+        val deletedMarkers =
+          for (i <- m if ids.contains(
+              i.getAttribute("__command", Int.MaxValue)))
+            yield {
+              val id = i.getAttribute("__command", Int.MaxValue)
+              i.delete
+              (id, i)
+            }
         import scala.collection.JavaConversions._
-        for ((c, (start, end), msg) <- added) {
-          val q = file.createMarker(core.ManifestIdentifiers.MARKER_PROBLEM)
-          q.setAttributes(Map(
-              IMarker.MESSAGE -> msg.replaceAll("\\s+", " ").trim,
-              IMarker.SEVERITY -> IMarker.SEVERITY_ERROR,
-              IMarker.LOCATION -> s"offset ${start}",
-              IMarker.CHAR_START -> start,
-              IMarker.CHAR_END -> end,
-              IMarker.TRANSIENT -> true,
-              "__command" -> c.id.asInstanceOf[Int]))
-        }
+        val addedMarkers =
+          for ((c, (start, end), msg) <- added)
+            yield {
+              val q = file.createMarker(
+                  core.ManifestIdentifiers.MARKER_PROBLEM)
+              val id = c.id.asInstanceOf[Int]
+              q.setAttributes(Map(
+                  IMarker.MESSAGE -> msg.replaceAll("\\s+", " ").trim,
+                  IMarker.SEVERITY -> IMarker.SEVERITY_ERROR,
+                  IMarker.LOCATION -> s"offset ${start}",
+                  IMarker.CHAR_START -> start,
+                  IMarker.CHAR_END -> end,
+                  IMarker.TRANSIENT -> true,
+                  "__command" -> id))
+              (id, q)
+            }
+        CoqoonDebugPreferences.PIDEMarkers.log(
+          s"UpdateErrorsJob(${removed}, ${added}):\n" +
+          s"ids = ${ids},\n" +
+          s"deleted ${deletedMarkers.toList}, added ${addedMarkers.toList}")
       })
       Status.OK_STATUS
     }
