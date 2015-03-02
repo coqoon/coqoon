@@ -65,7 +65,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
                      f.markup.properties.toMap.get("source") != Some("goal") =>
                 EclipseConsole.out.println(f.body(0).asInstanceOf[Text].content)
               case f : Elem if f.name == "error_message" =>
-                PIDECoqEditor.extractError(f).map(_._1).foreach(
+                PIDECoqEditor.extractError(f).map(_._2).foreach(
                     EclipseConsole.err.println)
               case _ =>
             }
@@ -117,10 +117,10 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
               tree match {
                 case f : Elem if f.name == "error_message" =>
                   (getFile, PIDECoqEditor.extractError(f)) match {
-                    case (Some(f), Some((msg, Some(start), Some(end)))) =>
+                    case (Some(f), Some((id, msg, Some(start), Some(end)))) =>
                       errorsToAdd :+= (command,
                           (offset + start - 1, offset + end - 1), msg)
-                    case (Some(f), Some((msg, _, _))) =>
+                    case (Some(f), Some((id, msg, _, _))) =>
                       errorsToAdd :+= (command,
                           (offset, offset + command.source.length), msg)
                     case _ =>
@@ -372,7 +372,8 @@ object PIDECoqEditor {
         (propertyMap.get("offset").map(Integer.parseInt(_, 10)),
          propertyMap.get("end_offset").map(Integer.parseInt(_, 10)))
       val msg = f.body(0).asInstanceOf[Text].content
-      Some(msg, errStart, errEnd)
+      propertyMap.get("id").map(Integer.parseInt(_, 10)).map(
+          id => (id, msg, errStart, errEnd))
     case _ => None
   }
 }
