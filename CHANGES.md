@@ -1,3 +1,12 @@
+Coqoon 0.5.7
+============
+
+2nd March 2015
+
+This minor release fixes an occasional bug that caused the PIDE editor to
+create duplicate error markers and adds support for producing debugging output
+when PIDE markers are created or removed.
+
 Coqoon 0.5.6
 ============
 
