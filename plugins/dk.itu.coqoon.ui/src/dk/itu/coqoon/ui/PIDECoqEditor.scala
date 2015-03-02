@@ -103,7 +103,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
       import org.eclipse.jface.text.Position
       var toDelete : Seq[(Command, Option[Annotation])] = Seq()
       var annotationsToAdd : Seq[(Command, Annotation, Position)] = Seq()
-      var errorsToAdd : Seq[(Command, (Int, Int), String)] = Seq()
+      var errorsToAdd : Map[Int, ((Command, (Int, Int), String))] = Map()
 
       try {
         for (i <- changedResultsAndMarkup) i match {
@@ -118,10 +118,10 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
                 case f : Elem if f.name == "error_message" =>
                   (getFile, PIDECoqEditor.extractError(f)) match {
                     case (Some(f), Some((id, msg, Some(start), Some(end)))) =>
-                      errorsToAdd :+= (command,
+                      errorsToAdd += id -> (command,
                           (offset + start - 1, offset + end - 1), msg)
                     case (Some(f), Some((id, msg, _, _))) =>
-                      errorsToAdd :+= (command,
+                      errorsToAdd += id -> (command,
                           (offset, offset + command.source.length), msg)
                     case _ =>
                   }
@@ -134,21 +134,29 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
               import org.eclipse.jface.text.source.IAnnotationModelExtension
               (complete, annotations.get(command)) match {
                 case (false, None) =>
+                  /* This command hasn't finished but has no processing
+                   * annotation; create a new one */
                   val an = new Annotation(
                       ManifestIdentifiers.ANNOTATION_PROCESSING,
                       false, "Processing proof")
                   annotationsToAdd :+= (command,
                       an, new Position(offset, command.source.length))
                 case (false, Some(an)) =>
+                  /* This command hasn't finished and has an existing
+                   * processing annotation; delete it and replace it */
                   toDelete :+= (command, Some(an))
                   annotationsToAdd :+= (command,
                       an, new Position(offset, command.source.length))
                 case (true, Some(an)) =>
+                  /* This command has finished and has an existing processing
+                   * annotation; delete it */
                   toDelete :+= (command, Some(an))
                 case _ =>
               }
             })
           case (None, command, _, _) =>
+            /* This command has been removed from the document; delete its
+             * annotation, along with any errors it might have */
             toDelete :+= (command, annotations.get(command))
         }
       } finally {
@@ -184,7 +192,9 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
           getSourceViewer.invalidateTextPresentation
         })
 
-        new UpdateErrorsJob(toDelete.map(_._1), errorsToAdd).schedule
+        if (!toDelete.isEmpty || !errorsToAdd.isEmpty)
+          new UpdateErrorsJob(
+              toDelete.map(_._1), errorsToAdd.values.toSeq).schedule
       }
 
       caretPing
