@@ -299,9 +299,11 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
         import dk.itu.coqoon.core
         val m = file.findMarkers(core.ManifestIdentifiers.MARKER_PROBLEM,
             false, IResource.DEPTH_ZERO)
-        for (i <- m if removed.exists(
-                           r => r.id.asInstanceOf[Int] ==
-                             i.getAttribute("__command")))
+        val ids =
+          removed.map(_.id.asInstanceOf[Int]) ++
+              added.map(_._1.id.asInstanceOf[Int])
+        /* Delete all errors associated with these commands */
+        for (i <- m if ids.contains(i.getAttribute("__command", Int.MaxValue)))
           i.delete
         import scala.collection.JavaConversions._
         for ((c, (start, end), msg) <- added) {
