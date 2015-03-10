@@ -10,8 +10,12 @@ class Activator extends AbstractUIPlugin {
   }
   
   override def stop(context : BundleContext) = {
-    Activator.instance = null
-    super.stop(context)
+    try {
+      dk.itu.coqoon.ui.pide.SessionManager.stop
+      Activator.instance = null
+    } finally {
+      super.stop(context)
+    }
   }
 
   import ManifestIdentifiers.Images._
