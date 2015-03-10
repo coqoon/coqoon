@@ -17,5 +17,16 @@ object SessionManager extends dk.itu.coqoon.pide.SessionManager {
       session.phase
     })
 
+  executeWithSessionLock(session => {
+    session.commands_changed += Session.Consumer[Any]("Coqoon") {
+      case changed : Session.Commands_Changed =>
+        CoqoonDebugPreferences.PrintPIDETraffic.log(s"! ${changed}")
+      case q =>
+        CoqoonDebugPreferences.PrintPIDETraffic.log(s"! ${q}")
+    }
+    session.all_messages += Session.Consumer("Coqoon")(q =>
+      CoqoonDebugPreferences.PrintPIDETraffic.log(s"? ${q}"))
+  })
+
   start()
 }

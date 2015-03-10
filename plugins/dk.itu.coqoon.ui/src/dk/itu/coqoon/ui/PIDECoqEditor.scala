@@ -1,5 +1,7 @@
 package dk.itu.coqoon.ui
 
+import dk.itu.coqoon.ui.pide.SessionManager
+
 class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   import org.eclipse.jface.text.reconciler.MonoReconciler
   private val reconciler =
@@ -18,12 +20,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
 
   def getViewer = super.getSourceViewer
 
-  import isabelle._
-  import dk.itu.coqoon.core.CoqoonPreferences
-  protected[ui] val syntax = new Coq_Syntax
-  protected[ui] val resources = new Coq_Resources(syntax)
-  protected[ui] val session = new Session
-  session.register_resources("coq", resources)
+  import isabelle.{XML, Text, Command, Session, Protocol, Document}
 
   import org.eclipse.swt.custom.{CaretEvent, CaretListener}
   object DocumentCaretListener extends CaretListener {
@@ -205,42 +202,28 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   private var commands : Seq[(Int, isabelle.Command)] = Seq()
 
   import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
-  session.commands_changed += Session.Consumer[Any]("Coqoon") {
-    case changed : Session.Commands_Changed =>
-      CoqoonDebugPreferences.PrintPIDETraffic.log(s"! ${changed}")
-      CommandsLock synchronized {
-        lastSnapshot = getName.map(
-            n => session.snapshot(Document.Node.Name(n)))
-        lastSnapshot.foreach(snapshot =>
-          commands =
-            (for (command <- snapshot.node.commands;
-                  offset <- snapshot.node.command_start(command)
-                    if offset >= ibLength)
-              yield (offset - ibLength, command)).toSeq)
+
+  SessionManager.executeWithSessionLock(session =>
+    if (session.phase == Session.Failed) {
+      dk.itu.coqoon.ui.utilities.EclipseConsole.err.println(
+          session.syslog_content.trim)
+    } else {
+      session.commands_changed += Session.Consumer[Any]("Coqoon") {
+        case changed : Session.Commands_Changed
+            if getNodeName.exists(changed.nodes.contains) =>
+          CommandsLock synchronized {
+            lastSnapshot = getNodeName.map(n => session.snapshot(n))
+            lastSnapshot.foreach(snapshot =>
+              commands =
+                (for (command <- snapshot.node.commands;
+                      offset <- snapshot.node.command_start(command)
+                        if offset >= ibLength)
+                  yield (offset - ibLength, command)).toSeq)
+          }
+          commandsUpdated(changed.commands.toSeq)
+        case _ =>
       }
-      commandsUpdated(changed.commands.toSeq)
-    case q =>
-      CoqoonDebugPreferences.PrintPIDETraffic.log(s"! ${q}")
-  }
-  session.all_messages += Session.Consumer("Coqoon")(q =>
-    CoqoonDebugPreferences.PrintPIDETraffic.log(s"? ${q}"))
-
-  session.start("coq",
-      CoqoonPreferences.CoqPath.get match {
-        case Some(path) => path + java.io.File.separator + "coqtop"
-        case _ => "coqtop"
-      }, Nil)
-
-  while (!session.is_ready && session.phase != Session.Failed)
-    Thread.sleep(500)
-  if (session.phase == Session.Failed)
-    dk.itu.coqoon.ui.utilities.EclipseConsole.err.println(
-        session.syslog_content.trim)
-
-  override def dispose = {
-    session.stop
-    super.dispose
-  }
+    })
 
   import dk.itu.coqoon.core.coqtop.CoqSentence
   import dk.itu.coqoon.core.utilities.TotalReader
@@ -250,6 +233,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
     input match {
       case f : IFileEditorInput =>
         val file = f.getFile
+        val nodeName = getNodeName.get
 
         import dk.itu.coqoon.core.model.ICoqModel
         val cp = ICoqModel.toCoqProject(file.getProject)
@@ -259,15 +243,13 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
 
         val text = TotalReader.read(file.getContents)
         lastDocument = text
-        session.update(
+        SessionManager.executeWithSessionLock(_.update(
             Document.Blobs.empty,
             List[Document.Edit_Text](
-                Document.Node.Name(file.getName) ->
-                    Document.Node.Edits(List(
-                        Text.Edit.insert(0, initialisationBlock + text))),
-                Document.Node.Name(file.getName) ->
-                    Perspective.createDummy),
-            "coq")
+                nodeName -> Document.Node.Edits(List(
+                    Text.Edit.insert(0, initialisationBlock + text))),
+                nodeName -> Perspective.createDummy),
+            "coq"))
       case _ =>
     }
   }
@@ -276,8 +258,8 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   import org.eclipse.core.resources.IFile
   protected[ui] def getFile() : Option[IFile] =
     TryCast[IFileEditorInput](getEditorInput).map(_.getFile)
-  protected[ui] def getName() : Option[String] =
-    getFile.map(_.getName)
+  protected[ui] def getNodeName() =
+    getFile.map(file => Document.Node.Name(file.getName))
   protected[ui] var lastDocument : String = ""
 
   protected[ui] var ibLength : Int = 0
@@ -457,11 +439,12 @@ private class PIDEReconcilingStrategy(
                else "")
         }
     }
-    editor.getName.foreach(name => editor.session.update(
-        Document.Blobs.empty,
-        List[Document.Edit_Text](
-            Document.Node.Name(name) -> edits,
-            Document.Node.Name(name) -> Perspective.createDummy), "coq"))
+    editor.getNodeName.foreach(nodeName =>
+      SessionManager.executeWithSessionLock(_.update(
+          Document.Blobs.empty,
+          List[Document.Edit_Text](
+              nodeName -> edits,
+              nodeName -> Perspective.createDummy), "coq")))
   }
 
   private var doc : Option[IDocument] = None
