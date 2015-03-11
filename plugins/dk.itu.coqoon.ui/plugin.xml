@@ -157,7 +157,7 @@
          </contentTypeBinding>
       </editor>
       <editor
-            class="dk.itu.coqoon.ui.PIDECoqEditor"
+            class="dk.itu.coqoon.ui.pide.PIDECoqEditor"
             contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
             default="true"
             extensions="v"

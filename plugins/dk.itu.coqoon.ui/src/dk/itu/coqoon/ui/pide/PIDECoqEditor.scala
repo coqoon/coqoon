@@ -1,6 +1,7 @@
-package dk.itu.coqoon.ui
+package dk.itu.coqoon.ui.pide
 
-import dk.itu.coqoon.ui.pide.SessionManager
+import dk.itu.coqoon.ui.{
+  BaseCoqEditor, CoqGoalsContainer, CoqoonUIPreferences, ManifestIdentifiers}
 
 class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   import org.eclipse.jface.text.reconciler.MonoReconciler
