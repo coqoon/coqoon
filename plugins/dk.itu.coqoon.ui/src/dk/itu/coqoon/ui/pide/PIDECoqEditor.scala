@@ -33,15 +33,17 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   import dk.itu.coqoon.ui.utilities.UIUtils.asyncExec
   private def caretPing() =
     asyncExec {
-      val caret = getViewer.getTextWidget.getCaretOffset
-      val commandResultsAndMarkup = CommandsLock synchronized {
-        val c = commands.find(
-            q => (caret >= q._1 && caret <= (q._1 + q._2.length)))
-        lastSnapshot.flatMap(snapshot => c.map(
-            c => (c,
-                PIDECoqEditor.extractResults(snapshot, c._2),
-                PIDECoqEditor.extractMarkup(snapshot, c._2))))
-      }
+      val caret = Option(getViewer).map(_.getTextWidget).filter(
+          text => !text.isDisposed).map(_.getCaretOffset)
+      val commandResultsAndMarkup = caret.flatMap(caret =>
+        CommandsLock synchronized {
+          val c = commands.find(
+              q => (caret >= q._1 && caret <= (q._1 + q._2.length)))
+          lastSnapshot.flatMap(snapshot => c.map(
+              c => (c,
+                  PIDECoqEditor.extractResults(snapshot, c._2),
+                  PIDECoqEditor.extractMarkup(snapshot, c._2))))
+        })
       commandResultsAndMarkup match {
         case Some(((offset, command), results, markup)) =>
           val sameCommand = lastCommand.contains(command)
