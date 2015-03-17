@@ -4,10 +4,7 @@ import dk.itu.coqoon.ui.{
   BaseCoqEditor, CoqGoalsContainer, CoqoonUIPreferences, ManifestIdentifiers}
 
 class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
-  import org.eclipse.jface.text.reconciler.MonoReconciler
-  private val reconciler =
-    new MonoReconciler(new PIDEReconcilingStrategy(this), true)
-  reconciler.setDelay(200)
+  private val reconciler = new PIDEReconciler(this)
 
   import org.eclipse.swt.widgets.Composite
   import org.eclipse.jface.text.source.IVerticalRuler
@@ -245,7 +242,6 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
         ibLength = initialisationBlock.length
 
         val text = TotalReader.read(file.getContents)
-        lastDocument = text
         SessionManager.executeWithSessionLock(_.update(
             Document.Blobs.empty,
             List[Document.Edit_Text](
@@ -263,7 +259,6 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
     TryCast[IFileEditorInput](getEditorInput).map(_.getFile)
   protected[ui] def getNodeName() =
     getFile.map(file => Document.Node.Name(file.getName))
-  protected[ui] var lastDocument : String = ""
 
   protected[ui] var ibLength : Int = 0
 
@@ -397,60 +392,27 @@ private object Perspective {
         Text.Perspective.full, Document.Node.Overlays.empty)
 }
 
-import org.eclipse.jface.text.reconciler.IReconcilingStrategy
+import dk.itu.coqoon.ui.EventReconciler
 
-private class PIDEReconcilingStrategy(
-    editor : PIDECoqEditor) extends IReconcilingStrategy {
-  import org.eclipse.jface.text.{Region, IRegion, IDocument}
-  import org.eclipse.jface.text.reconciler.DirtyRegion
-
+private class PIDEReconciler(editor : PIDECoqEditor) extends EventReconciler {
+  import EventReconciler._
   import org.eclipse.core.resources.{IMarker,IResource}
 
-  override def reconcile(r : IRegion) : Unit = ???
-
-  override def reconcile(dr : DirtyRegion, r : IRegion) = {
+  override def reconcile(events : List[DecoratedEvent]) = {
     import isabelle._
 
-    val edits : Document.Node.Edits[Text.Edit, Text.Perspective] =
-        dr.getType match {
-      case DirtyRegion.INSERT =>
-        val text = dr.getText
-        try {
-          Document.Node.Edits(List(Text.Edit.insert(
-              editor.ibLength + dr.getOffset, text)))
-        } finally {
-          editor.lastDocument =
-              editor.lastDocument.substring(0, dr.getOffset) +
-              text +
-              (if (dr.getOffset < editor.lastDocument.length)
-                 editor.lastDocument.substring(dr.getOffset)
-               else "")
-        }
-      case DirtyRegion.REMOVE =>
-        /* The region doesn't actually carry the deleted text, so retrieve it
-         * from the last known state of the document */
-        try {
-          Document.Node.Edits(List(Text.Edit.remove(
-              editor.ibLength + dr.getOffset,
-              editor.lastDocument.substring(
-                  dr.getOffset, dr.getOffset + dr.getLength))))
-        } finally {
-          editor.lastDocument =
-              editor.lastDocument.substring(0, dr.getOffset) +
-              (if (dr.getOffset + dr.getLength < editor.lastDocument.length)
-                 editor.lastDocument.substring(dr.getOffset + dr.getLength)
-               else "")
-        }
+    var edits : List[Text.Edit] = List()
+    for (DecoratedEvent(ev, pre) <- events) {
+      if (ev.fLength > 0)
+        edits :+= Text.Edit.remove(editor.ibLength + ev.fOffset, pre)
+      if (!ev.fText.isEmpty)
+        edits :+= Text.Edit.insert(editor.ibLength + ev.fOffset, ev.fText)
     }
     editor.getNodeName.foreach(nodeName =>
       SessionManager.executeWithSessionLock(_.update(
           Document.Blobs.empty,
           List[Document.Edit_Text](
-              nodeName -> edits,
+              nodeName -> Document.Node.Edits(edits),
               nodeName -> Perspective.createDummy), "coq")))
   }
-
-  private var doc : Option[IDocument] = None
-  override def setDocument(newDocument : IDocument) =
-    doc = Option(newDocument)
 }
