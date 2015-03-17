@@ -80,15 +80,15 @@ trait CoqTopIdeSlave_v20120710 extends CoqTopIdeSlave {
   def interp(raw : raw, verbose : verbose, string : String) : value[String]
   def rewind(steps : Int) : value[Int]
   def goals : value[Option[goals]]
-  def hints : value[Option[Pair[List[hint], hint]]]
+  def hints : value[Option[(List[hint], hint)]]
   def status : value[status]
   def inloadpath(dir : String) : value[Boolean]
   def mkcases(inductive : String) : value[List[List[String]]]
   def evars : value[Option[List[evar]]]
   def search(sf : search_flags) : value[List[coq_object[String]]]
-  def get_options : value[List[Pair[option_name, option_state]]]
+  def get_options : value[List[(option_name, option_state)]]
   def set_options(
-      options : List[Pair[option_name, option_value]]) : value[Unit]
+      options : List[(option_name, option_value)]) : value[Unit]
   def quit : value[Unit]
   /* ? */ def about : value[coq_info]
 

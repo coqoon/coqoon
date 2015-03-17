@@ -116,7 +116,7 @@ class OptionCache(ct : CoqTopIdeSlave_v20120710) {
     ct.set_options(List((name, value))) match {
       case Good(_) =>
         val os = get(name).get
-        optionCache = optionCache + Pair(name, option_state(
+        optionCache = optionCache + (name -> option_state(
             os.opt_sync, os.opt_depr, os.opt_name, value))
       case _ =>
     }
@@ -198,9 +198,9 @@ private class CoqTopIdeSlaveImpl(
   private def unwrapValue[A](e : Elem, f : Elem => A) : CoqTypes.value[A] = {
     e.attribute("val") match {
       case Some(Seq(Text("fail"))) => {
-        CoqTypes.Fail(Pair(
-            Pair(e.attribute("loc_s"), e.attribute("loc_e")) match {
-              case Pair(Some(Seq(Text(a))), Some(Seq(Text(b)))) =>
+        CoqTypes.Fail((
+            (e.attribute("loc_s"), e.attribute("loc_e")) match {
+              case (Some(Seq(Text(a))), Some(Seq(Text(b)))) =>
                 Some(a.toInt, b.toInt)
               case _ => None
             }, e.text))
@@ -235,14 +235,14 @@ private class CoqTopIdeSlaveImpl(
     childElements(e).map(f).toList
   }
 
-  private def wrapPair[A, B](a : Pair[A, B], f : A => Elem, g : B => Elem) = {
+  private def wrapPair[A, B](a : (A, B), f : A => Elem, g : B => Elem) = {
     val children = List(f(a._1), g(a._2))
     Elem(null, "pair", Null, scala.xml.TopScope, true, children : _*)
   }
 
   private def unwrapPair[A, B](e : Elem, f : Elem => A, g : Elem => B) = {
     val ce = childElements(e)
-    Pair(f(ce(0)), g(ce(1)))
+    (f(ce(0)), g(ce(1)))
   }
 
   private def unwrapHint(a : Elem) = {
@@ -422,13 +422,13 @@ private class CoqTopIdeSlaveImpl(
               unwrapOptionState)))
 
   private def wrapOptions(
-      options : List[Pair[CoqTypes.option_name, CoqTypes.option_value]]) :
+      options : List[(CoqTypes.option_name, CoqTypes.option_value)]) :
           List[Elem] = {
     options.map(wrapPair(_, wrapOptionName, wrapOptionValue))
   }
 
   private def wrapSetOptions(
-      options : List[Pair[CoqTypes.option_name, CoqTypes.option_value]]) :
+      options : List[(CoqTypes.option_name, CoqTypes.option_value)]) :
           Elem = {
     val children = wrapOptions(options)
     Elem(null, "call",
@@ -436,7 +436,7 @@ private class CoqTopIdeSlaveImpl(
   }
 
   override def set_options(
-      options : List[Pair[CoqTypes.option_name, CoqTypes.option_value]]) = {
+      options : List[(CoqTypes.option_name, CoqTypes.option_value)]) = {
     send(
       wrapSetOptions(options),
       _ => ())
@@ -481,13 +481,13 @@ private class ExceptionalCoqTopIdeSlave_v20120710(
   override def evars = check(base.evars)
   override def search(sf : search_flags) = check(base.search(sf))
   override def get_options = check(base.get_options)
-  override def set_options(options : List[Pair[option_name, option_value]]) =
+  override def set_options(options : List[(option_name, option_value)]) =
     check(base.set_options(options))
   override def quit = check(base.quit)
   override def about = check(base.about)
 }
 private class CoqFail(
-    val ep : Pair[CoqTypes.location, String]) extends Exception
+    val ep : (CoqTypes.location, String)) extends Exception
 
 private class OptionalCoqTopIdeSlave_v20120710(
     base : CoqTopIdeSlave_v20120710) extends CoqTopIdeSlave_v20120710 {

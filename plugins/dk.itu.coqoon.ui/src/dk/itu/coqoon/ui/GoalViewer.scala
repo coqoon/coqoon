@@ -232,7 +232,7 @@ class RichGoalPresenter extends SashGoalPresenter {
 object RichGoalPresenter {
   private def handleTokens(
       input_ : String, callback : Substring => Unit) = {
-    val input = input_ :+ '\0'
+    val input = input_ :+ '\u0000'
     var contextIdentifiers : Seq[Substring] = Seq()
     var (offset, detectionStart) = (0, Option.empty[Int])
     while (offset < input.length) {

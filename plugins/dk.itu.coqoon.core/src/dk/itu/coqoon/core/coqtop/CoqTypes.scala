@@ -22,10 +22,10 @@ object CoqTypes {
 
   case class goals(
     fg_goals : List[goal],
-    bg_goals : List[Pair[List[goal], List[goal]]])
+    bg_goals : List[(List[goal], List[goal])])
 
   case class hint(
-    fg_goals : List[Pair[String, String]])
+    fg_goals : List[(String, String)])
 
   type option_name = List[String]
 
@@ -54,7 +54,7 @@ object CoqTypes {
     value : List[String]) extends search_constraint
   case class Include_Blacklist() extends search_constraint
 
-  type search_flags = List[Pair[search_constraint, Boolean]]
+  type search_flags = List[(search_constraint, Boolean)]
 
   case class coq_object[A](
     coq_object_prefix : List[String],
@@ -78,10 +78,10 @@ object CoqTypes {
     message_level : message_level,
     message_content : String)
 
-  type location = Option[Pair[Int, Int]]
+  type location = Option[(Int, Int)]
 
   abstract class value[A]
   case class Good[A](value : A) extends value[A]
   case class Unsafe[A](value : A) extends value[A]
-  case class Fail[A](value : Pair[location, String]) extends value[A]
+  case class Fail[A](value : (location, String)) extends value[A]
 }

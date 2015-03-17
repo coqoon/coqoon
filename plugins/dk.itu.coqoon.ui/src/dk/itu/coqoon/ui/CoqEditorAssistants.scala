@@ -68,7 +68,7 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
       val (newStart, sentence) = quickScanBack(d, prStart)
       val whitespace = getHelpfulLeadingWhitespace(sentence)
       prStart = sentence match {
-        case DefinitionSentence(_) | ProofStartSentence(_) =>
+        case DefinitionSentence(_, _, _, _) | ProofStartSentence(_) =>
           newStart /* keep going */
         case AssertionSentence(_, _, _) if qedCount == 0 =>
           containingAssertion = Some(sentence)
@@ -100,7 +100,7 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
     val sentence = d.get(sentenceInfo.getOffset, sentenceInfo.getLength)
 
     sentence match {
-      case DefinitionSentence(_) =>
+      case DefinitionSentence(_, _, _, _) =>
         indent.customizeDocumentCommand(d, c)
       case AssertionSentence(keyword, identifier, body) =>
         /* XXX: don't hard-code two spaces */

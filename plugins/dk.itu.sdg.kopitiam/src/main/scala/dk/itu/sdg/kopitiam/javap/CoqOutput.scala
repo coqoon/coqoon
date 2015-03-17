@@ -17,7 +17,7 @@ class CoqOutput (jes : JavaEditorState, doc : IDocument) extends VisitingAST.Rep
   var deps : Set[String] = Set[String]()
   var ret : String = "`0"
 
-  private def extractString (x : Pair[Initializer, String]) : String = {
+  private def extractString (x : (Initializer, String)) : String = {
     //Console.println("string is " + x._2)
     val idx = x._2.indexOf(":")
     val r = x._2.substring(idx + 1, x._2.length - 2).trim
@@ -55,9 +55,9 @@ class CoqOutput (jes : JavaEditorState, doc : IDocument) extends VisitingAST.Rep
           }
         }
 
-        var quant : Option[Pair[Initializer, String]] = None;
-        var pre : Option[Pair[Initializer, String]] = None;
-        var post : Option[Pair[Initializer, String]] = None;
+        var quant : Option[(Initializer, String)] = None;
+        var pre : Option[(Initializer, String)] = None;
+        var post : Option[(Initializer, String)] = None;
 
         for (s <- specs) {
           //adjust pointers!
