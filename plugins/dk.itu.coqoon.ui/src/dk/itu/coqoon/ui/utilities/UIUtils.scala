@@ -82,7 +82,7 @@ class SupersedableTask(delay : Long) {
 
   import java.util.TimerTask
 
-  var last : Option[TimerTask] = None
+  private var last : Option[TimerTask] = None
 
   def schedule(f : => Unit) : Unit = lock synchronized {
     last.map(_.cancel)
