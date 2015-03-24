@@ -71,6 +71,8 @@ class CacheSlot[A](constructor : () => A) {
   }
   def set(value : Option[A]) = lock synchronized (slot = value)
   def clear() = set(None)
+
+  def asOption() = lock synchronized slot
 }
 object CacheSlot {
   def apply[A](constructor : => A) = new CacheSlot(() => constructor)
