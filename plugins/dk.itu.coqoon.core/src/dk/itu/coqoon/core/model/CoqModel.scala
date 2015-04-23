@@ -343,7 +343,7 @@ object CoqStandardLibrary {
     import IncompleteLoadPathEntry.Variable
     override def getIncompleteLoadPath =
       if (id == ID) {
-        CoqProgram("coqtop").run(Seq("-where")).readAll match {
+        CoqProgram.run(Seq("-where")).readAll match {
           case (0, _) =>
             Right(Seq(
                 IncompleteLoadPathEntry(
@@ -361,7 +361,7 @@ object CoqStandardLibrary {
 
     override def getValue(v : Variable) =
       if (v == CoqLocation) {
-        CoqProgram("coqtop").run(Seq("-where")).readAll match {
+        CoqProgram.run(Seq("-where")).readAll match {
           case (0, path) => Some(path.trim)
           case _ => None
         }

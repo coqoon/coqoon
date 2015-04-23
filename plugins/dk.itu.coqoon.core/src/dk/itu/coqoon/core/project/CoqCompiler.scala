@@ -65,7 +65,7 @@ class CoqCompilerRunner(source : IFile,
     val location = source.getLocation.removeFileExtension
     val outputFile = location.addFileExtension("vo").toFile
 
-    val coqc = CoqProgram("coqtop")
+    val coqc = CoqProgram
     if (!coqc.check)
       fail(new Status(IStatus.ERROR,
           ManifestIdentifiers.PLUGIN, "Couldn't find the coqtop program"))

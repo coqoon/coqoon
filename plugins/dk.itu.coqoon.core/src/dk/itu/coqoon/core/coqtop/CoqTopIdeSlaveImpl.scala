@@ -144,7 +144,7 @@ private class CoqTopIdeSlaveImpl(
     import dk.itu.coqoon.core.CoqoonPreferences
 
     if (pr == None) {
-      val ct = CoqProgram("coqtop")
+      val ct = CoqProgram
       if (!ct.check)
         throw new java.io.IOException("Couldn't find the coqtop program")
       pr = Option(ct.run(args ++ Seq("-ideslave")))

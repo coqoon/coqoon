@@ -50,7 +50,7 @@ class CoqoonPreferencesPage
 
   override def performOk = {
     super.performOk()
-    if (!CoqProgram("coqtop").check) {
+    if (!CoqProgram.check) {
       setErrorMessage("Can't find the coqtop program")
       false
     } else true

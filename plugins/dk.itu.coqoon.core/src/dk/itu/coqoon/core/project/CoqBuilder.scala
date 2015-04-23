@@ -77,7 +77,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
 
   private def buildFiles(files : Set[IFile],
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
-    if (!CoqProgram("coqtop").check) {
+    if (!CoqProgram.check) {
       createResourceErrorMarker(getProject, "Can't find the Coq compiler")
       return Array()
     }

@@ -25,7 +25,7 @@ trait CoqProgram {
   def run(args : Seq[String],
       start : ProcessBuilder => Process = (a => a.start)) : CoqProgramInstance
 }
-object CoqProgram {
+object CoqProgram extends CoqProgram {
   private class ProgramImpl(name : String) extends CoqProgram {
     override def path : String = CoqoonPreferences.CoqPath.get match {
       case Some(path) => path + java.io.File.separator + name
@@ -43,10 +43,16 @@ object CoqProgram {
       new CoqProgramInstanceImplWindows(path +: args, start)
   }
 
-  def apply(name : String) : CoqProgram =
+  private lazy val program : CoqProgram =
     if (PlatformUtilities.isWindows) {
-      new ProgramImplWindows(name)
-    } else new ProgramImpl(name)
+      new ProgramImplWindows("coqtop")
+    } else new ProgramImpl("coqtop")
+
+  override def path = program.path
+  override def check = program.check
+  override def run(args : Seq[String],
+      start : ProcessBuilder => Process = (a => a.start)) =
+    program.run(args, start)
 }
 
 trait CoqProgramInstance {
