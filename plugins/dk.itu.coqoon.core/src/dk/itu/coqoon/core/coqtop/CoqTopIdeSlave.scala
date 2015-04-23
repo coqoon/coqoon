@@ -53,6 +53,15 @@ object CoqProgram extends CoqProgram {
   override def run(args : Seq[String],
       start : ProcessBuilder => Process = (a => a.start)) =
     program.run(args, start)
+
+  def version() = run(Seq("-v")).readAll match {
+    case (0, Version(v)) =>
+      Some(v)
+    case _ =>
+      None
+  }
+
+  private final val Version = raw"version (.+) ".r.unanchored
 }
 
 trait CoqProgramInstance {
