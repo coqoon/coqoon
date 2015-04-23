@@ -84,9 +84,17 @@ class CoqCompilerRunner(source : IFile,
             "\"" + i + "\" is not a valid part of a Coq qualified name"))
     })
 
+    val path = location.removeLastSegments(1).toOSString
+    val cd = coqdir.mkString(".")
+
     val owndirArguments =
-      Seq("-I", location.removeLastSegments(1).toOSString) ++
-          (if (coqdir.length > 0) Seq("-as", coqdir.mkString(".")) else Seq())
+      if (coqdir.isEmpty) {
+        Seq("-I", path)
+      } else {
+        if (coqc.version.exists(_.startsWith("8.4"))) {
+          Seq("-I", path, "-as", cd)
+        } else Seq("-Q", path, cd)
+      }
 
     val cp = ICoqModel.toCoqProject(source.getProject)
     val flp = cp.getLoadPath.flatMap(_.asArguments)

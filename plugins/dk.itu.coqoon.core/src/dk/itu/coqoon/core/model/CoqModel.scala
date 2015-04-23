@@ -102,10 +102,18 @@ final case class LoadPathEntry(
       " as " + coqdir.mkString(".")
     } else "") + "."
 
-  def asArguments : Seq[String] =
+  def asArguments : Seq[String] = {
+    val cd = coqdir.mkString(".")
     if (!alwaysExpand && CoqoonPreferences.EnforceNamespaces.get) {
-      Seq("-I", path.toOSString) ++ coqdir.toSeq.flatMap(cd => Seq("-as", cd))
-    } else Seq("-R", path.toOSString, coqdir.mkString("."))
+      if (coqdir.isEmpty) {
+        Seq("-I", path.toOSString)
+      } else {
+        if (CoqProgram.version.exists(_.startsWith("8.4"))) {
+          Seq("-I", path.toOSString, "-as", cd)
+        } else Seq("-Q", path.toOSString, cd)
+      }
+    } else Seq("-R", path.toOSString, cd)
+  }
 
   import java.io.File
 
