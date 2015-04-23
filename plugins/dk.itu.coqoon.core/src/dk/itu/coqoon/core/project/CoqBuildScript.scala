@@ -45,7 +45,7 @@ object CoqBuildScript {
       }
   }
 
-  final val currentVersion = 6
+  final val currentVersion = 7
   private final val Version = """^_configure_coqoon_version = (\d+)$""".r
 
   def extractScriptVersion(project : IProject) : Option[Int] = {

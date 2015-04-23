@@ -11,7 +11,7 @@
 # Manipulating this project using Coqoon may cause this file to be overwritten
 # without warning: any local changes you may have made will not be preserved.
 
-_configure_coqoon_version = 6
+_configure_coqoon_version = 7
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -40,6 +40,12 @@ parser.add_argument(
     dest = "persevere",
     help = "generate a Makefile even if some dependencies could not be " +
            "resolved")
+parser.add_argument(
+    "-Q", "--use-Q",
+    action = "store_true",
+    dest = "use_q",
+    help = "use the -Q option to pass load path information to Coq (version " +
+           "8.5 or later)")
 
 args = parser.parse_args()
 
@@ -492,8 +498,13 @@ override _COQCMD = \\
             # /that/ mass of flags...)
             if not (coqdir, location) in output_so_far:
                 output_so_far.append((coqdir, location))
-                file.write(u"""\
+                if not args.use_q:
+                    file.write(u"""\
 override COQFLAGS += -I "%s" -as "%s"
+""" % (location, coqdir))
+                else:
+                    file.write(u"""\
+override COQFLAGS += -Q "%s" "%s"
 """ % (location, coqdir))
 
         for srcdir, bindir in source_directories:
