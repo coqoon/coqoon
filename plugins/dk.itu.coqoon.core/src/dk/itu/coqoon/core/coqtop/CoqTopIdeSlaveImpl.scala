@@ -145,8 +145,12 @@ private class CoqTopIdeSlaveImpl(
 
     if (pr == None) {
       val ct = CoqProgram
-      if (!ct.check)
+      if (!ct.check) {
         throw new java.io.IOException("Couldn't find the coqtop program")
+      } else if (!ct.version.exists(_.startsWith("8.4"))) {
+        throw new java.io.IOException(
+            "The ideslave-based editor is only compatible with Coq 8.4")
+      }
       pr = Option(ct.run(args ++ Seq("-ideslave")))
     }
     pr.get.stdin.write(n.toString())
