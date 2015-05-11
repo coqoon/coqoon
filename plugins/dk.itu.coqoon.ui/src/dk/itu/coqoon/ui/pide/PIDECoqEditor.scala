@@ -16,6 +16,18 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
     viewer
   }
 
+  override protected def dispose() = {
+    import isabelle.Document
+    getNodeName.foreach(nodeName =>
+      SessionManager.executeWithSessionLock(_.update(
+          Document.Blobs.empty,
+          List[Document.Edit_Text](
+              nodeName -> Document.Node.Clear(),
+              nodeName -> Document.Node.no_perspective_text),
+          "coq")))
+    super.dispose
+  }
+
   def getViewer = super.getSourceViewer
 
   import isabelle.{XML, Text, Command, Session, Protocol, Document}
