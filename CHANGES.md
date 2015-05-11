@@ -1,3 +1,11 @@
+Coqoon 0.5.8
+============
+
+11th May 2015
+
+This minor release changes the way PIDE sessions are created and managed in an
+attempt to reduce resource consumption and adds support for Coq 8.5beta2.
+
 Coqoon 0.5.7
 ============
 
