@@ -1,3 +1,11 @@
+Coqoon 0.5.8.1
+==============
+
+11th May 2015
+
+This exceedingly minor release fixes the build process for the embedded PIDE
+snapshot.
+
 Coqoon 0.5.8
 ============
 
