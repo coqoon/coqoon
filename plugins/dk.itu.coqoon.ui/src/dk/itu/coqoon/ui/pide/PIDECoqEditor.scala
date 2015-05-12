@@ -16,15 +16,10 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
     viewer
   }
 
+  private[pide] val session = new dk.itu.coqoon.ui.pide.SessionManager
+
   override protected def dispose() = {
-    import isabelle.Document
-    getNodeName.foreach(nodeName =>
-      SessionManager.executeWithSessionLock(_.update(
-          Document.Blobs.empty,
-          List[Document.Edit_Text](
-              nodeName -> Document.Node.Clear(),
-              nodeName -> Document.Node.no_perspective_text),
-          "coq")))
+    session.stop
     super.dispose
   }
 
@@ -215,7 +210,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
 
   import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
 
-  SessionManager.executeWithSessionLock(session =>
+  session.executeWithSessionLock(session =>
     if (session.phase == Session.Failed) {
       dk.itu.coqoon.ui.utilities.EclipseConsole.err.println(
           session.syslog_content.trim)
@@ -254,7 +249,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
         ibLength = initialisationBlock.length
 
         val text = TotalReader.read(file.getContents)
-        SessionManager.executeWithSessionLock(_.update(
+        session.executeWithSessionLock(_.update(
             Document.Blobs.empty,
             List[Document.Edit_Text](
                 nodeName -> Document.Node.Edits(List(
@@ -421,7 +416,7 @@ private class PIDEReconciler(editor : PIDECoqEditor) extends EventReconciler {
         edits :+= Text.Edit.insert(editor.ibLength + ev.fOffset, ev.fText)
     }
     editor.getNodeName.foreach(nodeName =>
-      SessionManager.executeWithSessionLock(_.update(
+      editor.session.executeWithSessionLock(_.update(
           Document.Blobs.empty,
           List[Document.Edit_Text](
               nodeName -> Document.Node.Edits(edits),

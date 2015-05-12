@@ -3,7 +3,7 @@ package dk.itu.coqoon.ui.pide
 import dk.itu.coqoon.core.CoqoonPreferences
 import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
 
-object SessionManager extends dk.itu.coqoon.pide.SessionManager {
+class SessionManager extends dk.itu.coqoon.pide.SessionManager {
   import isabelle.Session
   override def start =
     executeWithSessionLock(session => {

@@ -11,7 +11,6 @@ class Activator extends AbstractUIPlugin {
   
   override def stop(context : BundleContext) = {
     try {
-      dk.itu.coqoon.ui.pide.SessionManager.stop
       Activator.instance = null
     } finally {
       super.stop(context)
