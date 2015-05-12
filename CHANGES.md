@@ -1,3 +1,10 @@
+Coqoon 0.5.8.2
+==============
+
+12th May 2015
+
+This minor release restores the old way of creating PIDE sessions.
+
 Coqoon 0.5.8.1
 ==============
 
