@@ -2,9 +2,10 @@ package dk.itu.coqoon.pide
 
 abstract class SessionManager {
   import isabelle.Session
+  import dk.itu.coqoon.core.utilities.CacheSlot
 
   private final val SessionLock = new Object
-  private lazy val session = {
+  private lazy val session = CacheSlot {
     import isabelle.{Coq_Syntax, Coq_Resources}
     val syntax = new Coq_Syntax
     val resources = new Coq_Resources(syntax)
@@ -16,14 +17,19 @@ abstract class SessionManager {
 
   def start() : Session.Phase
   def stop() =
-    executeWithSessionLock(session => {
-      session.stop
-    })
+    SessionLock synchronized {
+      session.asOption match {
+        case Some(s) =>
+          s.stop
+          session.clear
+        case None =>
+      }
+    }
 
   def getPhase() = executeWithSessionLock(_.phase)
     
   def executeWithSessionLock[A](f : Session => A) =
     SessionLock synchronized {
-      f(session)
+      f(session.get)
     }
 }
