@@ -17,7 +17,6 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   }
 
   private[pide] val session = new dk.itu.coqoon.ui.pide.SessionManager
-  session.start
 
   override protected def dispose() = {
     session.stop
@@ -238,8 +237,24 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   import org.eclipse.ui.{IEditorInput, IFileEditorInput}
   override def doSetInput(input : IEditorInput) = {
     super.doSetInput(input)
-    input match {
-      case f : IFileEditorInput =>
+    checkedUpdate(List())
+  }
+
+  import dk.itu.coqoon.ui.utilities.UIUtils.exec
+  /* XXX: doing this synchronously on the UI thread makes me a bit nervous, but
+   * we /do/ need to be able to access the text widget... */
+  private def generateInitialEdits() = exec {
+    import dk.itu.coqoon.core.utilities.TryCast
+    val fi = TryCast[IFileEditorInput](getEditorInput)
+    val text =
+      Option(getSourceViewer).map(_.getTextWidget).map(_.getText) match {
+        case Some(text) =>
+          Some(text)
+        case _ =>
+          fi.map(fi => TotalReader.read(fi.getFile.getContents))
+      }
+    fi match {
+      case Some(f) =>
         val file = f.getFile
         val nodeName = getNodeName.get
 
@@ -249,15 +264,14 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
           cp.getLoadPath.map(_.asCommand).mkString("", "\n", "\n")
         ibLength = initialisationBlock.length
 
-        val text = TotalReader.read(file.getContents)
-        session.executeWithSessionLock(_.update(
-            Document.Blobs.empty,
-            List[Document.Edit_Text](
-                nodeName -> Document.Node.Edits(List(
-                    Text.Edit.insert(0, initialisationBlock + text))),
-                nodeName -> Perspective.createDummy),
-            "coq"))
+        List[Document.Edit_Text](
+            nodeName -> Document.Node.Clear(),
+            nodeName -> Document.Node.Edits(List(
+                Text.Edit.insert(0,
+                    initialisationBlock + text.getOrElse("")))),
+            nodeName -> Perspective.createDummy)
       case _ =>
+        List()
     }
   }
 
@@ -327,6 +341,24 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   private object UpdateErrorsJob {
     val rule = new dk.itu.coqoon.core.utilities.UniqueRule
   }
+
+  private[pide] def checkedUpdate(
+      edits_ : List[isabelle.Document.Edit_Text]) =
+    session.executeWithSessionLock(s => {
+      val submitInitialEdits =
+        if (s.phase != Session.Ready) {
+          session.start
+          true
+        } else false
+      if (s.phase == Session.Ready) {
+        val edits =
+          if (submitInitialEdits) {
+            generateInitialEdits ++ edits_
+          } else edits_
+        s.update(Document.Blobs.empty, edits, "coq")
+      }
+      s.phase
+    })
 }
 object PIDECoqEditor {
   import isabelle._
@@ -417,10 +449,9 @@ private class PIDEReconciler(editor : PIDECoqEditor) extends EventReconciler {
         edits :+= Text.Edit.insert(editor.ibLength + ev.fOffset, ev.fText)
     }
     editor.getNodeName.foreach(nodeName =>
-      editor.session.executeWithSessionLock(_.update(
-          Document.Blobs.empty,
+      editor.checkedUpdate(
           List[Document.Edit_Text](
               nodeName -> Document.Node.Edits(edits),
-              nodeName -> Perspective.createDummy), "coq")))
+              nodeName -> Perspective.createDummy)))
   }
 }
