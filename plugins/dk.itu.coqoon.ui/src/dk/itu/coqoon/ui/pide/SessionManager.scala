@@ -27,6 +27,4 @@ class SessionManager extends dk.itu.coqoon.pide.SessionManager {
     session.all_messages += Session.Consumer("Coqoon")(q =>
       CoqoonDebugPreferences.PrintPIDETraffic.log(s"? ${q}"))
   })
-
-  start()
 }

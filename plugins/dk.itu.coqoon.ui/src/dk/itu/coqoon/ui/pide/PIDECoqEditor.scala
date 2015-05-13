@@ -17,6 +17,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   }
 
   private[pide] val session = new dk.itu.coqoon.ui.pide.SessionManager
+  session.start
 
   override protected def dispose() = {
     session.stop
