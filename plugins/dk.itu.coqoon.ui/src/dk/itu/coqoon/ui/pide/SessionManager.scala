@@ -11,7 +11,7 @@ class SessionManager extends dk.itu.coqoon.pide.SessionManager {
           CoqoonPreferences.CoqPath.get match {
             case Some(path) => path + java.io.File.separator + "coqtop"
             case _ => "coqtop"
-          }, Nil)
+          }, Seq("-async-queries-always-delegate"))
       while (!session.is_ready && session.phase != Session.Failed)
         Thread.sleep(500)
       session.phase
