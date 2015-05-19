@@ -11,7 +11,7 @@
 # Manipulating this project using Coqoon may cause this file to be overwritten
 # without warning: any local changes you may have made will not be preserved.
 
-_configure_coqoon_version = 7
+_configure_coqoon_version = 8
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -41,11 +41,10 @@ parser.add_argument(
     help = "generate a Makefile even if some dependencies could not be " +
            "resolved")
 parser.add_argument(
-    "-Q", "--use-Q",
+    "-Q", "--require-qualification",
     action = "store_true",
-    dest = "use_q",
-    help = "use the -Q option to pass load path information to Coq (version " +
-           "8.5 or later)")
+    dest = "require_qualification",
+    help = "require that library names be fully qualified (Coq 8.5+ only)")
 
 args = parser.parse_args()
 
@@ -363,11 +362,19 @@ for srcdir, bindir in source_directories:
                 ids = extract_dependency_identifiers(file)
             to_be_resolved[(str(sf), str(bf))] = ids
 
-def expand_load_path(alp_dirs, configuration):
+def resolve_load_path(alp_dirs, configuration):
+    # This method produces two sequences of (coqdir, resolved directory) pairs:
+    # the first is not expanded, but the second is. (The second is used to
+    # resolve unqualified or partially-qualified names, and so will only be
+    # non-empty if we're not enforcing fully-qualified names.)
+    unexpanded_load_path = []
     def expand_pair(coqdir, directory):
         if not os.path.isdir(directory):
             warn("couldn't find directory \"%s\"" % directory)
             return []
+        unexpanded_load_path.append((coqdir, directory))
+        if args.require_qualification:
+            return [] # We don't actually need to do any expansion
         expansion = []
         base = Path(directory)
         for current, _, _ in os.walk(directory):
@@ -385,30 +392,31 @@ def expand_load_path(alp_dirs, configuration):
                 full = "%s.%s" % (coqdir, sub)
             expansion.append((full, current))
         return expansion
-    load_path = []
+    expanded_load_path = []
     for i in configuration:
         if i[0] == "SourceLoadPath":
             s, b = (i[1], i[2] if len(i) > 2 else default_output)
-            load_path.extend(expand_pair("", s))
-            load_path.extend(expand_pair("", b))
+            expanded_load_path.extend(expand_pair("", s))
+            expanded_load_path.extend(expand_pair("", b))
         elif i[0] == "DefaultOutput":
-            load_path.extend(expand_pair("", i[1]))
+            expanded_load_path.extend(expand_pair("", i[1]))
         elif i[0] == "ExternalLoadPath":
             directory = i[1]
             coqdir = i[2] if len(i) > 2 else ""
-            load_path.extend(expand_pair(coqdir, directory))
+            expanded_load_path.extend(expand_pair(coqdir, directory))
         elif i[0] == "AbstractLoadPath":
             alp_elements = alp_dirs.get(i[1])
             if alp_elements != None:
-                for d, cd, r in alp_elements:
+                # We should care about the third entry (recursive descent) in
+                # these tuples, but as of Coq 8.5, we seem not to have a
+                # choice...
+                for d, cd, _ in alp_elements:
                     if not os.path.isdir(d):
                         # Unresolved directory; skip it
                         warn("couldn't find directory \"%s\"" % d)
                         continue
-                    elif not r:
-                        load_path.append((cd, d))
                     else:
-                        load_path.extend(expand_pair(cd, d))
+                        expanded_load_path.extend(expand_pair(cd, d))
         elif i[0] == "ProjectLoadPath":
             pn = i[1]
             pn_var = "%s_PROJECT_PATH" % pn.upper()
@@ -421,7 +429,9 @@ def expand_load_path(alp_dirs, configuration):
             if path != None and path.isdir():
                 _, cfg = load_coq_project_configuration(path, str(path.append("_CoqProject")))
                 ads = substitute_variables(*structure_vars(load_vars(str(path.append("configure.coqoon.vars")))))
-                load_path.extend(expand_load_path(ads, cfg))
+                ulp, elp = resolve_load_path(ads, cfg)
+                unexpanded_load_path.extend(ulp)
+                expanded_load_path.extend(elp)
             else:
                 warning = """\
 the project "%s" could not be found; dependencies on it will not be resolved \
@@ -431,10 +441,10 @@ correctly""" % pn
 (either specify its path with the %s variable or specify the path to its \
 parent directory with the WORKSPACE variable)""" % (pn_var)
                 warn(warning)
-    return load_path
+    return (unexpanded_load_path, expanded_load_path)
 
-complete_load_path = expand_load_path( \
-    alp_directories, configuration) # sequence of (coqdir, resolved directory)
+unexpanded_load_path, complete_load_path = \
+    resolve_load_path(alp_directories, configuration)
 
 # Now that we know the names of all the .vo files we're going to create, we
 # can use those -- along with the Coq load path -- to calculate the rest of the
@@ -442,9 +452,19 @@ complete_load_path = expand_load_path( \
 for (sf, bf), identifiers in to_be_resolved.iteritems():
     for ident in identifiers:
         (libdir, _, libname) = ident.rpartition(".")
-        for coqdir, location in complete_load_path:
+
+        # If we require fully-qualified names, then only check the load path's
+        # top-level directories; otherwise, check all of them
+        lp = unexpanded_load_path if args.require_qualification \
+            else complete_load_path
+
+        for coqdir, location in lp:
+            # If we're looking for (say) "Coq.ZArith.ZArith", and this folder
+            # corresponds to "Coq", then drop the first part and look for
+            # "ZArith/ZArith.vo"
             adjusted = libdir if not libdir.startswith(coqdir) \
                 else libdir[len(coqdir):]
+
             p = Path(location)
             for i in adjusted.split("."):
                 p = p.append(i)
@@ -488,19 +508,16 @@ override _COQCMD = \\
 """ % (_configure_coqoon_version, gethostname(), formatdate(localtime = True)))
 
         output_so_far = []
-        # Coqoon itself actually passes -R options instead of -I ones, but this
-        # works too (and we've already generated these paths for the dependency
-        # resolver)
-        for coqdir, location in complete_load_path:
+        for coqdir, location in unexpanded_load_path:
             # There's no sense in generating the same flags over and over
             # again! (In particular, most projects will depend on the Coq
             # standard library, and we don't want to have multiple copies of
             # /that/ mass of flags...)
             if not (coqdir, location) in output_so_far:
                 output_so_far.append((coqdir, location))
-                if not args.use_q:
+                if not args.require_qualification:
                     file.write(u"""\
-override COQFLAGS += -I "%s" -as "%s"
+override COQFLAGS += -R "%s" "%s"
 """ % (location, coqdir))
                 else:
                     file.write(u"""\

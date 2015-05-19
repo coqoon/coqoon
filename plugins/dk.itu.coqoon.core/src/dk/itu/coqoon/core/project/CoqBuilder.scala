@@ -374,8 +374,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
     }
 
     for ((coqdir, location) <- completeLoadPath) {
-      /* If we're looking for "Utilities.Foo.Bar", and we're in the "Utilities"
-       * folder, then drop "Utilities" (this is approximately what Coq does) */
+      /* If we're looking for (say) "Coq.ZArith.ZArith", and this folder
+       * corresponds to "Coq", then drop the first part and look for
+       * "ZArith/ZArith.vo" */
       val adjusted =
         if (libdir.startsWith(coqdir)) {
           libdir.drop(coqdir.length)
