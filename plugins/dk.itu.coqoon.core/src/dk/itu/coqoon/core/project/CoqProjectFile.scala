@@ -65,7 +65,9 @@ object CoqProjectEntry {
     case "-custom" :: command :: deps :: target :: tail =>
       CustomEntry(command, deps, target) +: fromTokens(tail)
     case "-I" :: dir :: tail =>
-      IncludeEntry(dir) +: fromTokens(tail)
+      MLPathEntry(dir) +: fromTokens(tail)
+    case "-Q" :: physical :: logical :: tail =>
+      QualifiedRecursiveEntry(physical, logical) +: fromTokens(tail)
     case "-R" :: physical :: logical :: tail =>
       RecursiveEntry(physical, logical) +: fromTokens(tail)
     case name :: "=" :: value :: tail =>
@@ -105,8 +107,12 @@ case class CustomEntry(
   override def toTokens = Seq(
       "-custom", escape(command), escape(deps), escape(target))
 }
-case class IncludeEntry(dir : String) extends CoqProjectEntry {
-  override def toTokens = Seq("-I", escape(dir))
+case class MLPathEntry(physical : String) extends CoqProjectEntry {
+  override def toTokens = Seq("-I", escape(physical))
+}
+case class QualifiedRecursiveEntry(
+    physical : String, logical : String) extends CoqProjectEntry {
+  override def toTokens = Seq("-Q", escape(physical), escape(logical))
 }
 case class RecursiveEntry(
     physical : String, logical : String) extends CoqProjectEntry {
