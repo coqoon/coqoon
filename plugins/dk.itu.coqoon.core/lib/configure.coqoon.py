@@ -11,7 +11,7 @@
 # Manipulating this project using Coqoon may cause this file to be overwritten
 # without warning: any local changes you may have made will not be preserved.
 
-_configure_coqoon_version = 8
+_configure_coqoon_version = 9
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -179,9 +179,12 @@ def load_coq_project_configuration(cwd, path):
         # open it, but the paths that we read from it are guaranteed to be
         # relative and we need them to be absolute
         with io.open(path, mode = "r", encoding = "utf_8") as file:
-            for line in filter(lambda l: l.startswith("KOPITIAM_"), file):
+            for line in file:
+                if not (line.startswith("COQOON_") or \
+                        line.startswith("KOPITIAM_")):
+                    continue
                 split_line = shlex.split(line)
-                num = split_line[0][len("KOPITIAM_"):]
+                (_, _, num) = split_line[0].partition("_")
                 lp = shlex.split(split_line[2])
                 configuration.append(lp)
 
@@ -361,6 +364,9 @@ for srcdir, bindir in source_directories:
             with sf.open() as file:
                 ids = extract_dependency_identifiers(file)
             to_be_resolved[(str(sf), str(bf))] = ids
+
+if not deps:
+    err("no source files were found, aborting")
 
 def resolve_load_path(alp_dirs, configuration):
     # This method produces two sequences of (coqdir, resolved directory) pairs:
