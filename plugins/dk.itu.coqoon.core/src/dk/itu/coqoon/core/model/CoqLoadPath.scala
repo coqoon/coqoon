@@ -123,11 +123,11 @@ object SourceLoadPathProvider {
           IncompleteLoadPathEntry(
               Seq(Left(ProjectLocation),
                   Right(folder.getProjectRelativePath.toString)),
-              Nil, false)) ++
+              Nil)) ++
           output.map(output => IncompleteLoadPathEntry(
               Seq(Left(ProjectLocation),
                   Right(output.getProjectRelativePath.toString)),
-              Nil, false)))
+              Nil)))
 
     import IncompleteLoadPathEntry.Variable
     def getValue(v : Variable) =
@@ -195,7 +195,7 @@ object DefaultOutputLoadPathProvider {
           IncompleteLoadPathEntry(
               Seq(Left(ProjectLocation),
                   Right(folder.getProjectRelativePath.toString)),
-              Nil, false)))
+              Nil)))
 
     import IncompleteLoadPathEntry.Variable
     def getValue(v : Variable) =
@@ -263,7 +263,7 @@ object ExternalLoadPathProvider {
       Right(Seq(
           IncompleteLoadPathEntry(
               Seq(Left(ExternalPath)),
-              dir, false)))
+              dir)))
 
     import IncompleteLoadPathEntry.Variable
     def getValue(v : Variable) =

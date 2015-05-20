@@ -90,12 +90,11 @@ case class CoqFileContentChangedEvent(
 case class CoqProjectLoadPathChangedEvent(
     override val element : ICoqProject) extends CoqElementChangedEvent(element)
 
-final case class LoadPathEntry(
-    path : IPath, coqdir : Seq[String], alwaysExpand : Boolean = false) {
+final case class LoadPathEntry(path : IPath, coqdir : Seq[String]) {
   import dk.itu.coqoon.core.CoqoonPreferences
 
   def asCommand : String =
-    (if (!alwaysExpand && CoqoonPreferences.EnforceNamespaces.get) {
+    (if (CoqoonPreferences.RequireQualification.get) {
       s"""Add LoadPath "${path.toOSString}" """
     } else s"""Add Rec LoadPath "${path.toOSString}" """) +
     (if (coqdir != Nil) {
@@ -104,22 +103,16 @@ final case class LoadPathEntry(
 
   def asArguments : Seq[String] = {
     val cd = coqdir.mkString(".")
-    if (!alwaysExpand && CoqoonPreferences.EnforceNamespaces.get) {
-      if (coqdir.isEmpty) {
-        Seq("-I", path.toOSString)
-      } else {
-        if (CoqProgram.version.exists(_.startsWith("8.4"))) {
-          Seq("-I", path.toOSString, "-as", cd)
-        } else Seq("-Q", path.toOSString, cd)
-      }
+    if (CoqoonPreferences.RequireQualification.get) {
+      Seq("-Q", path.toOSString, cd)
     } else Seq("-R", path.toOSString, cd)
   }
 
   import java.io.File
 
   def expand() : Seq[(Seq[String], File)] =
-    if (!alwaysExpand && CoqoonPreferences.EnforceNamespaces.get) {
-      Seq((coqdir.toSeq.flatMap(_.split('.')), path.toFile))
+    if (CoqoonPreferences.RequireQualification.get) {
+      Seq((coqdir, path.toFile))
     } else {
       def _recurse(
           coqdir : Seq[String], f : File) : Seq[(Seq[String], File)] = {
@@ -138,7 +131,7 @@ final case class LoadPathEntry(
 
 final case class IncompleteLoadPathEntry(
     path : Seq[Either[IncompleteLoadPathEntry.Variable, String]],
-    coqdir : Seq[String], alwaysExpand : Boolean = false) {
+    coqdir : Seq[String]) {
   import IncompleteLoadPathEntry._
   def complete(p : VariableProvider) :
       Either[IncompleteLoadPathEntry, LoadPathEntry] = {
@@ -155,7 +148,7 @@ final case class IncompleteLoadPathEntry(
     val v =
       if (t.forall(_.isRight)) {
         Right(LoadPathEntry(
-            new Path(t.map(_.right.get).mkString("/")), coqdir, alwaysExpand))
+            new Path(t.map(_.right.get).mkString("/")), coqdir))
       } else Left(IncompleteLoadPathEntry(t, coqdir))
     CoqoonDebugPreferences.LoadPathResolution.log(s"${this} -> ${v}")
     v
@@ -356,13 +349,13 @@ object CoqStandardLibrary {
             Right(Seq(
                 IncompleteLoadPathEntry(
                     Seq(Left(CoqLocation), Right("/theories")),
-                    Seq("Coq"), true),
+                    Seq("Coq")),
                 IncompleteLoadPathEntry(
                     Seq(Left(CoqLocation), Right("/plugins")),
-                    Seq("Coq"), true),
+                    Seq("Coq")),
                 IncompleteLoadPathEntry(
                     Seq(Left(CoqLocation), Right("/user-contrib")),
-                    Nil, true)))
+                    Nil)))
           case _ => Left(Broken)
         }
       } else Left(VersionMismatch)

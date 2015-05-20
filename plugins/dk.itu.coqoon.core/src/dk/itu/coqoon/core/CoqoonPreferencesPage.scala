@@ -39,11 +39,14 @@ class CoqoonPreferencesPage
     })
     addField({
       val parent = getFieldEditorParent
-      val ed = new BooleanFieldEditor(CoqoonPreferences.EnforceNamespaces.ID,
-          "Enable namespace enforcement (experimental)", parent)
+      val ed = new BooleanFieldEditor(
+          CoqoonPreferences.RequireQualification.ID,
+          "Require library names to be qualified (experimental, Coq 8.5+)",
+          parent)
       ed.getDescriptionControl(parent).setToolTipText(
-          "Don't use the -R option to include project directories or " +
-          "dependencies.")
+          "Modify the dependency resolution behaviour to mirror that of the " +
+          "-Q option introduced in Coq 8.5, and pass that option when " +
+          "configuring Coq processes.")
       ed
     })
   }
@@ -68,7 +71,7 @@ class CoqoonPreferences extends AbstractPreferenceInitializer {
     val node = DefaultScope.INSTANCE.getNode(ManifestIdentifiers.PLUGIN)
 
     node.put(CoqPath.ID, CoqPath.tryCandidates.getOrElse(""))
-    node.putBoolean(EnforceNamespaces.ID, false)
+    node.putBoolean(RequireQualification.ID, false)
   }
 }
 object CoqoonPreferences {
@@ -94,8 +97,8 @@ object CoqoonPreferences {
     }
   }
 
-  object EnforceNamespaces {
-    final val ID = "enforce"
+  object RequireQualification {
+    final val ID = "requirequalification"
     def get() = Activator.getDefault.getPreferenceStore.getBoolean(ID)
   }
 }

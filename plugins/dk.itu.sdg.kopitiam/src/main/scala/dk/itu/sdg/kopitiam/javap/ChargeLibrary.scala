@@ -36,7 +36,7 @@ object ChargeLibrary {
       if (id == ID) {
         Right(Seq(
             IncompleteLoadPathEntry(Seq(
-                Left(ChargeLocation)), Nil, true)))
+                Left(ChargeLocation)), Nil)))
       } else Left(VersionMismatch)
 
     override def getValue(v : IncompleteLoadPathEntry.Variable) =

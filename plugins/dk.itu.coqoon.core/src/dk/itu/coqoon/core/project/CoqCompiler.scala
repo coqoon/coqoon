@@ -87,14 +87,7 @@ class CoqCompilerRunner(source : IFile,
     val path = location.removeLastSegments(1).toOSString
     val cd = coqdir.mkString(".")
 
-    val owndirArguments =
-      if (coqdir.isEmpty) {
-        Seq("-I", path)
-      } else {
-        if (coqc.version.exists(_.startsWith("8.4"))) {
-          Seq("-I", path, "-as", cd)
-        } else Seq("-Q", path, cd)
-      }
+    val owndirArguments = Seq("-R", path, coqdir.mkString("."))
 
     val cp = ICoqModel.toCoqProject(source.getProject)
     val flp = cp.getLoadPath.flatMap(_.asArguments)
