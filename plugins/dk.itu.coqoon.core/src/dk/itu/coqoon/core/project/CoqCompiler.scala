@@ -87,11 +87,9 @@ class CoqCompilerRunner(source : IFile,
     val path = location.removeLastSegments(1).toOSString
     val cd = coqdir.mkString(".")
 
-    val owndirArguments = Seq("-R", path, coqdir.mkString("."))
-
     val cp = ICoqModel.toCoqProject(source.getProject)
     val flp = cp.getLoadPath.flatMap(_.asArguments)
-    val coqcp = coqc.run(flp ++ owndirArguments ++
+    val coqcp = coqc.run(flp ++
         Seq("-noglob", "-compile", location.toOSString), _configureProcess)
 
     try {
