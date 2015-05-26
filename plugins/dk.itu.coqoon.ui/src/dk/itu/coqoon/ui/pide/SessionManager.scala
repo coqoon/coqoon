@@ -17,7 +17,7 @@ class SessionManager extends dk.itu.coqoon.pide.SessionManager {
       session.phase
     })
 
-  executeWithSessionLock(session => {
+  addInitialiser(session => {
     session.commands_changed += Session.Consumer[Any]("Coqoon") {
       case changed : Session.Commands_Changed =>
         CoqoonDebugPreferences.PrintPIDETraffic.log(s"! ${changed}")

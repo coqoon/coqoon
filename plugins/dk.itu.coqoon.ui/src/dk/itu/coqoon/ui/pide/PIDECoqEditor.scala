@@ -210,26 +210,21 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
 
   import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
 
-  session.executeWithSessionLock(session =>
-    if (session.phase == Session.Failed) {
-      dk.itu.coqoon.ui.utilities.EclipseConsole.err.println(
-          session.syslog_content.trim)
-    } else {
-      session.commands_changed += Session.Consumer[Any]("Coqoon") {
-        case changed : Session.Commands_Changed
-            if getNodeName.exists(changed.nodes.contains) =>
-          CommandsLock synchronized {
-            lastSnapshot = getNodeName.map(n => session.snapshot(n))
-            lastSnapshot.foreach(snapshot =>
-              commands =
-                (for (command <- snapshot.node.commands;
-                      offset <- snapshot.node.command_start(command)
-                        if offset >= ibLength)
-                  yield (offset - ibLength, command)).toSeq)
-          }
-          commandsUpdated(changed.commands.toSeq)
-        case _ =>
-      }
+  session.addInitialiser(session =>
+    session.commands_changed += Session.Consumer[Any]("Coqoon") {
+      case changed : Session.Commands_Changed
+          if getNodeName.exists(changed.nodes.contains) =>
+        CommandsLock synchronized {
+          lastSnapshot = getNodeName.map(n => session.snapshot(n))
+          lastSnapshot.foreach(snapshot =>
+            commands =
+              (for (command <- snapshot.node.commands;
+                    offset <- snapshot.node.command_start(command)
+                      if offset >= ibLength)
+                yield (offset - ibLength, command)).toSeq)
+        }
+        commandsUpdated(changed.commands.toSeq)
+      case _ =>
     })
 
   import dk.itu.coqoon.core.coqtop.CoqSentence
