@@ -16,7 +16,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
     viewer
   }
 
-  private[pide] val session = new dk.itu.coqoon.ui.pide.SessionManager
+  private[pide] val session = SessionPool.makePooledSession
 
   override protected def dispose() = {
     session.stop
@@ -339,20 +339,31 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
 
   private[pide] def checkedUpdate(
       edits_ : List[isabelle.Document.Edit_Text]) =
-    session.executeWithSessionLock(s => {
+    session.executeWithSessionLockSlot(slot => {
       val submitInitialEdits =
-        if (s.phase != Session.Ready) {
-          session.start
-          true
-        } else false
-      if (s.phase == Session.Ready) {
+        slot.asOption match {
+          case None =>
+            session.start
+            true
+          case Some(s) if s.phase == Session.Inactive =>
+            session.start
+            true
+          case Some(s) if s.phase == Session.Failed =>
+            s.stop
+            slot.clear
+            session.start
+            true
+          case _ =>
+            false
+        }
+      if (slot.get.phase == Session.Ready) {
         val edits =
           if (submitInitialEdits) {
             generateInitialEdits ++ edits_
           } else edits_
-        s.update(Document.Blobs.empty, edits, "coq")
+        slot.get.update(Document.Blobs.empty, edits, "coq")
       }
-      s.phase
+      slot.get.phase
     })
 }
 object PIDECoqEditor {
