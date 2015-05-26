@@ -20,8 +20,8 @@ import dk.itu.coqoon.core.{Activator, CoqoonPreferences}
 import dk.itu.coqoon.core.utilities.TotalReader
 
 trait CoqProgram {
-  def path : String
-  def check : Boolean = new java.io.File(path).exists
+  def path() : String
+  def check() : Boolean = new java.io.File(path).exists
   def run(args : Seq[String],
       start : ProcessBuilder => Process = (a => a.start)) : CoqProgramInstance
 }

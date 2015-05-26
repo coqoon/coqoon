@@ -16,7 +16,7 @@
 
 package dk.itu.coqoon.core.project
 
-import dk.itu.coqoon.core.ManifestIdentifiers
+import dk.itu.coqoon.core.{CoqoonPreferences, ManifestIdentifiers}
 import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.coqtop.CoqProgram
 import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot, JobRunner}
@@ -90,7 +90,8 @@ class CoqCompilerRunner(source : IFile,
     val cp = ICoqModel.toCoqProject(source.getProject)
     val flp = cp.getLoadPath.flatMap(_.asArguments)
     val coqcp = coqc.run(flp ++
-        Seq("-noglob", "-compile", location.toOSString), _configureProcess)
+        Seq("-noglob", "-compile", location.toOSString) ++
+            CoqoonPreferences.ExtraArguments.get, _configureProcess)
 
     try {
       coqcp.readAll match {

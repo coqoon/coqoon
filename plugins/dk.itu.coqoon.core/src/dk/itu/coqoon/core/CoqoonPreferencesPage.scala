@@ -39,6 +39,17 @@ class CoqoonPreferencesPage
     })
     addField({
       val parent = getFieldEditorParent
+      val ed = new StringFieldEditor(
+          CoqoonPreferences.ExtraArguments.ID,
+          "Extra arguments",
+          parent)
+      ed.getLabelControl(parent).setToolTipText(
+          "Extra arguments to be passed to the coqtop program whenever it " +
+          "is invoked.")
+      ed
+    })
+    addField({
+      val parent = getFieldEditorParent
       val ed = new BooleanFieldEditor(
           CoqoonPreferences.RequireQualification.ID,
           "Require library names to be qualified (experimental, Coq 8.5+)",
@@ -71,6 +82,7 @@ class CoqoonPreferences extends AbstractPreferenceInitializer {
     val node = DefaultScope.INSTANCE.getNode(ManifestIdentifiers.PLUGIN)
 
     node.put(CoqPath.ID, CoqPath.tryCandidates.getOrElse(""))
+    node.put(ExtraArguments.ID, "")
     node.putBoolean(RequireQualification.ID, false)
   }
 }
@@ -100,5 +112,13 @@ object CoqoonPreferences {
   object RequireQualification {
     final val ID = "requirequalification"
     def get() = Activator.getDefault.getPreferenceStore.getBoolean(ID)
+  }
+
+  object ExtraArguments {
+    import dk.itu.coqoon.core.project.CoqProjectFile.shellTokenise
+
+    final val ID = "extraarguments"
+    def get() =
+      shellTokenise(Activator.getDefault.getPreferenceStore.getString(ID))
   }
 }

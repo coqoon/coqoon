@@ -151,7 +151,8 @@ private class CoqTopIdeSlaveImpl(
         throw new java.io.IOException(
             "The ideslave-based editor is only compatible with Coq 8.4")
       }
-      pr = Option(ct.run(args ++ Seq("-ideslave")))
+      pr = Option(ct.run(
+          (args :+ "-ideslave") ++ CoqoonPreferences.ExtraArguments.get))
     }
     pr.get.stdin.write(n.toString())
     pr.get.stdin.flush()
