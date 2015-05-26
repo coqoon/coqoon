@@ -2,9 +2,9 @@ package dk.itu.coqoon.ui.pide
 
 import dk.itu.coqoon.core.CoqoonPreferences
 import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
+import isabelle.Session
 
 class SessionManager extends dk.itu.coqoon.pide.SessionManager {
-  import isabelle.Session
   override def start =
     executeWithSessionLock(session => {
       session.start("coq",
@@ -28,3 +28,47 @@ class SessionManager extends dk.itu.coqoon.pide.SessionManager {
       CoqoonDebugPreferences.PrintPIDETraffic.log(s"? ${q}"))
   })
 }
+
+class SessionPool(count : Int = 3) {
+  private class PooledSession extends SessionManager {
+    addInitialiser(session => {
+      session.phase_changed +=
+        Session.Consumer[Session.Phase]("Phase listener")(
+            p => onPhaseChange(this, p))
+    })
+  }
+
+  def makePooledSession() : SessionManager = new PooledSession
+
+  private object PoolLock {
+    var active : List[PooledSession] = List()
+  }
+
+  /* Session.Failed doesn't actually mean "failed"; it means "inactive and
+   * can't be started". (The normal shutdown sequence, for example, is
+   * Session.Ready -> Session.Shutdown -> Session.Failed.) */
+  private def onPhaseChange(
+      sacrifice : PooledSession, newPhase : Session.Phase) = {
+    println(s"$this.onPhaseChange($sacrifice, $newPhase)")
+    val toKill =
+      PoolLock synchronized {
+        newPhase match {
+          case Session.Ready =>
+            PoolLock.active :+= sacrifice
+            if (PoolLock.active.size > count) {
+              try {
+                PoolLock.active.headOption
+              } finally PoolLock.active = PoolLock.active.tail
+            } else None
+          case Session.Failed
+              if PoolLock.active.contains(sacrifice) =>
+            PoolLock.active = PoolLock.active.filter(_ != sacrifice)
+            None
+          case _ =>
+            None
+        }
+      }
+    toKill.foreach(_.stop)
+  }
+}
+object SessionPool extends SessionPool(count = 3)
