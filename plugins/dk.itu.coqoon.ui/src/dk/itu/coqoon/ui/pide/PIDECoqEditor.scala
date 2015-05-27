@@ -108,6 +108,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
       var toDelete : Seq[(Command, Option[Annotation])] = Seq()
       var annotationsToAdd : Seq[(Command, Annotation, Position)] = Seq()
       var errorsToAdd : Map[Int, ((Command, (Int, Int), String))] = Map()
+      var errorsToDelete : Seq[Command] = Seq()
 
       try {
         for (i <- changedResultsAndMarkup) i match {
@@ -116,6 +117,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
               Protocol.Status.make(markup.map(_.markup).iterator).is_finished
 
             /* Extract and display error messages */
+            var commandHasErrors = false
             for ((_, tree) <- results) {
               import XML._
               tree match {
@@ -124,14 +126,19 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
                     case (Some(f), Some((id, msg, Some(start), Some(end)))) =>
                       errorsToAdd += id -> (command,
                           (offset + start - 1, offset + end - 1), msg)
+                      commandHasErrors = true
                     case (Some(f), Some((id, msg, _, _))) =>
                       errorsToAdd += id -> (command,
                           (offset, offset + command.source.length), msg)
+                      commandHasErrors = true
                     case _ =>
                   }
                 case _ =>
               }
             }
+            if (!commandHasErrors)
+              errorsToDelete :+= command
+
             am.foreach(model => {
               import org.eclipse.jface.text.Position
               import org.eclipse.jface.text.source.Annotation
@@ -196,9 +203,11 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
           getSourceViewer.invalidateTextPresentation
         })
 
-        if (!toDelete.isEmpty || !errorsToAdd.isEmpty)
+        if (!toDelete.isEmpty || !errorsToAdd.isEmpty ||
+            !errorsToDelete.isEmpty)
           new UpdateErrorsJob(
-              toDelete.map(_._1), errorsToAdd.values.toSeq).schedule
+              toDelete.map(_._1) ++ errorsToDelete,
+              errorsToAdd.values.toSeq).schedule
       }
 
       caretPing
@@ -207,8 +216,6 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   private object CommandsLock
   private var lastSnapshot : Option[Document.Snapshot] = None
   private var commands : Seq[(Int, isabelle.Command)] = Seq()
-
-  import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
 
   session.addInitialiser(session =>
     session.commands_changed += Session.Consumer[Any]("Coqoon") {
@@ -294,6 +301,8 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
     override def runInWorkspace(monitor : IProgressMonitor) = {
       getFile.foreach(file => {
         import dk.itu.coqoon.core
+        import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
+
         val m = file.findMarkers(core.ManifestIdentifiers.MARKER_PROBLEM,
             false, IResource.DEPTH_ZERO)
         val ids =
