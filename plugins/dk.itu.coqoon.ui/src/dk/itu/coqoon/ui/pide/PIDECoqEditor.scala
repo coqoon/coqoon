@@ -87,14 +87,25 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   private def commandsUpdated(changed : Seq[Command]) =
     asyncExec {
       val changedResultsAndMarkup =
-        CommandsLock synchronized {
+        (CommandsLock synchronized {
           val ls = lastSnapshot.get
           for (c <- changed)
-            yield (
-                ls.node.command_start(c).map(_ - ibLength), c,
-                PIDECoqEditor.extractResults(ls, c),
-                PIDECoqEditor.extractMarkup(ls, c))
-        }
+            yield {
+              ls.node.command_start(c) match {
+                case Some(offset) if offset < ibLength =>
+                  /* If the command's in the initialisation block, then hide
+                   * it, as annotating things the user can't see is unhelpful
+                   * (and, incidentally, will make JFace throw exceptions). */
+                  None
+                case h =>
+                  /* Otherwise, fix up the offset, if there was one, and keep
+                   * this command and its metadata for further processing. */
+                  Some((h.map(_ - ibLength), c,
+                      PIDECoqEditor.extractResults(ls, c),
+                      PIDECoqEditor.extractMarkup(ls, c)))
+              }
+            }
+        }).flatten
 
       val am =
         if (CoqoonUIPreferences.ProcessingAnnotations.get) {
