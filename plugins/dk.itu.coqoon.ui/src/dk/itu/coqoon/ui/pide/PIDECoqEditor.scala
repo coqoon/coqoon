@@ -16,6 +16,12 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
     viewer
   }
 
+  import dk.itu.coqoon.core.utilities.TryCast
+  import org.eclipse.jface.text.source.AnnotationModel
+  protected def getAnnotationModel() = Option(getDocumentProvider).flatMap(
+      p => Option(p.getAnnotationModel(getEditorInput)).flatMap(
+          TryCast[AnnotationModel]))
+
   private[pide] val session = SessionPool.makePooledSession
 
   override protected def dispose() = {
@@ -109,8 +115,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
 
       val am =
         if (CoqoonUIPreferences.ProcessingAnnotations.get) {
-          Option(getDocumentProvider).flatMap(
-              p => Option(p.getAnnotationModel(getEditorInput)))
+          getAnnotationModel
         } else None
       am.foreach(
           model => Option(getViewer).map(_.getDocument).foreach(model.connect))
@@ -183,33 +188,21 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
         }
       } finally {
         am.foreach(model => {
-          import org.eclipse.jface.text.source.IAnnotationModelExtension
-          model match {
-            case m : IAnnotationModelExtension =>
-              import scala.collection.JavaConversions._
-              val del =
-                for ((command, Some(annotation)) <- toDelete)
-                  yield {
-                    annotations -= command
-                    annotation
-                  }
-              val add =
-                (for ((command, annotation, position) <- annotationsToAdd)
-                  yield {
-                    annotations += (command -> annotation)
-                    (annotation -> position)
-                  }).toMap
-              m.replaceAnnotations(del.toArray, add)
-            case m =>
-              for ((command, Some(annotation)) <- toDelete) {
-                m.removeAnnotation(annotation)
+          import scala.collection.JavaConversions._
+          val del =
+            for ((command, Some(annotation)) <- toDelete)
+              yield {
                 annotations -= command
+                annotation
               }
-              for ((command, annotation, position) <- annotationsToAdd) {
-                m.addAnnotation(annotation, position)
+          val add =
+            (for ((command, annotation, position) <- annotationsToAdd)
+              yield {
                 annotations += (command -> annotation)
-              }
-          }
+                (annotation -> position)
+              }).toMap
+          model.replaceAnnotations(del.toArray, add)
+
           model.disconnect(getViewer.getDocument)
           getSourceViewer.invalidateTextPresentation
         })
