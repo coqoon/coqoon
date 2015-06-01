@@ -1,3 +1,25 @@
+Coqoon 0.5.9
+============
+
+1st June 2015
+
+This minor release adds a cap on the number of running PIDE sessions and
+changes the namespace enforcement behaviour to follow that of Coq 8.5.
+
+Other significant features
+--------------------------
+
+* Command-line options
+
+  Extra command-line options for Coq can now be added through the preferences
+  page.
+
+Bug fixes
+---------
+
+* Delete PIDE errors even when command content stays the same (issue #94)
+* Don't attempt to create PIDE progress annotations for hidden commands
+
 Coqoon 0.5.8.2
 ==============
 

@@ -189,6 +189,12 @@
    <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.5.8.2.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.5.8.2">
       <category name="kopitiam"/>
    </feature>
+   <feature url="features/dk.itu.coqoon.feature_0.5.9.jar" id="dk.itu.coqoon.feature" version="0.5.9">
+      <category name="coqoon"/>
+   </feature>
+   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.5.9.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.5.9">
+      <category name="kopitiam"/>
+   </feature>
    <category-def name="coqoon" label="Coqoon"/>
    <category-def name="kopitiam" label="Kopitiam"/>
 </site>
