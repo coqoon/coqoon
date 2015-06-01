@@ -358,10 +358,11 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
           case None =>
             session.start
             true
-          case Some(s) if s.phase == Session.Inactive =>
-            session.start
-            true
-          case Some(s) if s.phase == Session.Failed =>
+          case Some(s)
+              if s.phase == Session.Failed || s.phase == Session.Inactive =>
+            /* The prover stopped or was killed off, so any existing progress
+             * markers are invalid; clear them */
+            getAnnotationModel.foreach(_.removeAllAnnotations)
             s.stop
             slot.clear
             session.start
