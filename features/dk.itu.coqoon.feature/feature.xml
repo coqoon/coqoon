@@ -2,7 +2,7 @@
 <feature
       id="dk.itu.coqoon.feature"
       label="Coqoon"
-      version="0.5.9"
+      version="0.5.9.1"
       provider-name="IT University of Copenhagen">
 
    <description>

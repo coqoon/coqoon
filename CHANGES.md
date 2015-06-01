@@ -1,3 +1,12 @@
+Coqoon 0.5.9.1
+==============
+
+1st June 2015
+
+This exceedingly minor release bumps the version number of the embedded PIDE
+snapshot to restore a missing method; the version numbers of other plugins
+remain unchanged.
+
 Coqoon 0.5.9
 ============
 
