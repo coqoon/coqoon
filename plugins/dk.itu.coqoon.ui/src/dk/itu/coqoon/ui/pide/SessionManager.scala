@@ -48,7 +48,6 @@ class SessionPool(count : Int = 3) {
    * Session.Ready -> Session.Shutdown -> Session.Failed.) */
   private def onPhaseChange(
       sacrifice : PooledSession, newPhase : Session.Phase) = {
-    println(s"$this.onPhaseChange($sacrifice, $newPhase)")
     val toKill =
       PoolLock synchronized {
         newPhase match {
