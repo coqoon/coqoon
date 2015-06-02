@@ -28,7 +28,5 @@ buildjar dk.itu.coqoon.core \
 	src/ lib/ plugin.xml schema/ license.txt -C bin/ dk/
 buildjar dk.itu.coqoon.ui \
 	src/ plugin.xml icons/ -C bin/ dk/
-buildjar dk.itu.sdg.kopitiam \
-	src/ plugin.xml license.txt -C bin/ dk/
 buildjar dk.itu.coqoon.pide \
 	src/ Pure.jar COPYRIGHT -C bin/ dk/

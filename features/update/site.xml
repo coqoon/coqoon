@@ -6,47 +6,23 @@
    <feature url="features/dk.itu.coqoon.feature_0.4.0.jar" id="dk.itu.coqoon.feature" version="0.4.0">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.0.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.0">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.1.jar" id="dk.itu.coqoon.feature" version="0.4.1">
       <category name="coqoon"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.1.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.1">
-      <category name="kopitiam"/>
    </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.2.jar" id="dk.itu.coqoon.feature" version="0.4.2">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.2.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.2">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.2.1.jar" id="dk.itu.coqoon.feature" version="0.4.2.1">
       <category name="coqoon"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.2.1.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.2.1">
-      <category name="kopitiam"/>
    </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.3.jar" id="dk.itu.coqoon.feature" version="0.4.3">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.3.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.3">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.4.jar" id="dk.itu.coqoon.feature" version="0.4.4">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.4.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.4">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.4.1.jar" id="dk.itu.coqoon.feature" version="0.4.4.1">
       <category name="coqoon"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.4.1.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.4.1">
-      <category name="kopitiam"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.4.2.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.4.2">
-      <category name="kopitiam"/>
    </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.4.2.jar" id="dk.itu.coqoon.feature" version="0.4.4.2">
       <category name="coqoon"/>
@@ -54,53 +30,26 @@
    <feature url="features/dk.itu.coqoon.feature_0.4.4.3.jar" id="dk.itu.coqoon.feature" version="0.4.4.3">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.4.3.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.4.3">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.5.jar" id="dk.itu.coqoon.feature" version="0.4.5">
       <category name="coqoon"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.5.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.5">
-      <category name="kopitiam"/>
    </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.5.1.jar" id="dk.itu.coqoon.feature" version="0.4.5.1">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.5.1.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.5.1">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.5.2.jar" id="dk.itu.coqoon.feature" version="0.4.5.2">
       <category name="coqoon"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.5.2.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.5.2">
-      <category name="kopitiam"/>
    </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.6.jar" id="dk.itu.coqoon.feature" version="0.4.6">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.6.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.6">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.6.1.jar" id="dk.itu.coqoon.feature" version="0.4.6.1">
       <category name="coqoon"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.6.1.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.6.1">
-      <category name="kopitiam"/>
    </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.6.2.jar" id="dk.itu.coqoon.feature" version="0.4.6.2">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.6.2.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.6.2">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.6.3.jar" id="dk.itu.coqoon.feature" version="0.4.6.3">
       <category name="coqoon"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.6.3.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.6.3">
-      <category name="kopitiam"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.6.4.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.6.4">
-      <category name="kopitiam"/>
    </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.6.4.jar" id="dk.itu.coqoon.feature" version="0.4.6.4">
       <category name="coqoon"/>
@@ -108,99 +57,50 @@
    <feature url="features/dk.itu.coqoon.feature_0.4.6.5.jar" id="dk.itu.coqoon.feature" version="0.4.6.5">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.6.5.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.6.5">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.6.6.jar" id="dk.itu.coqoon.feature" version="0.4.6.6">
       <category name="coqoon"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.6.6.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.6.6">
-      <category name="kopitiam"/>
    </feature>
    <feature url="features/dk.itu.coqoon.feature_0.4.7.jar" id="dk.itu.coqoon.feature" version="0.4.7">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.4.7.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.4.7">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.5.0.jar" id="dk.itu.coqoon.feature" version="0.5.0">
       <category name="coqoon"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.5.0.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.5.0">
-      <category name="kopitiam"/>
    </feature>
    <feature url="features/dk.itu.coqoon.feature_0.5.1.jar" id="dk.itu.coqoon.feature" version="0.5.1">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.5.1.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.5.1">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.5.2.jar" id="dk.itu.coqoon.feature" version="0.5.2">
       <category name="coqoon"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.5.2.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.5.2">
-      <category name="kopitiam"/>
    </feature>
    <feature url="features/dk.itu.coqoon.feature_0.5.3.jar" id="dk.itu.coqoon.feature" version="0.5.3">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.5.3.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.5.3">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.5.4.jar" id="dk.itu.coqoon.feature" version="0.5.4">
       <category name="coqoon"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.5.4.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.5.4">
-      <category name="kopitiam"/>
    </feature>
    <feature url="features/dk.itu.coqoon.feature_0.5.5.jar" id="dk.itu.coqoon.feature" version="0.5.5">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.5.5.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.5.5">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.5.6.jar" id="dk.itu.coqoon.feature" version="0.5.6">
       <category name="coqoon"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.5.6.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.5.6">
-      <category name="kopitiam"/>
    </feature>
    <feature url="features/dk.itu.coqoon.feature_0.5.7.jar" id="dk.itu.coqoon.feature" version="0.5.7">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.5.7.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.5.7">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.5.8.jar" id="dk.itu.coqoon.feature" version="0.5.8">
       <category name="coqoon"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.5.8.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.5.8">
-      <category name="kopitiam"/>
    </feature>
    <feature url="features/dk.itu.coqoon.feature_0.5.8.1.jar" id="dk.itu.coqoon.feature" version="0.5.8.1">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.5.8.1.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.5.8.1">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.5.8.2.jar" id="dk.itu.coqoon.feature" version="0.5.8.2">
       <category name="coqoon"/>
-   </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.5.8.2.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.5.8.2">
-      <category name="kopitiam"/>
    </feature>
    <feature url="features/dk.itu.coqoon.feature_0.5.9.jar" id="dk.itu.coqoon.feature" version="0.5.9">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.5.9.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.5.9">
-      <category name="kopitiam"/>
-   </feature>
    <feature url="features/dk.itu.coqoon.feature_0.5.9.1.jar" id="dk.itu.coqoon.feature" version="0.5.9.1">
       <category name="coqoon"/>
    </feature>
-   <feature url="features/dk.itu.sdg.feature.kopitiam.dev_0.5.9.1.jar" id="dk.itu.sdg.feature.kopitiam.dev" version="0.5.9.1">
-      <category name="kopitiam"/>
-   </feature>
    <category-def name="coqoon" label="Coqoon"/>
-   <category-def name="kopitiam" label="Kopitiam"/>
 </site>
