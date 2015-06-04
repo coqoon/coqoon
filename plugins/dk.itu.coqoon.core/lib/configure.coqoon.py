@@ -11,7 +11,7 @@
 # Manipulating this project using Coqoon may cause this file to be overwritten
 # without warning: any local changes you may have made will not be preserved.
 
-_configure_coqoon_version = 9
+_configure_coqoon_version = 10
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -432,6 +432,14 @@ def resolve_load_path(alp_dirs, configuration):
                 path = Path(variables[pn_var])
             elif "WORKSPACE" in variables:
                 path = Path(variables["WORKSPACE"]).append(pn)
+
+            if path == None or not path.isdir():
+                val = prompt_for(pn_var, \
+                    "Specify the path to the \"%s\" project." % pn, path)
+                if val != None:
+                    variables[pn_var] = val
+                    path = Path(val)
+
             if path != None and path.isdir():
                 _, cfg = load_coq_project_configuration(path, str(path.append("_CoqProject")))
                 ads = substitute_variables(*structure_vars(load_vars(str(path.append("configure.coqoon.vars")))))
