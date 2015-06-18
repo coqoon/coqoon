@@ -384,7 +384,20 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
       slot.get.phase
     })
 
-  private def makePerspective() = Perspective.makeFullPerspective()
+  import dk.itu.coqoon.ui.pide.Overlay
+  private var overlay : Option[Overlay] = None
+  private[pide] def setOverlay(overlay : Option[Overlay]) = {
+    this.overlay = overlay
+    checkedUpdate(List())
+  }
+  private[pide] def getOverlay() = overlay
+
+  private def makePerspective() = overlay match {
+    case None =>
+      Perspective.makeFullPerspective()
+    case Some(overlay) =>
+      Perspective.makeFullPerspective(overlay.wrap)
+  }
 }
 object PIDECoqEditor {
   import isabelle._
