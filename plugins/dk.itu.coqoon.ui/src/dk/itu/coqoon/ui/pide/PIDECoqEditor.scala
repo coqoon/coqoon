@@ -219,7 +219,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
 
   private object CommandsLock
   private var lastSnapshot : Option[Document.Snapshot] = None
-  private var commands : Seq[(Int, isabelle.Command)] = Seq()
+  private[pide] var commands : Seq[(Int, isabelle.Command)] = Seq()
 
   session.addInitialiser(session =>
     session.commands_changed += Session.Consumer[Any]("Coqoon") {
@@ -270,12 +270,12 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
           cp.getLoadPath.map(_.asCommand).mkString("", "\n", "\n")
         ibLength = initialisationBlock.length
 
-        List[Document.Edit_Text](
-            nodeName -> Document.Node.Clear(),
-            nodeName -> Document.Node.Edits(List(
+        List[Document.Node.Edit[Text.Edit, Text.Perspective]](
+            Document.Node.Clear(),
+            Document.Node.Edits(List(
                 Text.Edit.insert(0,
                     initialisationBlock + text.getOrElse("")))),
-            nodeName -> Perspective.makeFullPerspective())
+            Perspective.makeFullPerspective())
       case _ =>
         List()
     }
@@ -351,7 +351,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
   }
 
   private[pide] def checkedUpdate(
-      edits_ : List[isabelle.Document.Edit_Text]) =
+      edits_ : List[Document.Node.Edit[Text.Edit, Text.Perspective]]) =
     session.executeWithSessionLockSlot(slot => {
       val submitInitialEdits =
         slot.asOption match {
@@ -375,10 +375,16 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
           if (submitInitialEdits) {
             generateInitialEdits ++ edits_
           } else edits_
-        slot.get.update(Document.Blobs.empty, edits, "coq")
+        getNodeName.foreach(nodeName => {
+          val textEdits : List[Document.Edit_Text] =
+            edits.map(e => nodeName -> e) :+ (nodeName -> makePerspective)
+          slot.get.update(Document.Blobs.empty, textEdits, "coq")
+        })
       }
       slot.get.phase
     })
+
+  private def makePerspective() = Perspective.makeFullPerspective()
 }
 object PIDECoqEditor {
   import isabelle._
@@ -469,10 +475,6 @@ private class PIDEReconciler(editor : PIDECoqEditor) extends EventReconciler {
       if (!ev.fText.isEmpty)
         edits :+= Text.Edit.insert(editor.ibLength + ev.fOffset, ev.fText)
     }
-    editor.getNodeName.foreach(nodeName =>
-      editor.checkedUpdate(
-          List[Document.Edit_Text](
-              nodeName -> Document.Node.Edits(edits),
-              nodeName -> Perspective.makeFullPerspective())))
+    editor.checkedUpdate(List(Document.Node.Edits(edits)))
   }
 }
