@@ -275,7 +275,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
             nodeName -> Document.Node.Edits(List(
                 Text.Edit.insert(0,
                     initialisationBlock + text.getOrElse("")))),
-            nodeName -> Perspective.createDummy)
+            nodeName -> Perspective.makeFullPerspective())
       case _ =>
         List()
     }
@@ -447,9 +447,10 @@ object PIDECoqEditor {
 
 private object Perspective {
   import isabelle.{Text, Document}
-  def createDummy() =
+  def makeFullPerspective(
+      overlays : Document.Node.Overlays = Document.Node.Overlays.empty) =
     Document.Node.Perspective[Text.Edit, Text.Perspective](true,
-        Text.Perspective.full, Document.Node.Overlays.empty)
+        Text.Perspective.full, overlays)
 }
 
 import dk.itu.coqoon.ui.EventReconciler
@@ -472,6 +473,6 @@ private class PIDEReconciler(editor : PIDECoqEditor) extends EventReconciler {
       editor.checkedUpdate(
           List[Document.Edit_Text](
               nodeName -> Document.Node.Edits(edits),
-              nodeName -> Perspective.createDummy)))
+              nodeName -> Perspective.makeFullPerspective())))
   }
 }
