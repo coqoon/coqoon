@@ -141,6 +141,12 @@
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M3+F">
       </key>
+      <key
+            commandId="dk.itu.coqoon.ui.pide.commands.query"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M2+Space">
+      </key>
    </extension>
    <extension
          point="org.eclipse.ui.editors">
@@ -277,6 +283,12 @@
             description="Reindent and reformat a region of Coq code"
             id="dk.itu.coqoon.ui.commands.reformat"
             name="Reformat Coq region command">
+      </command>
+      <command
+            categoryId="dk.itu.coqoon.ui.commands.category"
+            description="Start a PIDE query session at the current position of the cursor"
+            id="dk.itu.coqoon.ui.pide.commands.query"
+            name="Begin PIDE query command">
       </command>
    </extension>
    <extension
@@ -491,6 +503,10 @@
                   definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
             </reference>
          </activeWhen>
+      </handler>
+      <handler
+            class="dk.itu.coqoon.ui.pide.QueryHandler"
+            commandId="dk.itu.coqoon.ui.pide.commands.query">
       </handler>
    </extension>
    <extension
@@ -740,6 +756,15 @@
                      definitionId="dk.itu.coqoon.ui.expressions.activeEditorHasCoq">
                </reference>
             </visibleWhen>
+         </menu>
+         <menu
+               label="PIDE">
+            <command
+                  commandId="dk.itu.coqoon.ui.pide.commands.query"
+                  icon="platform:/plugin/org.eclipse.ui/icons/full/etool16/help_search.gif"
+                  label="Query"
+                  style="push">
+            </command>
          </menu>
       </menuContribution>
    </extension>
