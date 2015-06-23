@@ -74,30 +74,30 @@ object CoqoonDebugPreferences {
             s"${id}: ${text}",
             new Exception("(dummy stack trace exception)").fillInStackTrace))
   }
-  object PrintProcessInvocations extends ChannelPreference("debug/process",
+  object PrintProcessInvocations extends ChannelPreference("debug.process",
       "coqtop invocations",
       "Log debugging messages whenever new instances of coqtop are started.")
-  object PrintIdeslaveTraffic extends ChannelPreference("debug/ideslave",
+  object PrintIdeslaveTraffic extends ChannelPreference("debug.ideslave",
       "-ideslave protocol messages",
       "Log debugging messages whenever ideslave protocol messages are sent " +
       "and received.")
-  object PrintPIDETraffic extends ChannelPreference("debug/pide",
+  object PrintPIDETraffic extends ChannelPreference("debug.pide",
       "PIDE protocol messages",
       "Log debugging messages whenever PIDE protocol messages are sent and " +
       "received.")
-  object PIDEMarkers extends ChannelPreference("debug/pide-markers",
+  object PIDEMarkers extends ChannelPreference("debug.pide-markers",
       "PIDE error markers",
       "Log debugging messages whenever PIDE error markers are created or " +
       "deleted.")
-  object LoadPathResolution extends ChannelPreference("debug/resolution",
+  object LoadPathResolution extends ChannelPreference("debug.resolution",
       "Load path resolution",
       "Log debugging messages whenever resolution is attempted on an " +
       "incomplete load path entry.")
-  object LoadPathExpansion extends ChannelPreference("debug/expansion",
+  object LoadPathExpansion extends ChannelPreference("debug.expansion",
       "Load path expansion",
       "Log debugging messages whenever a complete load path entry is " +
       "expanded.")
-  object ProjectBuild extends ChannelPreference("debug/project",
+  object ProjectBuild extends ChannelPreference("debug.project",
       "Project build",
       "Log debugging messages whenever a project build operation starts or " +
       "stops.")
