@@ -60,19 +60,30 @@ object CoqoonDebugPreferences {
       val default : A, val name : String, val description : String) {
     def get() : A
   }
+
+  object SuppressStackTraces extends Preference("suppressStackTraces",
+      false, "Suppress stack traces",
+      "Don't capture a stack trace when generating debugging messages.") {
+    override def get() = Activator.getDefault.getPreferenceStore.getBoolean(id)
+  }
+
   case class ChannelPreference(override val id : String,
       override val name : String, override val description : String)
           extends Preference(id, false, name, description) {
     import org.eclipse.core.runtime.{Status, IStatus}
     override def get() = Activator.getDefault.getPreferenceStore.getBoolean(id)
     def log(text : String) =
-      if (get())
+      if (get()) {
+        val dummy =
+          if (!SuppressStackTraces.get) {
+            new Exception("(dummy stack trace exception)").fillInStackTrace
+          } else null
         Activator.getDefault.getLog.log(new Status(
             IStatus.INFO,
             ManifestIdentifiers.PLUGIN,
             IStatus.OK,
-            s"${id}: ${text}",
-            new Exception("(dummy stack trace exception)").fillInStackTrace))
+            s"${id}: ${text}", dummy))
+      }
   }
   object PrintProcessInvocations extends ChannelPreference("debug.process",
       "coqtop invocations",
