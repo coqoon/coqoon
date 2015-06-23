@@ -130,7 +130,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
         for (i <- changedResultsAndMarkup) i match {
           case (Some(offset), command, results, markup) =>
             val complete =
-              Protocol.Status.make(markup.map(_.markup).iterator).is_finished
+              !(Protocol.Status.make(markup.map(_.markup).iterator).is_running)
 
             /* Extract and display error messages */
             var commandHasErrors = false
