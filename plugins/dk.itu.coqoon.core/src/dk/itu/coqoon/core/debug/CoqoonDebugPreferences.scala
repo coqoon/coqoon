@@ -52,7 +52,7 @@ class CoqoonDebugPreferences extends AbstractPreferenceInitializer {
   override def initializeDefaultPreferences() = {
     import org.eclipse.core.runtime.preferences.DefaultScope
     val node = DefaultScope.INSTANCE.getNode(ManifestIdentifiers.PLUGIN)
-    allPrefs.foreach(p => node.put(p.id, p.get.toString))
+    allPrefs.foreach(p => node.put(p.id, p.default.toString))
   }
 }
 object CoqoonDebugPreferences {
