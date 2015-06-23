@@ -27,21 +27,8 @@ class CoqoonDebugPreferencesPage
   override def init(w : IWorkbench) =
     setPreferenceStore(Activator.getDefault.getPreferenceStore)
 
-  import org.eclipse.jface.preference._
-  override def createFieldEditors = {
-    for (i <- allPrefs) {
-      val parent = getFieldEditorParent
-      val field = i match {
-        case ChannelPreference(id, name, description) =>
-          val f = new BooleanFieldEditor(id, s"${name} (${id})", parent)
-          f.getDescriptionControl(parent).setToolTipText(description)
-          Some(f)
-        case _ =>
-          None
-      }
-      field.foreach(addField)
-    }
-  }
+  override def createFieldEditors =
+    allPrefs.foreach(p => addField(p.createFieldEditor(getFieldEditorParent)))
 }
 
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer
@@ -56,22 +43,36 @@ class CoqoonDebugPreferences extends AbstractPreferenceInitializer {
   }
 }
 object CoqoonDebugPreferences {
+  import org.eclipse.swt.widgets.Composite
+  import org.eclipse.jface.preference.FieldEditor
   abstract class Preference[A](val id : String,
       val default : A, val name : String, val description : String) {
     def get() : A
+    def createFieldEditor(parent : Composite) : FieldEditor
   }
 
-  object SuppressStackTraces extends Preference("suppressStackTraces",
+  case class BooleanPreference(override val id : String,
+      override val default : Boolean, override val name : String,
+      override val description : String)
+          extends Preference[Boolean](id, default, name, description) {
+    override final def get() =
+      Activator.getDefault.getPreferenceStore.getBoolean(id)
+
+    import org.eclipse.jface.preference.BooleanFieldEditor
+    override def createFieldEditor(parent : Composite) = {
+      val f = new BooleanFieldEditor(id, s"${name}", parent)
+      f.getDescriptionControl(parent).setToolTipText(description)
+      f
+    }
+  }
+
+  object SuppressStackTraces extends BooleanPreference("suppressStackTraces",
       false, "Suppress stack traces",
-      "Don't capture a stack trace when generating debugging messages.") {
-    override def get() = Activator.getDefault.getPreferenceStore.getBoolean(id)
-  }
+      "Don't capture a stack trace when generating debugging messages.")
 
-  case class ChannelPreference(override val id : String,
-      override val name : String, override val description : String)
-          extends Preference(id, false, name, description) {
+  class ChannelPreference(id : String, name : String, description : String)
+      extends BooleanPreference(id, false, name, s"$description ($id)") {
     import org.eclipse.core.runtime.{Status, IStatus}
-    override def get() = Activator.getDefault.getPreferenceStore.getBoolean(id)
     def log(text : String) =
       if (get()) {
         val dummy =
@@ -113,7 +114,8 @@ object CoqoonDebugPreferences {
       "Log debugging messages whenever a project build operation starts or " +
       "stops.")
 
-  val allPrefs = Seq(
+  val allPrefs = Seq[Preference[_]](
+      SuppressStackTraces,
       PrintProcessInvocations,
       PrintIdeslaveTraffic,
       PrintPIDETraffic,
