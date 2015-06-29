@@ -48,11 +48,3 @@ class QueryHandler extends EditorHandler {
     null
   }
 }
-
-import org.eclipse.jface.viewers.StyledString
-private object QueryStyler extends StyledString.Styler {
-  lazy val blue = dk.itu.coqoon.ui.utilities.UIUtils.Color(64, 64, 200)
-
-  import org.eclipse.swt.graphics.TextStyle
-  override def applyStyles(style : TextStyle) = style.foreground = blue
-}

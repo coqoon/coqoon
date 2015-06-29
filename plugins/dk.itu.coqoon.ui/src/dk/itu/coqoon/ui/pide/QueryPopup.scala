@@ -20,7 +20,7 @@ class QueryPopup(
 
   def runQuery(query: String) = {
     editor.setOverlay(Some((Queries.coq_query(command, query), this)))
-    appendResult(query + "\n", QueryStyler)
+    appendResult(query + "\n", Stylers.Query)
   }
 
   import dk.itu.coqoon.ui.utilities.UIUtils
@@ -95,5 +95,25 @@ class QueryPopup(
   override def close() = {
     editor.setOverlay(None)
     super.close()
+  }
+}
+
+private object Stylers {
+  import org.eclipse.jface.viewers.StyledString
+  object Query extends StyledString.Styler {
+    lazy val blue = dk.itu.coqoon.ui.utilities.UIUtils.Color(64, 64, 200)
+
+    import org.eclipse.swt.graphics.TextStyle
+    override def applyStyles(style : TextStyle) = style.foreground = blue
+  }
+  object Error extends StyledString.Styler {
+    lazy val red = dk.itu.coqoon.ui.utilities.UIUtils.Color(200, 0, 0)
+
+    import org.eclipse.swt.graphics.TextStyle
+    override def applyStyles(style : TextStyle) = style.foreground = red
+  }
+  object Result extends StyledString.Styler {
+    import org.eclipse.swt.graphics.TextStyle
+    override def applyStyles(style : TextStyle) = ()
   }
 }
