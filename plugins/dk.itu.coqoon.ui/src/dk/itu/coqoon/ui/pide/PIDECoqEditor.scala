@@ -411,6 +411,42 @@ object PIDECoqEditor {
           markup <- entry.markup)
        yield markup).toSeq
   }
+  /* The left-hand side of this Either is an error message, and the right is
+   * a normal status message. */
+  private def extractQueryResult(snapshot : Document.Snapshot,
+      command : isabelle.Command, queryID_ : Long) : Option[Either[String, String]] = {
+    val queryID = queryID_.toString
+
+    import isabelle.XML.Elem
+    val results = (extractResults(snapshot, command) collect {
+      case (_, e @ Elem(Markup(Markup.RESULT, properties), _))
+          if properties.contains(Markup.INSTANCE -> queryID) =>
+        e
+    })
+
+    val finished = results exists {
+      case XML.Elem(_, List(XML.Elem(Markup(Markup.STATUS, _),
+                            List(XML.Elem(Markup(Markup.FINISHED, _), _))))) =>
+        true
+      case _ =>
+        false
+    }
+    println(results.toList)
+    println(finished)
+
+    if (finished) {
+      val r =
+        results collectFirst {
+          case XML.Elem(_, List(XML.Elem(Markup(Markup.ERROR, _),
+              List(t : XML.Text)))) =>
+            Left(t.content.trim)
+          case XML.Elem(_, List(XML.Elem(Markup(Markup.WRITELN, _),
+              List(t : XML.Text)))) =>
+            Right(t.content.trim)
+        }
+      r.orElse(Some(Left("Query finished without producing output")))
+    } else None
+  }
   private def extractResults(snapshot : Document.Snapshot,
       command : isabelle.Command) : Seq[Command.Results.Entry] = {
     val results =
