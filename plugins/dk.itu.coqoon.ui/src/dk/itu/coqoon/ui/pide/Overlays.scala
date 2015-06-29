@@ -11,6 +11,10 @@ case class Overlay(
   def wrap() = insert(isabelle.Document.Node.Overlays.empty)
 }
 
+trait OverlayListener {
+  def onResult(result : Either[String, String])
+}
+
 object Queries {
   object coq_query {
     def apply(command : Command, query : String) =
