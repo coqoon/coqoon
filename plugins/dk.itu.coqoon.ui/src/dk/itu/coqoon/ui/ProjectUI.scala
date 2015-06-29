@@ -22,7 +22,8 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
 
   class NewCoqProjectCreationPage
       extends WizardNewProjectCreationPage("Coq project") {
-
+    setTitle("Coq Project")
+    setDescription("Create a new, empty Coq project.")
   }
 
   import org.eclipse.ui.IWorkbench
