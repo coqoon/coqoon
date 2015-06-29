@@ -11,7 +11,7 @@ class QueryPopup(
     command : isabelle.Command,
     shell: Shell, position: Point)
     extends PopupDialog(shell, SWT.RESIZE | SWT.ON_TOP, true, false, false,
-        false, false, null, null) {
+        false, false, null, null) with OverlayListener {
   import org.eclipse.swt.custom.{StyledText, StyleRange}
 
   import org.eclipse.jface.viewers.StyledString
@@ -19,10 +19,12 @@ class QueryPopup(
   private var queryResults: Option[StyledText] = None
 
   def runQuery(query: String) = {
-    editor.getNodeName.foreach(nodeName =>
-      editor.setOverlay(Some(Queries.coq_query(command, query))))
+    editor.setOverlay(Some((Queries.coq_query(command, query), this)))
     appendResult(query + "\n", QueryStyler)
   }
+
+  import dk.itu.coqoon.ui.utilities.UIUtils
+  override def onResult(result : Either[String, String]) = ()
 
   def appendResult(result: String, styler: StyledString.Styler) = {
     queryResults.foreach(qr => {
