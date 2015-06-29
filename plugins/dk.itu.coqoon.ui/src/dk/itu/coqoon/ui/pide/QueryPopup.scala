@@ -84,4 +84,9 @@ class QueryPopup(
 
     c
   }
+
+  override def close() = {
+    editor.setOverlay(None)
+    super.close()
+  }
 }
