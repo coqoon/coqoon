@@ -234,6 +234,14 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
                 yield (offset - ibLength, command)).toSeq)
         }
         commandsUpdated(changed.commands.toSeq)
+
+        getOverlay match {
+          case Some((o @ Overlay(command, _, _), listener))
+              if changed.commands.contains(command) =>
+            PIDECoqEditor.extractQueryResult(
+                lastSnapshot.get, command, o.id).foreach(listener.onResult)
+          case _ =>
+        }
       case _ =>
     })
 
