@@ -43,22 +43,27 @@ class QueryPopup(
     })
   }
 
+  import org.eclipse.swt.widgets.{Text, Button}
+  private var queryText : Option[Text] = None
+  private var queryButton : Option[Button] = None
+
   override def getDefaultLocation(initialSize: Point) = position
   override def getDefaultSize() = new Point(400, 250)
   override def createDialogArea(parent: Composite) = {
     import org.eclipse.swt.layout.GridLayout
-    import org.eclipse.swt.widgets.{ Text, Button }
     val c = super.createDialogArea(parent).asInstanceOf[Composite]
     c.getLayout.asInstanceOf[GridLayout].numColumns = 2
     val queryText = new Text(c, SWT.BORDER)
+    this.queryText = Some(queryText)
     queryText.setLayoutData(
       GDF.fillDefaults.align(SWT.FILL, SWT.FILL).grab(
         true, false).create)
     val queryButton = new Button(c, SWT.ARROW | SWT.RIGHT)
+    this.queryButton = Some(queryButton)
     queryButton.setLayoutData(
       GDF.fillDefaults.align(SWT.FILL, SWT.FILL).create)
     val queryResults =
-      new StyledText(c, SWT.V_SCROLL | SWT.BORDER | SWT.READ_ONLY)
+      new StyledText(c, SWT.V_SCROLL | SWT.WRAP | SWT.BORDER | SWT.READ_ONLY)
     queryResults.setLayoutData(
       GDF.fillDefaults.align(SWT.FILL, SWT.FILL).grab(true, true).
         span(2, 1).create)
