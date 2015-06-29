@@ -21,10 +21,26 @@ class QueryPopup(
   def runQuery(query: String) = {
     editor.setOverlay(Some((Queries.coq_query(command, query), this)))
     appendResult(query + "\n", Stylers.Query)
+    (queryButton.toSeq ++ queryText.toSeq).filter(
+        !_.isDisposed).foreach(_.setEnabled(false))
   }
 
   import dk.itu.coqoon.ui.utilities.UIUtils
-  override def onResult(result : Either[String, String]) = ()
+  override def onResult(result : Either[String, String]) =
+    UIUtils.asyncExec {
+      val (message, styler) =
+        result match {
+          case Left(error) =>
+            (error, Stylers.Error)
+          case Right(result) =>
+            (result, Stylers.Result)
+        }
+      appendResult(message + "\n", styler)
+      (queryButton.toSeq ++ queryText.toSeq).filter(
+          !_.isDisposed).foreach(_.setEnabled(true))
+      queryText.foreach(_.setFocus)
+      editor.setOverlay(None)
+    }
 
   def appendResult(result: String, styler: StyledString.Styler) = {
     queryResults.foreach(qr => {
