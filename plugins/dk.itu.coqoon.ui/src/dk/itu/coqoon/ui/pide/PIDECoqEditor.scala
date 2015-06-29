@@ -223,8 +223,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
 
   session.addInitialiser(session =>
     session.commands_changed += Session.Consumer[Any]("Coqoon") {
-      case changed : Session.Commands_Changed
-          if getNodeName.exists(changed.nodes.contains) =>
+      case changed : Session.Commands_Changed =>
         CommandsLock synchronized {
           lastSnapshot = getNodeName.map(n => session.snapshot(n))
           lastSnapshot.foreach(snapshot =>
