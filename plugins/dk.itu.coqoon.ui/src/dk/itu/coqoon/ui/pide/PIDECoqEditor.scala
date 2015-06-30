@@ -3,7 +3,8 @@ package dk.itu.coqoon.ui.pide
 import dk.itu.coqoon.ui.{
   BaseCoqEditor, CoqGoalsContainer, CoqoonUIPreferences, ManifestIdentifiers}
 
-class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
+class PIDECoqEditor
+    extends BaseCoqEditor with CoqGoalsContainer with OverlayRunner {
   private val reconciler = new PIDEReconciler(this)
 
   import org.eclipse.swt.widgets.Composite
@@ -235,7 +236,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
         }
         commandsUpdated(changed.commands.toSeq)
 
-        getOverlay match {
+        overlay match {
           case Some((o @ Overlay(command, _, _), listener))
               if changed.commands.contains(command) =>
             PIDECoqEditor.extractQueryResult(
@@ -393,12 +394,11 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer {
 
   import dk.itu.coqoon.ui.pide.Overlay
   private var overlay : Option[(Overlay, OverlayListener)] = None
-  private[pide] def setOverlay(overlay : Option[(Overlay, OverlayListener)]) =
+  override def setOverlay(overlay : Option[(Overlay, OverlayListener)]) =
     if (this.overlay != overlay) {
       this.overlay = overlay
       checkedUpdate(List())
     }
-  private[pide] def getOverlay() = overlay
 
   private def makePerspective() = overlay match {
     case None =>

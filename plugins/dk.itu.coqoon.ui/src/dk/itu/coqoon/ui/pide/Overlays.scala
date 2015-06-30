@@ -11,6 +11,10 @@ case class Overlay(
   def wrap() = insert(isabelle.Document.Node.Overlays.empty)
 }
 
+trait OverlayRunner {
+  def setOverlay(overlay : Option[(Overlay, OverlayListener)])
+}
+
 trait OverlayListener {
   def onResult(result : Either[String, String])
 }
