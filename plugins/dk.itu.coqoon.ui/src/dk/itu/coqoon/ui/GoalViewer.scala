@@ -31,7 +31,7 @@ abstract class TabbedGoalPresenter extends GoalPresenter {
   }
   /* Implementations of this method are allowed to assume that they run on the
    * UI thread */
-  protected def fontChanged() : Unit = ()
+  protected def fontChanged() : Unit
 
   private var goals_ : TabFolderImpl = null
   protected def goals : TabFolderImpl = goals_
@@ -136,10 +136,24 @@ abstract class SashGoalPresenter extends TabbedGoalPresenter {
       goal : CoqTypes.goal, top : Composite, bottom : Composite) : Unit
   override protected final def updateTab(
       goal : CoqTypes.goal, control : Control) =
-    TryCast[Composite](control).map(_.getChildren()).getOrElse(
-        Array.empty).flatMap(TryCast[Composite]) match {
-      case Array(top, bottom) => updateTab(goal, top, bottom)
+    SashGoalPresenter.unpackTab(control) foreach {
+      case (top, bottom) =>
+        updateTab(goal, top, bottom)
+    }
+
+  protected def fontChanged(top : Composite, bottom : Composite) : Unit = ()
+  override protected final def fontChanged() =
+    for (tab <- subgoals;
+         (top, bottom) <- SashGoalPresenter.unpackTab(tab.getControl))
+      fontChanged(top, bottom)
+}
+object SashGoalPresenter {
+  private def unpackTab(control : Control) =
+    TryCast[Composite](control).toSeq.flatMap(_.getChildren) match {
+      case Seq(top : Composite, sash, bottom : Composite) =>
+        Some(top, bottom)
       case _ =>
+        None
     }
 }
 
