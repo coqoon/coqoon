@@ -1,5 +1,6 @@
 package dk.itu.coqoon.ui
 
+import dk.itu.coqoon.ui.utilities.UIUtils.asyncExec
 import dk.itu.coqoon.core.coqtop.CoqTypes
 import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
 
@@ -19,12 +20,31 @@ import org.eclipse.swt.custom.{
   CTabItem => TabItemImpl, CTabFolder => TabFolderImpl}
 
 abstract class TabbedGoalPresenter extends GoalPresenter {
+  import org.eclipse.jface.util.{PropertyChangeEvent, IPropertyChangeListener}
+  object TextFontChangeListener extends IPropertyChangeListener {
+    override def propertyChange(ev : PropertyChangeEvent) =
+      if (ev.getProperty == JFaceResources.TEXT_FONT) {
+        asyncExec {
+          fontChanged
+        }
+      }
+  }
+  /* Implementations of this method are allowed to assume that they run on the
+   * UI thread */
+  protected def fontChanged() : Unit = ()
+
   private var goals_ : TabFolderImpl = null
   protected def goals : TabFolderImpl = goals_
   protected def subgoals = goals.getItems()
 
   override def init(parent : Composite) = {
     goals_ = new TabFolderImpl(parent, SWT.BORDER)
+    JFaceResources.getFontRegistry.addListener(TextFontChangeListener)
+  }
+
+  override def dispose = {
+    JFaceResources.getFontRegistry.removeListener(TextFontChangeListener)
+    goals_.dispose
   }
 
   protected def makeTab(parent : Composite) : Control
@@ -47,8 +67,6 @@ abstract class TabbedGoalPresenter extends GoalPresenter {
       goals.getItems().headOption.map(goals.setSelection)
     goalData.zip(subgoals).foreach(a => updateTab(a._1, a._2.getControl))
   }
-
-  override def dispose = goals_.dispose
 }
 
 abstract class SashGoalPresenter extends TabbedGoalPresenter {
