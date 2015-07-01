@@ -4,6 +4,7 @@ import dk.itu.coqoon.core.coqtop.CoqTypes
 import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
 
 import org.eclipse.swt.widgets.{Text, Control, Composite}
+import org.eclipse.jface.resource.JFaceResources
 
 trait GoalPresenter {
   def init(parent : Composite)
@@ -128,9 +129,11 @@ class RawGoalPresenter extends SashGoalPresenter {
   override protected def makeTabRegions(
       top : Composite, bottom : Composite) = {
     new Text(top,
-        SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+        SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL).
+      setFont(JFaceResources.getTextFont)
     new Text(bottom,
-        SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+        SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL).
+      setFont(JFaceResources.getTextFont)
   }
 
   override protected def updateTab(
@@ -164,8 +167,10 @@ class RichGoalPresenter extends SashGoalPresenter {
     import org.eclipse.swt.custom.{CaretEvent, CaretListener}
     val topT = new StyledText(top,
         SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+    topT.setFont(JFaceResources.getTextFont)
     val bottomT = new StyledText(bottom,
         SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
+    bottomT.setFont(JFaceResources.getTextFont)
     topT.addCaretListener(new CaretListener {
       override def caretMoved(ev : CaretEvent) = if (!suppressUpdate) {
         val idents = TryCast[Seq[(String, Int, Int)]](

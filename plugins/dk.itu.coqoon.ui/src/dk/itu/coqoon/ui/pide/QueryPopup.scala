@@ -5,6 +5,7 @@ import org.eclipse.swt.widgets.{Shell, Composite}
 import org.eclipse.swt.graphics.Point
 import org.eclipse.jface.dialogs.PopupDialog
 import org.eclipse.jface.layout.{GridDataFactory => GDF}
+import org.eclipse.jface.resource.JFaceResources
 
 class QueryPopup(
     editor : PIDECoqEditor,
@@ -72,6 +73,7 @@ class QueryPopup(
     val c = super.createDialogArea(parent).asInstanceOf[Composite]
     c.getLayout.asInstanceOf[GridLayout].numColumns = 2
     val queryText = new Text(c, SWT.BORDER)
+    queryText.setFont(JFaceResources.getTextFont)
     this.queryText = Some(queryText)
     queryText.setLayoutData(
       GDF.fillDefaults.align(SWT.FILL, SWT.FILL).grab(
@@ -82,6 +84,7 @@ class QueryPopup(
       GDF.fillDefaults.align(SWT.FILL, SWT.FILL).create)
     val queryResults =
       new StyledText(c, SWT.V_SCROLL | SWT.WRAP | SWT.BORDER | SWT.READ_ONLY)
+    queryResults.setFont(JFaceResources.getTextFont)
     queryResults.setLayoutData(
       GDF.fillDefaults.align(SWT.FILL, SWT.FILL).grab(true, true).
         span(2, 1).create)
