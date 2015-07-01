@@ -141,7 +141,7 @@ abstract class SashGoalPresenter extends TabbedGoalPresenter {
         updateTab(goal, top, bottom)
     }
 
-  protected def fontChanged(top : Composite, bottom : Composite) : Unit = ()
+  protected def fontChanged(top : Composite, bottom : Composite) : Unit
   override protected final def fontChanged() =
     for (tab <- subgoals;
          (top, bottom) <- SashGoalPresenter.unpackTab(tab.getControl))
@@ -168,11 +168,18 @@ class RawGoalPresenter extends SashGoalPresenter {
       setFont(JFaceResources.getTextFont)
   }
 
+  private def getFirstChildText(parent : Composite) =
+    parent.getChildren()(0).asInstanceOf[Text]
+
+  override protected def fontChanged(top : Composite, bottom : Composite) = {
+    getFirstChildText(top).setFont(JFaceResources.getTextFont)
+    getFirstChildText(bottom).setFont(JFaceResources.getTextFont)
+  }
+
   override protected def updateTab(
       goal : CoqTypes.goal, top : Composite, bottom : Composite) = {
-    top.getChildren()(0).asInstanceOf[Text].setText(
-        goal.goal_hyp.mkString("\n"))
-    bottom.getChildren()(0).asInstanceOf[Text].setText(goal.goal_ccl)
+    getFirstChildText(top).setText(goal.goal_hyp.mkString("\n"))
+    getFirstChildText(bottom).setText(goal.goal_ccl)
   }
 }
 
@@ -180,6 +187,14 @@ import dk.itu.coqoon.core.utilities.Substring
 
 class RichGoalPresenter extends SashGoalPresenter {
   import org.eclipse.swt.custom.{StyleRange, StyledText}
+
+  private def getFirstChildText(parent : Composite) =
+    parent.getChildren()(0).asInstanceOf[StyledText]
+
+  override protected def fontChanged(top : Composite, bottom : Composite) = {
+    getFirstChildText(top).setFont(JFaceResources.getTextFont)
+    getFirstChildText(bottom).setFont(JFaceResources.getTextFont)
+  }
 
   private var selection : Seq[String] = Nil
 
@@ -203,6 +218,7 @@ class RichGoalPresenter extends SashGoalPresenter {
     val bottomT = new StyledText(bottom,
         SWT.BORDER | SWT.READ_ONLY | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL)
     bottomT.setFont(JFaceResources.getTextFont)
+
     topT.addCaretListener(new CaretListener {
       override def caretMoved(ev : CaretEvent) = if (!suppressUpdate) {
         val idents = TryCast[Seq[(String, Int, Int)]](
@@ -235,8 +251,7 @@ class RichGoalPresenter extends SashGoalPresenter {
 
   override protected def updateTab(
       goal : CoqTypes.goal, top : Composite, bottom : Composite) = {
-    val topT = top.getChildren()(0).asInstanceOf[StyledText]
-    val bottomT = bottom.getChildren()(0).asInstanceOf[StyledText]
+    val (topT, bottomT) = (getFirstChildText(top), getFirstChildText(bottom))
 
     var offset : Int = 0
                    /* name, start, end */
