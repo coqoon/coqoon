@@ -439,8 +439,6 @@ object PIDECoqEditor {
       case _ =>
         false
     }
-    println(results.toList)
-    println(finished)
 
     if (finished) {
       val r =

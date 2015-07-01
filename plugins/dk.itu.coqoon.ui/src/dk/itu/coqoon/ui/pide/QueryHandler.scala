@@ -18,7 +18,6 @@ class QueryHandler extends EditorHandler {
       val text = editor.getViewer.getTextWidget
       var (rx, ry) = {
         val cl = text.getCaret.getLocation
-        println(text.getCaret.getClass.getSimpleName, text.getCaret, cl)
         /* I have no idea why we're 80 pixels short, but we are (at least on my
          * computer!) */
         (cl.x, cl.y + 80)
@@ -27,7 +26,6 @@ class QueryHandler extends EditorHandler {
       while (control != None) {
         control.foreach(control => {
           val cl = control.getLocation
-          println(control.getClass.getSimpleName, control, cl)
           rx += cl.x
           ry += cl.y
         })
@@ -43,7 +41,6 @@ class QueryHandler extends EditorHandler {
           true
         case _ => false
       }
-      System.out.println("It is println")
     })
     null
   }
