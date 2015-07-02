@@ -1,3 +1,10 @@
+/* SessionManager.scala
+ * Coqoon-specific subclasses and wrappers for the PIDE SessionManager class
+ * Copyright © 2015 Alexander Faithfull
+ *
+ * You may use, copy, modify and/or redistribute this code subject to the terms
+ * of either the license of Kopitiam or the Apache License, version 2.0 */
+
 package dk.itu.coqoon.ui.pide
 
 import dk.itu.coqoon.core.CoqoonPreferences

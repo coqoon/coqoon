@@ -1,6 +1,6 @@
 /* BuildScriptUI.scala
  * A preference page for checking and updating project build scripts
- * Copyright © 2013 Alexander Faithfull
+ * Copyright © 2014, 2015 Alexander Faithfull
  *
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */

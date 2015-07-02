@@ -1,6 +1,6 @@
 /* LoadPathUI.scala
  * User interfaces for viewing and manipulating Coq project load paths
- * Copyright © 2013 Alexander Faithfull
+ * Copyright © 2013, 2014, 2015 Alexander Faithfull
  *
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
