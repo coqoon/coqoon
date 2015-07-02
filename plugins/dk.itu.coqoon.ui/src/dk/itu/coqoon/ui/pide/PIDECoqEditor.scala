@@ -52,8 +52,8 @@ class PIDECoqEditor
               q => (caret >= q._1 && caret <= (q._1 + q._2.length)))
           lastSnapshot.flatMap(snapshot => c.map(
               c => (c,
-                  PIDECoqEditor.extractResults(snapshot, c._2),
-                  PIDECoqEditor.extractMarkup(snapshot, c._2))))
+                  Responses.extractResults(snapshot, c._2),
+                  Responses.extractMarkup(snapshot, c._2))))
         })
       commandResultsAndMarkup match {
         case Some(((offset, command), results, markup)) =>
@@ -62,7 +62,7 @@ class PIDECoqEditor
           markup.find(_.name == "goals") match {
             case Some(el)
                 if !sameCommand || goals == None =>
-              setGoals(PIDECoqEditor.extractGoals(el))
+              setGoals(Responses.extractGoals(el))
             case Some(el) => /* do nothing? */
             case None => setGoals(None)
           }
@@ -76,7 +76,7 @@ class PIDECoqEditor
                      f.markup.properties.toMap.get("source") != Some("goal") =>
                 EclipseConsole.out.println(f.body(0).asInstanceOf[Text].content)
               case f : Elem if f.name == "error_message" =>
-                PIDECoqEditor.extractError(f).map(_._2).foreach(
+                Responses.extractError(f).map(_._2).foreach(
                     EclipseConsole.err.println)
               case _ =>
             }
@@ -108,8 +108,8 @@ class PIDECoqEditor
                   /* Otherwise, fix up the offset, if there was one, and keep
                    * this command and its metadata for further processing. */
                   Some((h.map(_ - ibLength), c,
-                      PIDECoqEditor.extractResults(ls, c),
-                      PIDECoqEditor.extractMarkup(ls, c)))
+                      Responses.extractResults(ls, c),
+                      Responses.extractMarkup(ls, c)))
               }
             }
         }).flatten
@@ -139,7 +139,7 @@ class PIDECoqEditor
               import XML._
               tree match {
                 case f : Elem if f.name == "error_message" =>
-                  (getFile, PIDECoqEditor.extractError(f)) match {
+                  (getFile, Responses.extractError(f)) match {
                     case (Some(f), Some((id, msg, Some(start), Some(end)))) =>
                       errorsToAdd += id -> (command,
                           (offset + start - 1, offset + end - 1), msg)
@@ -239,7 +239,7 @@ class PIDECoqEditor
         overlay match {
           case Some((o @ Overlay(command, _, _), listener))
               if changed.commands.contains(command) =>
-            PIDECoqEditor.extractQueryResult(
+            Responses.extractQueryResult(
                 lastSnapshot.get, command, o.id).foreach(listener.onResult)
           case _ =>
         }
@@ -405,104 +405,6 @@ class PIDECoqEditor
       Perspective.makeFullPerspective()
     case Some((overlay, _)) =>
       Perspective.makeFullPerspective(overlay.wrap)
-  }
-}
-object PIDECoqEditor {
-  import isabelle._
-  import dk.itu.coqoon.core.coqtop.CoqTypes
-  private def extractMarkup(snapshot : Document.Snapshot,
-      command : isabelle.Command) : Seq[XML.Elem] = {
-    val markupTree =
-      snapshot.state.command_markup(snapshot.version, command,
-          Command.Markup_Index.markup, command.range, Markup.Elements.full)
-    (for ((range, entry) <- markupTree.branches;
-          markup <- entry.markup)
-       yield markup).toSeq
-  }
-  /* The left-hand side of this Either is an error message, and the right is
-   * a normal status message. */
-  private def extractQueryResult(snapshot : Document.Snapshot,
-      command : isabelle.Command, queryID_ : Long) : Option[Either[String, String]] = {
-    val queryID = queryID_.toString
-
-    import isabelle.XML.Elem
-    val results = (extractResults(snapshot, command) collect {
-      case (_, e @ Elem(Markup(Markup.RESULT, properties), _))
-          if properties.contains(Markup.INSTANCE -> queryID) =>
-        e
-    })
-
-    val finished = results exists {
-      case XML.Elem(_, List(XML.Elem(Markup(Markup.STATUS, _),
-                            List(XML.Elem(Markup(Markup.FINISHED, _), _))))) =>
-        true
-      case _ =>
-        false
-    }
-
-    if (finished) {
-      val r =
-        results collectFirst {
-          case XML.Elem(_, List(XML.Elem(Markup(Markup.ERROR, _),
-              List(t : XML.Text)))) =>
-            Left(t.content.trim)
-          case XML.Elem(_, List(XML.Elem(Markup(Markup.WRITELN, _),
-              List(t : XML.Text)))) =>
-            Right(t.content.trim)
-        }
-      r.orElse(Some(Left("Query finished without producing output")))
-    } else None
-  }
-  private def extractResults(snapshot : Document.Snapshot,
-      command : isabelle.Command) : Seq[Command.Results.Entry] = {
-    val results =
-      snapshot.state.command_results(snapshot.version, command)
-    results.iterator.toSeq
-  }
-
-  import isabelle.XML.{Elem, Text, Tree}
-  /* For the time being, we convert exciting new PIDE data into boring old
-   * -ideslave-8.4 data, to make it easier to support both at once. */
-  private object GoalAssist {
-    import dk.itu.coqoon.core.coqtop.CoqTypes
-    def extractGoalList(e : Tree) : List[CoqTypes.goal] = e match {
-      case e : Elem =>
-        e.body.flatMap(extractGoal)
-      case _ => List()
-    }
-    def extractGoal(e : Tree) : Option[CoqTypes.goal] = e match {
-      case e : Elem if e.name == "goal" =>
-        val propertyMap = e.markup.properties.toMap
-        Some(CoqTypes.goal(
-            propertyMap.get("id").getOrElse("(unknown)"),
-            extractHypotheses(e.body(0)),
-            e.body(1).asInstanceOf[Elem].body(0).asInstanceOf[Text].content))
-      case _ => None
-    }
-    import dk.itu.coqoon.core.utilities.TryCast
-    def extractHypotheses(e : Tree) : List[String] = e match {
-      case e : Elem if e.name == "hypotheses" =>
-        for (hypothesis <- e.body.flatMap(TryCast[Elem]);
-             text <- TryCast[Text](hypothesis.body(0)))
-          yield text.content
-      case _ => List()
-    }
-  }
-  private def extractGoals(e : Tree) = e match {
-    case e : Elem if e.name == "goals" =>
-      Some(CoqTypes.goals(GoalAssist.extractGoalList(e.body(0)), List()))
-    case _ => None
-  }
-  private def extractError(e : Tree) = e match {
-    case f : Elem if f.name == "error_message" =>
-      val propertyMap = f.markup.properties.toMap
-      val (errStart, errEnd) =
-        (propertyMap.get("offset").map(Integer.parseInt(_, 10)),
-         propertyMap.get("end_offset").map(Integer.parseInt(_, 10)))
-      val msg = f.body(0).asInstanceOf[Text].content
-      propertyMap.get("id").map(Integer.parseInt(_, 10)).map(
-          id => (id, msg, errStart, errEnd))
-    case _ => None
   }
 }
 
