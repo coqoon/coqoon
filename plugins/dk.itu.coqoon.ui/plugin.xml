@@ -143,7 +143,7 @@
       </key>
       <key
             commandId="dk.itu.coqoon.ui.pide.commands.query"
-            contextId="org.eclipse.ui.contexts.window"
+            contextId="dk.itu.coqoon.ui.contexts.coq"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+M2+Space">
       </key>

@@ -140,6 +140,9 @@ abstract class BaseCoqEditor extends TextEditor {
         outlinePage = Some(createOutlinePage)
       outlinePage.orNull
     } else super.getAdapter(adapter)
+
+  override def initializeKeyBindingScopes =
+    setKeyBindingScopes(Array("dk.itu.coqoon.ui.contexts.coq"))
 }
 
 import org.eclipse.ui.views.contentoutline.ContentOutlinePage

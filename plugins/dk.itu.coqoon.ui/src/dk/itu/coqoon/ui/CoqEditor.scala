@@ -99,9 +99,6 @@ class CoqEditor extends BaseCoqEditor with CoqTopEditorContainer {
   def invalidate () : Unit = UIUtils.asyncExec {
     getSourceViewer.invalidateTextPresentation
   }
-
-  override def initializeKeyBindingScopes =
-    setKeyBindingScopes(Array("dk.itu.coqoon.ui.contexts.coq"))
 }
 object CoqEditor {
   final val FLAG_INITIALISED = "CoqEditor.initialised"
