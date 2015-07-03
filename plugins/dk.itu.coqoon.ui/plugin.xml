@@ -473,7 +473,7 @@
             commandId="dk.itu.coqoon.ui.commands.interrupt_coq">
          <activeWhen>
             <reference
-                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorHasCoq">
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
             </reference>
          </activeWhen>
       </handler>
@@ -482,7 +482,7 @@
             commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag">
          <activeWhen>
             <reference
-                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorHasCoq">
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
             </reference>
          </activeWhen>
       </handler>
@@ -491,7 +491,7 @@
             commandId="dk.itu.coqoon.ui.commands.open_declaration">
          <activeWhen>
             <reference
-                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorHasCoq">
             </reference>
          </activeWhen>
       </handler>
@@ -500,13 +500,18 @@
             commandId="dk.itu.coqoon.ui.commands.reformat">
          <activeWhen>
             <reference
-                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorHasCoq">
             </reference>
          </activeWhen>
       </handler>
       <handler
             class="dk.itu.coqoon.ui.pide.QueryHandler"
             commandId="dk.itu.coqoon.ui.pide.commands.query">
+         <activeWhen>
+            <reference
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsPIDE">
+            </reference>
+         </activeWhen>
       </handler>
    </extension>
    <extension
@@ -649,6 +654,16 @@
                   name="dk.itu.coqoon.ui.menus.coq.separator1"
                   visible="true">
             </separator>
+            <command
+                  commandId="dk.itu.coqoon.ui.pide.commands.query"
+                  icon="platform:/plugin/org.eclipse.ui/icons/full/etool16/help_search.gif"
+                  label="Begin PIDE query"
+                  style="push">
+            </command>
+            <separator
+                  name="dk.itu.coqoon.ui.menus.coq.separator3"
+                  visible="true">
+            </separator>
             <menu
                   id="dk.itu.coqoon.ui.menus.coq.setPrinting"
                   label="Set Printing">
@@ -757,15 +772,6 @@
                </reference>
             </visibleWhen>
          </menu>
-         <menu
-               label="PIDE">
-            <command
-                  commandId="dk.itu.coqoon.ui.pide.commands.query"
-                  icon="platform:/plugin/org.eclipse.ui/icons/full/etool16/help_search.gif"
-                  label="Query"
-                  style="push">
-            </command>
-         </menu>
       </menuContribution>
    </extension>
    <extension
@@ -774,21 +780,27 @@
             id="dk.itu.coqoon.ui.expressions.activeEditorIsCoq">
          <with
                variable="activeEditor">
-            <adapt
-                  type="dk.itu.coqoon.ui.CoqTopContainer">
-               <instanceof
-                     value="dk.itu.coqoon.ui.CoqEditor">
-               </instanceof>
-            </adapt>
+            <instanceof
+                  value="dk.itu.coqoon.ui.CoqEditor">
+            </instanceof>
          </with>
       </definition>
       <definition
             id="dk.itu.coqoon.ui.expressions.activeEditorHasCoq">
          <with
                variable="activeEditor">
-            <adapt
-                  type="dk.itu.coqoon.ui.CoqTopContainer">
-            </adapt>
+            <instanceof
+                  value="dk.itu.coqoon.ui.BaseCoqEditor">
+            </instanceof>
+         </with>
+      </definition>
+      <definition
+            id="dk.itu.coqoon.ui.expressions.activeEditorIsPIDE">
+         <with
+               variable="activeEditor">
+            <instanceof
+                  value="dk.itu.coqoon.ui.pide.PIDECoqEditor">
+            </instanceof>
          </with>
       </definition>
    </extension>
