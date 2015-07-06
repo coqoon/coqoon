@@ -243,12 +243,17 @@ class CoqMasterFormattingStrategy extends FormattingStrategyBase {
     }
   }
 
-  override protected def format() = {
+  override protected def format() = getMedium.foreach(document => {
     import dk.itu.coqoon.core.coqtop.CoqSentence
     import org.eclipse.jface.text.Region
 
-    val document = getMedium.get
-    val rawRegion = getRegion.get
+    val rawRegion =
+      (getDocument, getRegion) match {
+        case (Some(true), _) | (_, None) =>
+          new Region(0, document.getLength)
+        case (_, Some(r)) =>
+          r
+      }
     val rawEnd = rawRegion.getOffset + rawRegion.getLength
     val sentences =
       CoqSentence.getNextSentences(document.get, 0, rawEnd).map(_._1)
@@ -269,7 +274,7 @@ class CoqMasterFormattingStrategy extends FormattingStrategyBase {
       document.replace(region.getOffset,
           region.getLength, initialWhitespace + builder.get.result.trim)
     }
-  }
+  })
 }
 private object CoqMasterFormattingStrategy {
   private def leading(lines : Seq[String]) = {
