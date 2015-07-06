@@ -135,7 +135,9 @@ abstract class BaseCoqEditor extends TextEditor {
   }
 
   override def getAdapter(adapter : Class[_]) =
-    if (adapter == classOf[IContentOutlinePage]) {
+    if (adapter == classOf[ISourceViewer]) {
+      getSourceViewer
+    } else if (adapter == classOf[IContentOutlinePage]) {
       if (outlinePage == None && getSourceViewer != null)
         outlinePage = Some(createOutlinePage)
       outlinePage.orNull
