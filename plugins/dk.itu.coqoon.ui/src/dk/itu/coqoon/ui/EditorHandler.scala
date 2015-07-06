@@ -21,6 +21,9 @@ abstract class EditorHandler extends AbstractHandler {
   private var editorV : Option[IEditorPart] = None
   protected def getEditor() = editorV
 
+  protected def adaptEditor[A](implicit arg0 : Manifest[A]) =
+    getEditor.flatMap(TryAdapt[A])
+
   override protected def setEnabled(evaluationContext : Object) = {
     val activeEditor = TryCast[IEvaluationContext](evaluationContext) match {
       case Some(e) =>
