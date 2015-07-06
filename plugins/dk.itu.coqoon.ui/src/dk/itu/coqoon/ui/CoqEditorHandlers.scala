@@ -142,10 +142,15 @@ class StopCoqHandler extends CoqEditorHandler {
       getCoqTopContainer.exists(_.testFlag(CoqEditor.FLAG_INITIALISED)))
 }
 
-class ReformatCoqHandler extends CoqEditorHandler {
-  import org.eclipse.jface.text.source.ISourceViewer.FORMAT
+class ReformatCoqHandler extends EditorHandler {
+  import org.eclipse.jface.text.source.ISourceViewer
+  private def getViewer() = adaptEditor[ISourceViewer]
+
+  override def calculateEnabled = (getViewer != None)
+
   override def execute(ev : ExecutionEvent) = {
-    getEditor.foreach(_.getViewer.getTextOperationTarget.doOperation(FORMAT))
+    getViewer.foreach(
+        _.getTextOperationTarget.doOperation(ISourceViewer.FORMAT))
     null
   }
 }
