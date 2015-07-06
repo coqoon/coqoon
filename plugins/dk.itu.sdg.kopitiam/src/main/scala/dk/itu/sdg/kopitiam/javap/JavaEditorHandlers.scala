@@ -19,9 +19,10 @@ case class JavaStep(
     override val synthetic : Boolean) extends CoqCommand(text, synthetic)
 
 abstract class JavaEditorHandler extends EditorHandler {
-  override def editor : ITextEditor = TryCast[ITextEditor](super.editor).orNull
+  override def getEditor : Option[ITextEditor] =
+    super.getEditor.flatMap(TryCast[ITextEditor])
   override def calculateEnabled = (getState != null && !getState.busy)
-  protected def getState = JavaEditorState.requireStateFor(editor)
+  protected def getState = getEditor.map(JavaEditorState.requireStateFor).get
 }
 object JavaEditorHandler {
   import scala.collection.mutable.Stack
@@ -43,6 +44,7 @@ class VerifyMethodHandler extends JavaEditorHandler {
   import org.eclipse.jface.text.ITextSelection
   override def execute (ev : ExecutionEvent) : Object = {
     if (isEnabled()) {
+      val editor = getEditor.get
       //plan:
       // a: get project
       val jes = getState

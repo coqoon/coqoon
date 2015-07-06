@@ -13,8 +13,8 @@ import dk.itu.coqoon.core.utilities.{TryCast, Substring}
 import scala.collection.mutable.Stack
 
 abstract class CoqEditorHandler extends EditorHandler {
-  override def calculateEnabled = (editor != null && !editor.busy)
-  override def editor : CoqEditor = TryCast[CoqEditor](super.editor).orNull
+  override def calculateEnabled = getEditor.exists(editor => !editor.busy)
+  override def getEditor() : Option[CoqEditor] = super.getEditor.flatMap(TryCast[CoqEditor])
 }
 object CoqEditorHandler {
   def makeStep(doc : String, offset : Int) : Option[CoqStep] =
@@ -55,16 +55,18 @@ import org.eclipse.core.commands.ExecutionEvent
 
 class CoqStepForwardHandler extends CoqEditorHandler {
   /* Don't check whether the editor's coqtop instance is busy */
-  override def calculateEnabled = (editor != null)
+  override def calculateEnabled = (getEditor != None)
 
   override def execute(ev : ExecutionEvent) = {
-    if (isEnabled())
+    if (isEnabled()) {
+      val editor = getEditor.get
       CoqEditorHandler.makeStep(editor.document.get, editor.underway).foreach(
           step => {
         // We're running in the UI thread, so always move the underway marker
         editor.setUnderway(step.offset + step.text.length())
         scheduleJob(new CoqStepForwardJob(editor, List(step)))
       })
+    }
     null
   }
 }
@@ -72,6 +74,7 @@ class CoqStepForwardHandler extends CoqEditorHandler {
 class CoqStepAllHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
+      val editor = getEditor.get
       val doc = editor.document.get
       val steps = CoqEditorHandler.makeSteps(doc, editor.underway, doc.length)
       if (steps.length > 0) {
@@ -86,6 +89,7 @@ class CoqStepAllHandler extends CoqEditorHandler {
 class CoqStepToCursorHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled()) {
+      val editor = getEditor.get
       val underwayPos = editor.underway
       val cursorPos = editor.cursorPosition
       if (cursorPos > underwayPos) { // Forwards!
@@ -107,40 +111,41 @@ class CoqStepToCursorHandler extends CoqEditorHandler {
 class CoqStepBackHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled())
-      CoqEditorHandler.doStepBack(editor, a => if (a.length > 0) 1 else 0)
+      CoqEditorHandler.doStepBack(
+          getEditor.get, a => if (a.length > 0) 1 else 0)
     null
   }
 
   override def calculateEnabled =
-    super.calculateEnabled && (editor.steps.length > 0)
+    super.calculateEnabled && getEditor.exists(_.steps.length > 0)
 }
 
 class CoqRetractAllHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled())
-      CoqEditorHandler.doStepBack(editor, _.length)
+      CoqEditorHandler.doStepBack(getEditor.get, _.length)
     null
   }
 
   override def calculateEnabled =
-    super.calculateEnabled && (editor.steps.length > 0)
+    super.calculateEnabled && getEditor.exists(_.steps.length > 0)
 }
 
 class StopCoqHandler extends CoqEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled())
-      new StopCoqRunner(editor).run(null)
+      getEditor.foreach(editor => new StopCoqRunner(editor).run(null))
     null
   }
 
   override def calculateEnabled = (getCoqTopContainer != null &&
-      getCoqTopContainer.testFlag(CoqEditor.FLAG_INITIALISED))
+      getCoqTopContainer.exists(_.testFlag(CoqEditor.FLAG_INITIALISED)))
 }
 
 class ReformatCoqHandler extends CoqEditorHandler {
   import org.eclipse.jface.text.source.ISourceViewer.FORMAT
   override def execute(ev : ExecutionEvent) = {
-    editor.getViewer.getTextOperationTarget.doOperation(FORMAT)
+    getEditor.foreach(_.getViewer.getTextOperationTarget.doOperation(FORMAT))
     null
   }
 }

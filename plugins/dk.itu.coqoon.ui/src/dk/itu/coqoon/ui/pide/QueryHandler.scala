@@ -21,7 +21,7 @@ import org.eclipse.jface.viewers.StyledString
 class QueryHandler extends EditorHandler {
   import dk.itu.coqoon.ui.utilities.UIUtils
   override def execute(ev : ExecutionEvent) = {
-    TryCast[PIDECoqEditor](editor).foreach(editor => {
+    getEditor.flatMap(TryCast[PIDECoqEditor]).foreach(editor => {
       val text = editor.getViewer.getTextWidget
       var (rx, ry) = {
         val cl = text.getCaret.getLocation

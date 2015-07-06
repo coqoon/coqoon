@@ -18,33 +18,37 @@ import org.eclipse.core.expressions.IEvaluationContext
 abstract class EditorHandler extends AbstractHandler {
   setBaseEnabled(false)
 
-  private var editorV : IEditorPart = null
-  protected def editor = editorV
+  private var editorV : Option[IEditorPart] = None
+  protected def getEditor() = editorV
 
   override protected def setEnabled(evaluationContext : Object) = {
     val activeEditor = TryCast[IEvaluationContext](evaluationContext) match {
-      case Some(e) => e.getVariable(ISources.ACTIVE_EDITOR_NAME)
-      case _ => UIUtils.getWorkbench.getActiveWorkbenchWindow.
-          getActivePage.getActiveEditor
+      case Some(e) =>
+        TryCast[IEditorPart](e.getVariable(ISources.ACTIVE_EDITOR_NAME))
+      case _ =>
+        Option(UIUtils.getWorkbench.
+            getActiveWorkbenchWindow.getActivePage.getActiveEditor)
     }
     val oldEditor = editorV
-    editorV = TryCast[IEditorPart](activeEditor).orNull
+    editorV = activeEditor
     if (oldEditor != editorV)
       editorChanged(oldEditor, editorV)
     setBaseEnabled(editorV != null && calculateEnabled)
   }
 
-  protected def editorChanged(o : IEditorPart, n : IEditorPart) = ()
+  protected def editorChanged(
+      o : Option[IEditorPart], n : Option[IEditorPart]) = ()
 
-  protected def getCoqTopContainer = TryAdapt[CoqTopContainer](editor).orNull
+  protected def getCoqTopContainer =
+    getEditor.flatMap(TryAdapt[CoqTopContainer])
 
   import org.eclipse.core.runtime.jobs.Job
   protected def scheduleJob(j : Job) = {
-    getCoqTopContainer.setBusy(true)
+    getCoqTopContainer.foreach(_.setBusy(true))
     j.schedule
   }
 
-  def calculateEnabled : Boolean = true
+  def calculateEnabled() : Boolean = true
 }
 
 import org.eclipse.core.commands.ExecutionEvent
@@ -52,12 +56,12 @@ import org.eclipse.core.commands.ExecutionEvent
 class InterruptCoqHandler extends EditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled())
-      getCoqTopContainer.coqTop.interrupt
+      getCoqTopContainer.foreach(_.coqTop.interrupt)
     null
   }
 
   override def calculateEnabled =
-    (getCoqTopContainer != null && getCoqTopContainer.busy)
+    (getCoqTopContainer != null && getCoqTopContainer.exists(_.busy))
 }
 
 import org.eclipse.ui.menus.UIElement
@@ -71,9 +75,9 @@ class ToggleCoqFlagHandler extends EditorHandler with IElementUpdater {
       val name = ev.getParameter(
           ManifestIdentifiers.COMMAND_PARAMETER_TOGGLE_COQ_FLAG_NAME).
               split(" ").toList
-      getCoqTopContainer.coqTop.getOptionValue(name) match {
+      getCoqTopContainer.flatMap(_.coqTop.getOptionValue(name)) match {
         case Some(BoolValue(v)) => scheduleJob(
-            new SetCoqOptionJob(name, BoolValue(!v), getCoqTopContainer))
+            new SetCoqOptionJob(name, BoolValue(!v), getCoqTopContainer.get))
         case _ =>
       }
     }
@@ -82,9 +86,10 @@ class ToggleCoqFlagHandler extends EditorHandler with IElementUpdater {
 
   /* The states of the UI elements associated with this handler must be updated
    * whenever the active editor changes */
-  override protected def editorChanged(o : IEditorPart, n : IEditorPart) =
-    TryAdapt[CoqTopContainer](n).foreach(_ => UIUtils.refreshElements(
-        ManifestIdentifiers.COMMAND_TOGGLE_COQ_FLAG))
+  override protected def editorChanged(
+      o : Option[IEditorPart], n : Option[IEditorPart]) =
+    if (n != None)
+      UIUtils.refreshElements(ManifestIdentifiers.COMMAND_TOGGLE_COQ_FLAG)
 
   override def updateElement(
       element : UIElement, map : java.util.Map[_, _]) = {
@@ -92,7 +97,7 @@ class ToggleCoqFlagHandler extends EditorHandler with IElementUpdater {
         ManifestIdentifiers.COMMAND_PARAMETER_TOGGLE_COQ_FLAG_NAME)) match {
       case Some(name_) =>
         val name = name_.split(" ").toList
-        getCoqTopContainer.coqTop.getOptionValue(name) match {
+        getCoqTopContainer.flatMap(_.coqTop.getOptionValue(name)) match {
           case Some(BoolValue(v)) => element.setChecked(v)
           case _ =>
         }
