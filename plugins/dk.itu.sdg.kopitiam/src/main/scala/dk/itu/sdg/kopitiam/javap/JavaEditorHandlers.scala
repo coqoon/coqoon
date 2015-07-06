@@ -4,7 +4,7 @@
 package dk.itu.sdg.kopitiam.javap
 
 import dk.itu.coqoon.ui.{
-  CoqCommand, CoqEditorHandler, ResourceJob, EditorHandler}
+  CoqCommand, CoqEditorHandler, CoqTopEditorHandler, ResourceJob}
 import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core.utilities.TryCast
 
@@ -18,7 +18,7 @@ case class JavaStep(
     override val text : String,
     override val synthetic : Boolean) extends CoqCommand(text, synthetic)
 
-abstract class JavaEditorHandler extends EditorHandler {
+abstract class JavaEditorHandler extends CoqTopEditorHandler {
   override def getEditor : Option[ITextEditor] =
     super.getEditor.flatMap(TryCast[ITextEditor])
   override def calculateEnabled = (getState != null && !getState.busy)

@@ -39,6 +39,10 @@ abstract class EditorHandler extends AbstractHandler {
   protected def editorChanged(
       o : Option[IEditorPart], n : Option[IEditorPart]) = ()
 
+  def calculateEnabled() : Boolean = true
+}
+
+abstract class CoqTopEditorHandler extends EditorHandler {
   protected def getCoqTopContainer =
     getEditor.flatMap(TryAdapt[CoqTopContainer])
 
@@ -47,27 +51,24 @@ abstract class EditorHandler extends AbstractHandler {
     getCoqTopContainer.foreach(_.setBusy(true))
     j.schedule
   }
-
-  def calculateEnabled() : Boolean = true
 }
 
 import org.eclipse.core.commands.ExecutionEvent
 
-class InterruptCoqHandler extends EditorHandler {
+class InterruptCoqHandler extends CoqTopEditorHandler {
   override def execute(ev : ExecutionEvent) = {
     if (isEnabled())
       getCoqTopContainer.foreach(_.coqTop.interrupt)
     null
   }
 
-  override def calculateEnabled =
-    (getCoqTopContainer != null && getCoqTopContainer.exists(_.busy))
+  override def calculateEnabled = getCoqTopContainer.exists(_.busy)
 }
 
 import org.eclipse.ui.menus.UIElement
 import org.eclipse.ui.commands.IElementUpdater
 
-class ToggleCoqFlagHandler extends EditorHandler with IElementUpdater {
+class ToggleCoqFlagHandler extends CoqTopEditorHandler with IElementUpdater {
   import CoqTypes._
 
   override def execute(ev : ExecutionEvent) = {

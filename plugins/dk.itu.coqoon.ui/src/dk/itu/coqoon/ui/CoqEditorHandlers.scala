@@ -12,7 +12,7 @@ import dk.itu.coqoon.core.utilities.{TryCast, Substring}
 
 import scala.collection.mutable.Stack
 
-abstract class CoqEditorHandler extends EditorHandler {
+abstract class CoqEditorHandler extends CoqTopEditorHandler {
   override def calculateEnabled = getEditor.exists(editor => !editor.busy)
   override def getEditor() : Option[CoqEditor] = super.getEditor.flatMap(TryCast[CoqEditor])
 }
