@@ -230,7 +230,7 @@ class CoqMasterFormattingStrategy extends FormattingStrategyBase {
         import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier._
         s.getText match {
           case ProofStartSentence(_) | ProofEndSentence(_) |
-              IdentifiedEndSentence(_) =>
+              IdentifiedEndSentence(_) | EndSubproofSentence() =>
             /* These should appear in the enclosing scope */
             out(startAt, indentationLevel - 1, s)
           case _ =>
