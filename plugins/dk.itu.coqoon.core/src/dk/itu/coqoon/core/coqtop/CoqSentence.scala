@@ -22,7 +22,7 @@ object CoqSentence {
   final val CommentStart = """^\(\*""".r.unanchored
   final val CommentEnd = """^\*\)""".r.unanchored
   final val QuotationMark = "^\"".r.unanchored
-  final val Bullet = """^(\+|-|\*)""".r.unanchored
+  final val Bullet = """^(\++|-+|\*+)""".r.unanchored
   final val CurlyBracket = """^(\{|\})(\s|$)""".r.unanchored
   final val FullStop = """^\.(\s|$)""".r.unanchored
   final val Ellipsis = """^\.\.\.(\s|$)""".r.unanchored
@@ -56,8 +56,8 @@ object CoqSentence {
         return Some((Substring(doc, offset, i + 3), false))
       case CurlyBracket(t, _) if !content && !inString && commentDepth == 0 =>
         return Some((Substring(doc, offset, i + 1), false))
-      case Bullet(_) if !content && !inString && commentDepth == 0 =>
-        return Some((Substring(doc, offset, i + 1), false))
+      case Bullet(b) if !content && !inString && commentDepth == 0 =>
+        return Some((Substring(doc, offset, i + b.length), false))
       case DotRun(dots, end) if !inString && commentDepth == 0 =>
         content = true
         i += dots.length + end.length
