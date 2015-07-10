@@ -190,6 +190,30 @@ object CoqSentence {
         case _ => None
       }
     }
+
+    object BulletSentence {
+      val expr = ("(?s)^\\s*(-+|\\*+|\\++)\\s*$").r
+      def unapply(input : CharSequence) = input match {
+        case expr(bullet) => Some(bullet)
+        case _ => None
+      }
+    }
+
+    object SubproofSentence {
+      val expr = ("(?s)^\\s*\\{\\s*$").r
+      def unapply(input : CharSequence) = input match {
+        case expr() => true
+        case _ => false
+      }
+    }
+
+    object EndSubproofSentence {
+      val expr = ("(?s)^\\s*\\}\\s*$").r
+      def unapply(input : CharSequence) = input match {
+        case expr() => true
+        case _ => false
+      }
+    }
   }
 }
 
