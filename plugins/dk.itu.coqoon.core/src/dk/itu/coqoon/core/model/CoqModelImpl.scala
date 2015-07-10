@@ -503,6 +503,33 @@ private class CoqVernacFileImpl(
                 new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
             tail
 
+          case (h @ (SubproofSentence(), _)) :: tail =>
+            stack.pushContext(s"subproof-curly")
+            stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
+            tail
+
+          /* If we encounter a "}" (and no new proof has started since we saw
+           * the corresponding "{"), then close any intervening subproofs
+           * before also closing this one */
+          case (h @ (EndSubproofSentence(), _)) :: tail
+              if stack.getContext {
+                case f if f == "subproof-curly" => true
+                case f if f.startsWith("proof-") => true
+                case _ => false
+              } == Some("subproof-curly") =>
+            var context = stack.getInnermostContext
+            while (context != Some("subproof-curly")) {
+              val (tag, body) = stack.popContext
+              stack.push(
+                  new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
+              context = stack.getInnermostContext
+            }
+            stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
+            val (tag, body) = stack.popContext
+            stack.push(
+                new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
+            tail
+
           /* Something of the form "Foo. Proof." is probably a proof, even if
            * we don't recognise what "Foo." means (unless it's a comment) */
           case (h @ (_, false)) :: (i @ (ProofStartSentence(_), _)) :: tail =>
