@@ -434,6 +434,16 @@ private class CoqVernacFileImpl(
 
       val stack = new ParserStack[ICoqScriptElement, String]()
 
+      def _closeUntil(contextLabel : String) = {
+        var context = stack.getInnermostContext
+        while (context != Some(contextLabel)) {
+          val (tag, body) = stack.popContext
+          stack.push(
+              new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
+          context = stack.getInnermostContext
+        }
+      }
+
       while (sentences != Nil) {
         import CoqSentence.Classifier._
         sentences = sentences match {
@@ -495,8 +505,18 @@ private class CoqVernacFileImpl(
             stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
             stack.push(new CoqScriptSentenceImpl(i, CoqVernacFileImpl.this))
             tail
+
           case (h @ (ProofEndSentence(_), _)) :: tail
-              if stack.getInnermostContext.exists(_.startsWith("proof-")) =>
+              if stack.getContext {
+                case f if f.startsWith("proof-") => true
+                case _ => false
+              } != None =>
+            val label =
+              (stack.getContext {
+                case f if f.startsWith("proof-") => true
+                case _ => false
+              }).get
+            _closeUntil(label)
             stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
             val (tag, body) = stack.popContext
             stack.push(
@@ -517,17 +537,28 @@ private class CoqVernacFileImpl(
                 case f if f.startsWith("proof-") => true
                 case _ => false
               } == Some("subproof-curly") =>
-            var context = stack.getInnermostContext
-            while (context != Some("subproof-curly")) {
-              val (tag, body) = stack.popContext
-              stack.push(
-                  new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
-              context = stack.getInnermostContext
-            }
+            _closeUntil("subproof-curly")
             stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
             val (tag, body) = stack.popContext
             stack.push(
                 new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
+            tail
+
+          case (h @ (BulletSentence(b), _)) :: tail =>
+            val label = s"bullet-$b"
+            if (stack.getContext {
+                  case f if f == label => true
+                  case f if f == "subproof-curly" => true
+                  case f if f.startsWith("proof-") => true
+                  case _ => false
+                } == Some(label)) {
+              _closeUntil(label)
+              val (tag, body) = stack.popContext
+              stack.push(
+                  new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
+            }
+            stack.pushContext(label)
+            stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
             tail
 
           /* Something of the form "Foo. Proof." is probably a proof, even if
