@@ -1,6 +1,6 @@
 /* Navigation.scala
  * Coq editor handlers for finding and opening Coq model objects
- * Copyright © 2013, 2014 Alexander Faithfull
+ * Copyright © 2013, 2014, 2015 Alexander Faithfull
  *
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
@@ -19,54 +19,56 @@ import dk.itu.coqoon.core.coqtop.CoqSentence
 class OpenDeclarationHandler extends EditorHandler {
   import CoqWordDetector._
   import OpenDeclarationHandler._
+
+  private def getViewer() = adaptEditor[ISourceViewer]
+
+  override def calculateEnabled = (getViewer != None)
+
   override def execute(ev : ExecutionEvent) : AnyRef = {
-    val editor = TryCast[CoqEditor](UIUtils.getWorkbench.
-        getActiveWorkbenchWindow.getActivePage.getActiveEditor)
-    editor match {
-      case Some(editor) =>
-        editor.file.flatMap(ICoqModel.getInstance.toCoqElement) match {
-          case Some(f : ICoqVernacFile) =>
-            var (start, end) = (editor.cursorPosition, editor.cursorPosition)
-            while (isWordStart(editor.document.getChar(start - 1)) ||
-                   isWordPart(editor.document.getChar(start - 1)))
-              start -= 1
-            while (isWordPart(editor.document.getChar(end)) ||
-                   isWordEnd(editor.document.getChar(end)))
-              end += 1
-            if (start != end) {
-              val identifier = editor.document.get(start, end - start)
-              var result : Option[ICoqScriptElement] = None
-              f.getAncestor[ICoqProject].foreach(_.accept(_ match {
-                case e : ICoqLtacSentence
-                    if e.getIdentifier() == identifier =>
-                  result = Some(e); false
-                case e : ICoqFixpointSentence
-                    if e.getIdentifier() == identifier =>
-                  result = Some(e); false
-                case e : ICoqInductiveSentence
-                    if e.getIdentifier() == identifier =>
-                  result = Some(e); false
-                case e : ICoqDefinitionSentence
-                    if e.getIdentifier() == identifier =>
-                  result = Some(e); false
-                case e : ICoqSectionStartSentence
-                    if e.getIdentifier() == identifier =>
-                  result = Some(e); false
-                case e : ICoqModuleStartSentence
-                    if e.getIdentifier() == identifier =>
-                  result = Some(e); false
-                case e : ICoqAssertionSentence
-                    if e.getIdentifier() == identifier =>
-                  result = Some(e); false
-                case p : IParent if result == None => true
-                case f => false
-              }))
-              result.foreach(highlightElement)
-            }
-          case _ =>
+    getViewer.foreach(viewer => {
+      val file = getEditor.flatMap(fileFromEditor)
+      file.flatMap(ICoqModel.getInstance.toCoqElement).foreach(element => {
+        val document = viewer.getDocument
+        val cursorPosition = positionFromViewer(viewer)
+        var (start, end) = (cursorPosition, cursorPosition)
+        while (isWordStart(document.getChar(start - 1)) ||
+               isWordPart(document.getChar(start - 1)))
+          start -= 1
+        while (isWordPart(document.getChar(end)) ||
+               isWordEnd(document.getChar(end)))
+          end += 1
+        if (start != end) {
+          val identifier = document.get(start, end - start)
+          var result : Option[ICoqScriptElement] = None
+          element.getAncestor[ICoqProject].foreach(_.accept(_ match {
+            case e : ICoqLtacSentence
+                if e.getIdentifier() == identifier =>
+              result = Some(e); false
+            case e : ICoqFixpointSentence
+                if e.getIdentifier() == identifier =>
+              result = Some(e); false
+            case e : ICoqInductiveSentence
+                if e.getIdentifier() == identifier =>
+              result = Some(e); false
+            case e : ICoqDefinitionSentence
+                if e.getIdentifier() == identifier =>
+              result = Some(e); false
+            case e : ICoqSectionStartSentence
+                if e.getIdentifier() == identifier =>
+              result = Some(e); false
+            case e : ICoqModuleStartSentence
+                if e.getIdentifier() == identifier =>
+              result = Some(e); false
+            case e : ICoqAssertionSentence
+                if e.getIdentifier() == identifier =>
+              result = Some(e); false
+            case p : IParent if result == None => true
+            case f => false
+          }))
+          result.foreach(highlightElement)
         }
-      case _ =>
-    }
+      })
+    })
     null
   }
 }
