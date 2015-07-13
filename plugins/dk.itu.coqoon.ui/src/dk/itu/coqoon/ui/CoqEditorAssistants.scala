@@ -1,6 +1,6 @@
 /* CoqEditorAssistants.scala
  * Miscellaneous helper classes for the Coq editor
- * Copyright © 2013, 2014 Alexander Faithfull
+ * Copyright © 2013, 2014, 2015 Alexander Faithfull
  *
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
@@ -213,33 +213,35 @@ class CoqMasterFormattingStrategy extends FormattingStrategyBase {
 
   private var builder : Option[StringBuilder] = None
 
-  private def out(startAt : Int,
-      indentationLevel : Int, sentence : ICoqScriptSentence) =
-    if (sentence.getOffset >= startAt)
-      for (t <- normalise(sentence.getText))
-        builder.get ++=
-          (if (!onlyWhitespace(t)) {
-            val wsCount = CoqoonUIPreferences.SpacesPerIndentationLevel.get
-            (" " * wsCount * indentationLevel) + t + "\n"
-          } else "\n")
+  private def out(indentationLevel : Int, text : String) =
+    for (t <- normalise(text))
+      builder.get ++=
+        (if (!onlyWhitespace(t)) {
+          val wsCount = CoqoonUIPreferences.SpacesPerIndentationLevel.get
+          (" " * wsCount * indentationLevel) + t + "\n"
+        } else "\n")
 
   private def loop(startAt : Int,
       indentationLevel : Int, element : ICoqScriptElement) : Unit = {
     element match {
-      case s : ICoqScriptSentence =>
+      case s : ICoqScriptSentence
+          if s.getOffset >= startAt =>
         import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier._
-        s.getText match {
+        val text = s.getText
+        text match {
           case ProofStartSentence(_) | ProofEndSentence(_) |
               IdentifiedEndSentence(_) | EndSubproofSentence() =>
             /* These should appear in the enclosing scope */
-            out(startAt, indentationLevel - 1, s)
+            out(indentationLevel - 1, text)
           case _ =>
-            out(startAt, indentationLevel, s)
+            out(indentationLevel, text)
         }
       case s : ICoqScriptGroup =>
-        out(startAt, indentationLevel, s.getDeterminingSentence)
+        if (s.getOffset >= startAt)
+          out(indentationLevel, s.getDeterminingSentence.getText)
         for (i <- s.getChildren.tail)
           loop(startAt, indentationLevel + 1, i)
+      case _ =>
     }
   }
 
