@@ -77,12 +77,13 @@ object OpenDeclarationHandler {
     Option(org.eclipse.ui.ide.IDE.openEditor(page, resource, false))
   })
 
+  import org.eclipse.jface.text.source.ISourceViewer
   def highlightElement(e : ICoqScriptElement) =
-      openEditorOn(e).flatMap(TryCast[CoqEditor]).foreach(editor => {
+      openEditorOn(e).flatMap(TryAdapt[ISourceViewer]).foreach(viewer => {
     val padding = e.getText.takeWhile(_.isWhitespace).length
     val (start, length) =
       (e.getOffset + padding, e.getLength - padding)
-    editor.getViewer.revealRange(start, length)
-    editor.getViewer.setSelectedRange(start, length)
+    viewer.revealRange(start, length)
+    viewer.setSelectedRange(start, length)
   })
 }
