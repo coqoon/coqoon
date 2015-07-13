@@ -9,6 +9,7 @@ package dk.itu.coqoon.ui
 
 import org.eclipse.ui.part.FileEditorInput
 import org.eclipse.core.commands.ExecutionEvent
+import org.eclipse.jface.text.source.ISourceViewer
 
 import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core.model._
@@ -70,6 +71,15 @@ class OpenDeclarationHandler extends EditorHandler {
   }
 }
 object OpenDeclarationHandler {
+  import org.eclipse.ui.IEditorPart
+  import org.eclipse.ui.part.FileEditorInput
+  private def fileFromEditor(e : IEditorPart) =
+    TryCast[FileEditorInput](e.getEditorInput).map(_.getFile)
+
+  import org.eclipse.jface.text.ITextSelection
+  private def positionFromViewer(v : ISourceViewer) =
+    v.getSelectionProvider.getSelection.asInstanceOf[ITextSelection].getOffset
+
   import org.eclipse.core.resources.IFile
   def openEditorOn(e : ICoqElement) =
       e.getContainingResource.flatMap(TryCast[IFile]).flatMap(resource => {
