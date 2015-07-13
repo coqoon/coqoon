@@ -4,13 +4,10 @@
 package dk.itu.coqoon.ui
 
 import dk.itu.coqoon.ui.utilities.{UIUtils, SupersedableTask}
-import dk.itu.coqoon.core
+import dk.itu.coqoon.core.{ManifestIdentifiers => CMI}
 import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.coqtop.CoqTopIdeSlave_v20120710
 import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
-
-import org.eclipse.ui.IFileEditorInput
-import org.eclipse.ui.editors.text.TextEditor
 
 import org.eclipse.jface.text.IDocument
 
@@ -114,9 +111,9 @@ private class CoqProofReconcilingStrategy(
 
   override def reconcile(r : IRegion) : Unit = {
     editor.file.foreach(file => {
-      if (file.findMarkers(core.ManifestIdentifiers.MARKER_PROBLEM,
+      if (file.findMarkers(CMI.MARKER_PROBLEM,
           true, IResource.DEPTH_ZERO).length > 0)
-        new DeleteMarkersJob(file, core.ManifestIdentifiers.MARKER_PROBLEM,
+        new DeleteMarkersJob(file, CMI.MARKER_PROBLEM,
             true, IResource.DEPTH_ZERO).schedule
     })
 

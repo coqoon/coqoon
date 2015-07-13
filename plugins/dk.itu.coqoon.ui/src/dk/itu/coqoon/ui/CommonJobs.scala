@@ -8,8 +8,8 @@
 package dk.itu.coqoon.ui
 
 import dk.itu.coqoon.ui.utilities.{UIUtils, EclipseConsole}
-import dk.itu.coqoon.core
-import dk.itu.coqoon.core.coqtop.{CoqTypes, CoqTopIdeSlave_v20120710}
+import dk.itu.coqoon.core.{ManifestIdentifiers => CMI}
+import dk.itu.coqoon.core.coqtop.CoqTypes
 import dk.itu.coqoon.core.utilities.{
   JobBase, JobRunner, ObjectRule, JobUtilities}
 
@@ -65,7 +65,7 @@ class CreateMarkerJob(
 class CreateErrorMarkerJob(
     resource : IResource, region : (Int, Int), message : String)
     extends CreateMarkerJob(resource, region, message,
-        core.ManifestIdentifiers.MARKER_PROBLEM, IMarker.SEVERITY_ERROR)
+        CMI.MARKER_PROBLEM, IMarker.SEVERITY_ERROR)
 object CreateErrorMarkerJob {
   def apply(
       resource : IResource, step : CoqStep, ep : (CoqTypes.location, String)) : CreateErrorMarkerJob = {

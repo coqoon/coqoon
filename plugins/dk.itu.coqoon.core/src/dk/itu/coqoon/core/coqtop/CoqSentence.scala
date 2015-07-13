@@ -16,7 +16,7 @@
 
 package dk.itu.coqoon.core.coqtop
 
-import dk.itu.coqoon.core.utilities.Substring
+import dk.itu.coqoon.core.utilities.{TryCast, Substring}
 
 object CoqSentence {
   final val CommentStart = """^\(\*""".r.unanchored
@@ -218,8 +218,6 @@ object CoqSentence {
 }
 
 class ParserStack[A, B] {
-  import dk.itu.coqoon.core.utilities.TryCast
-
   var stack = List[Either[A, B]]()
 
   def push(value : A) = stack +:= Left(value)

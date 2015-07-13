@@ -17,6 +17,7 @@ import org.eclipse.core.runtime.IProgressMonitor
 
 import org.eclipse.ui.INewWizard
 import org.eclipse.jface.wizard.Wizard
+
 class NewCoqProjectWizard extends Wizard with INewWizard {
   import org.eclipse.ui.dialogs.WizardNewProjectCreationPage
 

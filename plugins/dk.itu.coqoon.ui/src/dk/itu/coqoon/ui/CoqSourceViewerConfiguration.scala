@@ -82,9 +82,8 @@ object BaseCoqSourceViewerConfiguration {
 }
 
 import dk.itu.coqoon.ui.utilities.UIUtils
-import org.eclipse.jface.text.rules.RuleBasedScanner
 import org.eclipse.jface.text.TextAttribute
-import org.eclipse.jface.text.rules.{Token, IToken}
+import org.eclipse.jface.text.rules.{Token, IToken, RuleBasedScanner}
 
 class CoqTokenScanner extends RuleBasedScanner {
   import CoqTokenScanner._

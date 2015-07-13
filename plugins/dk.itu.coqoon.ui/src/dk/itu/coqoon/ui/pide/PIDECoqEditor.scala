@@ -258,7 +258,6 @@ class PIDECoqEditor
   /* XXX: doing this synchronously on the UI thread makes me a bit nervous, but
    * we /do/ need to be able to access the text widget... */
   private def generateInitialEdits() = exec {
-    import dk.itu.coqoon.core.utilities.TryCast
     val fi = TryCast[IFileEditorInput](getEditorInput)
     val text =
       Option(getSourceViewer).map(_.getTextWidget).map(_.getText) match {
@@ -289,7 +288,6 @@ class PIDECoqEditor
     }
   }
 
-  import dk.itu.coqoon.core.utilities.TryCast
   import org.eclipse.core.resources.IFile
   protected[ui] def getFile() : Option[IFile] =
     TryCast[IFileEditorInput](getEditorInput).map(_.getFile)

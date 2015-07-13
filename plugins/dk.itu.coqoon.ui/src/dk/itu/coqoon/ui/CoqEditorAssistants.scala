@@ -380,7 +380,6 @@ class FuturisticWordRule(detector : IFuturisticWordDetector,
 }
 
 import dk.itu.coqoon.core.model.{Scanner, StateRule}
-import org.eclipse.jface.text.rules.Token
 
 class BasicRule(label : String = "<anonymous>")
     extends StateRule[Char, IToken, BasicRule.BasicState](

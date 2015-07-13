@@ -3,6 +3,7 @@
 
 package dk.itu.coqoon.ui
 
+import dk.itu.coqoon.core.utilities.TryCast
 import org.eclipse.ui.editors.text.TextEditor
 
 abstract class BaseCoqEditor extends TextEditor {
@@ -19,7 +20,7 @@ abstract class BaseCoqEditor extends TextEditor {
     ProjectionAnnotation, ProjectionAnnotationModel}
 
   import dk.itu.coqoon.core.model._
-  import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot}
+  import dk.itu.coqoon.core.utilities.CacheSlot
   import org.eclipse.ui.IFileEditorInput
   protected[ui] val workingCopy = CacheSlot[Option[IDetachedCoqVernacFile]] {
     TryCast[IFileEditorInput](getEditorInput).map(_.getFile).flatMap(
@@ -150,7 +151,6 @@ abstract class BaseCoqEditor extends TextEditor {
 import org.eclipse.ui.views.contentoutline.ContentOutlinePage
 
 import dk.itu.coqoon.core.model.{ICoqElement, ICoqScriptElement}
-import dk.itu.coqoon.core.utilities.TryCast
 
 class CoqContentOutlinePage extends ContentOutlinePage {
   import org.eclipse.jface.viewers.{

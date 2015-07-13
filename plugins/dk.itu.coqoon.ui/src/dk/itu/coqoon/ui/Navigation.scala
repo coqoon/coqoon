@@ -7,14 +7,12 @@
 
 package dk.itu.coqoon.ui
 
-import org.eclipse.ui.part.FileEditorInput
 import org.eclipse.core.commands.ExecutionEvent
 import org.eclipse.jface.text.source.ISourceViewer
 
 import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
-import dk.itu.coqoon.core.coqtop.CoqSentence
 
 class OpenDeclarationHandler extends EditorHandler {
   import CoqWordDetector._
@@ -89,7 +87,6 @@ object OpenDeclarationHandler {
     Option(org.eclipse.ui.ide.IDE.openEditor(page, resource, false))
   })
 
-  import org.eclipse.jface.text.source.ISourceViewer
   def highlightElement(e : ICoqScriptElement) =
       openEditorOn(e).flatMap(TryAdapt[ISourceViewer]).foreach(viewer => {
     val padding = e.getText.takeWhile(_.isWhitespace).length
