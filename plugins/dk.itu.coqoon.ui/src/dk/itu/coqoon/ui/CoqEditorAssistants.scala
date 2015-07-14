@@ -208,25 +208,44 @@ abstract class FormattingStrategyBase
 
 class CoqMasterFormattingStrategy extends FormattingStrategyBase {
   import CoqMasterFormattingStrategy._
+  import CoqoonUIPreferences.{SpacesPerIndentationLevel => SPIL}
 
   import dk.itu.coqoon.core.model._
 
   private var builder : Option[StringBuilder] = None
 
-  private def out(indentationLevel : Int, text : String) =
+  private var noIndent = false
+  /* XXX: skipTerminator = true will probably cause problems if text is a
+   * multi-line string. (On the other hand, will it ever be?) */
+  private def out(indentationLevel : Int,
+      text : String, skipTerminator : Boolean = false) =
     for (t <- normalise(text))
       builder.get ++=
         (if (!onlyWhitespace(t)) {
-          val wsCount = CoqoonUIPreferences.SpacesPerIndentationLevel.get
-          (" " * wsCount * indentationLevel) + t + "\n"
+          val whitespace =
+            if (!noIndent) {
+              val wsCount = SPIL.get
+              (" " * wsCount * indentationLevel)
+            } else {
+              noIndent = false
+              ""
+            }
+          val terminator =
+            if (!skipTerminator) {
+              "\n"
+            } else {
+              noIndent = true
+              ""
+            }
+          whitespace + t + terminator
         } else "\n")
 
   private def loop(startAt : Int,
       indentationLevel : Int, element : ICoqScriptElement) : Unit = {
+    import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier._
     element match {
       case s : ICoqScriptSentence
           if s.getOffset >= startAt =>
-        import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier._
         val text = s.getText
         text match {
           case ProofStartSentence(_) | ProofEndSentence(_) |
@@ -237,8 +256,17 @@ class CoqMasterFormattingStrategy extends FormattingStrategyBase {
             out(indentationLevel, text)
         }
       case s : ICoqScriptGroup =>
-        if (s.getOffset >= startAt)
-          out(indentationLevel, s.getDeterminingSentence.getText)
+        if (s.getOffset >= startAt) {
+          val text = s.getDeterminingSentence.getText
+          text match {
+            case BulletSentence(bullet)
+                if bullet.length < SPIL.get =>
+              out(indentationLevel,
+                  text + " " * (SPIL.get - bullet.length), true)
+            case _ =>
+              out(indentationLevel, text)
+          }
+        }
         for (i <- s.getChildren.tail)
           loop(startAt, indentationLevel + 1, i)
       case _ =>
