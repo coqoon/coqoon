@@ -150,7 +150,8 @@ abstract class BaseCoqEditor extends TextEditor {
 
 import org.eclipse.ui.views.contentoutline.ContentOutlinePage
 
-import dk.itu.coqoon.core.model.{ICoqElement, ICoqScriptElement}
+import dk.itu.coqoon.core.model.{
+  ICoqElement, ICoqScriptGroup, ICoqScriptSentence}
 
 class CoqContentOutlinePage extends ContentOutlinePage {
   import org.eclipse.jface.viewers.{
@@ -162,8 +163,10 @@ class CoqContentOutlinePage extends ContentOutlinePage {
 
     TryCast[IStructuredSelection](
         event.getSelection).flatMap(sel => Option(sel.getFirstElement)) match {
-      case Some(e : ICoqScriptElement) =>
-        OpenDeclarationHandler.highlightElement(e)
+      case Some(g : ICoqScriptGroup) =>
+        OpenDeclarationHandler.highlightElement(g.getDeterminingSentence)
+      case Some(s : ICoqScriptSentence) =>
+        OpenDeclarationHandler.highlightElement(s)
       case _ =>
     }
   }
