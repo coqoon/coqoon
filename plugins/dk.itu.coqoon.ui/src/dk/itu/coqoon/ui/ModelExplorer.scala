@@ -86,6 +86,10 @@ class ModelLabelProvider extends LabelProvider {
       } else packageName.mkString(".")
     case p : ICoqElement if p.getCorrespondingResource != None =>
       p.getCorrespondingResource.get.getName
+    case g : ICoqScriptGroup =>
+      g.getDeterminingSentence.getText.trim
+    case s : ICoqScriptSentence =>
+      s.getText.trim
     case a =>
       Option(a).map(_.toString.trim).getOrElse("null")
   }
@@ -115,8 +119,16 @@ class ModelContentProvider
     }
 
   private def toCE(o : Any) = Option(o).flatMap(TryCast[ICoqElement])
-  override def getChildren(o : Any) = toCE(o).flatMap(
-      TryCast[IParent]).toSeq.flatMap(_.getChildren).toArray
+  override def getChildren(o : Any) = toCE(o) match {
+    case Some(g : ICoqScriptGroup) =>
+      /* ICoqScriptGroups should always have at least a determining sentence,
+       * so calling getChildren.tail should always be safe */
+      g.getChildren.tail.toArray
+    case Some(p : IParent) =>
+      p.getChildren.toArray
+    case _ =>
+      Array.empty
+  }
   override def getElements(o : Any) = getChildren(o)
   override def getParent(o : Any) = toCE(o).flatMap(_.getParent).orNull
   override def hasChildren(o : Any) = toCE(o).flatMap(
