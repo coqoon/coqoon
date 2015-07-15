@@ -219,7 +219,7 @@ class CoqMasterFormattingStrategy extends FormattingStrategyBase {
    * multi-line string. (On the other hand, will it ever be?) */
   private def out(indentationLevel : Int,
       text : String, skipTerminator : Boolean = false) =
-    for (t <- normalise(text))
+    for (t <- dropFirstWhitespace(indentationLevel, text))
       builder.get ++=
         (if (!onlyWhitespace(t)) {
           val whitespace =
@@ -309,17 +309,23 @@ class CoqMasterFormattingStrategy extends FormattingStrategyBase {
 private object CoqMasterFormattingStrategy {
   private def leading(lines : Seq[String]) = {
     var firstActual = lines.find(!onlyWhitespace(_))
-    firstActual.map(_.takeWhile(_.isWhitespace)).getOrElse("")
+    firstActual.map(_.takeWhile(_.isWhitespace).length).getOrElse(0)
   }
-  private def normalise(sentence : String) = {
-    val lines = sentence.lines.toStream match {
+  private def dropFirstWhitespace(
+      indentationLevel : Int, sentence : String) = {
+    import CoqoonUIPreferences.{SpacesPerIndentationLevel => SPIL}
+    val expectedIndentation = SPIL.get * indentationLevel
+    val (lines, maxToDrop) = sentence.lines.toStream match {
       case f #:: tail if f.forall(_.isWhitespace) =>
-        tail
-      case l => l
+        (tail, leading(tail))
+      case l =>
+        (l, expectedIndentation)
     }
-    var leadingWhitespace = leading(lines)
     for (i <- lines)
-      yield i.stripPrefix(leadingWhitespace)
+      yield {
+        val leading = i.takeWhile(_.isWhitespace).length
+        i.drop(Math.min(maxToDrop, leading))
+      }
   }
 
   import java.util.regex.Pattern
