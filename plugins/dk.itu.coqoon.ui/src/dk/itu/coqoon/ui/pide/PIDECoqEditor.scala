@@ -59,8 +59,8 @@ class PIDECoqEditor
         case Some(((offset, command), results, markup)) =>
           val sameCommand = lastCommand.contains(command)
 
-          markup.find(_.name == "goals") match {
-            case Some(el)
+          markup.find(_._2.name == "goals") match {
+            case Some((_, el))
                 if !sameCommand || goals == None =>
               setGoals(Responses.extractGoals(el))
             case Some(el) => /* do nothing? */
@@ -131,7 +131,8 @@ class PIDECoqEditor
         for (i <- changedResultsAndMarkup) i match {
           case (Some(offset), command, results, markup) =>
             val complete =
-              !(Protocol.Status.make(markup.map(_.markup).iterator).is_running)
+              !(Protocol.Status.make(
+                  markup.map(_._2.markup).iterator).is_running)
 
             /* Extract and display error messages */
             var commandHasErrors = false

@@ -11,13 +11,20 @@ object Responses {
   import isabelle._
   import dk.itu.coqoon.core.coqtop.CoqTypes
   def extractMarkup(snapshot : Document.Snapshot,
-      command : isabelle.Command) : Seq[XML.Elem] = {
+      command : isabelle.Command) : Seq[(Text.Range, XML.Elem)] = {
+    def _extract(t : Markup_Tree) : Seq[(Text.Range, XML.Elem)] = {
+      val m =
+        for ((range, entry) <- t.branches;
+             markup <- entry.markup)
+        yield (range, markup)
+      val c =
+        t.branches.flatMap(b => _extract(b._2.subtree)).toSeq
+      m.toSeq ++ c
+    }
     val markupTree =
       snapshot.state.command_markup(snapshot.version, command,
           Command.Markup_Index.markup, command.range, Markup.Elements.full)
-    (for ((range, entry) <- markupTree.branches;
-          markup <- entry.markup)
-       yield markup).toSeq
+    _extract(markupTree).toSeq
   }
 
   /* The left-hand side of this Either is an error message, and the right is
