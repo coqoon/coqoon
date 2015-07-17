@@ -14,17 +14,17 @@ object Responses {
       command : isabelle.Command) : Seq[(Text.Range, XML.Elem)] = {
     def _extract(t : Markup_Tree) : Seq[(Text.Range, XML.Elem)] = {
       val m =
-        for ((range, entry) <- t.branches;
+        for ((range, entry) <- t.branches.toList;
              markup <- entry.markup)
         yield (range, markup)
       val c =
-        t.branches.flatMap(b => _extract(b._2.subtree)).toSeq
-      m.toSeq ++ c
+        t.branches.flatMap(b => _extract(b._2.subtree)).toList
+      m.toList ++ c
     }
     val markupTree =
       snapshot.state.command_markup(snapshot.version, command,
           Command.Markup_Index.markup, command.range, Markup.Elements.full)
-    _extract(markupTree).toSeq
+    _extract(markupTree)
   }
 
   /* The left-hand side of this Either is an error message, and the right is
