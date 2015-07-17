@@ -70,12 +70,14 @@ class PIDECoqEditor
           if (!sameCommand) {
             import dk.itu.coqoon.ui.utilities.EclipseConsole
             import isabelle.XML.{Elem, Text}
+            import isabelle.Markup
             for ((_, tree) <- results) tree match {
-              case f : Elem
-                  if f.name == "writeln_message" &&
-                     f.markup.properties.toMap.get("source") != Some("goal") =>
-                EclipseConsole.out.println(f.body(0).asInstanceOf[Text].content)
-              case f : Elem if f.name == "error_message" =>
+              case XML.Elem(
+                  Markup(Markup.WRITELN_MESSAGE, properties),
+                  List(t : Text))
+                      if properties.toMap.get("source") != Some("goal") =>
+                EclipseConsole.out.println(t.content)
+              case f @ XML.Elem(Markup(Markup.ERROR_MESSAGE, _), _) =>
                 Responses.extractError(f).map(_._2).foreach(
                     EclipseConsole.err.println)
               case _ =>

@@ -104,14 +104,15 @@ object Responses {
   }
 
   def extractError(e : Tree) = e match {
-    case f : Elem if f.name == "error_message" =>
-      val propertyMap = f.markup.properties.toMap
+    case Elem(
+        Markup(Markup.ERROR_MESSAGE, properties),
+        List(message : Text)) =>
+      val propertyMap = properties.toMap
       val (errStart, errEnd) =
         (propertyMap.get("offset").map(Integer.parseInt(_, 10)),
          propertyMap.get("end_offset").map(Integer.parseInt(_, 10)))
-      val msg = f.body(0).asInstanceOf[Text].content
       propertyMap.get("id").map(Integer.parseInt(_, 10)).map(
-          id => (id, msg, errStart, errEnd))
+          id => (id, message.content, errStart, errEnd))
     case _ => None
   }
 }
