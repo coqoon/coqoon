@@ -115,4 +115,32 @@ object Responses {
           id => (id, message.content, errStart, errEnd))
     case _ => None
   }
+
+  /* The left tuple is (path to file, (start offset, end offset)), and the
+   * right, used for things defined in this PIDE session, is (defining
+   * execution ID, (start offset, end offset)). */
+  type Entity = Either[
+    (String, (Int, Int)),
+    (isabelle.Document_ID.Generic, (Int, Int))]
+  def extractEntity(e : Tree) : Option[Entity] = e match {
+    case Elem(Markup(Markup.ENTITY, properties), _) =>
+      val propertyMap = properties.toMap
+      Seq("def_file", "def_offset", "def_end_offset", "def_id").
+          map(propertyMap.get) match {
+        case Seq(
+            Some(def_file), Some(def_offset_), Some(def_end_offset_), _) =>
+          val def_offset = Integer.parseInt(def_offset_, 10)
+          val def_end_offset = Integer.parseInt(def_end_offset_, 10)
+          Some(Left(def_file, (def_offset, def_end_offset)))
+        case Seq(
+            None, Some(def_offset_), Some(def_end_offset_), Some(def_id_)) =>
+          val def_id = Integer.parseInt(def_id_, 10)
+          val def_offset = Integer.parseInt(def_offset_, 10)
+          val def_end_offset = Integer.parseInt(def_end_offset_, 10)
+          Some(Right(def_id, (def_offset, def_end_offset)))
+        case x =>
+          None
+      }
+    case _ => None
+  }
 }
