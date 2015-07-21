@@ -83,6 +83,18 @@ abstract class BaseCoqEditor extends TextEditor {
     oldAnnotations = newAnnotations.map(_._1).toArray
   }
 
+  override def isEditable =
+    TryCast[IFileEditorInput](
+        getEditorInput).map(_.getFile).flatMap(
+           ICoqModel.getInstance.toCoqElement) match {
+      case Some(q) =>
+        super.isEditable
+      case None =>
+        /* Anything without a backing ICoqElement isn't really part of Coqoon's
+         * world and should be read-only */
+        false
+    }
+
   import org.eclipse.ui.texteditor.SourceViewerDecorationSupport
   import org.eclipse.jface.text.source.DefaultCharacterPairMatcher
   override def configureSourceViewerDecorationSupport(
