@@ -3,6 +3,13 @@ package dk.itu.coqoon.ui.pide
 import dk.itu.coqoon.ui.{
   BaseCoqEditor, CoqGoalsContainer, CoqoonUIPreferences, ManifestIdentifiers}
 
+trait AdvancedNavigationHost {
+  def getCommand(offset : Int) : Option[(Int, isabelle.Command)]
+  def getEntities(command : isabelle.Command) :
+      Seq[(isabelle.Text.Range, Responses.Entity)]
+  def selectEntity(e : (isabelle.Text.Range, Responses.Entity)) : Unit
+}
+
 class PIDECoqEditor
     extends BaseCoqEditor with CoqGoalsContainer with OverlayRunner {
   private val reconciler = new PIDEReconciler(this)
