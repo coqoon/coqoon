@@ -24,6 +24,22 @@ class OpenDeclarationHandler extends EditorHandler {
 
   override def execute(ev : ExecutionEvent) : AnyRef = {
     getViewer.foreach(viewer => {
+      adaptEditor[pide.AdvancedNavigationHost] match {
+        case Some(an) =>
+          val position_ = positionFromViewer(viewer)
+          an.getCommand(position_) match {
+            case Some((offset, command)) =>
+              val position = position_ - offset
+              for (r @ (range, _) <- an.getEntities(command)
+                   if position >= range.start && position < range.stop) {
+                an.selectEntity(r)
+                return null
+              }
+            case None =>
+          }
+          return null
+        case None =>
+      }
       val file = getEditor.flatMap(fileFromEditor)
       file.flatMap(ICoqModel.getInstance.toCoqElement).foreach(element => {
         val document = viewer.getDocument
