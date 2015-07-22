@@ -13,6 +13,8 @@ import dk.itu.coqoon.core.coqtop.CoqProgram
 import isabelle.Session
 
 class SessionManager extends dk.itu.coqoon.pide.SessionManager {
+  import CoqoonDebugPreferences.PrintPIDETraffic
+
   override def start =
     executeWithSessionLock(session => {
       session.start("coq", CoqProgram.path,
@@ -24,14 +26,12 @@ class SessionManager extends dk.itu.coqoon.pide.SessionManager {
     })
 
   addInitialiser(session => {
-    session.commands_changed += Session.Consumer[Any]("Coqoon") {
-      case changed : Session.Commands_Changed =>
-        CoqoonDebugPreferences.PrintPIDETraffic.log(s"! ${changed}")
-      case q =>
-        CoqoonDebugPreferences.PrintPIDETraffic.log(s"! ${q}")
-    }
-    session.all_messages += Session.Consumer("Coqoon")(q =>
-      CoqoonDebugPreferences.PrintPIDETraffic.log(s"? ${q}"))
+    session.commands_changed +=
+      Session.Consumer[Session.Commands_Changed]("Coqoon")(
+          changed => PrintPIDETraffic.log(s"! ${changed}"))
+    session.all_messages +=
+      Session.Consumer("Coqoon")(
+          q => PrintPIDETraffic.log(s"? ${q}"))
   })
 }
 
