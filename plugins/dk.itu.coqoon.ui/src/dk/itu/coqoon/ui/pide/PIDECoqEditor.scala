@@ -11,7 +11,62 @@ trait AdvancedNavigationHost {
 }
 
 class PIDECoqEditor
-    extends BaseCoqEditor with CoqGoalsContainer with OverlayRunner {
+    extends BaseCoqEditor with CoqGoalsContainer with OverlayRunner
+                          with AdvancedNavigationHost {
+  override def getCommand(offset : Int) : Option[(Int, isabelle.Command)] =
+    CommandsLock synchronized {
+      for (r @ (o, command) <- commands
+          if offset >= o && offset < o + command.length)
+        return Some(r)
+      None
+    }
+  override def getEntities(command : isabelle.Command) =
+    CommandsLock synchronized {
+      for ((range, elem) <- Responses.extractMarkup(lastSnapshot.get, command);
+           entity <- Responses.extractEntity(elem))
+        yield (range, entity)
+    }
+  override def selectEntity(e : (isabelle.Text.Range, Responses.Entity)) =
+    CommandsLock synchronized {
+      e match {
+        case (r, Left((path_, (start, end)))) =>
+          import dk.itu.coqoon.ui.utilities.UIUtils
+          import dk.itu.coqoon.core.utilities.TryAdapt
+          import org.eclipse.ui.ide.IDE
+          import org.eclipse.core.runtime.Path
+          import org.eclipse.core.resources.ResourcesPlugin
+          import org.eclipse.core.filesystem.EFS
+          import org.eclipse.jface.text.source.ISourceViewer
+          val path = new Path(path_)
+          val file = EFS.getLocalFileSystem.getStore(path)
+          import org.eclipse.jface.text.source.ISourceViewer
+          val page =
+            UIUtils.getWorkbench.getActiveWorkbenchWindow.getActivePage
+          Option(IDE.openInternalEditorOnFileStore(page, file)).
+              flatMap(TryAdapt[ISourceViewer]) match {
+            case Some(viewer) =>
+              val s = start - 1
+              val l = end - s
+              viewer.revealRange(s, l)
+              viewer.setSelectedRange(s, l)
+            case _ =>
+          }
+        case (r, Right((exec_id, (start, end)))) =>
+          val command = lastSnapshot.get.state.find_command(
+              lastSnapshot.get.version, exec_id)
+          command.foreach {
+            case (_, command) =>
+              commands.find(e => e._2 == command).foreach {
+                case (offset, command) =>
+                  val s = (offset + start) - 1
+                  val l = end - start
+                  getSourceViewer.revealRange(s, l)
+                  getSourceViewer.setSelectedRange(s, l)
+              }
+          }
+      }
+    }
+
   private val reconciler = new PIDEReconciler(this)
 
   import org.eclipse.swt.widgets.Composite
