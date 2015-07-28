@@ -69,8 +69,15 @@ class SessionManager {
       Session.Consumer[Session.Commands_Changed]("Coqoon")(
           changed => PrintPIDETraffic.log(s"! ${changed}"))
     session.all_messages +=
-      Session.Consumer("Coqoon")(
-          q => PrintPIDETraffic.log(s"? ${q}"))
+      Session.Consumer("Coqoon") {
+        case i : isabelle.Prover.Input =>
+          PrintPIDETraffic.log(s"? $i -> coq")
+        case o : isabelle.Prover.Output =>
+          PrintPIDETraffic.log(s"? coq -> $o")
+        case _ =>
+          /* This should never happen (isabelle.Prover.Message is a sealed
+           * class) */
+      }
   })
 }
 
