@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Coqoon core
 Bundle-SymbolicName: dk.itu.coqoon.core;singleton:=true
-Bundle-Version: 0.5.9
+Bundle-Version: 0.6.0
 Bundle-Activator: dk.itu.coqoon.core.Activator
 Bundle-Vendor: IT University of Copenhagen
 Require-Bundle: 

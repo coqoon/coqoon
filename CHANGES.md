@@ -1,3 +1,36 @@
+Coqoon 0.6.0
+============
+
+30th July 2015
+
+This release adds support for running PIDE queries, improves the goal viewer
+by showing more proof state information, and makes the "Open Declaration" and
+"Reformat" features work in the PIDE editor.
+
+Other significant features
+--------------------------
+
+* Support for PIDE entity information
+
+  The "Open Declaration" feature now uses PIDE entity information when
+  possible, making it possible to open declarations from external libraries.
+
+* Limited support for external files
+
+  The PIDE editor can now display files that are not associated with a Coqoon
+  project, although the other services of the editor will not be available.
+
+* Cache support in the configure script
+
+  The Python configure script can now optionally extract variable values from
+  Makefiles that it has previously generated.
+
+* Improved bullet support in the model
+
+  The internal model of Coq code now has full support for proof-structuring
+  bullets; as a consequence, the reformatting code now handles them properly,
+  too.
+
 Coqoon 0.5.9.1
 ==============
 
