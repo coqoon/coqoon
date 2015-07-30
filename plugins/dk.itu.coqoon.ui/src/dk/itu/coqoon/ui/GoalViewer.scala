@@ -46,13 +46,24 @@ abstract class TabbedGoalPresenter extends GoalPresenter {
     goals_.dispose
   }
 
+  sealed trait GoalDisposition
+  case object Unfocused extends GoalDisposition
+  case object Foreground extends GoalDisposition
+  case object Shelved extends GoalDisposition
+  case object GivenUp extends GoalDisposition
+
   protected def makeTab(parent : Composite) : Control
   protected def updateTab(goal : CoqTypes.goal, control : Control) : Unit
 
   override def render(coqGoals : Option[CoqTypes.goals]) = {
     val goalData = coqGoals match {
-      case None => List.empty
-      case Some(x) => x.fg_goals
+      case None => List()
+      case Some(x) =>
+        val lefts = x.bg_goals.reverse.map(_._1).flatten
+        val rights = x.bg_goals.map(_._2).flatten
+        (lefts.map((_, Unfocused)) ++ x.fg_goals.map((_, Foreground)) ++
+            rights.map((_, Unfocused)) ++ x.shelved_goals.map((_, Shelved)) ++
+            x.given_up_goals.map((_, GivenUp)))
     }
     if (subgoals.length < goalData.length) {
       while (subgoals.length != goalData.length) {
@@ -64,7 +75,46 @@ abstract class TabbedGoalPresenter extends GoalPresenter {
     goals.layout
     if (goals.getSelection == null)
       goals.getItems().headOption.map(goals.setSelection)
-    goalData.zip(subgoals).foreach(a => updateTab(a._1, a._2.getControl))
+    val m = goalData.zip(subgoals)
+    var (bg, fg, sh, gi) = (1, 1, 1, 1)
+    var focusTo : Option[CTabItem] = None
+    goalData.zip(subgoals).foreach(gz => {
+      gz match {
+        case ((goal, Unfocused), tab) =>
+          tab.setFont(TabbedGoalPresenter.unfocusedFont.get)
+          tab.setText(try s"($bg)" finally bg += 1)
+          tab.setToolTipText("Unfocused")
+        case ((goal, Foreground), tab) =>
+          focusTo = focusTo.orElse(Some(tab))
+          tab.setFont(TabbedGoalPresenter.focusedFont.get)
+          tab.setText(try s"$fg" finally fg += 1)
+          tab.setToolTipText("Foreground")
+        case ((goal, Shelved), tab) =>
+          tab.setFont(TabbedGoalPresenter.unfocusedFont.get)
+          tab.setText(try s"$sh?" finally sh += 1)
+          tab.setToolTipText("Shelved")
+        case ((goal, GivenUp), tab) =>
+          tab.setFont(TabbedGoalPresenter.unfocusedFont.get)
+          tab.setText(try s"$gi!" finally gi += 1)
+          tab.setToolTipText("Given up")
+      }
+      updateTab(gz._1._1, gz._2.getControl)
+    })
+    focusTo.foreach(f => goals_.setSelection(f))
+  }
+}
+private object TabbedGoalPresenter {
+  import dk.itu.coqoon.ui.utilities.UIUtils.getDisplay
+  import dk.itu.coqoon.core.utilities.CacheSlot
+  import org.eclipse.swt.SWT
+  import org.eclipse.swt.graphics.Font
+  val unfocusedFont = CacheSlot {
+    JFaceResources.getDefaultFontDescriptor.setStyle(
+        SWT.ITALIC).createFont(getDisplay)
+  }
+  val focusedFont = CacheSlot {
+    JFaceResources.getDefaultFontDescriptor.setStyle(
+        SWT.BOLD).createFont(getDisplay)
   }
 }
 
