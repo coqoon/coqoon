@@ -16,8 +16,7 @@ trait GoalPresenter {
 import org.eclipse.swt.SWT
 import org.eclipse.swt.layout.FillLayout
 
-import org.eclipse.swt.custom.{
-  CTabItem => TabItemImpl, CTabFolder => TabFolderImpl}
+import org.eclipse.swt.custom.{CTabItem, CTabFolder}
 
 abstract class TabbedGoalPresenter extends GoalPresenter {
   import org.eclipse.jface.util.{PropertyChangeEvent, IPropertyChangeListener}
@@ -33,12 +32,12 @@ abstract class TabbedGoalPresenter extends GoalPresenter {
    * UI thread */
   protected def fontChanged() : Unit
 
-  private var goals_ : TabFolderImpl = null
-  protected def goals : TabFolderImpl = goals_
+  private var goals_ : CTabFolder = null
+  protected def goals : CTabFolder = goals_
   protected def subgoals = goals.getItems()
 
   override def init(parent : Composite) = {
-    goals_ = new TabFolderImpl(parent, SWT.BORDER)
+    goals_ = new CTabFolder(parent, SWT.BORDER)
     JFaceResources.getFontRegistry.addListener(TextFontChangeListener)
   }
 
@@ -57,7 +56,7 @@ abstract class TabbedGoalPresenter extends GoalPresenter {
     }
     if (subgoals.length < goalData.length) {
       while (subgoals.length != goalData.length) {
-        val ti = new TabItemImpl(goals, SWT.NONE)
+        val ti = new CTabItem(goals, SWT.NONE)
         ti.setControl(makeTab(goals))
         ti.setText(subgoals.length.toString)
       }
