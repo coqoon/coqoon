@@ -279,7 +279,7 @@ private class CoqTopIdeSlaveImpl(
         unwrapList(ce(0), unwrapGoal),
         unwrapList(ce(1), unwrapPair(_,
             unwrapList(_, unwrapGoal),
-            unwrapList(_, unwrapGoal))))
+            unwrapList(_, unwrapGoal))), List(), List())
   }
 
   private def unwrapCoqObjectString(a : Elem) = {

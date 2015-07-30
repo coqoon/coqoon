@@ -98,8 +98,22 @@ object Responses {
     }
   }
   def extractGoals(e : Tree) = e match {
-    case e : Elem if e.name == "goals" =>
-      Some(CoqTypes.goals(GoalAssist.extractGoalList(e.body(0)), List()))
+    case Elem(Markup("goals", _),
+              List(focus, bg, shelf, given_up)) =>
+      import GoalAssist.{extractGoalList => eGL}
+      val (focused_goals, shelved_goals, given_up_goals) =
+        (eGL(focus), eGL(shelf), eGL(given_up))
+      val bg_goals =
+        bg match {
+          case Elem(Markup("bg_goals", _), bg_goals) =>
+            /* This is a list of pairs of lists of goals */
+            for (Elem(Markup("bg_goal", _), List(l, r)) <- bg_goals)
+              yield (eGL(l), eGL(r))
+          case _ =>
+            List()
+        }
+      Some(CoqTypes.goals(
+          focused_goals, bg_goals, shelved_goals, given_up_goals))
     case _ => None
   }
 

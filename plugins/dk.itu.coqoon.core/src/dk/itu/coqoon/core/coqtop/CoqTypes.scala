@@ -22,7 +22,9 @@ object CoqTypes {
 
   case class goals(
     fg_goals : List[goal],
-    bg_goals : List[(List[goal], List[goal])])
+    bg_goals : List[(List[goal], List[goal])],
+    shelved_goals : List[goal],
+    given_up_goals : List[goal])
 
   case class hint(
     fg_goals : List[(String, String)])
