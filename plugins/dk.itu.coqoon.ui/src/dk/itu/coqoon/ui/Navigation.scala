@@ -31,7 +31,7 @@ class OpenDeclarationHandler extends EditorHandler {
             case Some((offset, command)) =>
               val position = position_ - offset
               for (r @ (range, _) <- an.getEntities(command)
-                   if position >= range.start && position < range.stop) {
+                   if position >= range.start && position <= range.stop) {
                 an.selectEntity(r)
                 return null
               }

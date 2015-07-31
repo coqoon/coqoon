@@ -16,7 +16,7 @@ class PIDECoqEditor
   override def getCommand(offset : Int) : Option[(Int, isabelle.Command)] =
     CommandsLock synchronized {
       for (r @ (o, command) <- commands
-          if offset >= o && offset < o + command.length)
+          if offset >= o && offset <= o + command.length)
         return Some(r)
       None
     }
