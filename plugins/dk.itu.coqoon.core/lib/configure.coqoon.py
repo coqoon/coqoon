@@ -11,10 +11,17 @@
 # Manipulating this project using Coqoon may cause this file to be overwritten
 # without warning: any local changes you may have made will not be preserved.
 
-_configure_coqoon_version = 13
+_configure_coqoon_version = 14
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
+
+try:
+    import readline
+    readline.set_completer_delims(" \t\n")
+    readline.parse_and_bind("tab: complete")
+except ImportError:
+    pass
 
 parser = ArgumentParser(
     description = "Generate a site-specific Makefile to compile this " +
