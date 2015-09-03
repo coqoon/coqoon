@@ -11,7 +11,7 @@
 # Manipulating this project using Coqoon may cause this file to be overwritten
 # without warning: any local changes you may have made will not be preserved.
 
-_configure_coqoon_version = 11
+_configure_coqoon_version = 12
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -359,10 +359,109 @@ for i in configuration:
         entry = (i[1], i[2] if len(i) > 2 else default_output)
         source_directories.append(entry)
 
+# Keep this in sync with CoqSentence.getNextSentence
+class SentenceIterator:
+    # The leading ^ has been removed from all of these regular expressions
+    # because RegexObject.match only matches on it when the optional pos
+    # argument is missing or zero, and we use that argument to avoid slicing
+    # and thus to improve performance
+    CommentStart = re.compile(r"\(\*")
+    CommentEnd = re.compile(r"\*\)")
+    QuotationMark = re.compile("\"")
+    Bullet = re.compile(r"(\++|-+|\*+)")
+    CurlyBracket = re.compile(r"(\{|\})(\s|$)")
+    FullStop = re.compile(r"\.(\s|$)")
+    # Python has a mysterious constant called "Ellipsis", so let's not clash
+    # with that
+    Ellipsis_ = re.compile(r"\.\.\.(\s|$)")
+
+    DotRun = re.compile(r"(\.+)(\s|$)")
+    WhitespaceRun = re.compile(r"(\s+)")
+
+    def __init__(self, doc):
+        self.doc = doc
+        self.offset = 0
+    def __iter__(self):
+        return self
+    # Coqoon considers a Coq command to be a (content as string, comment as
+    # boolean) pair. Standalone comments are returned as separate commands
+    def next(self):
+        i = self.offset
+        commentDepth = 0
+        inString = False
+        content = False
+
+        cd = self.doc
+        dl = len(cd) # (total) document length
+        while i < dl:
+            if SentenceIterator.CommentStart.match(cd, i) \
+                    and not inString:
+                commentDepth += 1
+                i += 2
+            elif SentenceIterator.CommentEnd.match(cd, i) \
+                    and not content and not inString and commentDepth == 1:
+                try:
+                    return (self.doc[self.offset:i + 2], True)
+                finally:
+                    self.offset = i + 2
+            elif SentenceIterator.CommentEnd.match(cd, i) \
+                    and not inString and commentDepth > 0:
+                commentDepth -= 1
+                i += 2
+            elif SentenceIterator.QuotationMark.match(cd, i):
+                inString = not inString
+                i += 1
+            elif SentenceIterator.FullStop.match(cd, i) \
+                    and not inString and commentDepth == 0:
+                try:
+                    return (self.doc[self.offset:i + 1], False)
+                finally:
+                    self.offset = i + 1
+            elif SentenceIterator.Ellipsis_.match(cd, i) \
+                    and not inString and commentDepth == 0:
+                try:
+                    return (self.doc[self.offset:i + 3], False)
+                finally:
+                    self.offset = i + 3
+            elif SentenceIterator.CurlyBracket.match(cd, i) \
+                    and not inString and commentDepth == 0:
+                try:
+                    return (self.doc[self.offset:i + 1], False)
+                finally:
+                    self.offset = i + 1
+            elif SentenceIterator.Bullet.match(cd, i) \
+                    and not content and not inString and commentDepth == 0:
+                b = SentenceIterator.Bullet.match(cd, i).group(1)
+                try:
+                    return (self.doc[self.offset:i + len(b)], False)
+                finally:
+                    self.offset = i + len(b)
+            elif SentenceIterator.DotRun.match(cd, i) \
+                    and not inString and commentDepth == 0:
+                content = True
+                (dots, end) = SentenceIterator.DotRun.match(cd, i).group(1, 2)
+                i += len(dots) + len(end)
+            elif SentenceIterator.WhitespaceRun.match(cd, i):
+                ws = SentenceIterator.WhitespaceRun.match(cd, i).group(1)
+                i += len(ws)
+            else:
+                if commentDepth == 0:
+                    content = True
+                i += 1
+        raise StopIteration
+
+Require = re.compile(
+    r"(?s)^\s*Require\s+(Import\s+|Export\s+|)(.*)\s*\.$",
+    re.DOTALL + re.MULTILINE)
+
 def extract_dependency_identifiers(f):
     identifiers = []
-    for line in iter(f.readline, ""):
-        for (_, ids) in re.findall("(?s)Require\\s+(Import\\s+|Export\\s+|)(.*?)\\s*\\.[$\\s]", line, 0):
+    for (sentence, is_comment) in SentenceIterator(f.read()):
+        if is_comment:
+            continue
+        match = Require.search(sentence)
+        if match != None:
+            ids = match.group(2)
             # Using shlex.split here is /technically/ cheating, but it means we
             # can handle both quoted identifiers and multiple identifiers with
             # the same code

@@ -32,6 +32,7 @@ object CoqSentence {
 
   type Sentence = (Substring, Boolean)
 
+  /* Keep this in sync with the Python build script */
   def getNextSentence(
       doc : CharSequence, offset : Int = 0) : Option[Sentence] = {
     var i = offset
