@@ -11,7 +11,7 @@
 # Manipulating this project using Coqoon may cause this file to be overwritten
 # without warning: any local changes you may have made will not be preserved.
 
-_configure_coqoon_version = 12
+_configure_coqoon_version = 13
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -35,11 +35,10 @@ parser.add_argument(
     dest = "prompt",
     help = "prompt the user to specify values for any missing variables")
 parser.add_argument(
-    "-k", "--keep-going",
-    action = "store_true",
+    "-s", "--strict",
+    action = "store_false",
     dest = "persevere",
-    help = "generate a Makefile even if some dependencies could not be " +
-           "resolved")
+    help = "don't generate a Makefile if a dependency couldn't be resolved")
 parser.add_argument(
     "-Q", "--require-qualification",
     action = "store_true",
@@ -637,10 +636,11 @@ for (sf, bf), identifiers in to_be_resolved.iteritems():
 
 if doomed:
     if not args.persevere:
-        err("dependency resolution failed, aborting")
+        err("""\
+strict dependency resolution failed, aborting""")
     else:
         warn("""\
-dependency resolution failed, but continuing anyway as you requested""")
+dependency resolution failed, but continuing anyway""")
 
 try:
     from socket import gethostname
