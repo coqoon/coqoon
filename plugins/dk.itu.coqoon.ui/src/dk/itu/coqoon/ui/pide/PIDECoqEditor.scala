@@ -477,7 +477,7 @@ class PIDECoqEditor
   }
 }
 
-private object Perspective {
+object Perspective {
   import isabelle.{Text, Document}
   def makeFullPerspective(
       overlays : Document.Node.Overlays = Document.Node.Overlays.empty) =
