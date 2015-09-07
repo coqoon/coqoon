@@ -371,12 +371,18 @@ class LoadPathConfigurationPage
           case Some(_ : DefaultOutputLPE) =>
             /* Deleting default output entries is really not a good idea */
             dfb.setEnabled(false)
+          case Some(e : LPProvider) if e.getParent != None =>
+            /* Only allow top-level entries to be deleted */
+            dfb.setEnabled(false)
           case _ =>
             dfb.setEnabled(true)
         }
         selection.flatMap(TryCast[LPProvider]).foreach(p => {
-          upb.setEnabled(p.getIndex != 0);
-          dob.setEnabled(p.getIndex != loadPath.get.length - 1)
+          /* Only allow top-level entries to be moved up and down */
+          if (p.getParent == None) {
+            upb.setEnabled(p.getIndex != 0);
+            dob.setEnabled(p.getIndex != loadPath.get.length - 1)
+          } else Seq(upb, dob).foreach(_.setEnabled(false))
         })
       }
     })
