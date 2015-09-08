@@ -11,6 +11,7 @@
 # Manipulating this project using Coqoon may cause this file to be overwritten
 # without warning: any local changes you may have made will not be preserved.
 
+# Remember to keep this value in sync with CoqBuildScript.scala
 _configure_coqoon_version = 15
 
 import io, os, re, sys, shlex, codecs

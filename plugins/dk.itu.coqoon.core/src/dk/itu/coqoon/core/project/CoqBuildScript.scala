@@ -45,7 +45,8 @@ object CoqBuildScript {
       }
   }
 
-  final val currentVersion = 11
+  /* Remember to keep this value in sync with the build script */
+  final val currentVersion = 15
   private final val Version = """^_configure_coqoon_version = (\d+)$""".r
 
   def extractScriptVersion(project : IProject) : Option[Int] = {
@@ -55,7 +56,7 @@ object CoqBuildScript {
       val r = new BufferedReader(new InputStreamReader(bsHandle.getContents))
       try {
         /* We only bother scanning the first 20-ish lines of the file (the
-         * version number should be somewhere around line 14) */
+         * version number should be somewhere around line 15) */
         var count = 0
         var line : Option[String] = None
         do {
