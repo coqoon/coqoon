@@ -175,13 +175,6 @@
       </menuContribution>
    </extension>
    <extension
-         point="org.eclipse.ui.ide.markerResolution">
-      <markerResolutionGenerator
-            class="dk.itu.coqoon.ui.ResolutionGenerator"
-            markerType="dk.itu.sdg.kopitiam.problemmarker">
-      </markerResolutionGenerator>
-   </extension>
-   <extension
          point="dk.itu.coqoon.core.loadpath">
       <provider
             provider="dk.itu.sdg.kopitiam.javap.ChargeLibrary">

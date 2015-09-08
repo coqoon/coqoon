@@ -822,4 +822,11 @@
          </newWizardShortcut>
       </perspectiveExtension>
    </extension>
+   <extension
+         point="org.eclipse.ui.ide.markerResolution">
+      <markerResolutionGenerator
+            class="dk.itu.coqoon.ui.ResolutionGenerator"
+            markerType="dk.itu.sdg.kopitiam.problemmarker">
+      </markerResolutionGenerator>
+   </extension>
 </plugin>
