@@ -285,6 +285,8 @@ private class CoqProjectImpl(
 
   override def getLoadPath() = getCache.loadPath.get
 
+  override def getLoadPathProviders : Seq[LoadPathProvider] =
+    getCache.loadPathProviders.get
   override def setLoadPathProviders(
       lp : Seq[LoadPathProvider], monitor : IProgressMonitor) = {
     var coqPart : List[CoqProjectEntry] = Nil
@@ -324,8 +326,38 @@ private class CoqProjectImpl(
     }
     setProjectConfiguration(coqPart ++ kopitiamPart, monitor)
   }
-  override def getLoadPathProviders : Seq[LoadPathProvider] =
-    getCache.loadPathProviders.get
+
+  import dk.itu.coqoon.core.ManifestIdentifiers
+  import org.eclipse.core.runtime.Path
+  import org.eclipse.core.runtime.QualifiedName
+  override def getLocalOverrides() : Map[IPath, IPath] =
+    res match {
+      case Some(project) =>
+        import scala.collection.JavaConversions._
+        (for ((from, to) <- project.getPersistentProperties
+             if from.getQualifier == ManifestIdentifiers.PLUGIN &&
+                from.getLocalName.startsWith("override:"))
+          yield (new Path(from.getLocalName.drop("override:".length)) ->
+              new Path(to))).toMap
+      case _ =>
+        Map()
+    }
+  override def setLocalOverrides(overrides : Map[IPath, IPath]) =
+    res.foreach(project => {
+      import scala.collection.JavaConversions._
+      val names =
+        for ((from, to) <- overrides) yield {
+          val name = new QualifiedName(
+              ManifestIdentifiers.PLUGIN, s"override:${from.toString}")
+          project.setPersistentProperty(name,  to.toString)
+          name
+        }
+      val toDelete =
+        project.getPersistentProperties.keys.filter(f =>
+            f.getQualifier == ManifestIdentifiers.PLUGIN &&
+                f.getLocalName.startsWith("override:") && !names.contains(f))
+      toDelete.foreach(n => project.setPersistentProperty(n, null))
+    })
 
   override def getDefaultOutputLocation : Option[IFolder] = {
     for (DefaultOutputLoadPath(folder) <- getLoadPathProviders)
