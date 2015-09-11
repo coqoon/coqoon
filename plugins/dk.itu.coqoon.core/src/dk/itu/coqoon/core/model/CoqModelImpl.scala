@@ -259,7 +259,14 @@ private class CoqProjectImpl(
 
     private[CoqProjectImpl] final val loadPath =
         CacheSlot[Seq[LoadPathEntry]] {
-      loadPathProviders.get.flatMap(_.getLoadPath)
+      val localOverrides = getLocalOverrides
+      (for (i <- loadPathProviders.get) yield i match {
+        case ExternalLoadPath(p, d)
+            if localOverrides.contains(p) =>
+          ExternalLoadPath(localOverrides.get(p).get, d).getLoadPath
+        case p =>
+          p.getLoadPath
+      }).flatten
     }
   }
   private def getCache() = getModel.getCacheFor(this, new Cache)
@@ -357,6 +364,9 @@ private class CoqProjectImpl(
             f.getQualifier == ManifestIdentifiers.PLUGIN &&
                 f.getLocalName.startsWith("override:") && !names.contains(f))
       toDelete.foreach(n => project.setPersistentProperty(n, null))
+
+      /* Err on the side of caution and clear the whole load path */
+      getCache.loadPath.clear
     })
 
   override def getDefaultOutputLocation : Option[IFolder] = {

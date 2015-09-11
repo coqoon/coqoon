@@ -377,6 +377,9 @@ trait ICoqProject extends ICoqElement with IParent {
   override def getParent : Option[ICoqModel]
   override def getCorrespondingResource : Option[IProject]
 
+  /* Note that this method automatically applies any project-defined local
+   * overrides for external paths; callers of the getLoadPathProviders method
+   * might potentially have to do that themselves. */
   def getLoadPath() : Seq[LoadPathEntry]
 
   def getLoadPathProviders() : Seq[LoadPathProvider]
