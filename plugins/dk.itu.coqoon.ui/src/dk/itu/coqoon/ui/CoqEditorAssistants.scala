@@ -155,7 +155,7 @@ import utilities.UIUtils
 import org.eclipse.ui.{IMarkerResolution, IMarkerResolutionGenerator}
 import org.eclipse.core.resources.IMarker
 
-object ConfigureCoqPathResolution extends IMarkerResolution {
+private object ConfigureCoqPathResolution extends IMarkerResolution {
   override def getLabel = "Configure the path to Coq"
 
   override def run(r : IMarker) = {
@@ -165,8 +165,22 @@ object ConfigureCoqPathResolution extends IMarkerResolution {
   }
 }
 
+private object AddLocalOverrideResolution extends IMarkerResolution {
+  override def getLabel = "Add a local load path override"
+
+  override def run(r : IMarker) = {
+    import org.eclipse.ui.dialogs.PreferencesUtil
+    PreferencesUtil.createPropertyDialogOn(UIUtils.getActiveShell,
+      r.getResource.getProject,
+      "dk.itu.sdg.kopitiam.propertyPages.CoqLoadPath.override",
+      null, null).open
+  }
+}
+
 class ResolutionGenerator extends IMarkerResolutionGenerator {
-  override def getResolutions(m : IMarker) = Array(ConfigureCoqPathResolution)
+  override def getResolutions(m : IMarker) = Array(
+      AddLocalOverrideResolution,
+      ConfigureCoqPathResolution)
 }
 
 import org.eclipse.jface.text.formatter.{
