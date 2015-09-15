@@ -14,8 +14,7 @@ class LoadPathOverridePreferencePage
   import dk.itu.coqoon.ui.utilities.UIXML
   override def createContents(parent : Composite) = {
     import org.eclipse.jface.viewers.TableViewer
-    val names = UIXML.makeNameMap
-    UIXML(
+    val names = UIXML(
         <composite name="root">
           <grid-layout columns="2" equal-width="false" />
           <composite name="tv-container">
@@ -41,9 +40,8 @@ class LoadPathOverridePreferencePage
               Edit...
             </button>
           </composite>
-        </composite>, parent, Some(names))
-    val tvc = names.get("tv-container").get.asInstanceOf[Composite]
-    val tv = new TableViewer(tvc)
-    names.get("root").get.asInstanceOf[Composite]
+        </composite>, parent)
+    val tv = new TableViewer(names.get[Composite]("tv-container").get)
+    names.get[Composite]("root").get
   }
 }
