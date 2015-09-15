@@ -17,7 +17,6 @@ import org.eclipse.jface.viewers._
 
 import org.eclipse.swt.SWT
 import org.eclipse.swt.layout.FillLayout
-import org.eclipse.swt.events._
 import org.eclipse.swt.widgets.{
   Text, Composite, Button, Label, TabFolder, TabItem}
 import org.eclipse.core.runtime.IAdaptable
@@ -522,8 +521,8 @@ class NLPAbstractEntryPage extends NLPWizardPage(
     val at = new Text(c, SWT.BORDER)
     at.setLayoutData(
         GDF.fillDefaults.grab(true, false).align(SWT.FILL, SWT.FILL).create)
-    at.addModifyListener(new ModifyListener {
-      override def modifyText(ev : ModifyEvent) = {
+    Listener.Modify(at, Listener {
+      case Event.Modify(_) =>
         val identifier = at.getText.trim
         var success = false
         if (!identifier.isEmpty) {
@@ -550,7 +549,6 @@ class NLPAbstractEntryPage extends NLPWizardPage(
             Some(identifier)
           } else None
         getContainer.updateButtons
-      }
     })
 
     lv.addSelectionChangedListener(new ISelectionChangedListener {
@@ -612,8 +610,8 @@ class NLPSourceEntryPage extends NLPWizardPage(
     new Label(c, SWT.NONE).setText("Source folder: ")
     val st = new Text(c, SWT.BORDER)
     st.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false))
-    st.addModifyListener(new ModifyListener {
-      override def modifyText(ev : ModifyEvent) = {
+    Listener.Modify(st, Listener {
+      case Event.Modify(_) =>
         val path = st.getText.trim
         folder =
           if (path.length > 0) {
@@ -628,7 +626,6 @@ class NLPSourceEntryPage extends NLPWizardPage(
                 "The folder \"" + path + "\" does not exist in this project")
         }
         getContainer.updateButtons
-      }
     })
     val sb = new Button(c, SWT.PUSH)
     sb.setText("Browse...")
@@ -647,8 +644,8 @@ class NLPSourceEntryPage extends NLPWizardPage(
 
     new Label(c, SWT.NONE).setText("Output folder:")
     val ot = new Text(c, SWT.BORDER)
-    ot.addModifyListener(new ModifyListener {
-      override def modifyText(ev : ModifyEvent) = {
+    Listener.Modify(ot, Listener {
+      case Event.Modify(_) =>
         val path = ot.getText.trim
         val folder =
           if (path.length > 0) {
@@ -660,7 +657,6 @@ class NLPSourceEntryPage extends NLPWizardPage(
                 "The folder \"" + path + "\" does not exist in this project")
         } else setErrorMessage(null)
         getContainer.updateButtons
-      }
     })
     ot.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false))
     val ob = new Button(c, SWT.PUSH)
@@ -753,8 +749,8 @@ class NLPExternalEntryPage extends NLPWizardPage(
     new Label(c, SWT.NONE).setText("Folder: ")
     val ft = new Text(c, SWT.BORDER)
     ft.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false))
-    ft.addModifyListener(new ModifyListener {
-      override def modifyText(ev : ModifyEvent) = {
+    Listener.Modify(ft, Listener {
+      case Event.Modify(_) =>
         val path = ft.getText.trim
         fspath =
           if (path.length > 0) {
@@ -769,7 +765,6 @@ class NLPExternalEntryPage extends NLPWizardPage(
                 "The path \"" + path + "\" does not exist")
         }
         getContainer.updateButtons
-      }
     })
     val fb = new Button(c, SWT.PUSH)
     fb.setText("Browse...")
@@ -787,8 +782,8 @@ class NLPExternalEntryPage extends NLPWizardPage(
     new Label(c, SWT.NONE).setText("Coq namespace:")
     val nt = new Text(c, SWT.BORDER)
     nt.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false, 2, 1))
-    nt.addModifyListener(new ModifyListener {
-      override def modifyText(ev : ModifyEvent) = {
+    Listener.Modify(nt, Listener {
+      case Event.Modify(_) =>
         val coqdir = nt.getText.trim
         val split = coqdir.split('.')
 
@@ -807,7 +802,6 @@ class NLPExternalEntryPage extends NLPWizardPage(
             Some(split)
           } else None
         getContainer.updateButtons
-      }
     })
 
     setControl(c)
