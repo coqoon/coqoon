@@ -8,7 +8,7 @@
 package dk.itu.coqoon.ui
 
 import org.eclipse.core.resources.IProject
-import dk.itu.coqoon.ui.utilities.UIUtils
+import dk.itu.coqoon.ui.utilities.{Event, UIUtils, Listener}
 import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot}
 
@@ -271,15 +271,14 @@ class LoadPathConfigurationPage
     afb.setText("Add...")
     afb.setLayoutData(GridDataFactory.fillDefaults.span(2, 1).
         align(SWT.FILL, SWT.FILL).create)
-    afb.addSelectionListener(new SelectionAdapter {
-      override def widgetSelected(ev : SelectionEvent) = {
+    Listener.Selection(afb, Listener {
+      case Event.Selection(_) =>
         val wiz = new NewLoadPathWizard(getElement)
         if (new WizardDialog(c.getShell, wiz).open == Window.OK) {
           val lp = loadPath.get
           wiz.getResult.filter(r => !lp.contains(r)).foreach(lp.append(_))
           tv1.refresh()
         }
-      }
     })
 
     new Label(c1r, SWT.SEPARATOR | SWT.HORIZONTAL).setLayoutData(
@@ -290,9 +289,8 @@ class LoadPathConfigurationPage
     dfb.setText("Remove")
     dfb.setLayoutData(GridDataFactory.fillDefaults.span(2, 1).
         align(SWT.FILL, SWT.FILL).create)
-    dfb.addSelectionListener(new SelectionAdapter {
-      import scala.collection.JavaConversions._
-      override def widgetSelected(ev : SelectionEvent) = {
+    Listener.Selection(dfb, Listener {
+      case Event.Selection(_) =>
         Option(tv1.getSelection.
             asInstanceOf[TreeSelection].getFirstElement) match {
           case Some(p : LPProvider) =>
@@ -300,7 +298,6 @@ class LoadPathConfigurationPage
             tv1.refresh()
           case _ =>
         }
-      }
     })
 
     val edb = new Button(c1r, SWT.NONE)
@@ -313,9 +310,8 @@ class LoadPathConfigurationPage
     upb.setText("Up")
     upb.setLayoutData(GridDataFactory.fillDefaults.
         align(SWT.FILL, SWT.FILL).create)
-    upb.addSelectionListener(new SelectionAdapter {
-      import scala.collection.JavaConversions._
-      override def widgetSelected(ev : SelectionEvent) = {
+    Listener.Selection(upb, Listener {
+      case Event.Selection(_) =>
         Option(tv1.getSelection.
             asInstanceOf[TreeSelection].getFirstElement) match {
           case Some(p : LPProvider)
@@ -328,16 +324,14 @@ class LoadPathConfigurationPage
                 translate(None, element, p.getIndex - 1)))))
           case _ =>
         }
-      }
     })
 
     val dob = new Button(c1r, SWT.NONE)
     dob.setText("Down")
     dob.setLayoutData(GridDataFactory.fillDefaults.
         align(SWT.FILL, SWT.FILL).create)
-    dob.addSelectionListener(new SelectionAdapter {
-      import scala.collection.JavaConversions._
-      override def widgetSelected(ev : SelectionEvent) = {
+    Listener.Selection(dob, Listener {
+      case Event.Selection(_) =>
         Option(tv1.getSelection.
             asInstanceOf[TreeSelection].getFirstElement) match {
           case Some(p : LPProvider)
@@ -350,7 +344,6 @@ class LoadPathConfigurationPage
                 translate(None, element, p.getIndex + 1)))))
           case _ =>
         }
-      }
     })
 
     new Label(c1r, SWT.SEPARATOR | SWT.HORIZONTAL).setLayoutData(
@@ -570,20 +563,18 @@ class NLPAbstractEntryPage extends NLPWizardPage(
         }
     })
 
-    b1.addSelectionListener(new SelectionAdapter {
-      override def widgetSelected(ev : SelectionEvent) = {
+    Listener.Selection(b1, Listener {
+      case Event.Selection(_) =>
         lv.getControl.setEnabled(true);
         at.setEnabled(false);
-      }
-    });
+    })
     b1.setSelection(true)
 
-    b2.addSelectionListener(new SelectionAdapter {
-      override def widgetSelected(ev : SelectionEvent) = {
+    Listener.Selection(b2, Listener {
+      case Event.Selection(_) =>
         at.setEnabled(true);
         lv.getControl.setEnabled(false);
-      }
-    });
+    })
 
     at.setEnabled(false);
 
@@ -641,8 +632,8 @@ class NLPSourceEntryPage extends NLPWizardPage(
     })
     val sb = new Button(c, SWT.PUSH)
     sb.setText("Browse...")
-    sb.addSelectionListener(new SelectionAdapter {
-      override def widgetSelected(ev : SelectionEvent) = {
+    Listener.Selection(sb, Listener {
+      case Event.Selection(_) =>
         val ed = UIUtils.createWorkspaceElementDialog(sb.getShell)
         ed.addFilter(new OnlyFoldersFilter)
         ed.setInput(getWizard.project)
@@ -652,7 +643,6 @@ class NLPSourceEntryPage extends NLPWizardPage(
               st.setText(f.getProjectRelativePath.toString)
             case _ =>
           }
-      }
     })
 
     new Label(c, SWT.NONE).setText("Output folder:")
@@ -675,8 +665,8 @@ class NLPSourceEntryPage extends NLPWizardPage(
     ot.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false))
     val ob = new Button(c, SWT.PUSH)
     ob.setText("Browse...")
-    ob.addSelectionListener(new SelectionAdapter {
-      override def widgetSelected(ev : SelectionEvent) = {
+    Listener.Selection(ob, Listener {
+      case Event.Selection(_) =>
         val ed = UIUtils.createWorkspaceElementDialog(ob.getShell)
         ed.addFilter(new OnlyFoldersFilter)
         ed.setInput(getWizard.project)
@@ -686,7 +676,6 @@ class NLPSourceEntryPage extends NLPWizardPage(
               ot.setText(f.getProjectRelativePath.toString)
             case _ =>
           }
-      }
     })
 
     setControl(c)
@@ -784,8 +773,8 @@ class NLPExternalEntryPage extends NLPWizardPage(
     })
     val fb = new Button(c, SWT.PUSH)
     fb.setText("Browse...")
-    fb.addSelectionListener(new SelectionAdapter {
-      override def widgetSelected(ev : SelectionEvent) = {
+    Listener.Selection(fb, Listener {
+      case Event.Selection(_) =>
         import org.eclipse.swt.widgets.DirectoryDialog
         val ed = new DirectoryDialog(fb.getShell, SWT.OPEN)
         Option(ed.open) match {
@@ -793,7 +782,6 @@ class NLPExternalEntryPage extends NLPWizardPage(
             ft.setText(p)
           case _ =>
         }
-      }
     })
 
     new Label(c, SWT.NONE).setText("Coq namespace:")
