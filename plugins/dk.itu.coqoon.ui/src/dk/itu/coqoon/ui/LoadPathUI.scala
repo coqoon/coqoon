@@ -8,18 +8,17 @@
 package dk.itu.coqoon.ui
 
 import org.eclipse.core.resources.IProject
-import dk.itu.coqoon.ui.utilities.{Event, UIUtils, Listener}
+import dk.itu.coqoon.ui.utilities.{Event, UIXML, UIUtils, Listener}
 import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot}
 
 import org.eclipse.jface.wizard._
 import org.eclipse.jface.viewers._
+import org.eclipse.jface.window.Window
 
 import org.eclipse.swt.SWT
-import org.eclipse.swt.layout.FillLayout
-import org.eclipse.swt.widgets.{
-  Text, Composite, Button, Label, TabFolder, TabItem}
-import org.eclipse.core.runtime.IAdaptable
+import org.eclipse.swt.widgets.{Text, Composite, Button}
+import org.eclipse.core.runtime.{Path, IPath, IAdaptable}
 import org.eclipse.ui.IWorkbenchPropertyPage
 import org.eclipse.jface.preference.PreferencePage
 
@@ -91,7 +90,6 @@ protected object LoadPathModel {
     override def hasChildren = getChildren.size > 0
   }
 
-  import org.eclipse.core.runtime.IPath
   case class ExternalLPE(parent : Option[LPProvider], fsPath : IPath,
       dir : Seq[String], index : Int) extends LPProvider(parent, index) {
     override def getChildren =
@@ -244,9 +242,6 @@ class LoadPathConfigurationPage
   override def getElement : IProject = TryCast[IProject](element).get
   override def setElement(element : IAdaptable) = (this.element = element)
   override def createContents(c : Composite) = {
-    import org.eclipse.jface.window.Window
-
-    import dk.itu.coqoon.ui.utilities.UIXML
     val names = UIXML(
         <composite name="root">
           <grid-layout columns="2" />
@@ -281,8 +276,7 @@ class LoadPathConfigurationPage
               Down
             </button>
             <label align="center" read-only="true" wrap="true">
-              <grid-data h-span="2" h-align="fill" v-grab="true"
-                         width-hint="100" />
+              <grid-data h-span="2" v-grab="true" width-hint="100" />
               Higher entries take priority over lower ones. Use the Up and Down
               buttons to reorder entries.
             </label>
@@ -464,17 +458,28 @@ class NLPAbstractEntryPage extends NLPWizardPage(
   override def createLoadPathEntry = identifier.map(AbstractLoadPath(_))
 
   override def createControl(parent : Composite) = {
-    import org.eclipse.jface.layout.{GridDataFactory => GDF, GridLayoutFactory}
-    val c = new Composite(parent, SWT.NONE)
-    c.setLayout(GridLayoutFactory.fillDefaults.create)
+    val names = UIXML(
+        <composite name="root">
+          <grid-layout />
+          <button name="b1" style="radio">
+            <grid-data h-grab="true" />
+            Select from the list of available abstract dependencies
+          </button>
+          <composite name="lv-container">
+            <grid-data h-grab="true" v-grab="true" />
+            <fill-layout />
+          </composite>
+          <button name="b2" style="radio">
+            <grid-data h-grab="true" />
+            Manually specify the identifier of an abstract dependency
+          </button>
+          <text name="at" border="true">
+            <grid-data h-grab="true" />
+          </text>
+        </composite>, parent)
 
-    val b1 = new Button(c, SWT.RADIO)
-    b1.setText("Select from the list of available abstract dependencies")
-    b1.setLayoutData(GDF.fillDefaults.grab(true, false).
-        align(SWT.FILL, SWT.FILL).create)
-    val lv = new TreeViewer(c, SWT.SINGLE | SWT.BORDER)
-    lv.getControl.setLayoutData(
-        GDF.fillDefaults.grab(true, true).align(SWT.FILL, SWT.FILL).create)
+    val lv = new TreeViewer(
+        names.get[Composite]("lv-container").get, SWT.SINGLE | SWT.BORDER)
     lv.setContentProvider(new FuturisticContentProvider[TreeViewer] {
       override def actuallyGetChildren(element : AnyRef) =
         element match {
@@ -508,14 +513,7 @@ class NLPAbstractEntryPage extends NLPWizardPage(
     })
     lv.setInput(AbstractLoadPathManager.getInstance)
 
-    val b2 = new Button(c, SWT.RADIO)
-    b2.setText("Manually specify the identifier of an abstract dependency")
-    b2.setLayoutData(
-        GDF.fillDefaults.grab(true, false).align(SWT.FILL, SWT.FILL).create)
-
-    val at = new Text(c, SWT.BORDER)
-    at.setLayoutData(
-        GDF.fillDefaults.grab(true, false).align(SWT.FILL, SWT.FILL).create)
+    val at = names.get[Text]("at").get
     Listener.Modify(at, Listener {
       case Event.Modify(_) =>
         val identifier = at.getText.trim
@@ -556,29 +554,29 @@ class NLPAbstractEntryPage extends NLPWizardPage(
         }
     })
 
+    val b1 = names.get[Button]("b1").get
     Listener.Selection(b1, Listener {
       case Event.Selection(_) =>
-        lv.getControl.setEnabled(true);
-        at.setEnabled(false);
+        lv.getControl.setEnabled(true)
+        at.setEnabled(false)
     })
     b1.setSelection(true)
 
+    val b2 = names.get[Button]("b2").get
     Listener.Selection(b2, Listener {
       case Event.Selection(_) =>
-        at.setEnabled(true);
-        lv.getControl.setEnabled(false);
+        at.setEnabled(true)
+        lv.getControl.setEnabled(false)
     })
 
     at.setEnabled(false);
 
-    setControl(c)
+    setControl(names.get[Composite]("root").get)
   }
 }
 
 class NLPSourceEntryPage extends NLPWizardPage(
     "nlpSEP", "Another source folder in this project") {
-  import org.eclipse.core.runtime.Path
-
   setDescription(
       "Add an additional source folder to this project.")
 
@@ -597,14 +595,30 @@ class NLPSourceEntryPage extends NLPWizardPage(
 
   override def createControl(parent : Composite) = {
     import org.eclipse.ui.dialogs.ISelectionStatusValidator
-    import org.eclipse.swt.layout.{GridData, GridLayout}
-    import org.eclipse.jface.window.Window
-    val c = new Composite(parent, SWT.NONE)
-    c.setLayout(new GridLayout(3, false))
+    val names = UIXML(
+        <composite name="root">
+          <grid-layout columns="3" />
+          <label>
+            Source folder:
+          </label>
+          <text name="st" border="true">
+            <grid-data h-grab="true" />
+          </text>
+          <button name="sb" style="push">
+            Browse...
+          </button>
+          <label>
+            Output folder:
+          </label>
+          <text name="ot" border="true">
+            <grid-data h-grab="true" />
+          </text>
+          <button name="ob" style="push">
+            Browse...
+          </button>
+        </composite>, parent)
 
-    new Label(c, SWT.NONE).setText("Source folder: ")
-    val st = new Text(c, SWT.BORDER)
-    st.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false))
+    val st = names.get[Text]("st").get
     Listener.Modify(st, Listener {
       case Event.Modify(_) =>
         val path = st.getText.trim
@@ -622,8 +636,7 @@ class NLPSourceEntryPage extends NLPWizardPage(
         }
         getContainer.updateButtons
     })
-    val sb = new Button(c, SWT.PUSH)
-    sb.setText("Browse...")
+    val sb = names.get[Button]("sb").get
     Listener.Selection(sb, Listener {
       case Event.Selection(_) =>
         val ed = UIUtils.createWorkspaceElementDialog(sb.getShell)
@@ -637,8 +650,7 @@ class NLPSourceEntryPage extends NLPWizardPage(
           }
     })
 
-    new Label(c, SWT.NONE).setText("Output folder:")
-    val ot = new Text(c, SWT.BORDER)
+    val ot = names.get[Text]("ot").get
     Listener.Modify(ot, Listener {
       case Event.Modify(_) =>
         val path = ot.getText.trim
@@ -653,9 +665,7 @@ class NLPSourceEntryPage extends NLPWizardPage(
         } else setErrorMessage(null)
         getContainer.updateButtons
     })
-    ot.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false))
-    val ob = new Button(c, SWT.PUSH)
-    ob.setText("Browse...")
+    val ob = names.get[Button]("ob").get
     Listener.Selection(ob, Listener {
       case Event.Selection(_) =>
         val ed = UIUtils.createWorkspaceElementDialog(ob.getShell)
@@ -669,7 +679,7 @@ class NLPSourceEntryPage extends NLPWizardPage(
           }
     })
 
-    setControl(c)
+    setControl(names.get[Composite]("root").get)
   }
 }
 
@@ -681,14 +691,9 @@ class NLPProjectEntryPage extends NLPWizardPage(
   override def createLoadPathEntry = project.map(ProjectLoadPath(_))
 
   override def createControl(parent : Composite) = {
-    import org.eclipse.swt.layout.{GridData, GridLayout}
-    val c = new Composite(parent, SWT.NONE)
-    c.setLayout(new FillLayout)
-
     import org.eclipse.ui.model.{
       WorkbenchLabelProvider, WorkbenchContentProvider}
-    import org.eclipse.core.resources.ResourcesPlugin
-    val tv = new TreeViewer(c, SWT.BORDER | SWT.SINGLE)
+    val tv = new TreeViewer(parent, SWT.BORDER | SWT.SINGLE)
     tv.setLabelProvider(
         WorkbenchLabelProvider.getDecoratingWorkbenchLabelProvider())
     tv.setContentProvider(new WorkbenchContentProvider {
@@ -719,31 +724,42 @@ class NLPProjectEntryPage extends NLPWizardPage(
       }
     })
 
-    setControl(c)
+    setControl(tv.getControl)
   }
 }
 
 class NLPExternalEntryPage extends NLPWizardPage(
     "nlpEEP", "External development") {
-  import org.eclipse.core.runtime.Path
-
   setDescription(
       "Add a dependency on a Coq development built outside of Coqoon.")
 
-  import org.eclipse.core.runtime.IPath
   private var fspath : Option[IPath] = None
   private var dir : Option[Seq[String]] = None
   override def createLoadPathEntry =
     fspath.map(ExternalLoadPath(_, dir.getOrElse(Seq())))
 
   override def createControl(parent : Composite) = {
-    import org.eclipse.swt.layout.{GridData, GridLayout}
-    val c = new Composite(parent, SWT.NONE)
-    c.setLayout(new GridLayout(3, false))
+    val names = UIXML(
+        <composite name="root">
+          <grid-layout columns="3" />
+          <label>
+            Folder:
+          </label>
+          <text name="ft" border="true">
+            <grid-data h-grab="true" />
+          </text>
+          <button name="fb" style="push">
+            Browse...
+          </button>
+          <label>
+            Coq namespace:
+          </label>
+          <text name="nt" border="true">
+            <grid-data h-grab="true" h-span="2" />
+          </text>
+        </composite>, parent)
 
-    new Label(c, SWT.NONE).setText("Folder: ")
-    val ft = new Text(c, SWT.BORDER)
-    ft.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false))
+    val ft = names.get[Text]("ft").get
     Listener.Modify(ft, Listener {
       case Event.Modify(_) =>
         val path = ft.getText.trim
@@ -761,8 +777,7 @@ class NLPExternalEntryPage extends NLPWizardPage(
         }
         getContainer.updateButtons
     })
-    val fb = new Button(c, SWT.PUSH)
-    fb.setText("Browse...")
+    val fb = names.get[Button]("fb").get
     Listener.Selection(fb, Listener {
       case Event.Selection(_) =>
         import org.eclipse.swt.widgets.DirectoryDialog
@@ -774,9 +789,7 @@ class NLPExternalEntryPage extends NLPWizardPage(
         }
     })
 
-    new Label(c, SWT.NONE).setText("Coq namespace:")
-    val nt = new Text(c, SWT.BORDER)
-    nt.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false, 2, 1))
+    val nt = names.get[Text]("nt").get
     Listener.Modify(nt, Listener {
       case Event.Modify(_) =>
         val coqdir = nt.getText.trim
@@ -799,7 +812,7 @@ class NLPExternalEntryPage extends NLPWizardPage(
         getContainer.updateButtons
     })
 
-    setControl(c)
+    setControl(names.get[Composite]("root").get)
   }
 }
 
