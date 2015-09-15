@@ -172,7 +172,6 @@ class UIXML {
         gd.grabExcessHorizontalSpace = (x \@ "h-grab" == "true")
         gd.grabExcessVerticalSpace = (x \@ "v-grab" == "true")
 
-        println(s"$context.setLayoutData($gd)")
         context.setLayoutData(gd)
 
         None
