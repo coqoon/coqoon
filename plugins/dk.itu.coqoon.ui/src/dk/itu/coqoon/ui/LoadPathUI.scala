@@ -244,33 +244,58 @@ class LoadPathConfigurationPage
   override def getElement : IProject = TryCast[IProject](element).get
   override def setElement(element : IAdaptable) = (this.element = element)
   override def createContents(c : Composite) = {
-    import org.eclipse.swt.layout._
-    import org.eclipse.core.runtime.IStatus
-    import org.eclipse.core.resources.IFolder
-    import org.eclipse.jface.layout._
     import org.eclipse.jface.window.Window
 
-    val c1 = new Composite(c, SWT.NONE)
-    c1.setLayout(GridLayoutFactory.fillDefaults.numColumns(2).create)
+    import dk.itu.coqoon.ui.utilities.UIXML
+    val names = UIXML(
+        <composite name="root">
+          <grid-layout columns="2" />
+          <composite name="tvc-container">
+            <grid-data h-grab="true" v-grab="true" />
+            <fill-layout />
+          </composite>
+          <composite>
+            <grid-data />
+            <grid-layout columns="2" equal-width="true" />
+            <button name="afb">
+              <grid-data h-span="2" />
+              Add...
+            </button>
+            <label separator="horizontal">
+              <grid-data h-span="2" />
+            </label>
+            <button name="dfb">
+              <grid-data h-span="2" />
+              Remove
+            </button>
+            <button enabled="false">
+              <grid-data h-span="2" />
+              Edit...
+            </button>
+            <button name="upb">
+              <grid-data />
+              Up
+            </button>
+            <button name="dob">
+              <grid-data />
+              Down
+            </button>
+            <label align="center" read-only="true" wrap="true">
+              <grid-data h-span="2" h-align="fill" v-grab="true"
+                         width-hint="100" />
+              Higher entries take priority over lower ones. Use the Up and Down
+              buttons to reorder entries.
+            </label>
+          </composite>
+        </composite>, c)
 
-    val tv1 = new TreeViewer(c1, SWT.SINGLE | SWT.BORDER)
+    val tv1 = new TreeViewer(
+        names.get[Composite]("tvc-container").get, SWT.SINGLE | SWT.BORDER)
     tv1.setLabelProvider(new LoadPathLabelProvider)
     tv1.setContentProvider(new LoadPathContentProvider)
     tv1.setInput(loadPath.get)
-    tv1.getControl.setLayoutData(GridDataFactory.fillDefaults().
-        align(SWT.FILL, SWT.FILL).grab(true, true).create)
 
-    val c1r = new Composite(c1, SWT.NONE)
-    c1r.setLayout(GridLayoutFactory.fillDefaults().
-        numColumns(2).equalWidth(true).create)
-    c1r.setLayoutData(GridDataFactory.fillDefaults().
-        align(SWT.FILL, SWT.FILL).create)
-
-    val afb = new Button(c1r, SWT.NONE)
-    afb.setText("Add...")
-    afb.setLayoutData(GridDataFactory.fillDefaults.span(2, 1).
-        align(SWT.FILL, SWT.FILL).create)
-    Listener.Selection(afb, Listener {
+    Listener.Selection(names.get[Button]("afb").get, Listener {
       case Event.Selection(_) =>
         val wiz = new NewLoadPathWizard(getElement)
         if (new WizardDialog(c.getShell, wiz).open == Window.OK) {
@@ -280,14 +305,7 @@ class LoadPathConfigurationPage
         }
     })
 
-    new Label(c1r, SWT.SEPARATOR | SWT.HORIZONTAL).setLayoutData(
-        GridDataFactory.fillDefaults.
-            align(SWT.FILL, SWT.FILL).span(2, 1).create)
-
-    val dfb = new Button(c1r, SWT.NONE)
-    dfb.setText("Remove")
-    dfb.setLayoutData(GridDataFactory.fillDefaults.span(2, 1).
-        align(SWT.FILL, SWT.FILL).create)
+    val dfb = names.get[Button]("dfb").get
     Listener.Selection(dfb, Listener {
       case Event.Selection(_) =>
         Option(tv1.getSelection.
@@ -299,16 +317,7 @@ class LoadPathConfigurationPage
         }
     })
 
-    val edb = new Button(c1r, SWT.NONE)
-    edb.setText("Edit...")
-    edb.setLayoutData(GridDataFactory.fillDefaults.span(2, 1).
-        align(SWT.FILL, SWT.FILL).create)
-    edb.setEnabled(false)
-
-    val upb = new Button(c1r, SWT.NONE)
-    upb.setText("Up")
-    upb.setLayoutData(GridDataFactory.fillDefaults.
-        align(SWT.FILL, SWT.FILL).create)
+    val upb = names.get[Button]("upb").get
     Listener.Selection(upb, Listener {
       case Event.Selection(_) =>
         Option(tv1.getSelection.
@@ -325,10 +334,7 @@ class LoadPathConfigurationPage
         }
     })
 
-    val dob = new Button(c1r, SWT.NONE)
-    dob.setText("Down")
-    dob.setLayoutData(GridDataFactory.fillDefaults.
-        align(SWT.FILL, SWT.FILL).create)
+    val dob = names.get[Button]("dob").get
     Listener.Selection(dob, Listener {
       case Event.Selection(_) =>
         Option(tv1.getSelection.
@@ -344,17 +350,6 @@ class LoadPathConfigurationPage
           case _ =>
         }
     })
-
-    new Label(c1r, SWT.SEPARATOR | SWT.HORIZONTAL).setLayoutData(
-        GridDataFactory.fillDefaults.align(
-            SWT.FILL, SWT.FILL).span(2, 1).create)
-
-    val inl = new Label(c1r, SWT.CENTER | SWT.READ_ONLY | SWT.WRAP)
-    inl.setLayoutData(
-        GridDataFactory.fillDefaults.hint(100, SWT.DEFAULT).align(
-            SWT.FILL, SWT.BEGINNING).grab(false, true).span(2, 1).create)
-    inl.setText("Higher entries take priority over lower ones. " +
-        "Use the Up and Down buttons to reorder entries.")
 
     tv1.addSelectionChangedListener(new ISelectionChangedListener {
       override def selectionChanged(ev : SelectionChangedEvent) = {
@@ -380,7 +375,7 @@ class LoadPathConfigurationPage
       }
     })
 
-    c1
+    names.get[Composite]("root").get
   }
 }
 
