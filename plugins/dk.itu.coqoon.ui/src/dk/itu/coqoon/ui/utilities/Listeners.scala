@@ -9,6 +9,12 @@ object Event {
         Some(new events.SelectionEvent(ev))
       } else None
   }
+  object DefaultSelection {
+    def unapply(ev : widgets.Event) =
+      if (ev.`type` == SWT.DefaultSelection) {
+        Some(new events.SelectionEvent(ev))
+      } else None
+  }
   object Modify {
     def unapply(ev : widgets.Event) =
       if (ev.`type` == SWT.Modify) {
@@ -24,6 +30,10 @@ object Listener {
   object Selection {
     def apply(w : widgets.Widget, l : widgets.Listener) =
       w.addListener(SWT.Selection, l)
+  }
+  object DefaultSelection {
+    def apply(w : widgets.Widget, l : widgets.Listener) =
+      w.addListener(SWT.DefaultSelection, l)
   }
   object Modify {
     def apply(w : widgets.Widget, l : widgets.Listener) =
