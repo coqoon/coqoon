@@ -7,11 +7,11 @@
 
 package dk.itu.coqoon.ui.pide
 
+import dk.itu.coqoon.ui.utilities.UIXML
 import org.eclipse.swt.SWT
 import org.eclipse.swt.widgets.{Shell, Composite}
 import org.eclipse.swt.graphics.Point
 import org.eclipse.jface.dialogs.PopupDialog
-import org.eclipse.jface.layout.{GridDataFactory => GDF}
 import org.eclipse.jface.resource.JFaceResources
 
 class QueryPopup(
@@ -75,47 +75,53 @@ class QueryPopup(
 
   override def getDefaultLocation(initialSize: Point) = position
   override def getDefaultSize() = new Point(400, 250)
-  override def createDialogArea(parent: Composite) = {
-    import org.eclipse.swt.layout.GridLayout
-    val c = super.createDialogArea(parent).asInstanceOf[Composite]
-    c.getLayout.asInstanceOf[GridLayout].numColumns = 2
-    val queryText = new Text(c, SWT.BORDER)
+  override def createDialogArea(parent_ : Composite) = {
+    val parent = super.createDialogArea(parent_)
+    val names = UIXML(
+        <composite name="root">
+          <grid-layout columns="2" />
+          <!-- We can safely assume that the parent uses a GridLayout -->
+          <grid-data h-grab="true" v-grab="true" />
+          <text name="queryText" border="true">
+            <grid-data h-grab="true" />
+          </text>
+          <button name="queryButton" style="arrow" direction="right">
+            <grid-data />
+          </button>
+          <composite name="results-container">
+            <grid-data h-grab="true" v-grab="true" h-span="2" />
+            <fill-layout />
+          </composite>
+        </composite>, parent)
+    val queryText = names.get[Text]("queryText").get
     queryText.setFont(JFaceResources.getTextFont)
     this.queryText = Some(queryText)
-    queryText.setLayoutData(
-      GDF.fillDefaults.align(SWT.FILL, SWT.FILL).grab(
-        true, false).create)
-    val queryButton = new Button(c, SWT.ARROW | SWT.RIGHT)
+
+    val queryButton = names.get[Button]("queryButton").get
     this.queryButton = Some(queryButton)
-    queryButton.setLayoutData(
-      GDF.fillDefaults.align(SWT.FILL, SWT.FILL).create)
-    val queryResults =
-      new StyledText(c, SWT.V_SCROLL | SWT.WRAP | SWT.BORDER | SWT.READ_ONLY)
+
+    val queryResults = new StyledText(
+        names.get[Composite]("results-container").get,
+        SWT.V_SCROLL | SWT.WRAP | SWT.BORDER | SWT.READ_ONLY)
     queryResults.setFont(JFaceResources.getTextFont)
-    queryResults.setLayoutData(
-      GDF.fillDefaults.align(SWT.FILL, SWT.FILL).grab(true, true).
-        span(2, 1).create)
     this.queryResults = Some(queryResults)
 
-    import org.eclipse.swt.events.{ SelectionEvent, SelectionListener }
-    object Listener
-      extends org.eclipse.swt.events.SelectionListener {
-      override def widgetSelected(ev: SelectionEvent) =
-        runQuery
-      override def widgetDefaultSelected(ev: SelectionEvent) =
-        runQuery
-
-      def runQuery() = {
-        val query = queryText.getText.trim
-        queryText.setText("")
-        if (query.length > 0)
-          QueryPopup.this.runQuery(query)
-      }
+    def runQuery() = {
+      val query = queryText.getText.trim
+      queryText.setText("")
+      if (query.length > 0)
+        QueryPopup.this.runQuery(query)
     }
-    queryText.addSelectionListener(Listener)
-    queryButton.addSelectionListener(Listener)
 
-    c
+    import dk.itu.coqoon.ui.utilities.{Event, Listener}
+    val l = Listener {
+      case Event.Selection(_) => runQuery
+      case Event.DefaultSelection(_) => runQuery
+    }
+    Listener.Selection(queryButton, l)
+    Listener.DefaultSelection(queryText, l)
+
+    parent
   }
 
   override def close() = {
