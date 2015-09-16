@@ -233,6 +233,13 @@ object UIXML extends UIXML {
       names.get(name).flatMap(TryCast[A])
   }
 
+  private def first(x : xml.Node, attributes : String*) : Option[String] = {
+    for (n <- attributes;
+         v <- Option(x \@ n) if !v.isEmpty)
+      return Some(v)
+    None
+  }
+
   private def getControlFlags(x : xml.Node) =
     if (x \@ "border" == "true") {
       SWT.BORDER
