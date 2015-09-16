@@ -79,9 +79,9 @@ class QueryPopup(
     val parent = super.createDialogArea(parent_)
     val names = UIXML(
         <composite name="root">
-          <grid-layout columns="2" />
+          <grid-layout columns="2" spacing="0" />
           <!-- We can safely assume that the parent uses a GridLayout -->
-          <grid-data h-grab="true" v-grab="true" />
+          <grid-data grab="true" />
           <text name="queryText" border="true">
             <grid-data h-grab="true" />
           </text>
@@ -90,7 +90,7 @@ class QueryPopup(
           </button>
           <styled-text name="queryResults" border="true" wrap="true"
                        read-only="true" scroll="vertical" >
-            <grid-data h-grab="true" v-grab="true" h-span="2" />
+            <grid-data grab="true" h-span="2" />
           </styled-text>
         </composite>, parent)
     val queryText = names.get[Text]("queryText").get
