@@ -127,20 +127,6 @@ class UIXML {
       case (parent : widgets.Composite, xml.Elem(_, "composite", _, _, _*)) =>
         val flags = getScrollableFlags(x)
         Some(new widgets.Composite(parent, flags))
-      case (parent : widgets.Table, xml.Elem(_, "column", _, _, _*)) =>
-        var flags = 0
-
-        if (x \@ "align" == "left") {
-          flags |= SWT.LEFT
-        } else if (x \@ "align" == "center") {
-          flags |= SWT.CENTER
-        } else if (x \@ "align" == "right") {
-          flags |= SWT.RIGHT
-        }
-
-        val tc = new widgets.TableColumn(parent, flags)
-        tc.setText(juice(x))
-        Some(tc)
       case (parent : widgets.Composite,
           xml.Elem(_, "grid-layout", _, _, _*)) =>
         val gl = GridLayoutFactory.fillDefaults
