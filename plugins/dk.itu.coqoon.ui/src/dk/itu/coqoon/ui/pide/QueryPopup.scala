@@ -88,10 +88,10 @@ class QueryPopup(
           <button name="queryButton" style="arrow" direction="right">
             <grid-data />
           </button>
-          <composite name="results-container">
+          <styled-text name="queryResults" border="true" wrap="true"
+                       read-only="true" scroll="vertical" >
             <grid-data h-grab="true" v-grab="true" h-span="2" />
-            <fill-layout />
-          </composite>
+          </styled-text>
         </composite>, parent)
     val queryText = names.get[Text]("queryText").get
     queryText.setFont(JFaceResources.getTextFont)
@@ -100,9 +100,7 @@ class QueryPopup(
     val queryButton = names.get[Button]("queryButton").get
     this.queryButton = Some(queryButton)
 
-    val queryResults = new StyledText(
-        names.get[Composite]("results-container").get,
-        SWT.V_SCROLL | SWT.WRAP | SWT.BORDER | SWT.READ_ONLY)
+    val queryResults = names.get[StyledText]("queryResults").get
     queryResults.setFont(JFaceResources.getTextFont)
     this.queryResults = Some(queryResults)
 
