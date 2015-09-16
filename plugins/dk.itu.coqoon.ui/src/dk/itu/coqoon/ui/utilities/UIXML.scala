@@ -33,13 +33,7 @@ class UIXML {
           flags |= SWT.SEPARATOR | SWT.VERTICAL
         }
 
-        if (x \@ "align" == "left") {
-          flags |= SWT.LEFT
-        } else if (x \@ "align" == "center") {
-          flags |= SWT.CENTER
-        } else if (x \@ "align" == "right") {
-          flags |= SWT.RIGHT
-        }
+        first(x, "align").map(unpackTextAlign).foreach(flags |= _)
 
         if (x \@ "wrap" == "true")
           flags |= SWT.WRAP
@@ -77,21 +71,9 @@ class UIXML {
       case (parent : widgets.Composite, xml.Elem(_, "text", a, _, _*)) =>
         var flags = getScrollableFlags(x)
 
-        /* XXX: should this flag handling go somewhere more generic? */
-        /* ICON_CANCEL, ICON_SEARCH, PASSWORD, SEARCH */
-        if (x \@ "align" == "left") {
-          flags |= SWT.LEFT
-        } else if (x \@ "align" == "center") {
-          flags |= SWT.CENTER
-        } else if (x \@ "align" == "right") {
-          flags |= SWT.RIGHT
-        }
-
-        if (x \@ "lines" == "single") {
-          flags |= SWT.SINGLE
-        } else if (x \@ "lines" == "multi") {
-          flags |= SWT.MULTI
-        }
+        /* ICON_CANCEL, ICON_SEARCH, PASSWORD, SEARCH? */
+        first(x, "align").map(unpackTextAlign).foreach(flags |= _)
+        first(x, "lines").map(unpackTextLines).foreach(flags |= _)
 
         if (x \@ "read-only" == "true")
           flags |= SWT.READ_ONLY
@@ -106,11 +88,7 @@ class UIXML {
           xml.Elem(_, "styled-text", a, _, _*)) =>
         var flags = getScrollableFlags(x)
 
-        if (x \@ "lines" == "single") {
-          flags |= SWT.SINGLE
-        } else if (x \@ "lines" == "multi") {
-          flags |= SWT.MULTI
-        }
+        first(x, "lines").map(unpackTextLines).foreach(flags |= _)
 
         if (x \@ "selection" == "full")
           flags |= SWT.FULL_SELECTION
@@ -129,56 +107,35 @@ class UIXML {
         Some(new widgets.Composite(parent, flags))
       case (parent : widgets.Composite,
           xml.Elem(_, "grid-layout", _, _, _*)) =>
-        val gl = GridLayoutFactory.fillDefaults
+        val gl = GridLayoutFactory.fillDefaults.create
 
-        val columns = x \@ "columns"
-        if (columns != "")
-          gl.numColumns(Integer.parseInt(columns))
-        gl.equalWidth(x \@ "equal-width" == "true")
+        first(x, "columns").map(Integer.parseInt).foreach(gl.numColumns = _)
+        gl.makeColumnsEqualWidth = (x \@ "equal-width" == "true")
 
-        parent.setLayout(gl.create)
+        parent.setLayout(gl)
         None
       case (context : widgets.Control, xml.Elem(_, "grid-data", _, _, _*)) =>
         val gd = GridDataFactory.fillDefaults().create
 
-        gd.horizontalAlignment =
-          if (x \@ "h-align" == "beginning") {
-            SWT.BEGINNING
-          } else if (x \@ "h-align" == "center") {
-            SWT.CENTER
-          } else if (x \@ "h-align" == "end") {
-            SWT.END
-          } else if (x \@ "h-align" == "fill") {
-            SWT.FILL
-          } else gd.horizontalAlignment
+        first(x, "h-align", "align").map(unpackGridAlign).foreach(
+            gd.horizontalAlignment = _)
+        first(x, "v-align", "align").map(unpackGridAlign).foreach(
+            gd.verticalAlignment = _)
 
-        gd.verticalAlignment =
-          if (x \@ "v-align" == "beginning") {
-            SWT.BEGINNING
-          } else if (x \@ "v-align" == "center") {
-            SWT.CENTER
-          } else if (x \@ "v-align" == "end") {
-            SWT.END
-          } else if (x \@ "v-align" == "fill") {
-            SWT.FILL
-          } else gd.verticalAlignment
+        first(x, "width-hint").map(Integer.parseInt).foreach(gd.widthHint = _)
+        first(x, "height-hint").map(
+            Integer.parseInt).foreach(gd.heightHint = _)
 
-        val width = (x \@ "width-hint")
-        if (width != "")
-          gd.widthHint = Integer.parseInt(width)
-        val height = (x \@ "height-hint")
-        if (height != "")
-          gd.heightHint = Integer.parseInt(height)
+        first(x, "h-span", "span").map(Integer.parseInt).foreach(
+            gd.horizontalSpan = _)
+        first(x, "v-span", "span").map(Integer.parseInt).foreach(
+            gd.verticalSpan = _)
 
-        val hSpan = (x \@ "h-span")
-        if (hSpan != "")
-          gd.horizontalSpan = Integer.parseInt(hSpan)
-        val vSpan = (x \@ "v-span")
-        if (vSpan != "")
-          gd.verticalSpan = Integer.parseInt(vSpan)
-
-        gd.grabExcessHorizontalSpace = (x \@ "h-grab" == "true")
-        gd.grabExcessVerticalSpace = (x \@ "v-grab" == "true")
+        import java.lang.Boolean.parseBoolean
+        first(x, "h-grab", "grab").map(parseBoolean).foreach(
+            gd.grabExcessHorizontalSpace = _)
+        first(x, "v-grab", "grab").map(parseBoolean).foreach(
+            gd.grabExcessVerticalSpace = _)
 
         context.setLayoutData(gd)
 
@@ -215,11 +172,8 @@ class UIXML {
       case _ =>
         None
     }
-    widget.foreach(widget => {
-      val name = x \@ "name"
-      if (!name.isEmpty)
-        names.names += (name -> widget)
-    })
+    widget.foreach(
+        widget => first(x, "name").foreach(names.names += _ -> widget))
     widget.flatMap(TryCast[widgets.Control]).foreach(widget => {
       widget.setEnabled(x \@ "enabled" != "false")
       x.child.foreach(go(_, widget, names))
@@ -238,6 +192,25 @@ object UIXML extends UIXML {
          v <- Option(x \@ n) if !v.isEmpty)
       return Some(v)
     None
+  }
+
+  def unpackGridAlign(t : String) = t match {
+    case "beginning" => SWT.BEGINNING
+    case "center" => SWT.CENTER
+    case "end" => SWT.END
+    case "fill" => SWT.FILL
+    case _ => SWT.NONE
+  }
+  def unpackTextAlign(t : String) = t match {
+    case "left" => SWT.LEFT
+    case "center" => SWT.CENTER
+    case "right" => SWT.RIGHT
+    case _ => SWT.NONE
+  }
+  def unpackTextLines(t : String) = t match {
+    case "single" => SWT.SINGLE
+    case "multi" => SWT.MULTI
+    case _ => SWT.NONE
   }
 
   private def getControlFlags(x : xml.Node) =
