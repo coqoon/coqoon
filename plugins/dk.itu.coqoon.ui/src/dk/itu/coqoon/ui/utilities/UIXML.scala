@@ -112,6 +112,11 @@ class UIXML {
         first(x, "columns").map(Integer.parseInt).foreach(gl.numColumns = _)
         gl.makeColumnsEqualWidth = (x \@ "equal-width" == "true")
 
+        first(x, "h-spacing", "spacing").map(
+            Integer.parseInt).foreach(gl.horizontalSpacing = _)
+        first(x, "v-spacing", "spacing").map(
+            Integer.parseInt).foreach(gl.verticalSpacing = _)
+
         parent.setLayout(gl)
         None
       case (context : widgets.Control, xml.Elem(_, "grid-data", _, _, _*)) =>
