@@ -2,7 +2,7 @@ package dk.itu.coqoon.ui.utilities
 
 import scala.xml
 import dk.itu.coqoon.core.utilities.TryCast
-import org.eclipse.swt.{SWT, layout, widgets}
+import org.eclipse.swt.{SWT, custom, layout, widgets}
 import org.eclipse.jface.layout.{
   GridDataFactory, GridLayoutFactory, RowLayoutFactory}
 
@@ -100,6 +100,28 @@ class UIXML {
           flags |= SWT.WRAP
 
         val t = new widgets.Text(parent, flags)
+        t.setText(juice(x))
+        Some(t)
+      case (parent : widgets.Composite,
+          xml.Elem(_, "styled-text", a, _, _*)) =>
+        var flags = getScrollableFlags(x)
+
+        if (x \@ "lines" == "single") {
+          flags |= SWT.SINGLE
+        } else if (x \@ "lines" == "multi") {
+          flags |= SWT.MULTI
+        }
+
+        if (x \@ "selection" == "full")
+          flags |= SWT.FULL_SELECTION
+
+        if (x \@ "read-only" == "true")
+          flags |= SWT.READ_ONLY
+
+        if (x \@ "wrap" == "true")
+          flags |= SWT.WRAP
+
+        val t = new custom.StyledText(parent, flags)
         t.setText(juice(x))
         Some(t)
       case (parent : widgets.Composite, xml.Elem(_, "composite", _, _, _*)) =>
