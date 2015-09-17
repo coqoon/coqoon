@@ -70,6 +70,10 @@ object CoqoonDebugPreferences {
       false, "Suppress stack traces",
       "Don't capture a stack trace when generating debugging messages.")
 
+  object NoQueryDelegation extends BooleanPreference("noQueryDelegation",
+      false, "Disable PIDE query delegation",
+      "Only run PIDE queries on the main process and not on workers.")
+
   class ChannelPreference(id : String, name : String, description : String)
       extends BooleanPreference(id, false, name, s"$description ($id)") {
     import org.eclipse.core.runtime.{Status, IStatus}
@@ -116,6 +120,7 @@ object CoqoonDebugPreferences {
 
   val allPrefs = Seq[Preference[_]](
       SuppressStackTraces,
+      NoQueryDelegation,
       PrintProcessInvocations,
       PrintIdeslaveTraffic,
       PrintPIDETraffic,

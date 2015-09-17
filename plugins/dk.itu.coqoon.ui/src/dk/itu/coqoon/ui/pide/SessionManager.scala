@@ -57,7 +57,7 @@ class SessionManager {
   def start() : Session.Phase =
     executeWithSessionLock(session => {
       session.start("coq", CoqProgram.path,
-          Seq("-async-queries-always-delegate") ++
+          SessionManager.getStartupArguments ++
               CoqoonPreferences.ExtraArguments.get)
       while (!session.is_ready && session.phase != Session.Failed)
         Thread.sleep(500)
@@ -75,10 +75,14 @@ class SessionManager {
         case o : isabelle.Prover.Output =>
           PrintPIDETraffic.log(s"? coq -> $o")
         case _ =>
-          /* This should never happen (isabelle.Prover.Message is a sealed
-           * class) */
       }
   })
+}
+object SessionManager {
+  def getStartupArguments() =
+    if (!CoqoonDebugPreferences.NoQueryDelegation.get) {
+      Seq("-async-queries-always-delegate")
+    } else Seq()
 }
 
 class SessionPool(count : Int = 3) {
