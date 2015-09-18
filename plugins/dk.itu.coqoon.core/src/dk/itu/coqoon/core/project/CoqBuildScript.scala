@@ -114,6 +114,8 @@ object CoqBuildScript {
   }
 
   def generateVars(project : ICoqProject) = {
+    import dk.itu.coqoon.core.model.IncompleteLoadPathImplementation
+    import dk.itu.coqoon.core.utilities.TryCast
     import java.io.{BufferedWriter, OutputStreamWriter}
     val vfHandle = project.getCorrespondingResource.map(
         _.getFile("configure.coqoon.vars"))
@@ -125,7 +127,8 @@ object CoqBuildScript {
       var alpNames : Map[String, String] = Map()
       project.getLoadPathProviders.foreach(_ match {
         case q @ AbstractLoadPath(id) =>
-          q.getImplementation.foreach(impl => {
+          q.getImplementation.flatMap(
+              TryCast[IncompleteLoadPathImplementation]).foreach(impl => {
             alpNames += (id -> impl.getName)
             for (parts <- impl.getIncompleteLoadPath.right;
                  part <- parts) {

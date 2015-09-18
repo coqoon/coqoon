@@ -234,8 +234,7 @@ trait LoadPathImplementationProvider {
   def getImplementations() : Seq[LoadPathImplementation]
 }
 
-trait LoadPathImplementation
-    extends IncompleteLoadPathEntry.VariableProvider {
+trait LoadPathImplementation {
   def getProvider() : LoadPathImplementationProvider
   def getIdentifier() : String
 
@@ -243,18 +242,8 @@ trait LoadPathImplementation
   def getAuthor() : String
   def getDescription() : String
 
-  import LoadPathImplementation._
-  final def getLoadPath() : Either[Excuse, Seq[LoadPathEntry]] =
-    getIncompleteLoadPath match {
-      case Right(r) =>
-        val c = r.map(_.complete(this))
-        if (c.forall(_.isRight)) {
-          Right(c.map(_.right.get))
-        } else Left(Broken)
-      case Left(e) => Left(e)
-    }
-
-  def getIncompleteLoadPath() : Either[Excuse, Seq[IncompleteLoadPathEntry]]
+  import LoadPathImplementation.Excuse
+  def getLoadPath() : Either[Excuse, Seq[LoadPathEntry]]
 }
 object LoadPathImplementation {
   sealed abstract class Excuse
@@ -271,6 +260,22 @@ object LoadPathImplementation {
   final case object Retrievable extends NotAvailable
   /* Not installed and not installable */
   final case object NotRetrievable extends NotAvailable
+}
+
+trait IncompleteLoadPathImplementation extends LoadPathImplementation
+    with IncompleteLoadPathEntry.VariableProvider {
+  import LoadPathImplementation._
+  final def getLoadPath() : Either[Excuse, Seq[LoadPathEntry]] =
+    getIncompleteLoadPath match {
+      case Right(r) =>
+        val c = r.map(_.complete(this))
+        if (c.forall(_.isRight)) {
+          Right(c.map(_.right.get))
+        } else Left(Broken)
+      case Left(e) => Left(e)
+    }
+
+  def getIncompleteLoadPath() : Either[Excuse, Seq[IncompleteLoadPathEntry]]
 }
 
 class LoadPathManager {
@@ -332,7 +337,7 @@ object CoqStandardLibrary {
   final val ID = "dk.itu.sdg.kopitiam/lp/coq/8.4"
 
   private class Implementation(provider : LoadPathImplementationProvider,
-      id : String = ID) extends LoadPathImplementation {
+      id : String = ID) extends IncompleteLoadPathImplementation {
     override def getProvider = provider
 
     override def getIdentifier = id

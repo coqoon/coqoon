@@ -46,19 +46,16 @@ object ProjectLoadPathProvider {
     override def getDescription() = ""
 
     import LoadPathImplementation._
-    override def getIncompleteLoadPath() =
+    override def getLoadPath() =
       if (project.isOpen &&
           project.hasNature(ManifestIdentifiers.NATURE_COQ)) {
         val impls = ICoqModel.toCoqProject(
             project).getLoadPathProviders.flatMap(_.getImplementation)
-        val lpes = impls.map(_.getIncompleteLoadPath)
+        val lpes = impls.map(_.getLoadPath)
         if (lpes.forall(_.isRight)) {
           Right(lpes.map(_.right.get).flatten)
         } else Left(Broken)
       } else Left(Broken)
-
-    import IncompleteLoadPathEntry.Variable
-    override def getValue(name : Variable) : Option[String] = None
   }
 
   def makeIdentifier(project : IProject) = s"project:${project.getName}"
@@ -99,7 +96,7 @@ object SourceLoadPathProvider {
 
   case class Implementation(
       private val provider : SourceLoadPathProvider, val folder : IFolder,
-      val output : Option[IFolder]) extends LoadPathImplementation {
+      val output : Option[IFolder]) extends IncompleteLoadPathImplementation {
     override def getProvider() : LoadPathImplementationProvider = provider
 
     override def getName() = folder.getName
@@ -158,7 +155,7 @@ object DefaultOutputLoadPathProvider {
 
   case class Implementation(
       private val provider : DefaultOutputLoadPathProvider,
-      val folder : IFolder) extends LoadPathImplementation {
+      val folder : IFolder) extends IncompleteLoadPathImplementation {
     override def getProvider(): DefaultOutputLoadPathProvider = provider
 
     import dk.itu.coqoon.core.project.CoqProjectEntry.escape
@@ -216,7 +213,7 @@ object ExternalLoadPathProvider {
   import org.eclipse.core.runtime.IPath
   case class Implementation(private val provider : ExternalLoadPathProvider,
       val fsPath : IPath, val dir : Seq[String])
-          extends LoadPathImplementation {
+          extends IncompleteLoadPathImplementation {
     override def getProvider(): ExternalLoadPathProvider = provider
 
     import dk.itu.coqoon.core.project.CoqProjectEntry.escape

@@ -2,7 +2,8 @@ package dk.itu.sdg.kopitiam.javap
 
 import dk.itu.sdg.kopitiam.Activator
 import dk.itu.coqoon.core.model.{LoadPathEntry, AbstractLoadPathManager,
-  LoadPathImplementation, LoadPathImplementationProvider}
+  LoadPathImplementation, LoadPathImplementationProvider,
+  IncompleteLoadPathImplementation}
 
 import org.eclipse.core.runtime.Path
 
@@ -22,7 +23,7 @@ object ChargeLibrary {
 
   import dk.itu.coqoon.core.model.IncompleteLoadPathEntry
   private class Implementation(provider : LoadPathImplementationProvider,
-      id : String = ID) extends LoadPathImplementation {
+      id : String = ID) extends IncompleteLoadPathImplementation {
     override def getProvider = provider
     override def getIdentifier = id
 

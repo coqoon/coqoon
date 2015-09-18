@@ -521,7 +521,7 @@ class NLPAbstractEntryPage extends NLPWizardPage(
         if (!identifier.isEmpty) {
           val impl = AbstractLoadPath(at.getText.trim).getImplementation
           import LoadPathImplementation._
-          impl.map(_.getIncompleteLoadPath()) match {
+          impl.map(_.getLoadPath()) match {
             case Some(Right(_)) =>
               success = true
             case Some(Left(VersionMismatch)) =>
