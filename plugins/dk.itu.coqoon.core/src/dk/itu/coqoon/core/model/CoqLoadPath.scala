@@ -96,7 +96,7 @@ object SourceLoadPathProvider {
 
   case class Implementation(
       private val provider : SourceLoadPathProvider, val folder : IFolder,
-      val output : Option[IFolder]) extends IncompleteLoadPathImplementation {
+      val output : Option[IFolder]) extends LoadPathImplementation {
     override def getProvider() : LoadPathImplementationProvider = provider
 
     override def getName() = folder.getName
@@ -105,18 +105,10 @@ object SourceLoadPathProvider {
     override def getAuthor() = ""
     override def getDescription() = ""
 
-    import LoadPathImplementation._
-    override def getIncompleteLoadPath() =
+    override def getLoadPath() =
       Right(Seq(
-          IncompleteLoadPathEntry(
-              Seq(Right(folder.getLocation.toString)),
-              Nil)) ++
-          output.map(output => IncompleteLoadPathEntry(
-              Seq(Right(output.getLocation.toString)),
-              Nil)))
-
-    import IncompleteLoadPathEntry.Variable
-    def getValue(v : Variable) = None
+          LoadPathEntry(folder.getLocation, Nil)) ++
+          output.map(output => LoadPathEntry(output.getLocation, Nil)))
   }
 
   import dk.itu.coqoon.core.project.CoqProjectEntry.escape
@@ -155,7 +147,7 @@ object DefaultOutputLoadPathProvider {
 
   case class Implementation(
       private val provider : DefaultOutputLoadPathProvider,
-      val folder : IFolder) extends IncompleteLoadPathImplementation {
+      val folder : IFolder) extends LoadPathImplementation {
     override def getProvider(): DefaultOutputLoadPathProvider = provider
 
     import dk.itu.coqoon.core.project.CoqProjectEntry.escape
@@ -165,15 +157,8 @@ object DefaultOutputLoadPathProvider {
     override def getAuthor() = ""
     override def getDescription() = ""
 
-    import LoadPathImplementation._
-    override def getIncompleteLoadPath() =
-      Right(Seq(
-          IncompleteLoadPathEntry(
-              Seq(Right(folder.getLocation.toString)),
-              Nil)))
-
-    import IncompleteLoadPathEntry.Variable
-    def getValue(v : Variable) = None
+    override def getLoadPath() =
+      Right(Seq(LoadPathEntry(folder.getLocation, Nil)))
   }
 
   import dk.itu.coqoon.core.project.CoqProjectEntry.escape
@@ -213,7 +198,7 @@ object ExternalLoadPathProvider {
   import org.eclipse.core.runtime.IPath
   case class Implementation(private val provider : ExternalLoadPathProvider,
       val fsPath : IPath, val dir : Seq[String])
-          extends IncompleteLoadPathImplementation {
+          extends LoadPathImplementation {
     override def getProvider(): ExternalLoadPathProvider = provider
 
     import dk.itu.coqoon.core.project.CoqProjectEntry.escape
@@ -223,15 +208,8 @@ object ExternalLoadPathProvider {
     override def getAuthor() = ""
     override def getDescription() = ""
 
-    import LoadPathImplementation._
-    override def getIncompleteLoadPath() =
-      Right(Seq(
-          IncompleteLoadPathEntry(
-              Seq(Right(fsPath.toString)),
-              dir)))
-
-    import IncompleteLoadPathEntry.Variable
-    def getValue(v : Variable) = None
+    override def getLoadPath() =
+      Right(Seq(LoadPathEntry(fsPath, dir)))
   }
 
   import dk.itu.coqoon.core.project.CoqProjectEntry.escape
