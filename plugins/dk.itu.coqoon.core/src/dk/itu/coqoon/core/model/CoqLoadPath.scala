@@ -49,12 +49,7 @@ object ProjectLoadPathProvider {
     override def getLoadPath() =
       if (project.isOpen &&
           project.hasNature(ManifestIdentifiers.NATURE_COQ)) {
-        val impls = ICoqModel.toCoqProject(
-            project).getLoadPathProviders.flatMap(_.getImplementation)
-        val lpes = impls.map(_.getLoadPath)
-        if (lpes.forall(_.isRight)) {
-          Right(lpes.map(_.right.get).flatten)
-        } else Left(Broken)
+        Right(ICoqModel.toCoqProject(project).getLoadPath)
       } else Left(Broken)
   }
 
