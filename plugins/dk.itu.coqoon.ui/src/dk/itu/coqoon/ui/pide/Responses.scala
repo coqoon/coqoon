@@ -130,6 +130,19 @@ object Responses {
     case _ => None
   }
 
+  def extractWarning(e : Tree) = e match {
+    case Elem(
+        Markup(Markup.WARNING_MESSAGE, properties),
+        List(message : Text)) =>
+      val propertyMap = properties.toMap
+      val (errStart, errEnd) =
+        (propertyMap.get("offset").map(Integer.parseInt(_, 10)),
+         propertyMap.get("end_offset").map(Integer.parseInt(_, 10)))
+      propertyMap.get("id").map(Integer.parseInt(_, 10)).map(
+          id => (id, message.content, errStart, errEnd))
+    case _ => None
+  }
+
   /* The left tuple is (path to file, (start offset, end offset)), and the
    * right, used for things defined in this PIDE session, is (defining
    * execution ID, (start offset, end offset)). */
