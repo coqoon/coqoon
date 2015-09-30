@@ -70,6 +70,14 @@ class PIDECoqEditor
 
   val uiMoveTask = new SupersedableTask(200)
 
+  import org.eclipse.jface.text.IViewportListener
+  object ViewportListener extends IViewportListener {
+    override def viewportChanged(x : Int) =
+      uiMoveTask schedule {
+        checkedUpdate(List())
+      }
+  }
+
   private val reconciler = new PIDEReconciler(this)
 
   import org.eclipse.swt.widgets.Composite
@@ -79,6 +87,7 @@ class PIDECoqEditor
     val viewer = super.createSourceViewer(parent, ruler, styles)
     reconciler.install(viewer)
     viewer.getTextWidget.addCaretListener(DocumentCaretListener)
+    viewer.addViewportListener(ViewportListener)
     viewer
   }
 
