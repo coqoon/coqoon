@@ -43,14 +43,20 @@ class QueryHandler extends EditorHandler {
        * the caret. (Ideally we'd just use the command under the caret, but
        * that doesn't work in any recent version of the PIDE library...) */
       val caret = editor.getViewer.getTextWidget.getCaretOffset
-      editor.commands.reverse.find {
+      var command : Option[isabelle.Command] = None
+      editor.commands.find {
         case (o, c)
             if o <= caret && !c.is_ignored =>
-          val d = new QueryPopup(editor, c, text.getShell, new Point(rx, ry))
-          d.open
+          command = Some(c)
+          false
+        case (o, c) if o <= caret =>
+          /* Ignore ignored commands */
+          false
+        case _ =>
           true
-        case _ => false
       }
+      command.foreach(c =>
+          new QueryPopup(editor, c, text.getShell, new Point(rx, ry)).open)
     })
     null
   }

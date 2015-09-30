@@ -110,13 +110,20 @@ class PIDECoqEditor
           text => !text.isDisposed).map(_.getCaretOffset)
       val commandResultsAndMarkup = caret.flatMap(caret =>
         CommandsLock synchronized {
-          val c = commands.reverse.find {
-            /* This is the same test that QueryHandler.execute does */
-            case (o, c)
-                if o <= caret && !c.is_ignored =>
-              true
-            case _ =>
-              false
+          val c = {
+            var command : Option[(Int, Command)] = None
+            commands.find {
+              case q @ (o, c)
+                  if o <= caret && !c.is_ignored =>
+                command = Some(q)
+                false
+              case (o, c) if o <= caret =>
+                /* Ignore ignored commands */
+                false
+              case _ =>
+                true
+            }
+            command
           }
           lastSnapshot.flatMap(snapshot => c.map(
               c => (c,
