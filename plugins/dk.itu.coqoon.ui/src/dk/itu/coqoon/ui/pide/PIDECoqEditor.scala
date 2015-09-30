@@ -281,9 +281,10 @@ class PIDECoqEditor
 
         if (!toDelete.isEmpty || !errorsToAdd.isEmpty ||
             !errorsToDelete.isEmpty)
-          new UpdateErrorsJob(
-              toDelete.map(_._1) ++ errorsToDelete,
-              errorsToAdd.values.toSeq).schedule
+          getFile.foreach(file =>
+            new UpdateErrorsJob(file,
+                toDelete.map(_._1) ++ errorsToDelete,
+                errorsToAdd.values.toSeq).schedule)
       }
 
       caretPing
@@ -367,66 +368,6 @@ class PIDECoqEditor
 
   protected[ui] var ibLength : Int = 0
 
-  import dk.itu.coqoon.core.utilities.{UniqueRule, JobUtilities}
-  import org.eclipse.core.resources.WorkspaceJob
-  private class UpdateErrorsJob(
-      removed : Seq[Command], added : Seq[(Command, (Int, Int), String)])
-      extends WorkspaceJob("Update PIDE markers") {
-    setRule(JobUtilities.MultiRule(
-        getFile.map(f => f.getWorkspace.getRuleFactory.markerRule(f)).orNull,
-        UpdateErrorsJob.rule))
-    setSystem(true)
-
-    import org.eclipse.core.runtime.{Status, IProgressMonitor}
-    import org.eclipse.core.resources.{IMarker, IResource}
-    override def runInWorkspace(monitor : IProgressMonitor) = {
-      getFile.foreach(file => {
-        import dk.itu.coqoon.core
-        import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
-
-        val m = file.findMarkers(core.ManifestIdentifiers.MARKER_PROBLEM,
-            false, IResource.DEPTH_ZERO)
-        val ids =
-          removed.map(_.id.asInstanceOf[Int]) ++
-              added.map(_._1.id.asInstanceOf[Int])
-        /* Delete all errors associated with these commands */
-        val deletedMarkers =
-          for (i <- m if ids.contains(
-              i.getAttribute("__command", Int.MaxValue)))
-            yield {
-              val id = i.getAttribute("__command", Int.MaxValue)
-              i.delete
-              (id, i)
-            }
-        import scala.collection.JavaConversions._
-        val addedMarkers =
-          for ((c, (start, end), msg) <- added)
-            yield {
-              val q = file.createMarker(
-                  core.ManifestIdentifiers.MARKER_PROBLEM)
-              val id = c.id.asInstanceOf[Int]
-              q.setAttributes(Map(
-                  IMarker.MESSAGE -> msg.replaceAll("\\s+", " ").trim,
-                  IMarker.SEVERITY -> IMarker.SEVERITY_ERROR,
-                  IMarker.LOCATION -> s"offset ${start}",
-                  IMarker.CHAR_START -> start,
-                  IMarker.CHAR_END -> end,
-                  IMarker.TRANSIENT -> true,
-                  "__command" -> id))
-              (id, q)
-            }
-        CoqoonDebugPreferences.PIDEMarkers.log(
-          s"UpdateErrorsJob(${removed}, ${added}):\n" +
-          s"ids = ${ids},\n" +
-          s"deleted ${deletedMarkers.toList}, added ${addedMarkers.toList}")
-      })
-      Status.OK_STATUS
-    }
-  }
-  private object UpdateErrorsJob {
-    val rule = new dk.itu.coqoon.core.utilities.UniqueRule
-  }
-
   private[pide] def checkedUpdate(
       edits_ : List[Document.Node.Edit[Text.Edit, Text.Perspective]]) =
     session.executeWithSessionLockSlot(slot => {
@@ -483,6 +424,65 @@ object Perspective {
       overlays : Document.Node.Overlays = Document.Node.Overlays.empty) =
     Document.Node.Perspective[Text.Edit, Text.Perspective](true,
         Text.Perspective.full, overlays)
+}
+
+import dk.itu.coqoon.core.utilities.{UniqueRule, JobUtilities}
+import org.eclipse.core.resources.{IFile, WorkspaceJob}
+import isabelle.Command
+class UpdateErrorsJob(file : IFile,
+    removed : Seq[Command], added : Seq[(Command, (Int, Int), String)])
+    extends WorkspaceJob("Update PIDE markers") {
+  setRule(JobUtilities.MultiRule(
+      file.getWorkspace.getRuleFactory.markerRule(file),
+      UpdateErrorsJob.rule))
+  setSystem(true)
+
+  import org.eclipse.core.runtime.{Status, IProgressMonitor}
+  import org.eclipse.core.resources.{IMarker, IResource}
+  override def runInWorkspace(monitor : IProgressMonitor) = {
+    import dk.itu.coqoon.core
+    import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
+
+    val m = file.findMarkers(core.ManifestIdentifiers.MARKER_PROBLEM,
+        false, IResource.DEPTH_ZERO)
+    val ids =
+      removed.map(_.id.asInstanceOf[Int]) ++
+          added.map(_._1.id.asInstanceOf[Int])
+    /* Delete all errors associated with these commands */
+    val deletedMarkers =
+      for (i <- m if ids.contains(
+          i.getAttribute("__command", Int.MaxValue)))
+        yield {
+          val id = i.getAttribute("__command", Int.MaxValue)
+          i.delete
+          (id, i)
+        }
+    import scala.collection.JavaConversions._
+    val addedMarkers =
+      for ((c, (start, end), msg) <- added)
+        yield {
+          val q = file.createMarker(
+              core.ManifestIdentifiers.MARKER_PROBLEM)
+          val id = c.id.asInstanceOf[Int]
+          q.setAttributes(Map(
+              IMarker.MESSAGE -> msg.replaceAll("\\s+", " ").trim,
+              IMarker.SEVERITY -> IMarker.SEVERITY_ERROR,
+              IMarker.LOCATION -> s"offset ${start}",
+              IMarker.CHAR_START -> start,
+              IMarker.CHAR_END -> end,
+              IMarker.TRANSIENT -> true,
+              "__command" -> id))
+          (id, q)
+        }
+    CoqoonDebugPreferences.PIDEMarkers.log(
+      s"UpdateErrorsJob(${removed}, ${added}):\n" +
+      s"ids = ${ids},\n" +
+      s"deleted ${deletedMarkers.toList}, added ${addedMarkers.toList}")
+    Status.OK_STATUS
+  }
+}
+private object UpdateErrorsJob {
+  val rule = new dk.itu.coqoon.core.utilities.UniqueRule
 }
 
 import dk.itu.coqoon.ui.EventReconciler
