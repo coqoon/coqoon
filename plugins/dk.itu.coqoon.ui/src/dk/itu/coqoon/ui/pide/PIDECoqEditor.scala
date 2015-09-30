@@ -2,6 +2,7 @@ package dk.itu.coqoon.ui.pide
 
 import dk.itu.coqoon.ui.{
   BaseCoqEditor, CoqGoalsContainer, CoqoonUIPreferences, ManifestIdentifiers}
+import dk.itu.coqoon.ui.utilities.SupersedableTask
 
 trait AdvancedNavigationHost {
   def getCommand(offset : Int) : Option[(Int, isabelle.Command)]
@@ -67,6 +68,8 @@ class PIDECoqEditor
       }
     }
 
+  val uiMoveTask = new SupersedableTask(200)
+
   private val reconciler = new PIDEReconciler(this)
 
   import org.eclipse.swt.widgets.Composite
@@ -98,7 +101,10 @@ class PIDECoqEditor
 
   import org.eclipse.swt.custom.{CaretEvent, CaretListener}
   object DocumentCaretListener extends CaretListener {
-    override def caretMoved(ev : CaretEvent) = caretPing()
+    override def caretMoved(ev : CaretEvent) =
+      uiMoveTask schedule {
+        caretPing
+      }
   }
 
   private var lastCommand : Option[isabelle.Command] = None
