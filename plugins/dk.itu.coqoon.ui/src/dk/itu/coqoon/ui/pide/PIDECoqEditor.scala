@@ -368,7 +368,7 @@ class PIDECoqEditor
             Document.Node.Edits(List(
                 Text.Edit.insert(0,
                     initialisationBlock + text.getOrElse("")))),
-            Perspective.makeFullPerspective())
+            getViewerPerspective)
       case _ =>
         List()
     }
@@ -409,7 +409,7 @@ class PIDECoqEditor
           } else edits_
         getNodeName.foreach(nodeName => {
           val textEdits : List[Document.Edit_Text] =
-            edits.map(e => nodeName -> e) :+ (nodeName -> makePerspective)
+            edits.map(e => nodeName -> e) :+ (nodeName -> getViewerPerspective)
           slot.get.update(Document.Blobs.empty, textEdits, "coq")
         })
       }
@@ -424,17 +424,47 @@ class PIDECoqEditor
       checkedUpdate(List())
     }
 
-  private def makePerspective() = overlay match {
-    case None =>
-      Perspective.makeFullPerspective()
-    case Some((overlay, _)) =>
-      Perspective.makeFullPerspective(overlay.wrap)
+  import isabelle.{Text, Document}
+  def getViewerPerspective() = {
+    import org.eclipse.jface.text.Region
+    val r = exec {
+      Option(getViewer).flatMap {
+        case v =>
+          val (start, end) =
+            (v.getTopIndexStartOffset, v.getBottomIndexEndOffset)
+          if (end < start) {
+            None
+          } else Some(new Region(ibLength + start, end - start))
+      }
+    }
+    val overlay = this.overlay match {
+      case Some((o, _)) => o.wrap
+      case _ => Document.Node.Overlays.empty
+    }
+    r match {
+      case Some(r) =>
+        Perspective.makePartial(r, overlay)
+      case _ =>
+        Perspective.makeEmpty(overlay)
+    }
   }
 }
 
 object Perspective {
   import isabelle.{Text, Document}
-  def makeFullPerspective(
+  def makeEmpty(
+      overlays : Document.Node.Overlays = Document.Node.Overlays.empty) =
+    Document.Node.Perspective[Text.Edit, Text.Perspective](true,
+        Text.Perspective.empty, overlays)
+  import org.eclipse.jface.text.IRegion
+  def makePartial(region : IRegion,
+      overlays : Document.Node.Overlays = Document.Node.Overlays.empty) =
+    Document.Node.Perspective[Text.Edit, Text.Perspective](true,
+        Text.Perspective(
+            Seq(Text.Range(
+                region.getOffset,
+                region.getOffset + region.getLength))), overlays)
+  def makeFull(
       overlays : Document.Node.Overlays = Document.Node.Overlays.empty) =
     Document.Node.Perspective[Text.Edit, Text.Perspective](true,
         Text.Perspective.full, overlays)
