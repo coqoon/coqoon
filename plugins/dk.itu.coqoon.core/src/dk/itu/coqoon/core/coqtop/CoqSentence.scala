@@ -192,6 +192,14 @@ object CoqSentence {
       }
     }
 
+    object FromRequireSentence {
+      val expr = ("(?s)^\\s*From\\s+(.*)\\s+Require\\s+(Import\\s+|Export\\s+|)(.*)\\s*\\.$").r
+      def unapply(input : CharSequence) = input match {
+        case expr(prefix, kind, ident) => Some((prefix, kind, ident))
+        case _ => None
+      }
+    }
+
     object BulletSentence {
       val expr = ("(?s)^\\s*(-+|\\*+|\\++)\\s*$").r
       def unapply(input : CharSequence) = input match {

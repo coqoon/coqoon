@@ -559,6 +559,15 @@ trait ICoqRequireSentence extends ICoqScriptSentence {
   }
 }
 
+trait ICoqFromRequireSentence extends ICoqScriptSentence {
+  import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
+  def getPrefix() = Classifier.FromRequireSentence.unapply(getText).get._1
+  def getKind() = Classifier.FromRequireSentence.unapply(getText).get._2
+  def getIdent() = Classifier.FromRequireSentence.unapply(getText).get._3
+
+  def getIdentifiers() : Seq[String] = getIdent.split("\\s+")
+}
+
 trait ICoqAssertionSentence extends ICoqScriptSentence {
   import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
   def getKeyword() = Classifier.AssertionSentence.unapply(getText).get._1
