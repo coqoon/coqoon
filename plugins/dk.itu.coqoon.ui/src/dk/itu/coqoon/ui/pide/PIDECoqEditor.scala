@@ -309,7 +309,13 @@ class PIDECoqEditor
                 errorsToAdd.values.toSeq).schedule)
       }
 
-      caretPing
+      lastCommand match {
+        case None =>
+          caretPing
+        case Some(c) if changed.contains(c) =>
+          caretPing
+        case _ =>
+      }
     }
   }
 
