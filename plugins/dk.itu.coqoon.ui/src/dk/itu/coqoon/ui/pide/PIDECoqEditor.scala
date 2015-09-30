@@ -174,29 +174,29 @@ class PIDECoqEditor
   import org.eclipse.jface.text.source.Annotation
   private var annotations : Map[Command, Annotation] = Map()
 
-  private def commandsUpdated(changed : Seq[Command]) =
-    asyncExec {
-      val changedResultsAndMarkup =
-        (CommandsLock synchronized {
-          val ls = lastSnapshot.get
-          for (c <- changed)
-            yield {
-              ls.node.command_start(c) match {
-                case Some(offset) if offset < ibLength =>
-                  /* If the command's in the initialisation block, then hide
-                   * it, as annotating things the user can't see is unhelpful
-                   * (and, incidentally, will make JFace throw exceptions). */
-                  None
-                case h =>
-                  /* Otherwise, fix up the offset, if there was one, and keep
-                   * this command and its metadata for further processing. */
-                  Some((h.map(_ - ibLength), c,
-                      Responses.extractResults(ls, c),
-                      Responses.extractMarkup(ls, c)))
-              }
+  private def commandsUpdated(changed : Seq[Command]) = {
+    val changedResultsAndMarkup =
+      (CommandsLock synchronized {
+        val ls = lastSnapshot.get
+        for (c <- changed)
+          yield {
+            ls.node.command_start(c) match {
+              case Some(offset) if offset < ibLength =>
+                /* If the command's in the initialisation block, then hide
+                 * it, as annotating things the user can't see is unhelpful
+                 * (and, incidentally, will make JFace throw exceptions). */
+                None
+              case h =>
+                /* Otherwise, fix up the offset, if there was one, and keep
+                 * this command and its metadata for further processing. */
+                Some((h.map(_ - ibLength), c,
+                    Responses.extractResults(ls, c),
+                    Responses.extractMarkup(ls, c)))
             }
-        }).flatten
+          }
+      }).flatten
 
+    asyncExec {
       val am =
         if (CoqoonUIPreferences.ProcessingAnnotations.get) {
           getAnnotationModel
@@ -302,6 +302,7 @@ class PIDECoqEditor
 
       caretPing
     }
+  }
 
   private object CommandsLock
   private var lastSnapshot : Option[Document.Snapshot] = None
