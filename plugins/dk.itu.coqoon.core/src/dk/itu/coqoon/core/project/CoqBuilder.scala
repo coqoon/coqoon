@@ -365,7 +365,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
       p : IPath)(t : (Option[ICoqScriptSentence], String)) =
     Option(p)
 
-  private def resolveRequire(
+  private def resolveRequire(prefix : Seq[String])(
       t_ : (Option[ICoqScriptSentence], String)) : Option[IPath] = {
     val (_, t) = t_
     val (libdir, libname) = {
@@ -402,9 +402,14 @@ class CoqBuilder extends IncrementalProjectBuilder {
         deps += ((Some(l), l.getIdent()), resolveLoad(_), emptyPath)
         false
       case r : ICoqRequireSentence =>
-        for (f <- r.getQualid) {
-          deps += ((Some(r), f), resolveRequire(_), emptyPath)
-        }
+        for (i <- r.getIdentifiers)
+          deps += ((Some(r), i), resolveRequire(Seq())(_), emptyPath)
+        false
+      /* XXX: do this properly (and implement it in the configure script) */
+      case f : ICoqFromRequireSentence =>
+        val prefix = f.getPrefix.split("\\.")
+        for (i <- f.getIdentifiers)
+          deps += ((Some(f), i), resolveRequire(prefix)(_), emptyPath)
         false
       case e : IParent => true
       case _ => false

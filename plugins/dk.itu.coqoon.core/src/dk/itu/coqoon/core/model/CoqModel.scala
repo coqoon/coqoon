@@ -551,7 +551,7 @@ trait ICoqRequireSentence extends ICoqScriptSentence {
   def getKind() = Classifier.RequireSentence.unapply(getText).get._1
   def getIdent() = Classifier.RequireSentence.unapply(getText).get._2
 
-  def getQualid() : Seq[String] = {
+  def getIdentifiers() : Seq[String] = {
     val ident = getIdent
     if (ident(0) == '"') {
       Seq(ident.substring(1).split("\"", 2)(0))
