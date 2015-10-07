@@ -116,22 +116,30 @@ class CoqBuilder extends IncrementalProjectBuilder {
     getProject.deleteMarkers(
         ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_INFINITE)
 
+    var canBuildCache : Set[IPath] = Set()
     def canBuild(path : IPath,
         chain : Seq[TrackerT#Dependency] = Seq()) : Boolean =
-      deps.getDependencies(path).forall(_ match {
-        case r @ ((sentence, _), _, Some(p)) =>
-          val nextChain = (chain :+ r)
-          if (chain.exists(_._3.contains(p))) {
-            chain.head._1._1.foreach(createSentenceErrorMarker(_,
-                "Dependency cycle detected: " +
-                nextChain.map(_._1._2).mkString(" -> ") + "."))
-            false
-          } else canBuild(p, nextChain) && !mustBuild(p)
-        case _ =>
-          /* This should never happen, as we only call canBuild on resolved
-           * entries */
-           false
-       })
+      if (canBuildCache.contains(path)) {
+        true
+      } else {
+        val c = deps.getDependencies(path).forall(_ match {
+          case r @ ((sentence, _), _, Some(p)) =>
+            val nextChain = (chain :+ r)
+            if (chain.exists(_._3.contains(p))) {
+              chain.head._1._1.foreach(createSentenceErrorMarker(_,
+                  "Dependency cycle detected: " +
+                  nextChain.map(_._1._2).mkString(" -> ") + "."))
+              false
+            } else canBuild(p, nextChain) && !mustBuild(p)
+          case _ =>
+            /* This should never happen, as we only call canBuild on resolved
+             * entries */
+             false
+        })
+        if (c)
+          canBuildCache += path
+        c
+      }
     def mustBuild(path : IPath) = {
       val lm = path.toFile.lastModified
       deps.getDependencies(path).flatMap(_._3).exists(
