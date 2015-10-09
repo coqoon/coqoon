@@ -389,11 +389,14 @@ class CoqBuilder extends IncrementalProjectBuilder {
         if (libdir.startsWith(coqdir)) {
           libdir.drop(coqdir.length)
         } else libdir
-      val p = new Path(location.getAbsolutePath).append(
-          adjusted.mkString("/")).append(libname).addFileExtension("vo")
-      val f = p.toFile
-      if (f.exists || deps.hasDependencies(p))
-        return Some(p)
+      val base = new Path(location.getAbsolutePath).append(
+          adjusted.mkString("/")).append(libname)
+      for (p <- Seq(base.addFileExtension("vo"),
+                    base.addFileExtension("vio"))) {
+        val f = p.toFile
+        if (f.exists || deps.hasDependencies(p))
+          return Some(p)
+      }
     }
     None
   }
