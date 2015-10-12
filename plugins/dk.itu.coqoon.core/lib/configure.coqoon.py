@@ -12,7 +12,7 @@
 # without warning: any local changes you may have made will not be preserved.
 
 # Remember to keep this value in sync with CoqBuildScript.scala
-_configure_coqoon_version = 15
+_configure_coqoon_version = 16
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -642,15 +642,18 @@ for (sf, bf), identifiers in to_be_resolved.iteritems():
             p = Path(location)
             for i in adjusted.split("."):
                 p = p.append(i)
-            p = p.append(libname + ".vo")
-            success = False
-            try:
-                os.stat(str(p))
-                success = True
-            except:
-                success = str(p) in deps
-            if success:
-                deps[bf].append(str(p))
+            result = None
+            for c in [ p.append(libname + ".vo"), p.append(libname + ".vio") ]:
+                try:
+                    os.stat(str(c))
+                    result = c
+                except:
+                    if str(c) in deps:
+                        result = c
+                if result:
+                    break
+            if result:
+                deps[bf].append(str(result))
                 break
         else:
             warn("%s: couldn't resolve dependency \"%s\"" % (str(sf), ident))
