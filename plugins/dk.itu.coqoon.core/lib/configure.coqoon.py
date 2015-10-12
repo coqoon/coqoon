@@ -12,7 +12,7 @@
 # without warning: any local changes you may have made will not be preserved.
 
 # Remember to keep this value in sync with CoqBuildScript.scala
-_configure_coqoon_version = 16
+_configure_coqoon_version = 17
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -474,6 +474,9 @@ class SentenceIterator:
 Require = re.compile(
     r"(?s)^\s*Require\s+(Import\s+|Export\s+|)(.*)\s*\.$",
     re.DOTALL + re.MULTILINE)
+FromRequire = re.compile(
+    r"(?s)^\s*From\s+(.*)\s+Require\s+(Import\s+|Export\s+|)(.*)\s*\.$",
+    re.DOTALL + re.MULTILINE)
 
 def extract_dependency_identifiers(f):
     identifiers = []
@@ -487,6 +490,13 @@ def extract_dependency_identifiers(f):
             # can handle both quoted identifiers and multiple identifiers with
             # the same code
             identifiers.extend(shlex.split(ids))
+            continue
+        match = FromRequire.search(sentence)
+        if match != None:
+            # We ignore the prefix for the time being, just like Coqoon does
+            ids = match.group(3)
+            identifiers.extend(shlex.split(ids))
+            continue
     return identifiers
 
 def is_name_valid(name):
