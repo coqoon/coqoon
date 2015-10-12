@@ -568,6 +568,11 @@ trait ICoqFromRequireSentence extends ICoqScriptSentence {
   def getIdentifiers() : Seq[String] = getIdent.split("\\s+")
 }
 
+trait ICoqDeclareMLSentence extends ICoqScriptSentence {
+  import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
+  def getIdent() = Classifier.DeclareMLSentence.unapply(getText).get
+}
+
 trait ICoqAssertionSentence extends ICoqScriptSentence {
   import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
   def getKeyword() = Classifier.AssertionSentence.unapply(getText).get._1

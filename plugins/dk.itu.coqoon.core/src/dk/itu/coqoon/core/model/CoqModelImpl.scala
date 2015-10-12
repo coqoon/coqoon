@@ -539,6 +539,10 @@ private class CoqVernacFileImpl(
             stack.push(
                 new CoqFromRequireSentenceImpl(h, CoqVernacFileImpl.this))
             tail
+          case (h @ (DeclareMLSentence(_), _)) :: tail =>
+            stack.push(
+                new CoqDeclareMLSentenceImpl(h, CoqVernacFileImpl.this))
+            tail
 
           case (h @ (AssertionSentence(_, identifier, _), _)) :: tail =>
             stack.pushContext(s"proof-${identifier}")
@@ -725,6 +729,12 @@ private class CoqFromRequireSentenceImpl(
     private val parent : ICoqElement with IParent)
         extends CoqScriptSentenceImpl(sentence, parent)
             with ICoqFromRequireSentence
+
+private class CoqDeclareMLSentenceImpl(
+    private val sentence : Sentence,
+    private val parent : ICoqElement with IParent)
+        extends CoqScriptSentenceImpl(sentence, parent)
+            with ICoqDeclareMLSentence
 
 private class CoqAssertionSentenceImpl(
     private val sentence : Sentence,

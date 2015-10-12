@@ -200,6 +200,14 @@ object CoqSentence {
       }
     }
 
+    object DeclareMLSentence {
+      val expr = ("(?s)^\\s*Declare\\s+ML\\s+Module\\s+\"(.*)\"\\s*\\.$").r
+      def unapply(input : CharSequence) = input match {
+        case expr(ident) => Some(ident)
+        case _ => None
+      }
+    }
+
     object BulletSentence {
       val expr = ("(?s)^\\s*(-+|\\*+|\\++)\\s*$").r
       def unapply(input : CharSequence) = input match {
