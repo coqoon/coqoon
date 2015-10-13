@@ -88,7 +88,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     /* Delete any objects in the output folders that don't have a corresponding
      * source file */
     traverse[IFile](getProject,
-        a => TryCast[IFile](a).flatMap(extensionFilter("vo")).filter(
+        a => TryCast[IFile](a).flatMap(extensionFilter("vo", "vio")).filter(
             f => objectToSource(f.getLocation).size == 0),
         a => a.delete(IResource.NONE, null))
 
@@ -294,7 +294,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   override protected def clean(monitor : IProgressMonitor) = {
     def deleteObjects(f : IFolder) = if (f.exists)
       traverse[IFile](f,
-          a => TryCast[IFile](a).flatMap(extensionFilter("vo")),
+          a => TryCast[IFile](a).flatMap(extensionFilter("vo", "vio")),
           a => a.delete(IResource.NONE, monitor))
     deps.clearDependencies
     getProject.deleteMarkers(
@@ -540,8 +540,8 @@ private object CoqBuilder {
     }
   }
 
-  def extensionFilter[A <: IResource](ext : String)(r : A) : Option[A] =
-    Option(r).filter(_.getFileExtension == ext)
+  def extensionFilter[A <: IResource](ext : String*)(r : A) : Option[A] =
+    Option(r).filter(i => ext.contains(i.getFileExtension))
 
   def derivedFilter[A <: IResource](der : Boolean)(r : A) : Option[A] =
     Option(r).filter(_.isDerived == der)
