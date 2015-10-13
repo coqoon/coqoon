@@ -12,7 +12,7 @@
 # without warning: any local changes you may have made will not be preserved.
 
 # Remember to keep this value in sync with CoqBuildScript.scala
-_configure_coqoon_version = 17
+_configure_coqoon_version = 18
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -64,6 +64,12 @@ parser.add_argument(
     dest = "use_cache",
     help = "don't attempt to extract values for variables from a " +
            "previously-generated Makefile")
+parser.add_argument(
+    "-z", "--quick",
+    action = "store_true",
+    dest = "go_fast",
+    help = "use the quick compilation process to produce .vio files (Coq " +
+           "8.5+ only)")
 
 args = parser.parse_args()
 
@@ -506,7 +512,7 @@ def is_name_valid(name):
             return False
     return True
 
-# Populate the dependency map with the basics: .vo files depend on their source
+# Populate the dependency map with the basics: objects depend on sources
 deps = {} # Target path -> sequence of dependency paths
 to_be_resolved = {}
 for srcdir, bindir in source_directories:
@@ -525,7 +531,7 @@ for srcdir, bindir in source_directories:
             os.makedirs(str(binpath))
         for sf_ in filter(lambda f: f.endswith(".v"), files):
             sf = srcpath.append(sf_)
-            bf = binpath.append(sf_ + "o")
+            bf = binpath.append(sf_ + ("o" if not args.go_fast else "io"))
             deps[str(bf)] = [str(sf)]
 
             # While we're here, stash away the identifiers of the dependencies
@@ -704,9 +710,9 @@ try:
 COQC = coqc
 COQFLAGS = -noglob
 override _COQCMD = \\
-	mkdir -p "`dirname "$@"`" && $(COQC) $(COQFLAGS) "$<" && mv "$<o" "$@"
+	mkdir -p "`dirname "$@"`" && $(COQC) $(COQFLAGS) "$<" && mv "$<%s" "$@"
 
-""")
+""" % ("o" if not args.go_fast else "io"))
 
         output_so_far = []
         for coqdir, location in unexpanded_load_path:
@@ -724,13 +730,17 @@ override COQFLAGS += -R "%s" "%s"
                     file.write(u"""\
 override COQFLAGS += -Q "%s" "%s"
 """ % (location, coqdir))
-
+        if args.go_fast:
+          file.write(u"""\
+override COQFLAGS += -quick
+""")
         for srcdir, bindir in source_directories:
+            object_extension = "vo" if not args.go_fast else "vio"
             file.write(u"""\
-%s/%%.vo: %s/%%.v
+%s/%%.%s: %s/%%.v
 	$(_COQCMD)
 
-""" % (bindir, srcdir))
+""" % (bindir, object_extension, srcdir))
 
         file.write(u"""\
 OBJECTS = \\
