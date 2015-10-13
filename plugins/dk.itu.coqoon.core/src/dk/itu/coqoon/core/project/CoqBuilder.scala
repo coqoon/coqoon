@@ -73,6 +73,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   private def makePathRelativeFile(f : IPath) =
     makePathRelative(f).map(getProject.getFile)
 
+  private var loadPath : Seq[LoadPathEntry] = Seq()
   private var completeLoadPath : Seq[(Seq[String], java.io.File)] = Seq()
 
   private def buildFiles(files : Set[IFile],
@@ -110,7 +111,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
 
     /* Expand the project load path and use it to resolve all the
      * dependencies */
-    completeLoadPath = coqProject.get.getLoadPath.flatMap(_.expand)
+    loadPath = coqProject.get.getLoadPath
+    completeLoadPath = loadPath.flatMap(_.expand)
     deps.resolveDependencies
 
     getProject.deleteMarkers(
@@ -401,6 +403,26 @@ class CoqBuilder extends IncrementalProjectBuilder {
     None
   }
 
+  private def resolveDeclareML(
+      t_ : (Option[ICoqScriptSentence], String)) : Option[IPath] = {
+    val (_, libname) = t_
+
+    /* As of Coq 8.5, -I, -R and -Q all add *precisely one* directory to the
+     * ML load path; as a consequence, the unexpanded load path effectively
+     * specifies the ML load path. (We might want to make this more explicit
+     * somehow...) */
+    for (LoadPathEntry(path, coqdir) <- loadPath) {
+      val base = path.append(libname)
+      for (p <- Seq(base.addFileExtension("cmxs"))) {
+        println(p)
+        val f = p.toFile
+        if (f.exists)
+          return Some(p)
+      }
+    }
+    None
+  }
+
   private final val emptyPath = Option.empty[IPath]
 
   private def generateDeps(file : IFile) : Seq[TrackerT#Dependency] = {
@@ -421,6 +443,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
         val prefix = f.getPrefix.split("\\.")
         for (i <- f.getIdentifiers)
           deps += ((Some(f), i), resolveRequire(prefix)(_), emptyPath)
+        false
+      case d : ICoqDeclareMLSentence =>
+        deps += ((Some(d), d.getIdent), resolveDeclareML(_), emptyPath)
         false
       case e : IParent => true
       case _ => false
