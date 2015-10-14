@@ -16,7 +16,7 @@
 
 package dk.itu.coqoon.core.project
 
-import dk.itu.coqoon.core.ManifestIdentifiers
+import dk.itu.coqoon.core.{CoqoonPreferences, ManifestIdentifiers}
 import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
 import dk.itu.coqoon.core.coqtop.CoqProgram
@@ -511,7 +511,8 @@ private object CoqBuilder {
             src.getLocation.segmentCount).removeFileExtension
         val output = bin.getOrElse(
             project.getDefaultOutputLocation.get).getLocation
-        return Some(output.append(base).addFileExtension("vo"))
+        return Some(output.append(base).addFileExtension(
+            if (CoqoonPreferences.UseQuick.get) "vio" else "vo"))
       case _ =>
     }
     None

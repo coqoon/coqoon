@@ -60,6 +60,17 @@ class CoqoonPreferencesPage
           "configuring Coq processes.")
       ed
     })
+    addField({
+      val parent = getFieldEditorParent
+      val ed = new BooleanFieldEditor(
+          CoqoonPreferences.UseQuick.ID,
+          "Enable the quick compilation process (experimental, Coq 8.5+)",
+          parent)
+      ed.getDescriptionControl(parent).setToolTipText(
+          "Pass the -quick option to Coq, causing it to defer many " +
+          "computations by generating larger library files.")
+      ed
+    })
   }
 
   override def performOk = {
@@ -84,6 +95,7 @@ class CoqoonPreferences extends AbstractPreferenceInitializer {
     node.put(CoqPath.ID, CoqPath.tryCandidates.getOrElse(""))
     node.put(ExtraArguments.ID, "")
     node.putBoolean(RequireQualification.ID, false)
+    node.putBoolean(UseQuick.ID, false)
   }
 }
 object CoqoonPreferences {
@@ -111,6 +123,11 @@ object CoqoonPreferences {
 
   object RequireQualification {
     final val ID = "requirequalification"
+    def get() = Activator.getDefault.getPreferenceStore.getBoolean(ID)
+  }
+
+  object UseQuick {
+    final val ID = "usequick"
     def get() = Activator.getDefault.getPreferenceStore.getBoolean(ID)
   }
 

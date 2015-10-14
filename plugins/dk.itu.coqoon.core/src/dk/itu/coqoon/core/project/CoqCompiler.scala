@@ -63,7 +63,8 @@ class CoqCompilerRunner(source : IFile,
     monitor.beginTask("Compiling " + source, 1)
 
     val location = source.getLocation.removeFileExtension
-    val outputFile = location.addFileExtension("vo").toFile
+    val outputFile = location.addFileExtension(
+        if (CoqoonPreferences.UseQuick.get) "vio" else "vo").toFile
 
     val coqc = CoqProgram
     if (!coqc.check)
@@ -90,6 +91,7 @@ class CoqCompilerRunner(source : IFile,
     val cp = ICoqModel.toCoqProject(source.getProject)
     val flp = cp.getLoadPath.flatMap(_.asArguments)
     val coqcp = coqc.run(flp ++
+        (if (CoqoonPreferences.UseQuick.get) Seq("-quick") else Seq()) ++
         Seq("-noglob", "-compile", location.toOSString) ++
             CoqoonPreferences.ExtraArguments.get, _configureProcess)
 
