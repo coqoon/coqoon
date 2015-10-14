@@ -411,7 +411,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
      * ML load path; as a consequence, the unexpanded load path effectively
      * specifies the ML load path. (We might want to make this more explicit
      * somehow...) */
-    for (LoadPathEntry(path, coqdir) <- loadPath) {
+    for (LoadPathEntry(path, coqdir, _) <- loadPath) {
       val base = path.append(libname)
       for (p <- Seq(base.addFileExtension("cmxs"))) {
         println(p)

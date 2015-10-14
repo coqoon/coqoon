@@ -90,7 +90,8 @@ case class CoqFileContentChangedEvent(
 case class CoqProjectLoadPathChangedEvent(
     override val element : ICoqProject) extends CoqElementChangedEvent(element)
 
-final case class LoadPathEntry(path : IPath, coqdir : Seq[String]) {
+final case class LoadPathEntry(
+    path : IPath, coqdir : Seq[String], expandML : Boolean = false) {
   import dk.itu.coqoon.core.CoqoonPreferences
 
   def asCommands() : Seq[String] = {
@@ -101,7 +102,11 @@ final case class LoadPathEntry(path : IPath, coqdir : Seq[String]) {
       (if (coqdir != Nil) {
         " as " + coqdir.mkString(".")
       } else "") + "."
-    Seq(base)
+    val ml =
+      if (expandML) {
+        Seq(s"""Add Rec ML Path "${path.toOSString}".""")
+      } else Seq()
+    Seq(base) ++ ml
   }
 
   def asArguments() : Seq[String] = {
@@ -110,24 +115,31 @@ final case class LoadPathEntry(path : IPath, coqdir : Seq[String]) {
       if (CoqoonPreferences.RequireQualification.get) {
         Seq("-Q", path.toOSString, cd)
       } else Seq("-R", path.toOSString, cd)
-    base
+    val ml =
+      if (expandML) {
+        _expand(coqdir, path.toFile) flatMap {
+          case (_, path) => Seq("-I", path.toString)
+        }
+      } else Seq()
+    base ++ ml
   }
 
   import java.io.File
+
+  private def _expand(
+      coqdir : Seq[String], f : File) : Seq[(Seq[String], File)] = {
+    val l = f.listFiles
+    (if (l != null) {
+      l.toSeq.filter(_.isDirectory).flatMap(
+        f => _expand(coqdir :+ f.getName, f))
+    } else Seq.empty) :+ (coqdir, f)
+  }
 
   def expand() : Seq[(Seq[String], File)] =
     if (CoqoonPreferences.RequireQualification.get) {
       Seq((coqdir, path.toFile))
     } else {
-      def _recurse(
-          coqdir : Seq[String], f : File) : Seq[(Seq[String], File)] = {
-        val l = f.listFiles
-        (if (l != null) {
-          l.toSeq.filter(_.isDirectory).flatMap(
-            f => _recurse(coqdir :+ f.getName, f))
-        } else Seq.empty) :+ (coqdir, f)
-      }
-      val r = _recurse(coqdir, path.toFile)
+      val r = _expand(coqdir, path.toFile)
       CoqoonDebugPreferences.LoadPathExpansion.log(
           s"${this} -> ${r}")
       r
@@ -136,7 +148,7 @@ final case class LoadPathEntry(path : IPath, coqdir : Seq[String]) {
 
 final case class IncompleteLoadPathEntry(
     path : Seq[Either[IncompleteLoadPathEntry.Variable, String]],
-    coqdir : Seq[String]) {
+    coqdir : Seq[String], expandML : Boolean = false) {
   import IncompleteLoadPathEntry._
   def complete(p : VariableProvider) :
       Either[IncompleteLoadPathEntry, LoadPathEntry] = {
@@ -153,8 +165,8 @@ final case class IncompleteLoadPathEntry(
     val v =
       if (t.forall(_.isRight)) {
         Right(LoadPathEntry(
-            new Path(t.map(_.right.get).mkString("/")), coqdir))
-      } else Left(IncompleteLoadPathEntry(t, coqdir))
+            new Path(t.map(_.right.get).mkString("/")), coqdir, expandML))
+      } else Left(IncompleteLoadPathEntry(t, coqdir, expandML))
     CoqoonDebugPreferences.LoadPathResolution.log(s"${this} -> ${v}")
     v
   }
