@@ -375,7 +375,7 @@ class PIDECoqEditor
         import dk.itu.coqoon.core.model.ICoqModel
         val cp = ICoqModel.toCoqProject(file.getProject)
         val initialisationBlock =
-          cp.getLoadPath.map(_.asCommand).mkString("", "\n", "\n")
+          cp.getLoadPath.flatMap(_.asCommands).mkString("", "\n", "\n")
         ibLength = initialisationBlock.length
 
         List[Document.Node.Edit[Text.Edit, Text.Perspective]](

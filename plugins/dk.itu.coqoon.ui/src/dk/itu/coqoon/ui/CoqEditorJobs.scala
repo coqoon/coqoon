@@ -20,7 +20,8 @@ class InitialiseCoqRunner(editor : CoqEditor) extends JobRunner[Unit] {
         /* XXX: I don't like using raw="true" here, but it's the quickest way
          * of making re-initialisation work properly (and, because load path
          * changes can't be undone, it should be approximately safe) */
-        cp.getLoadPath.foreach(lpe => ct.interp(true, false, lpe.asCommand))
+        cp.getLoadPath.foreach(
+            lpe => lpe.asCommands.foreach(ct.interp(true, false, _)))
       })
 
       monitor.worked(1)

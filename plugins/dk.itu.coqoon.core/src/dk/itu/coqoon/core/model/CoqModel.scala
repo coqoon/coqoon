@@ -93,19 +93,24 @@ case class CoqProjectLoadPathChangedEvent(
 final case class LoadPathEntry(path : IPath, coqdir : Seq[String]) {
   import dk.itu.coqoon.core.CoqoonPreferences
 
-  def asCommand : String =
-    (if (CoqoonPreferences.RequireQualification.get) {
-      s"""Add LoadPath "${path.toOSString}" """
-    } else s"""Add Rec LoadPath "${path.toOSString}" """) +
-    (if (coqdir != Nil) {
-      " as " + coqdir.mkString(".")
-    } else "") + "."
+  def asCommands() : Seq[String] = {
+    val base =
+      (if (CoqoonPreferences.RequireQualification.get) {
+        s"""Add LoadPath "${path.toOSString}" """
+      } else s"""Add Rec LoadPath "${path.toOSString}" """) +
+      (if (coqdir != Nil) {
+        " as " + coqdir.mkString(".")
+      } else "") + "."
+    Seq(base)
+  }
 
-  def asArguments : Seq[String] = {
+  def asArguments() : Seq[String] = {
     val cd = coqdir.mkString(".")
-    if (CoqoonPreferences.RequireQualification.get) {
-      Seq("-Q", path.toOSString, cd)
-    } else Seq("-R", path.toOSString, cd)
+    val base =
+      if (CoqoonPreferences.RequireQualification.get) {
+        Seq("-Q", path.toOSString, cd)
+      } else Seq("-R", path.toOSString, cd)
+    base
   }
 
   import java.io.File

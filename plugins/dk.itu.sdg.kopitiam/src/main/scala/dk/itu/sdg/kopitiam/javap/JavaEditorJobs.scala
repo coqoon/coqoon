@@ -64,7 +64,8 @@ class JavaProofInitialisationRunner(
       monitor.subTask("Performing custom Coq initialisation")
 
       monitor.subTask("Adding project loadpath entries")
-      cp.getLoadPath.foreach(lpe => ct.interp(true, false, lpe.asCommand))
+      cp.getLoadPath.foreach(
+          lpe => lpe.asCommands.foreach(ct.interp(true, false, _)))
       monitor.worked(1)
 
       monitor.subTask("Preparing model")
