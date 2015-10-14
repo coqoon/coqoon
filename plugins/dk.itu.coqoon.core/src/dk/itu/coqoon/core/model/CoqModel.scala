@@ -376,7 +376,7 @@ object CoqStandardLibrary {
                     Seq("Coq")),
                 IncompleteLoadPathEntry(
                     Seq(Left(CoqLocation), Right("/plugins")),
-                    Seq("Coq")),
+                    Seq("Coq"), expandML = true),
                 IncompleteLoadPathEntry(
                     Seq(Left(CoqLocation), Right("/user-contrib")),
                     Nil)))
