@@ -135,6 +135,8 @@ final case class LoadPathEntry(
     } else Seq.empty) :+ (coqdir, f)
   }
 
+  /* XXX: the RequireQualification code *really* needs to move into the Coq
+   * builder! */
   def expand() : Seq[(Seq[String], File)] =
     if (CoqoonPreferences.RequireQualification.get) {
       Seq((coqdir, path.toFile))

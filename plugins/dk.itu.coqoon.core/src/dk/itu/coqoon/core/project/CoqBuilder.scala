@@ -73,7 +73,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   private def makePathRelativeFile(f : IPath) =
     makePathRelative(f).map(getProject.getFile)
 
-  private var loadPath : Seq[LoadPathEntry] = Seq()
+  private var mlLoadPath : Seq[(Seq[String], java.io.File)] = Seq()
   private var completeLoadPath : Seq[(Seq[String], java.io.File)] = Seq()
 
   private def buildFiles(files : Set[IFile],
@@ -111,8 +111,14 @@ class CoqBuilder extends IncrementalProjectBuilder {
 
     /* Expand the project load path and use it to resolve all the
      * dependencies */
-    loadPath = coqProject.get.getLoadPath
-    completeLoadPath = loadPath.flatMap(_.expand)
+    mlLoadPath =
+      coqProject.get.getLoadPath flatMap {
+        case LoadPathEntry(path, coqdir, false) =>
+          Seq((coqdir, path.toFile))
+        case lpe @ LoadPathEntry(_, _, true) =>
+          lpe.expand
+      }
+    completeLoadPath = coqProject.get.getLoadPath.flatMap(_.expand)
     deps.resolveDependencies
 
     getProject.deleteMarkers(
@@ -411,8 +417,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
      * ML load path; as a consequence, the unexpanded load path effectively
      * specifies the ML load path. (We might want to make this more explicit
      * somehow...) */
-    for (LoadPathEntry(path, coqdir, _) <- loadPath) {
-      val base = path.append(libname)
+    for ((coqdir, location) <- mlLoadPath) {
+      val base = new Path(location.getAbsolutePath).append(libname)
       for (p <- Seq(base.addFileExtension("cmxs"))) {
         println(p)
         val f = p.toFile
