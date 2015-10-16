@@ -1,3 +1,6 @@
+(* This program is free software; its author grants unlimited permission to
+   use, copy, modify and/or redistribute it. *)
+
 open Ocamlbuild_plugin
 
 let coqtop =
