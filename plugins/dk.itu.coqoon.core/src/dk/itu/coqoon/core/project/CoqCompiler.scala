@@ -56,7 +56,7 @@ class CoqCompilerRunner(source : IFile,
     process
   }
 
-  private val buffer = CacheSlot[Array[Byte]](new Array[Byte](40960))
+  private val buffer = CacheSlot[Array[Byte]](new Array[Byte](65536))
 
   override protected def doOperation(
       monitor : SubMonitor) : CoqCompilerResult = {
