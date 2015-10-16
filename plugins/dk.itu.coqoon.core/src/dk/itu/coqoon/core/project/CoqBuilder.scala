@@ -208,14 +208,24 @@ class CoqBuilder extends IncrementalProjectBuilder {
         import BuildTask._
 
         val tasks = candidates.map(a => new BuildTask(a))
+        CoqoonDebugPreferences.ProjectBuild.log(
+            "Starting build tasks for " +
+                s"${tasks.map(_.out.toString).mkString("[", ", ", "]")}")
         tasks.foreach(_.start)
 
+        var completedTasks = Set[BuildTask]()
         var last = tasks.count(a => a.getResult == Waiting)
         while (tasks.exists(a => a.getResult == Waiting)) {
           monitor.subTask(
               "Compiling " + tasks.filter(a => a.getResult == Waiting).map(
                   _.out.lastSegment).mkString(", "))
           taskMonitor.wait
+          tasks.filter(_.getResult != Waiting).filterNot(
+              completedTasks.contains).foreach(task => {
+            completedTasks += task
+            CoqoonDebugPreferences.ProjectBuild.log(
+                s"Status of task ${task.out} is now ${task.getResult}")
+          })
           val now = tasks.count(a => a.getResult == Waiting)
           monitor.worked(last - now)
           last = now

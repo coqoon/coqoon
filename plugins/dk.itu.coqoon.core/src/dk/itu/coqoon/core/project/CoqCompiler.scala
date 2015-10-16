@@ -129,6 +129,8 @@ case class CoqCompilerSuccess(override val source : IFile,
       output.setContents(is, IResource.NONE, monitor)
     } else output.create(is, IResource.NONE, monitor)
   }
+
+  override def toString = s"CoqCompilerSuccess($source, <result>)"
 }
 case class CoqCompilerFailure(override val source : IFile,
     exitCode : Int, messages : String) extends CoqCompilerResult(source)
