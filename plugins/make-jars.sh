@@ -28,3 +28,5 @@ buildjar dk.itu.coqoon.core \
 	src/ lib/ plugin.xml schema/ license.txt -C bin/ dk/
 buildjar dk.itu.coqoon.ui \
 	src/ plugin.xml icons/ -C bin/ dk/
+buildjar dk.itu.coqoon.ocaide \
+	src/ lib/ plugin.xml -C bin/ dk/
