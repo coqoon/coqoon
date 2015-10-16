@@ -3,7 +3,7 @@ package dk.itu.coqoon.ocaide
 import dk.itu.coqoon.core.utilities.TryCast
 
 import org.eclipse.ui.ISources
-import org.eclipse.core.runtime.{Status, IProgressMonitor}
+import org.eclipse.core.runtime.{Path, Status, IProgressMonitor}
 import org.eclipse.core.commands.{ExecutionEvent, AbstractHandler}
 import org.eclipse.core.resources.{
   ICommand, IProject, WorkspaceJob, IProjectDescription}
@@ -22,7 +22,7 @@ class ConfigureHandler extends AbstractHandler {
         var ns = d.getNatureIds
         if (!ns.exists(isOCBNature)) {
           d.setNatureIds(ns :+ OCBNatureID)
-          new UpdateProjectDescription(p, d).schedule
+          new UpdateProjectDescription(p, d, install = true).schedule
         }
     }
     null
@@ -37,19 +37,36 @@ class UnconfigureHandler extends AbstractHandler {
         val d = p.getDescription
         d.setBuildSpec(d.getBuildSpec.filterNot(isOCBBuilder))
         d.setNatureIds(d.getNatureIds.filterNot(isOCBNature))
-        new UpdateProjectDescription(p, d).schedule
+        new UpdateProjectDescription(p, d, install = false).schedule
     }
     null
   }
 }
 
 private class UpdateProjectDescription(
-    project : IProject, description : IProjectDescription)
+    project : IProject, description : IProjectDescription, install : Boolean)
         extends WorkspaceJob(s"Reconfiguring project ${project.getName}") {
   setRule(project.getWorkspace.getRoot)
 
   override def runInWorkspace(monitor : IProgressMonitor) = {
     project.setDescription(description, monitor)
+
+    val bsHandle = project.getFile("myocamlbuild.ml")
+    if (install) {
+      try {
+        import org.eclipse.core.runtime.FileLocator
+        val s = FileLocator.find(Activator.getDefault.getBundle,
+            new Path("lib/myocamlbuild.ml"), null).openStream
+        if (bsHandle.exists) {
+          bsHandle.setContents(s, 0, null)
+        } else bsHandle.create(s, 0, null)
+      } catch {
+        case e : Exception =>
+          println(e)
+          throw e
+      }
+    } else bsHandle.delete(0, null)
+
     Status.OK_STATUS
   }
 }
