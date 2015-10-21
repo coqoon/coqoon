@@ -1,3 +1,53 @@
+Coqoon 0.7.0
+============
+
+21st October 2015
+
+This release adds support for the Coq 8.5 quick compilation chain and for
+compiling Coq developments with embedded OCaml plugins.
+
+([OCaml](http://ocaml.org/) and [OcaIDE](http://www.algo-prog.info/ocaide/)
+are also required to compile OCaml plugins.)
+
+Other significant features
+--------------------------
+
+* True PIDE perspective support
+
+  When using the PIDE editor, Coq will now only evaluate the region of the
+  document shown in the editor's viewport (along with anything that region
+  might depend upon).
+
+* Local overrides for external paths
+
+  Dependencies on external paths can now be overridden by the user without
+  needing to change the original `_CoqProject` file.
+
+* Tab completion support in the build script
+
+  On platforms that support the `readline` library, the build script now
+  supports tab completion of paths when providing values for variables.
+
+* OCaml module dependencies
+
+  Coqoon now recognises that sentences of the form `Declare ML Module "X".`
+  introduce dependencies on OCaml libraries.
+
+Bug fixes
+---------
+
+* Made the "Open Declaration" feature less picky about offsets
+* The Python build script no longer tries to overwrite Makefiles it didn't
+  create
+* PIDE no longer crashes upon encountering a parenthesis followed by a
+  quotation mark
+* Improved the performance of the PIDE editor
+* Improved the I/O performance of the Coq compiler wrapper
+* Drastically improved the performance of the Coq builder's dependency
+  resolution code
+* Added (limited) support for sentences of the form `From X Import Y.`
+* Improved the Coq builder's support for ML load paths
+
 Coqoon 0.6.0
 ============
 
