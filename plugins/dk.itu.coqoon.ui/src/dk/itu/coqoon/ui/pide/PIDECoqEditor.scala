@@ -305,6 +305,7 @@ class PIDECoqEditor
             !errorsToDelete.isEmpty)
           getFile.foreach(file =>
             new UpdateErrorsJob(file,
+                commands,
                 toDelete.map(_._1) ++ errorsToDelete,
                 errorsToAdd.values.toSeq).schedule)
       }
@@ -488,7 +489,7 @@ object Perspective {
 import dk.itu.coqoon.core.utilities.{UniqueRule, JobUtilities}
 import org.eclipse.core.resources.{IFile, WorkspaceJob}
 import isabelle.Command
-class UpdateErrorsJob(file : IFile,
+class UpdateErrorsJob(file : IFile, commands : Seq[(Int, Command)],
     removed : Seq[Command], added : Seq[(Command, (Int, Int), String)])
     extends WorkspaceJob("Update PIDE markers") {
   import UpdateErrorsJob._
@@ -511,13 +512,27 @@ class UpdateErrorsJob(file : IFile,
           added.map(_._1.id.asInstanceOf[Int])
     /* Delete all errors associated with these commands */
     val deletedMarkers =
-      for (i <- m if ids.contains(
-          i.getAttribute("__command", Int.MaxValue)))
+      (for (i <- m)
         yield {
-          val id = i.getAttribute("__command", Int.MaxValue)
-          i.delete
-          (id, i)
-        }
+          val commandID = i.getAttribute("__command", Int.MaxValue)
+          val delete =
+            if (ids.contains(commandID)) {
+              /* The command associated with this marker has been deleted, or a
+               * new marker is going to be created for it. In either case, this
+               * marker needs to be deleted */
+              true
+            } else if (!commands.exists(_._2.id == commandID)) {
+              /* The command associated with this marker doesn't actually exist
+               * in the document; delete it. (As the builder doesn't care about
+               * PIDE command identifiers, this also has the effect of deleting
+               * any markers that it may have created.) */
+              true
+            } else false
+          if (delete) {
+            i.delete
+            Some((commandID, i))
+          } else None
+        }).flatten
     import scala.collection.JavaConversions._
     val addedMarkers =
       for ((c, (start, end), msg) <- added)
