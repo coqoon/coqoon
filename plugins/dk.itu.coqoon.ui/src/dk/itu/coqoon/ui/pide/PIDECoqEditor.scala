@@ -491,9 +491,11 @@ import isabelle.Command
 class UpdateErrorsJob(file : IFile,
     removed : Seq[Command], added : Seq[(Command, (Int, Int), String)])
     extends WorkspaceJob("Update PIDE markers") {
+  import UpdateErrorsJob._
+
   setRule(JobUtilities.MultiRule(
       file.getWorkspace.getRuleFactory.markerRule(file),
-      UpdateErrorsJob.rule))
+      rule))
   setSystem(true)
 
   import org.eclipse.core.runtime.{Status, IProgressMonitor}
@@ -524,7 +526,7 @@ class UpdateErrorsJob(file : IFile,
               core.ManifestIdentifiers.MARKER_PROBLEM)
           val id = c.id.asInstanceOf[Int]
           q.setAttributes(Map(
-              IMarker.MESSAGE -> msg.replaceAll("\\s+", " ").trim,
+              IMarker.MESSAGE -> reduceError(msg).replaceAll("\\s+", " ").trim,
               IMarker.SEVERITY -> IMarker.SEVERITY_ERROR,
               IMarker.LOCATION -> s"offset ${start}",
               IMarker.CHAR_START -> start,
@@ -541,6 +543,9 @@ class UpdateErrorsJob(file : IFile,
   }
 }
 private object UpdateErrorsJob {
+  /* Sync with CoqBuilder */
+  def reduceError(s : String) = s.lines.take(20).mkString("\n")
+
   val rule = new dk.itu.coqoon.core.utilities.UniqueRule
 }
 

@@ -475,6 +475,9 @@ private object CoqBuilder {
   type TrackerT =
     DependencyTracker[IPath, (Option[ICoqScriptSentence], String)]
 
+  /* Sync with PIDECoqEditor */
+  def reduceError(s : String) = s.lines.take(20).mkString("\n")
+
   def createSentenceErrorMarker(
       l : ICoqScriptSentence, errorMessage : String) =
     l.getContainingResource.foreach(r => {
@@ -489,7 +492,7 @@ private object CoqBuilder {
     import scala.collection.JavaConversions._
     Option(r).filter(_.exists).foreach(
         _.createMarker(ManifestIdentifiers.MARKER_PROBLEM).setAttributes(Map(
-            (IMarker.MESSAGE, s),
+            (IMarker.MESSAGE, reduceError(s)),
             (IMarker.SEVERITY, IMarker.SEVERITY_ERROR),
             (IMarker.LOCATION, s"offset ${region._1}"),
             (IMarker.CHAR_START, region._1),
@@ -500,7 +503,7 @@ private object CoqBuilder {
     import scala.collection.JavaConversions._
     Option(r).filter(_.exists).foreach(
         _.createMarker(ManifestIdentifiers.MARKER_PROBLEM).setAttributes(Map(
-            (IMarker.MESSAGE, s),
+            (IMarker.MESSAGE, reduceError(s)),
             (IMarker.SEVERITY, IMarker.SEVERITY_ERROR))))
   }
 
@@ -508,7 +511,7 @@ private object CoqBuilder {
     import scala.collection.JavaConversions._
     Option(f).filter(_.exists).foreach(
         _.createMarker(ManifestIdentifiers.MARKER_PROBLEM).setAttributes(Map(
-            (IMarker.MESSAGE, s),
+            (IMarker.MESSAGE, reduceError(s)),
             (IMarker.LOCATION, "line " + line),
             (IMarker.LINE_NUMBER, line),
             (IMarker.SEVERITY, IMarker.SEVERITY_ERROR))))
