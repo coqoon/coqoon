@@ -460,7 +460,7 @@ class PIDECoqEditor
       case Some(r) =>
         Perspective.makePartial(r, overlay)
       case _ =>
-        Perspective.makeEmpty(overlay)
+        Perspective.makeFull(overlay)
     }
   }
 }
