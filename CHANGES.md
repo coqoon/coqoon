@@ -1,3 +1,12 @@
+Coqoon 0.7.0.1
+==============
+
+26th October 2015
+
+This minor release makes the PIDE editor clean up error markers more
+aggressively and works around an occasional crashing bug in the Coq builder
+triggered by running Coq in `-debug` mode.
+
 Coqoon 0.7.0
 ============
 
