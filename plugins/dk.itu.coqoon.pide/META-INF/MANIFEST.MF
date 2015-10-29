@@ -2,11 +2,11 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: PIDE container for Coqoon
 Bundle-SymbolicName: dk.itu.coqoon.pide;singleton:=true
-Bundle-Version: 0.0.11.58608-d617f32e1672
+Bundle-Version: 0.0.12.58609-b43a66a25385
 Bundle-ClassPath: Pure.jar,.
 Require-Bundle: 
  org.scala-lang.scala-library;bundle-version="2.11.2",
  org.scala-lang.modules.scala-parser-combinators;bundle-version="1.0.2"
-Export-Package: isabelle;version="0.0.11.58608-d617f32e1672"
+Export-Package: isabelle;version="0.0.12.58609-b43a66a25385"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
