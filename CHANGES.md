@@ -1,3 +1,12 @@
+Coqoon 0.7.0.2
+==============
+
+29th October 2015
+
+This minor release makes a small change to the way Coqoon sends PIDE messages
+that should, when used with an up-to-date version of the PIDE plugin for Coq,
+greatly improve the reliability of the PIDE editor.
+
 Coqoon 0.7.0.1
 ==============
 
