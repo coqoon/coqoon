@@ -10,9 +10,7 @@ package dk.itu.coqoon.ui
 import dk.itu.coqoon.core.model.ICoqModel
 import dk.itu.coqoon.core.utilities.TryCast
 import org.eclipse.ui.IWorkbenchPropertyPage
-import org.eclipse.swt.SWT
-import org.eclipse.swt.widgets.{
-  Text, Composite, Button, Label, TabFolder, TabItem}
+import org.eclipse.swt.widgets.{Composite, Button, Label}
 import org.eclipse.core.resources.IProject
 import org.eclipse.jface.preference.PreferencePage
 
@@ -43,79 +41,79 @@ class BuildScriptManagementPage
   override def getElement : IProject = TryCast[IProject](element).get
   override def setElement(element : IAdaptable) = (this.element = element)
   override def createContents(c : Composite) = {
-    import org.eclipse.swt.events._
-    import org.eclipse.swt.layout._
     import org.eclipse.core.runtime.IStatus
-    import org.eclipse.jface.layout._
     import org.eclipse.jface.window.Window
 
-    val c1 = new Composite(c, SWT.NONE)
-    c1.setLayout(GridLayoutFactory.fillDefaults.numColumns(2).create)
+    import dk.itu.coqoon.ui.utilities.{UIXML, Event, Listener}
+    val names = UIXML(
+        <composite name="root">
+          <grid-layout columns="2" />
+          <label>
+            <grid-data />
+            Project version:
+          </label>
+          <label name="cur">
+            <grid-data h-grab="true" />
+            <tool-tip>
+              The version of the build script currently included in this
+              project.
+            </tool-tip>
+          </label>
+          <label>
+            <grid-data />
+            Most recent version:
+          </label>
+          <label name="mrl">
+            <grid-data h-grab="true" />
+            <tool-tip>
+              The most recent version of the build script known to this version
+              of Coqoon.
+            </tool-tip>
+          </label>
+          <composite>
+            <row-layout type="horizontal" />
+            <grid-data h-grab="true" h-span="2" h-align="end" />
+            <button name="upd" />
+            <button name="var">
+              Update configure.coqoon.vars
+            </button>
+          </composite>
+          <label separator="horizontal">
+            <grid-data h-fill="true" h-span="2" />
+          </label>
+          <button style="check" name="auto">
+            <grid-data h-grab="true" h-span="2" />
+            Automatically update the build script for this project
+            <tool-tip>
+              If this option is enabled, then the build process for this
+              project will automatically update its build script when a new
+              version is available. (Setting this option on several computers
+              may lead to merge conflicts when using version control systems.)
+            </tool-tip>
+          </button>
+        </composite>, c)
 
-    val pvl = new Label(c1, SWT.NONE)
-    pvl.setLayoutData(GridDataFactory.fillDefaults.create)
-    pvl.setText("Project version:")
-    
-    val pv = new Label(c1, SWT.NONE)
-    pv.setLayoutData(GridDataFactory.fillDefaults.grab(true, false).create)
-    projectVersionLabel = Some(pv)
-    pv.setToolTipText("The version of the build script currently included " +
-                      "in this project.")
+    projectVersionLabel = names.get[Label]("cur")
+    names.get[Label]("mrl").foreach(
+        _.setText(s"${CoqBuildScript.currentVersion}"))
 
-    val mrl = new Label(c1, SWT.NONE)
-    mrl.setLayoutData(GridDataFactory.fillDefaults.create)
-    mrl.setText("Most recent version:")
-
-    val mr = new Label(c1, SWT.NONE)
-    mr.setLayoutData(GridDataFactory.fillDefaults.grab(true, false).create)
-    mr.setText(s"${CoqBuildScript.currentVersion}")
-    mr.setToolTipText("The most recent version of the build script known to " +
-                      "this version of Coqoon.")
-
-    val c2 = new Composite(c1, SWT.NONE)
-    c2.setLayoutData(GridDataFactory.fillDefaults.align(SWT.RIGHT, SWT.TOP).
-        grab(true, false).span(2, 1).create)
-    c2.setLayout(RowLayoutFactory.fillDefaults.create)
-
-    val upd = new Button(c2, SWT.NONE)
-    upd.setLayoutData(RowDataFactory.swtDefaults.create)
-    upd.addSelectionListener(new SelectionAdapter {
-      override def widgetSelected(ev : SelectionEvent) =
-        if (getElement != null) {
-          performInstall
-          updateControls
-        }
+    updateButton = names.get[Button]("upd")
+    Listener.Selection(updateButton.get, Listener {
+      case Event.Selection(_) if getElement != null =>
+        performInstall
+        updateControls
     })
-    updateButton = Some(upd)
 
-    val reb = new Button(c2, SWT.NONE)
-    reb.setText("Update configure.coqoon.vars")
-    reb.setLayoutData(RowDataFactory.swtDefaults.create)
-    reb.addSelectionListener(new SelectionAdapter {
-      override def widgetSelected(ev : SelectionEvent) =
-        if (getElement != null)
-          performVarsUpdate
+    val reb = names.get[Button]("var").get
+    Listener.Selection(reb, Listener {
+      case Event.Selection(_) if getElement != null =>
+        performVarsUpdate
     })
 
-    new Label(c1, SWT.HORIZONTAL | SWT.SEPARATOR).setLayoutData(
-        GridDataFactory.fillDefaults.grab(true, false).span(2, 1).create)
-
-    val autob = new Button(c1, SWT.CHECK)
-    autob.setLayoutData(GridDataFactory.fillDefaults.grab(true, false).
-        span(2, 1).create)
-    autob.setText("Automatically update the build script for this project")
-    autob.setToolTipText("If this option is enabled, then the build " +
-                         "process for this project will automatically " +
-                         "update its " +
-                         "build script when a new version is available. " +
-                         "(Setting this option on several computers may " +
-                         "lead to merge conflicts when using version " +
-                         "control systems.)")
-    automaticCheckbox = Some(autob)
+    automaticCheckbox = names.get("auto")
 
     updateControls
-
-    c1
+    names.get[Composite]("root").get
   }
 
   private def performInstall() =
