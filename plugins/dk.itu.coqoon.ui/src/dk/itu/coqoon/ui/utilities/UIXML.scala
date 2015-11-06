@@ -174,6 +174,10 @@ class UIXML {
 
         parent.setLayout(rl.create)
         None
+      case (context : widgets.Control,
+          xml.Elem(_, "tool-tip", _, _, _*)) =>
+        context.setToolTipText(juice(x))
+        None
       case _ =>
         None
     }
