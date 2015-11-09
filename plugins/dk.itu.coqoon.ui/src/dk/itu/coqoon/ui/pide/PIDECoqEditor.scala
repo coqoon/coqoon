@@ -12,23 +12,23 @@ trait AdvancedNavigationHost {
 }
 
 class PIDECoqEditor
-    extends BaseCoqEditor with CoqGoalsContainer with OverlayRunner
+    extends BaseCoqEditor with CoqGoalsContainer with PIDESessionHost
                           with AdvancedNavigationHost {
   override def getCommand(offset : Int) : Option[(Int, isabelle.Command)] =
-    CommandsLock synchronized {
+    executeWithCommandsLock {
       for (r @ (o, command) <- commands
           if offset >= o && offset <= o + command.length)
         return Some(r)
       None
     }
   override def getEntities(command : isabelle.Command) =
-    CommandsLock synchronized {
+    executeWithCommandsLock {
       for ((range, elem) <- Responses.extractMarkup(lastSnapshot.get, command);
            entity <- Responses.extractEntity(elem))
         yield (range, entity)
     }
   override def selectEntity(e : (isabelle.Text.Range, Responses.Entity)) =
-    CommandsLock synchronized {
+    executeWithCommandsLock {
       e match {
         case (r, Left((path_, (start, end)))) =>
           import dk.itu.coqoon.ui.utilities.UIUtils
@@ -97,8 +97,6 @@ class PIDECoqEditor
       p => Option(p.getAnnotationModel(getEditorInput)).flatMap(
           TryCast[AnnotationModel]))
 
-  private[pide] val session = SessionPool.makePooledSession
-
   override protected def dispose() = {
     session.stop
     super.dispose
@@ -124,7 +122,7 @@ class PIDECoqEditor
       val caret = Option(getViewer).map(_.getTextWidget).filter(
           text => !text.isDisposed).map(_.getCaretOffset)
       val commandResultsAndMarkup = caret.flatMap(caret =>
-        CommandsLock synchronized {
+        executeWithCommandsLock {
           val c = {
             var command : Option[(Int, Command)] = None
             commands.find {
@@ -183,10 +181,16 @@ class PIDECoqEditor
   import org.eclipse.jface.text.source.Annotation
   private var annotations : Map[Command, Annotation] = Map()
 
-  private def commandsUpdated(changed : Seq[Command]) = {
+  override protected def commandsUpdated(changed : Seq[Command]) = {
     val changedResultsAndMarkup =
-      (CommandsLock synchronized {
+      (executeWithCommandsLock {
         val ls = lastSnapshot.get
+        lastSnapshot.foreach(snapshot =>
+            commands =
+              (for (command <- snapshot.node.commands;
+                    offset <- snapshot.node.command_start(command)
+                      if offset >= ibLength)
+                yield (offset - ibLength, command)).toSeq)
         for (c <- changed)
           yield {
             ls.node.command_start(c) match {
@@ -320,33 +324,8 @@ class PIDECoqEditor
     }
   }
 
-  private object CommandsLock
-  private var lastSnapshot : Option[Document.Snapshot] = None
+  /* Synchronized on PIDESessionHost's CommandsLock */
   private[pide] var commands : Seq[(Int, isabelle.Command)] = Seq()
-
-  session.addInitialiser(session =>
-    session.commands_changed += Session.Consumer[Any]("Coqoon") {
-      case changed : Session.Commands_Changed =>
-        CommandsLock synchronized {
-          lastSnapshot = getNodeName.map(n => session.snapshot(n))
-          lastSnapshot.foreach(snapshot =>
-            commands =
-              (for (command <- snapshot.node.commands;
-                    offset <- snapshot.node.command_start(command)
-                      if offset >= ibLength)
-                yield (offset - ibLength, command)).toSeq)
-        }
-        commandsUpdated(changed.commands.toSeq)
-
-        overlay match {
-          case Some((o @ Overlay(command, _, _), listener))
-              if changed.commands.contains(command) =>
-            Responses.extractQueryResult(
-                lastSnapshot.get, command, o.id).foreach(listener.onResult)
-          case _ =>
-        }
-      case _ =>
-    })
 
   import dk.itu.coqoon.core.coqtop.CoqSentence
   import dk.itu.coqoon.core.utilities.TotalReader
@@ -359,7 +338,7 @@ class PIDECoqEditor
   import dk.itu.coqoon.ui.utilities.UIUtils.exec
   /* XXX: doing this synchronously on the UI thread makes me a bit nervous, but
    * we /do/ need to be able to access the text widget... */
-  private def generateInitialEdits() = exec {
+  protected def generateInitialEdits() = exec {
     val fi = TryCast[IFileEditorInput](getEditorInput)
     val text =
       Option(getSourceViewer).map(_.getTextWidget).map(_.getText) match {
@@ -384,7 +363,7 @@ class PIDECoqEditor
             Document.Node.Edits(List(
                 Text.Edit.insert(0,
                     initialisationBlock + text.getOrElse("")))),
-            getViewerPerspective)
+            getPerspective)
       case _ =>
         List()
     }
@@ -393,55 +372,13 @@ class PIDECoqEditor
   import org.eclipse.core.resources.IFile
   protected[ui] def getFile() : Option[IFile] =
     TryCast[IFileEditorInput](getEditorInput).map(_.getFile)
-  protected[ui] def getNodeName() =
+  override protected def getNodeName() =
     getFile.map(file => Document.Node.Name(file.getName))
 
   protected[ui] var ibLength : Int = 0
 
-  private[pide] def checkedUpdate(
-      edits_ : List[Document.Node.Edit[Text.Edit, Text.Perspective]]) =
-    session.executeWithSessionLockSlot(slot => {
-      val submitInitialEdits =
-        slot.asOption match {
-          case None =>
-            session.start
-            true
-          case Some(s)
-              if s.phase == Session.Failed || s.phase == Session.Inactive =>
-            /* The prover stopped or was killed off, so any existing progress
-             * markers are invalid; clear them */
-            getAnnotationModel.foreach(_.removeAllAnnotations)
-            s.stop
-            slot.clear
-            session.start
-            true
-          case _ =>
-            false
-        }
-      if (slot.get.phase == Session.Ready) {
-        val edits =
-          if (submitInitialEdits) {
-            generateInitialEdits ++ edits_
-          } else edits_
-        getNodeName.foreach(nodeName => {
-          val textEdits : List[Document.Edit_Text] =
-            edits.map(e => nodeName -> e) :+ (nodeName -> getViewerPerspective)
-          slot.get.update(Document.Blobs.empty, textEdits, "coq")
-        })
-      }
-      slot.get.phase
-    })
-
-  import dk.itu.coqoon.ui.pide.Overlay
-  private var overlay : Option[(Overlay, OverlayListener)] = None
-  override def setOverlay(overlay : Option[(Overlay, OverlayListener)]) =
-    if (this.overlay != overlay) {
-      this.overlay = overlay
-      checkedUpdate(List())
-    }
-
   import isabelle.{Text, Document}
-  def getViewerPerspective() = {
+  override protected def getPerspective() = {
     import org.eclipse.jface.text.Region
     val r = exec {
       Option(getViewer).flatMap {
@@ -453,7 +390,7 @@ class PIDECoqEditor
           } else Some(new Region(ibLength + start, end - start))
       }
     }
-    val overlay = this.overlay match {
+    val overlay = getOverlay match {
       case Some((o, _)) => o.wrap
       case _ => Document.Node.Overlays.empty
     }
