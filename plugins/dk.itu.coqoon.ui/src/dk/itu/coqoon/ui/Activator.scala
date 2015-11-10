@@ -38,9 +38,12 @@ object Activator {
 
 object ManifestIdentifiers {
   final val PLUGIN = "dk.itu.coqoon.ui"
-  final val ANNOTATION_PROCESSED = "dk.itu.coqoon.ui.annotationTypes.processed"
-  final val ANNOTATION_PROCESSING =
-    "dk.itu.coqoon.ui.annotationTypes.processing"
+
+  object Annotations {
+    final val PROCESSED = "dk.itu.coqoon.ui.annotationTypes.processed"
+    final val PROCESSING = "dk.itu.coqoon.ui.annotationTypes.processing"
+  }
+
   final val VIEW_GOAL_VIEWER = "kopitiam.GoalViewer"
   final val COMMAND_TOGGLE_COQ_FLAG =
     "dk.itu.coqoon.ui.commands.toggle_coq_flag"

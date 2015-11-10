@@ -109,9 +109,9 @@ trait CoqTopEditorContainer extends CoqTopContainer {
         None
     }
     completeA = _do(r._1, completeA,
-        ManifestIdentifiers.ANNOTATION_PROCESSED, "Processed Proof")
+        ManifestIdentifiers.Annotations.PROCESSED, "Processed Proof")
     underwayA = _do(r._2, underwayA,
-        ManifestIdentifiers.ANNOTATION_PROCESSING, "Processing Proof")
+        ManifestIdentifiers.Annotations.PROCESSING, "Processing Proof")
   }
 }
 object CoqTopEditorContainer {

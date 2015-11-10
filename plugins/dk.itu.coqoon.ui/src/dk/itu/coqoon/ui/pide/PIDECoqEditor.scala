@@ -262,7 +262,7 @@ class PIDECoqEditor
                   /* This command hasn't finished but has no processing
                    * annotation; create a new one */
                   val an = new Annotation(
-                      ManifestIdentifiers.ANNOTATION_PROCESSING,
+                      ManifestIdentifiers.Annotations.PROCESSING,
                       false, "Processing proof")
                   annotationsToAdd :+= (command,
                       an, new Position(offset, command.source.length))
