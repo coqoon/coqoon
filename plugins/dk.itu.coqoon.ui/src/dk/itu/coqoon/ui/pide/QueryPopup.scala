@@ -93,31 +93,27 @@ class QueryPopup(
             <grid-data grab="true" h-span="2" />
           </styled-text>
         </composite>, parent)
-    val queryText = names.get[Text]("queryText").get
-    queryText.setFont(JFaceResources.getTextFont)
-    this.queryText = Some(queryText)
+    queryText = names.get[Text]("queryText")
+    queryButton = names.get[Button]("queryButton")
+    queryResults = names.get[StyledText]("queryResults")
 
-    val queryButton = names.get[Button]("queryButton").get
-    this.queryButton = Some(queryButton)
+    queryText.foreach(_.setFont(JFaceResources.getTextFont))
+    queryResults.foreach(_.setFont(JFaceResources.getTextFont))
 
-    val queryResults = names.get[StyledText]("queryResults").get
-    queryResults.setFont(JFaceResources.getTextFont)
-    this.queryResults = Some(queryResults)
-
-    def runQuery() = {
+    def runQuery() = queryText.foreach(queryText => {
       val query = queryText.getText.trim
       queryText.setText("")
       if (query.length > 0)
         QueryPopup.this.runQuery(query)
-    }
+    })
 
     import dk.itu.coqoon.ui.utilities.{Event, Listener}
     val l = Listener {
       case Event.Selection(_) => runQuery
       case Event.DefaultSelection(_) => runQuery
     }
-    Listener.Selection(queryButton, l)
-    Listener.DefaultSelection(queryText, l)
+    queryButton.foreach(Listener.Selection(_, l))
+    queryText.foreach(Listener.DefaultSelection(_, l))
 
     parent
   }
