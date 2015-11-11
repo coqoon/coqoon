@@ -253,32 +253,21 @@ class PIDECoqEditor
             if (!commandHasErrors)
               errorsToDelete :+= command
 
-            am.foreach(model => {
-              import org.eclipse.jface.text.Position
-              import org.eclipse.jface.text.source.Annotation
-              import org.eclipse.jface.text.source.IAnnotationModelExtension
-              (complete, annotations.get(command)) match {
-                case (false, None) =>
-                  /* This command hasn't finished but has no processing
-                   * annotation; create a new one */
-                  val an = new Annotation(
+            val oldAnnotation = annotations.get(command)
+            val newAnnotation =
+              if (!complete) {
+                  Some(new Annotation(
                       ManifestIdentifiers.Annotations.PROCESSING,
-                      false, "Processing proof")
-                  annotationsToAdd :+= (command,
-                      an, new Position(offset, command.source.length))
-                case (false, Some(an)) =>
-                  /* This command hasn't finished and has an existing
-                   * processing annotation; delete it and replace it */
-                  toDelete :+= (command, Some(an))
-                  annotationsToAdd :+= (command,
-                      an, new Position(offset, command.source.length))
-                case (true, Some(an)) =>
-                  /* This command has finished and has an existing processing
-                   * annotation; delete it */
-                  toDelete :+= (command, Some(an))
-                case _ =>
-              }
-            })
+                      false, "Processing proof"))
+              } else None
+
+            /* If the old and new annotations have the same type (or, for that
+             * matter, if neither of them exists), then do nothing */
+            if (newAnnotation.map(_.getType) != oldAnnotation.map(_.getType)) {
+              oldAnnotation.foreach(an => toDelete :+= (command, Some(an)))
+              newAnnotation.foreach(an => annotationsToAdd :+= (command,
+                  an, new Position(offset, command.source.length)))
+            }
           case (None, command, _, _) =>
             /* This command has been removed from the document; delete its
              * annotation, along with any errors it might have */
