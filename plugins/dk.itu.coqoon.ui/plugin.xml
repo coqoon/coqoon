@@ -294,6 +294,9 @@
    <extension
          point="org.eclipse.ui.editors.annotationTypes">
       <type
+            name="dk.itu.coqoon.ui.annotationTypes.failed">
+      </type>
+      <type
             name="dk.itu.coqoon.ui.annotationTypes.processed">
       </type>
       <type
@@ -303,13 +306,30 @@
    <extension
          point="org.eclipse.ui.editors.markerAnnotationSpecification">
       <specification
+            annotationType="dk.itu.coqoon.ui.annotationTypes.failed"
+            colorPreferenceKey="coqFailedBg"
+            colorPreferenceValue="255,127,127"
+            highlightPreferenceKey="dk.itu.sdg.kopitiam.failed.mycolorbackgroundhighlightkey"
+            highlightPreferenceValue="true"
+            includeOnPreferencePage="true"
+            label="Coq command failed"
+            overviewRulerPreferenceKey="dk.itu.sdg.kopitiam.failed.overviewrulerkey"
+            overviewRulerPreferenceValue="true"
+            textPreferenceKey="failedIndicationInText"
+            textPreferenceValue="true"
+            textStylePreferenceKey="dk.itu.sdg.kopitiam.processed.textStyle"
+            textStylePreferenceValue="BOX"
+            verticalRulerPreferenceKey="failedIndicationInVerticalRuler"
+            verticalRulerPreferenceValue="true">
+      </specification>
+      <specification
             annotationType="dk.itu.coqoon.ui.annotationTypes.processed"
             colorPreferenceKey="coqSentBg"
             colorPreferenceValue="118,255,133"
             highlightPreferenceKey="dk.itu.sdg.kopitiam.processed.mycolorbackgroundhighlightkey"
             highlightPreferenceValue="true"
             includeOnPreferencePage="true"
-            label="Coq Processed"
+            label="Coq command processed"
             overviewRulerPreferenceKey="dk.itu.sdg.kopitiam.processed.overviewrulerkey"
             overviewRulerPreferenceValue="true"
             textPreferenceKey="processedIndicationInText"
@@ -326,7 +346,7 @@
             highlightPreferenceKey="dk.itu.sdg.kopitiam.processing.mycolorbackgroundhighlightkey"
             highlightPreferenceValue="true"
             includeOnPreferencePage="true"
-            label="Coq Processing"
+            label="Coq command processing"
             overviewRulerPreferenceKey="dk.itu.sdg.kopitiam.processing.overviewrulerkey"
             overviewRulerPreferenceValue="true"
             textPreferenceKey="processingIndicationInText"

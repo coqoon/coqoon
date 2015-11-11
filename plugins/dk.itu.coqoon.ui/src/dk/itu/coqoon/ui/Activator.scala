@@ -40,6 +40,7 @@ object ManifestIdentifiers {
   final val PLUGIN = "dk.itu.coqoon.ui"
 
   object Annotations {
+    final val FAILED = "dk.itu.coqoon.ui.annotationTypes.failed"
     final val PROCESSED = "dk.itu.coqoon.ui.annotationTypes.processed"
     final val PROCESSING = "dk.itu.coqoon.ui.annotationTypes.processing"
   }
