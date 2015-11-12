@@ -70,6 +70,13 @@ object Responses {
   }
 
   import isabelle.XML.{Elem, Text, Tree}
+  def extractWritelnMessage(e : isabelle.XML.Tree) = e match {
+    case Elem(Markup(Markup.WRITELN_MESSAGE, properties),
+              List(t : Text)) if !properties.contains("source" -> "goal") =>
+      Some(t.content)
+    case _ => None
+  }
+
   /* For the time being, we convert exciting new PIDE data into boring old
    * -ideslave-8.4 data, to make it easier to support both at once. */
   private object GoalAssist {
