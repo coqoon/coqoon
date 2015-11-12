@@ -104,7 +104,7 @@ class PIDECoqEditor
 
   def getViewer = super.getSourceViewer
 
-  import isabelle.{XML, Text, Command, Session, Protocol, Document}
+  import isabelle.{Text, Command, Protocol, Document}
 
   import org.eclipse.swt.custom.{CaretEvent, CaretListener}
   object DocumentCaretListener extends CaretListener {
@@ -114,7 +114,7 @@ class PIDECoqEditor
       }
   }
 
-  private var lastCommand : Option[isabelle.Command] = None
+  private var lastCommand : Option[Command] = None
 
   import dk.itu.coqoon.ui.utilities.UIUtils.asyncExec
   private def caretPing() =
@@ -157,18 +157,11 @@ class PIDECoqEditor
 
           if (!sameCommand) {
             import dk.itu.coqoon.ui.utilities.EclipseConsole
-            import isabelle.XML.{Elem, Text}
-            import isabelle.Markup
-            for ((_, tree) <- results) tree match {
-              case XML.Elem(
-                  Markup(Markup.WRITELN_MESSAGE, properties),
-                  List(t : Text))
-                      if properties.toMap.get("source") != Some("goal") =>
-                EclipseConsole.out.println(t.content)
-              case f @ XML.Elem(Markup(Markup.ERROR_MESSAGE, _), _) =>
-                Responses.extractError(f).map(_._2).foreach(
-                    EclipseConsole.err.println)
-              case _ =>
+            for ((_, tree) <- results) {
+              Responses.extractWritelnMessage(tree).foreach(message =>
+                  EclipseConsole.out.println(message))
+              Responses.extractError(tree).foreach(error =>
+                  EclipseConsole.err.println(error._2))
             }
             lastCommand = Option(command)
           }
@@ -233,20 +226,15 @@ class PIDECoqEditor
             /* Extract and display error messages */
             var commandHasErrors = false
             for ((_, tree) <- results) {
-              import XML._
-              tree match {
-                case f : Elem if f.name == "error_message" =>
-                  (getFile, Responses.extractError(f)) match {
-                    case (Some(f), Some((id, msg, Some(start), Some(end)))) =>
-                      errorsToAdd += id -> (command,
-                          (offset + start - 1, offset + end - 1), msg)
-                      commandHasErrors = true
-                    case (Some(f), Some((id, msg, _, _))) =>
-                      errorsToAdd += id -> (command,
-                          (offset, offset + command.source.length), msg)
-                      commandHasErrors = true
-                    case _ =>
-                  }
+              (getFile, Responses.extractError(tree)) match {
+                case (Some(f), Some((id, msg, Some(start), Some(end)))) =>
+                  errorsToAdd += id -> (command,
+                      (offset + start - 1, offset + end - 1), msg)
+                  commandHasErrors = true
+                case (Some(f), Some((id, msg, _, _))) =>
+                  errorsToAdd += id -> (command,
+                      (offset, offset + command.source.length), msg)
+                  commandHasErrors = true
                 case _ =>
               }
             }
@@ -366,7 +354,6 @@ class PIDECoqEditor
 
   protected[ui] var ibLength : Int = 0
 
-  import isabelle.{Text, Document}
   override protected def getPerspective() = {
     import org.eclipse.jface.text.Region
     val r = exec {
