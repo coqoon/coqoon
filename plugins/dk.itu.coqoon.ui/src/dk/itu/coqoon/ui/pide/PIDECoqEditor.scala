@@ -123,21 +123,7 @@ class PIDECoqEditor
           text => !text.isDisposed).map(_.getCaretOffset)
       val commandResultsAndMarkup = caret.flatMap(caret =>
         executeWithCommandsLock {
-          val c = {
-            var command : Option[(Int, Command)] = None
-            commands.find {
-              case q @ (o, c)
-                  if o <= caret && !c.is_ignored =>
-                command = Some(q)
-                false
-              case (o, c) if o <= caret =>
-                /* Ignore ignored commands */
-                false
-              case _ =>
-                true
-            }
-            command
-          }
+          val c = findCommand(caret)
           lastSnapshot.flatMap(snapshot => c.map(
               c => (c,
                   Responses.extractResults(snapshot, c._2),
@@ -376,6 +362,22 @@ class PIDECoqEditor
       case _ =>
         Perspective.makeFull(overlay)
     }
+  }
+
+  override def findCommand(offset : Int) = {
+    var command : Option[(Int, Command)] = None
+    commands.find {
+      case q @ (o, c)
+          if o <= offset && !c.is_ignored =>
+        command = Some(q)
+        false
+      case (o, c) if o <= offset =>
+        /* Ignore ignored commands */
+        false
+      case _ =>
+        true
+    }
+    command
   }
 }
 

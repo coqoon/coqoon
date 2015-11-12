@@ -39,24 +39,10 @@ class QueryHandler extends EditorHandler {
         control = control.flatMap(c => Option(c.getParent))
       }
 
-      /* We want to evaluate the query on the last non-ignored command before
-       * the caret. (Ideally we'd just use the command under the caret, but
-       * that doesn't work in any recent version of the PIDE library...) */
-      val caret = editor.getViewer.getTextWidget.getCaretOffset
-      var command : Option[isabelle.Command] = None
-      editor.commands.find {
-        case (o, c)
-            if o <= caret && !c.is_ignored =>
-          command = Some(c)
-          false
-        case (o, c) if o <= caret =>
-          /* Ignore ignored commands */
-          false
-        case _ =>
-          true
-      }
+      val command = editor.findCommand(
+          editor.getViewer.getTextWidget.getCaretOffset)
       command.foreach(c =>
-          new QueryPopup(editor, c, text.getShell, new Point(rx, ry)).open)
+          new QueryPopup(editor, c._2, text.getShell, new Point(rx, ry)).open)
     })
     null
   }
