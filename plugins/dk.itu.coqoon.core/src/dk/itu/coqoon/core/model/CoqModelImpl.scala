@@ -449,7 +449,8 @@ private object CoqPackageFragmentImpl {
       _.getFileExtension == "v").getOrElse(false)
 
   def isObjectFile(a : IFile) = Option(a).map(_.getProjectRelativePath).map(
-      _.getFileExtension == "vo").getOrElse(false)
+      f => f.getFileExtension == "vo" ||
+           f.getFileExtension == "vio").getOrElse(false)
 }
 
 import java.io.InputStream
@@ -768,4 +769,7 @@ private case class CoqObjectFileImpl(
     private val parent : ICoqPackageFragment)
     extends CoqElementImpl(res, parent) with ICoqObjectFile {
   override def getVernacFile = None
+
+  override def isQuick =
+    (res.map(_.getLocation.getFileExtension == "vio")).getOrElse(false)
 }

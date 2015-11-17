@@ -37,7 +37,7 @@
             priority="normal">
       </content-type>
       <content-type
-            file-extensions="vo"
+            file-extensions="vo,vio"
             id="dk.itu.coqoon.core.CoqObjectFile"
             name="Coq object file"
             priority="normal">

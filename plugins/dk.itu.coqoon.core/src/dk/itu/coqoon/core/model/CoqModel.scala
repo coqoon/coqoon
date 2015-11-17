@@ -622,6 +622,8 @@ trait ICoqScriptGroup extends ICoqScriptElement with IParent {
 
 trait ICoqObjectFile extends ICoqFile {
   def getVernacFile : Option[ICoqVernacFile]
+
+  def isQuick() : Boolean
 }
 object ICoqObjectFile {
   import org.eclipse.core.runtime.Platform
