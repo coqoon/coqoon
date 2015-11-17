@@ -71,7 +71,16 @@ trait PIDESessionHost extends OverlayRunner {
       if (slot.get.phase == Session.Ready) {
         val edits =
           if (submitInitialEdits) {
-            generateInitialEdits ++ edits_
+            /* Since the generateInitialEdits method builds an initial edit
+             * including the current body of the document, the text edits
+             * passed to this method are redundant! As a result, we need to
+             * filter those edits out to avoid getting out of sync. */
+            val eds = edits_.filterNot {
+              case e : Document.Node.Edits[
+                Text.Edit, Text.Perspective] => true
+              case _ => false
+            }
+            generateInitialEdits ++ eds
           } else edits_
         getNodeName.foreach(nodeName => {
           val textEdits : List[Document.Edit_Text] =
