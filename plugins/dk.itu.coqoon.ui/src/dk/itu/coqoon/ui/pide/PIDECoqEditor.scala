@@ -7,7 +7,7 @@ import dk.itu.coqoon.ui.utilities.SupersedableTask
 trait PIDENavigationHost extends PIDESessionHost {
   def getEntities(command : isabelle.Command) :
       Seq[(isabelle.Text.Range, Responses.Entity)]
-  def selectEntity(e : (isabelle.Text.Range, Responses.Entity)) : Unit
+  def selectEntity(e : Responses.Entity) : Unit
 }
 
 class PIDECoqEditor
@@ -19,10 +19,10 @@ class PIDECoqEditor
            entity <- Responses.extractEntity(elem))
         yield (range, entity)
     }
-  override def selectEntity(e : (isabelle.Text.Range, Responses.Entity)) =
+  override def selectEntity(e : Responses.Entity) =
     executeWithCommandsLock {
       e match {
-        case (r, Left((path_, (start, end)))) =>
+        case Left((path_, (start, end))) =>
           import dk.itu.coqoon.ui.utilities.UIUtils
           import dk.itu.coqoon.core.utilities.TryAdapt
           import org.eclipse.ui.ide.IDE
@@ -32,7 +32,6 @@ class PIDECoqEditor
           import org.eclipse.jface.text.source.ISourceViewer
           val path = new Path(path_)
           val file = EFS.getLocalFileSystem.getStore(path)
-          import org.eclipse.jface.text.source.ISourceViewer
           val page =
             UIUtils.getWorkbench.getActiveWorkbenchWindow.getActivePage
           Option(IDE.openInternalEditorOnFileStore(page, file)).
@@ -44,7 +43,7 @@ class PIDECoqEditor
               viewer.setSelectedRange(s, l)
             case _ =>
           }
-        case (r, Right((exec_id, (start, end)))) =>
+        case Right((exec_id, (start, end))) =>
           val command = lastSnapshot.get.state.find_command(
               lastSnapshot.get.version, exec_id)
           command.foreach {
