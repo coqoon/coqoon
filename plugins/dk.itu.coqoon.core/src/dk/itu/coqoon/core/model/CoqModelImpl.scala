@@ -39,8 +39,8 @@ private abstract class CoqElementImpl[
     Option(a).filter(_.getClass == getClass).flatMap(
         TryCast[CoqElementImpl[_, _]]).exists(_.properties == properties)
 
-  override def toString = getClass.getSimpleName + "@" +
-      hashCode.toHexString + properties.mkString("(", ", ", ")")
+  override def toString =
+    getClass.getSimpleName + properties.mkString("(", ", ", ")")
 
   override def getParent = Option(parent)
   override def exists = getCorrespondingResource.exists { _.exists }
@@ -104,6 +104,8 @@ private class CoqModelImpl(
   }
   res.foreach(_.getWorkspace.addResourceChangeListener(
       WorkspaceListener, IResourceChangeEvent.POST_CHANGE))
+
+  override def properties = Seq(res)
 
   override def getProject(name : String) =
     new CoqProjectImpl(res.map(_.getProject(name)), this)
