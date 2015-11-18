@@ -24,10 +24,10 @@ class OpenDeclarationHandler extends EditorHandler {
 
   override def execute(ev : ExecutionEvent) : AnyRef = {
     getViewer.foreach(viewer => {
-      adaptEditor[pide.AdvancedNavigationHost] match {
+      adaptEditor[pide.PIDENavigationHost] match {
         case Some(an) =>
           val position_ = positionFromViewer(viewer)
-          an.getCommand(position_) match {
+          an.findCommand(position_) match {
             case Some((offset, command)) =>
               val position = position_ - offset
               for (r @ (range, _) <- an.getEntities(command)

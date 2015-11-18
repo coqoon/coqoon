@@ -4,8 +4,7 @@ import dk.itu.coqoon.ui.{
   BaseCoqEditor, CoqGoalsContainer, CoqoonUIPreferences, ManifestIdentifiers}
 import dk.itu.coqoon.ui.utilities.SupersedableTask
 
-trait AdvancedNavigationHost {
-  def getCommand(offset : Int) : Option[(Int, isabelle.Command)]
+trait PIDENavigationHost extends PIDESessionHost {
   def getEntities(command : isabelle.Command) :
       Seq[(isabelle.Text.Range, Responses.Entity)]
   def selectEntity(e : (isabelle.Text.Range, Responses.Entity)) : Unit
@@ -13,14 +12,7 @@ trait AdvancedNavigationHost {
 
 class PIDECoqEditor
     extends BaseCoqEditor with CoqGoalsContainer with PIDESessionHost
-                          with AdvancedNavigationHost {
-  override def getCommand(offset : Int) : Option[(Int, isabelle.Command)] =
-    executeWithCommandsLock {
-      for (r @ (o, command) <- commands
-          if offset >= o && offset <= o + command.length)
-        return Some(r)
-      None
-    }
+                          with PIDENavigationHost {
   override def getEntities(command : isabelle.Command) =
     executeWithCommandsLock {
       for ((range, elem) <- Responses.extractMarkup(lastSnapshot.get, command);
