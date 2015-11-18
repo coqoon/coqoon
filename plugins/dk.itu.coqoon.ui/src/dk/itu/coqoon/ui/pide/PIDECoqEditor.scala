@@ -9,6 +9,31 @@ trait PIDENavigationHost extends PIDESessionHost {
       Seq[(isabelle.Text.Range, Responses.Entity)]
   def selectEntity(e : Responses.Entity) : Unit
 }
+object PIDENavigationHost {
+  def openLeft(left : (String, (Int, Int))) = {
+    val (path_, (start, end)) = left
+    import dk.itu.coqoon.ui.utilities.UIUtils
+    import dk.itu.coqoon.core.utilities.TryAdapt
+    import org.eclipse.ui.ide.IDE
+    import org.eclipse.core.runtime.Path
+    import org.eclipse.core.resources.ResourcesPlugin
+    import org.eclipse.core.filesystem.EFS
+    import org.eclipse.jface.text.source.ISourceViewer
+    val path = new Path(path_)
+    val file = EFS.getLocalFileSystem.getStore(path)
+    val page =
+      UIUtils.getWorkbench.getActiveWorkbenchWindow.getActivePage
+    Option(IDE.openInternalEditorOnFileStore(page, file)).
+        flatMap(TryAdapt[ISourceViewer]) match {
+      case Some(viewer) =>
+        val s = start - 1
+        val l = end - s
+        viewer.revealRange(s, l)
+        viewer.setSelectedRange(s, l)
+      case _ =>
+    }
+  }
+}
 
 class PIDECoqEditor
     extends BaseCoqEditor with CoqGoalsContainer with PIDESessionHost
@@ -22,27 +47,7 @@ class PIDECoqEditor
   override def selectEntity(e : Responses.Entity) =
     executeWithCommandsLock {
       e match {
-        case Left((path_, (start, end))) =>
-          import dk.itu.coqoon.ui.utilities.UIUtils
-          import dk.itu.coqoon.core.utilities.TryAdapt
-          import org.eclipse.ui.ide.IDE
-          import org.eclipse.core.runtime.Path
-          import org.eclipse.core.resources.ResourcesPlugin
-          import org.eclipse.core.filesystem.EFS
-          import org.eclipse.jface.text.source.ISourceViewer
-          val path = new Path(path_)
-          val file = EFS.getLocalFileSystem.getStore(path)
-          val page =
-            UIUtils.getWorkbench.getActiveWorkbenchWindow.getActivePage
-          Option(IDE.openInternalEditorOnFileStore(page, file)).
-              flatMap(TryAdapt[ISourceViewer]) match {
-            case Some(viewer) =>
-              val s = start - 1
-              val l = end - s
-              viewer.revealRange(s, l)
-              viewer.setSelectedRange(s, l)
-            case _ =>
-          }
+        case Left(l) => PIDENavigationHost.openLeft(l)
         case Right((exec_id, (start, end))) =>
           val command = lastSnapshot.get.state.find_command(
               lastSnapshot.get.version, exec_id)
