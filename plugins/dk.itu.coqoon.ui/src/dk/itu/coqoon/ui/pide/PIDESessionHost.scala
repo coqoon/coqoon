@@ -99,9 +99,9 @@ trait PIDESessionHost extends OverlayRunner {
    * necessarily correspond directly to a PIDE document position!
    *
    * If the command at the specified offset is ignored (i.e., it represents a
-   * comment or a block of whitespace), this method will return the first
-   * preceding non-ignored command. That is, when this method returns something
-   * other than None, the returned command is safe to use as the target of a
-   * PIDE query. */
+   * comment or a block of whitespace), this method may instead return the
+   * first preceding non-ignored command. That is, when this method returns
+   * something other than None, the returned command is safe to use as the
+   * target of a PIDE query. */
   def findCommand(offset : Int) : Option[(Int, Command)]
 }
