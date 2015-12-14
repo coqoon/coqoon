@@ -54,16 +54,20 @@ trait PIDESessionHost extends OverlayRunner {
     session.syslog_messages += Session.Consumer("Coqoon") {
       case o : isabelle.Prover.Output
           if o.is_exit && o.properties.contains("return_code" -> "1") =>
-        DeadLock synchronized {
-          DeadLock.dead = true
-          val lastLines = session.syslog_content.lines.toSeq.map(
+        val lastLines =
+          DeadLock synchronized {
+            DeadLock.dead = true
+            session.syslog_content.lines.toSeq.map(
               _.trim).filterNot(_.isEmpty).reverse.take(50).reverse
+          }
+        import dk.itu.coqoon.ui.utilities.UIUtils.asyncExec
+        asyncExec {
           dk.itu.coqoon.ui.utilities.EclipseConsole.err.println(
               s"Coq session for ${getNodeName.getOrElse("(unknown)")} " +
               "stopped unexpectedly:\n" + lastLines.mkString("\n"))
-          getAnnotationModel.foreach(_.removeAllAnnotations)
-          /* Raise an error? */
         }
+        getAnnotationModel.foreach(_.removeAllAnnotations)
+        /* Raise an error? */
       case _ =>
     }
   })
