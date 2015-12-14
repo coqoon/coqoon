@@ -470,7 +470,7 @@ class UpdateErrorsJob(file : IFile, commands : Seq[(Int, Command)],
 }
 private object UpdateErrorsJob {
   /* Sync with CoqBuilder */
-  def reduceError(s : String) = s.lines.take(20).mkString("\n")
+  def reduceError(s : String) = s.lines.toSeq.takeRight(20).mkString("\n")
 
   val rule = new dk.itu.coqoon.core.utilities.UniqueRule
 }

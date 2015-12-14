@@ -476,7 +476,7 @@ private object CoqBuilder {
     DependencyTracker[IPath, (Option[ICoqScriptSentence], String)]
 
   /* Sync with PIDECoqEditor */
-  def reduceError(s : String) = s.lines.take(20).mkString("\n")
+  def reduceError(s : String) = s.lines.toSeq.takeRight(20).mkString("\n")
 
   def createSentenceErrorMarker(
       l : ICoqScriptSentence, errorMessage : String) =
