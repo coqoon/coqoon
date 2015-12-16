@@ -426,24 +426,3 @@ class FuturisticWordRule(detector : IFuturisticWordDetector,
     } else Token.UNDEFINED
   }
 }
-
-import dk.itu.coqoon.core.model.{Scanner, StateRule}
-
-class BasicRule(label : String = "<anonymous>")
-    extends StateRule[Char, IToken, BasicRule.BasicState](
-        label, Token.UNDEFINED, new BasicRule.BasicState) with IRule {
-  override def evaluate(scanner : ICharacterScanner) =
-    super.evaluate(BasicRule.BasicScanner(scanner))
-}
-object BasicRule {
-  class BasicState extends StateRule.State[Char, BasicState]
-      with StateRule.TokenState[Char, IToken, BasicState]
-          with StateRule.FallbackState[Char, BasicState]
-  case class BasicScanner(
-      scanner : ICharacterScanner) extends Scanner[Char] {
-    override def read() =
-      Option(scanner.read).filter(
-          _ != ICharacterScanner.EOF).map(_.asInstanceOf[Char])
-    override def unread() = scanner.unread
-  }
-}
