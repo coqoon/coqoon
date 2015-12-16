@@ -141,9 +141,10 @@ class CoqTokenScanner extends RuleBasedScanner {
   private val wordRule = new FuturisticWordRule(CoqWordDetector, otherToken)
   for (k <- keyword) wordRule.addWord(k, definerToken)
   for (k <- keywords) wordRule.addWord(k, keywordToken)
-  private val opRule = new BasicRule("operator")
+  import dk.itu.coqoon.ui.text.ExtensibleRecogniser
+  private val opRule = new ExtensibleRecogniser
   for (o <- operator) opRule.recognise(o, opToken)
-  private val optionRule = new BasicRule("option")
+  private val optionRule = new ExtensibleRecogniser
   for (o <- options) optionRule.recognise(o, optionToken)
 
   setRules(Array(optionRule, wordRule, opRule))
@@ -165,13 +166,10 @@ private object CoqTokenScanner {
   val otherToken : IToken = new Token(new TextAttribute(black, white, 0))
 }
 
-class CommentTokenScanner extends RuleBasedScanner {
-  import CommentTokenScanner._
+import dk.itu.coqoon.ui.text.DummyRecogniser
 
-  private val commentRule = new BasicRule("!comment")
-  commentRule.getStartState.setFallback(Some(commentRule.getStartState))
-  commentRule.getStartState.setToken(Some(commentToken))
-  setRules(Array(commentRule))
+class CommentTokenScanner extends RuleBasedScanner {
+  setRules(Array(new DummyRecogniser(CommentTokenScanner.commentToken)))
 }
 private object CommentTokenScanner {
   import org.eclipse.swt.SWT
@@ -181,12 +179,7 @@ private object CommentTokenScanner {
 }
 
 class StringTokenScanner extends RuleBasedScanner {
-  import StringTokenScanner._
-
-  private val stringRule = new BasicRule("!string")
-  stringRule.getStartState.setFallback(Some(stringRule.getStartState))
-  stringRule.getStartState.setToken(Some(stringToken))
-  setRules(Array(stringRule))
+  setRules(Array(new DummyRecogniser(StringTokenScanner.stringToken)))
 }
 private object StringTokenScanner {
   val stringToken : IToken = new Token(new TextAttribute(
