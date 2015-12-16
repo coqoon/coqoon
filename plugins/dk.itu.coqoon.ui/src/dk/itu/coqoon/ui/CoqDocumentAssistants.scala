@@ -53,8 +53,17 @@ object CoqPartitions {
     partitioner.connect(input)
   }
 
+  import dk.itu.coqoon.ui.text.{Tokeniser, TokeniserPartitioner}
+  import dk.itu.coqoon.ui.text.coq.{CoqTokeniser, CoqRecogniser}
   def createPartitioner() : IDocumentPartitioner =
-    new FastPartitioner(new CoqPartitionScanner, CoqPartitions.TYPES)
+    new TokeniserPartitioner(CoqTokeniser, CoqRecogniser.States.coq, mapping)
+
+  private[CoqPartitions] val mapping = {
+    import CoqRecogniser.States._
+    Map(coq -> Types.COQ,
+        coqString -> Types.STRING,
+        coqComment -> Types.COMMENT)
+  }
 }
 
 abstract class PartitionStateScanner(
