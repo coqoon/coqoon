@@ -26,5 +26,6 @@ Bundle-ActivationPolicy: lazy
 Export-Package: dk.itu.coqoon.ui,
  dk.itu.coqoon.ui.pide,
  dk.itu.coqoon.ui.text,
+ dk.itu.coqoon.ui.text.coq,
  dk.itu.coqoon.ui.utilities
 Import-Package: scala.xml;version="1.0.2"
