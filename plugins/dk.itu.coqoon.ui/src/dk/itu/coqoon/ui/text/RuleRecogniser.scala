@@ -67,7 +67,7 @@ class ExtensibleRecogniser extends RuleRecogniser {
   }
 }
 
-class DummyRecogniser(t : IToken) extends ExtensibleRecogniser {
+class DummyRecogniser(t : IToken) extends RuleRecogniser {
   Actions.DefaultTransition(RuleRecogniser.start, RuleRecogniser.start)
   addFinalState(RuleRecogniser.start, t)
 }
