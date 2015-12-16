@@ -46,11 +46,11 @@ class BaseCoqSourceViewerConfiguration(
   override def getConfiguredContentTypes(v : ISourceViewer) =
     IDocument.DEFAULT_CONTENT_TYPE +: CoqPartitions.TYPES
   override def getConfiguredDocumentPartitioning(v : ISourceViewer) =
-    CoqPartitions.COQ
+    CoqPartitions.ID
 
   override def getPresentationReconciler(v : ISourceViewer) = {
     val pr = new PresentationReconciler
-    pr.setDocumentPartitioning(CoqPartitions.COQ)
+    pr.setDocumentPartitioning(CoqPartitions.ID)
     BaseCoqSourceViewerConfiguration.addDamagerRepairers(pr)
   }
 

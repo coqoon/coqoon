@@ -1,25 +1,30 @@
-/* CoqDocumentAssistants.scala
- * Classes for configuring and partitioning Coq documents
- * Copyright © 2013, 2014 Alexander Faithfull
+/* CoqPartitions.scala
+ * Utility methods for installing Coq partitioning support
+ * Copyright © 2013, 2014, 2015 Alexander Faithfull
  *
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
 package dk.itu.coqoon.ui
 
-import org.eclipse.jface.text.IDocument
-
 object CoqPartitions {
-  final val COQ = "__coqoon_ptn_coqn"
+  final val ID = "__coqoon_coq"
   object Types {
-    final val COQ = "__coqoon_ptn_coqn_coq"
-    final val STRING = "__coqoon_ptn_coqn_string"
-    final val COMMENT = "__coqoon_ptn_coqn_comment"
+    final val COQ = s"${ID}_coq"
+    final val STRING = "${COQ}_string"
+    final val COMMENT = "${COQ}_comment"
   }
-  final val TYPES = Array(Types.COQ, Types.COMMENT, Types.STRING)
+  final lazy val TYPES = mapping.values.toSet.toArray
 
-  import org.eclipse.jface.text.{IDocumentExtension3, IDocumentPartitioner}
+  import dk.itu.coqoon.ui.text.coq.{CoqTokeniser, CoqRecogniser}
+  private[CoqPartitions] lazy val mapping = {
+    import CoqRecogniser.States._
+    Map(coq -> Types.COQ,
+        coqString -> Types.STRING,
+        coqComment -> Types.COMMENT)
+  }
 
+  import org.eclipse.jface.text.{IDocument, IDocumentExtension3}
   def installPartitioner(input : IDocument, partitioning : String) = {
     import dk.itu.coqoon.core.utilities.TryCast
     val partitioner = createPartitioner
@@ -34,13 +39,6 @@ object CoqPartitions {
 
   import dk.itu.coqoon.ui.text.{Tokeniser, TokeniserPartitioner}
   import dk.itu.coqoon.ui.text.coq.{CoqTokeniser, CoqRecogniser}
-  def createPartitioner() : IDocumentPartitioner =
+  def createPartitioner() =
     new TokeniserPartitioner(CoqTokeniser, CoqRecogniser.States.coq, mapping)
-
-  private[CoqPartitions] val mapping = {
-    import CoqRecogniser.States._
-    Map(coq -> Types.COQ,
-        coqString -> Types.STRING,
-        coqComment -> Types.COMMENT)
-  }
 }

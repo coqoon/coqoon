@@ -195,7 +195,7 @@ class CoqSourceViewerConfiguration(
     IContentAssistant,ContentAssistant}
   override def getContentAssistant(v : ISourceViewer) : IContentAssistant = {
     val assistant = new ContentAssistant
-    assistant.setDocumentPartitioning(CoqPartitions.COQ)
+    assistant.setDocumentPartitioning(CoqPartitions.ID)
     val assistantProcessor = new CoqContentAssistantProcessor(editor)
     assistant.setContentAssistProcessor(
         assistantProcessor, CoqPartitions.Types.COQ)

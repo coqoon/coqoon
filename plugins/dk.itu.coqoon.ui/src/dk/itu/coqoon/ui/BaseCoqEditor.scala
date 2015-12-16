@@ -40,12 +40,12 @@ abstract class BaseCoqEditor extends TextEditor {
       extends IDocumentSetupParticipant {
     import org.eclipse.jface.text.IDocument
     override def setup(doc : IDocument) =
-      CoqPartitions.installPartitioner(doc, CoqPartitions.COQ)
+      CoqPartitions.installPartitioner(doc, CoqPartitions.ID)
   }
 
   override protected def initializeEditor() = {
     setDocumentProvider(new ForwardingDocumentProvider(
-      CoqPartitions.COQ, CoqDocumentSetupParticipant,
+      CoqPartitions.ID, CoqDocumentSetupParticipant,
       new TextFileDocumentProvider {
         override def getDefaultEncoding() = "UTF-8"
       }))
@@ -104,7 +104,7 @@ abstract class BaseCoqEditor extends TextEditor {
     super.configureSourceViewerDecorationSupport(support)
     support.setCharacterPairMatcher(new DefaultCharacterPairMatcher(
         Array('(', ')', '{', '}', '<', '>', '[', ']'),
-        CoqPartitions.COQ, true))
+        CoqPartitions.ID, true))
     support.setMatchingCharacterPainterPreferenceKeys(
         MATCHING_BRACKETS, MATCHING_BRACKETS_COLOR)
   }
