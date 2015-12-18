@@ -1,3 +1,18 @@
+Coqoon 0.7.1
+============
+
+18th December 2015
+
+This release drastically improves the syntax highlighting code, improving
+performance and bringing complete support for nested comments.
+
+Bug fixes
+---------
+
+* Fatal PIDE errors are now captured and reported instead of being ignored
+* Coq error summaries now record more useful information
+* Errors during Coqoon shutdown should no longer cause the UI to freeze
+
 Coqoon 0.7.0.2
 ==============
 
