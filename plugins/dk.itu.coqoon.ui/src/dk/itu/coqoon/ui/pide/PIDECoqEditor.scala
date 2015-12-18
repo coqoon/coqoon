@@ -375,6 +375,10 @@ class PIDECoqEditor
     }
     command
   }
+
+  override protected[pide] def executeWithCommandsLock[A](
+      f : => A) = super.executeWithCommandsLock(f)
+  private[pide] def getSession() = session
 }
 
 object Perspective {
@@ -484,13 +488,23 @@ private class PIDEReconciler(editor : PIDECoqEditor) extends EventReconciler {
   override def reconcile(events : List[DecoratedEvent]) = {
     import isabelle._
 
+    var earliestOffset = Int.MaxValue
     var edits : List[Text.Edit] = List()
     for (DecoratedEvent(ev, pre) <- events) {
       if (ev.fLength > 0)
         edits :+= Text.Edit.remove(editor.ibLength + ev.fOffset, pre)
       if (!ev.fText.isEmpty)
         edits :+= Text.Edit.insert(editor.ibLength + ev.fOffset, ev.fText)
+      earliestOffset = Math.min(earliestOffset, ev.fOffset)
     }
+
+    val command = editor.findCommand(earliestOffset)
+    val stop = editor.executeWithCommandsLock {
+      command == editor.commands.headOption
+    }
+    if (stop)
+      editor.getSession.stop
+
     editor.checkedUpdate(List(Document.Node.Edits(edits)))
   }
 }
