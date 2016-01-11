@@ -116,30 +116,34 @@ class TokeniserPartitioner(
   override def getLegalContentTypes() = contentTypes
 
   override def computePartitioning(offset : Int, length : Int,
-      withEmptyPartitions : Boolean) : Array[ITypedRegion] = {
+      includeZeroLengthPartitions : Boolean) : Array[ITypedRegion] = {
     var (i, end) = (offset, offset + length)
     var s = Seq[ITypedRegion]()
     while (i < end) {
-      val p = getPartition(i, withEmptyPartitions)
-      if (!s.contains(p))
+      val p = getPartition(i, false)
+      if ((includeZeroLengthPartitions || p.getLength > 0) &&
+          !s.contains(p))
         s :+= p
       i = p.getOffset + p.getLength
     }
     s.toArray
   }
   override def getContentType(offset : Int,
-      withEmptyPartitions : Boolean) : String =
-    getPartition(offset, withEmptyPartitions).getType
+      preferOpenPartitions : Boolean) : String =
+    getPartition(offset, preferOpenPartitions).getType
   override def getManagingPositionCategories() : Array[String] = {
     null /* XXX: should we stash the partition information in the document? */
   }
   override def getPartition(
-      offset : Int, withEmptyPartitions : Boolean) : ITypedRegion = {
+      offset : Int, preferOpenPartitions : Boolean) : ITypedRegion = {
+    val length = document.map(_.getLength).get
     var pos = 0
-    for ((t, s) <- getTokens if withEmptyPartitions || !s.isEmpty;
+    for ((t, s) <- getTokens;
          label <- mapping.get(t)) {
       val tr = Region(pos, length = s.length)
-      if (tr.contains(offset) || document.map(_.getLength).contains(offset)) {
+      if (tr.contains(offset) ||
+          (preferOpenPartitions && tr.extend(1).contains(offset)) ||
+          length == offset) {
         return tr.asTypedRegion(label)
       } else pos = tr.end
     }
