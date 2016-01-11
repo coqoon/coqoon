@@ -11,8 +11,8 @@ object CoqPartitions {
   final val ID = "__coqoon_coq"
   object Types {
     final val COQ = s"${ID}_coq"
-    final val STRING = "${COQ}_string"
-    final val COMMENT = "${COQ}_comment"
+    final val STRING = s"${COQ}_string"
+    final val COMMENT = s"${COQ}_comment"
   }
   final lazy val TYPES = mapping.values.toSet.toArray
 
