@@ -38,7 +38,8 @@ private object DocumentAdapter {
 
 class TokeniserPartitioner(
     t : Tokeniser, start : PushdownAutomaton.State,
-    mapping : Map[PushdownAutomaton.State, String])
+    mapping : Map[PushdownAutomaton.State,
+      (String /* partition type */, Boolean /* delimited partition? */)])
     extends IDocumentPartitioner
         with IDocumentPartitionerExtension
         with IDocumentPartitionerExtension2
@@ -112,7 +113,7 @@ class TokeniserPartitioner(
         Region(0, length = ev.fDocument.getLength)
     }
 
-  private final lazy val contentTypes = mapping.values.toSet.toArray
+  private final lazy val contentTypes = mapping.values.map(_._1).toSet.toArray
   override def getLegalContentTypes() = contentTypes
 
   override def computePartitioning(offset : Int, length : Int,
@@ -139,7 +140,7 @@ class TokeniserPartitioner(
     val length = document.map(_.getLength).get
     var pos = 0
     for ((t, s) <- getTokens;
-         label <- mapping.get(t)) {
+         (label, delimited) <- mapping.get(t)) {
       val tr = Region(pos, length = s.length)
       if (tr.contains(offset) ||
           (preferOpenPartitions && tr.extend(1).contains(offset)) ||

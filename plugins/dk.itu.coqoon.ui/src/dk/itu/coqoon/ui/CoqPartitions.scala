@@ -14,14 +14,14 @@ object CoqPartitions {
     final val STRING = s"${COQ}_string"
     final val COMMENT = s"${COQ}_comment"
   }
-  final lazy val TYPES = mapping.values.toSet.toArray
+  final lazy val TYPES = mapping.values.map(_._1).toSet.toArray
 
   import dk.itu.coqoon.ui.text.coq.{CoqTokeniser, CoqRecogniser}
   private[CoqPartitions] lazy val mapping = {
     import CoqRecogniser.States._
-    Map(coq -> Types.COQ,
-        coqString -> Types.STRING,
-        coqComment -> Types.COMMENT)
+    Map(coq -> (Types.COQ, false),
+        coqString -> (Types.STRING, true),
+        coqComment -> (Types.COMMENT, true))
   }
 
   import org.eclipse.jface.text.{IDocument, IDocumentExtension3}
