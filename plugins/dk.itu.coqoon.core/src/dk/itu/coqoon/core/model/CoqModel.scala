@@ -353,7 +353,20 @@ class CoqStandardLibrary extends LoadPathImplementationProvider {
     Seq(new CoqStandardLibrary.Implementation(this))
 }
 object CoqStandardLibrary {
+  import dk.itu.coqoon.core.CoqoonPreferences.CoqPath
+  import org.eclipse.jface.util.{PropertyChangeEvent, IPropertyChangeListener}
+  private object Listener extends IPropertyChangeListener {
+    override def propertyChange(ev : PropertyChangeEvent) =
+      if (ev.getProperty == CoqPath.ID)
+        path.clear
+  }
+  Activator.getDefault.getPreferenceStore.addPropertyChangeListener(Listener)
   final val ID = "dk.itu.sdg.kopitiam/lp/coq/8.4"
+
+  import dk.itu.coqoon.core.utilities.CacheSlot
+  private val path = CacheSlot {
+    CoqProgram.run(Seq("-where")).readAll
+  }
 
   private class Implementation(provider : LoadPathImplementationProvider,
       id : String = ID) extends IncompleteLoadPathImplementation {
@@ -368,7 +381,7 @@ object CoqStandardLibrary {
     import IncompleteLoadPathEntry.Variable
     override def getIncompleteLoadPath =
       if (id == ID) {
-        CoqProgram.run(Seq("-where")).readAll match {
+        path.get match {
           case (0, _) =>
             Right(Seq(
                 IncompleteLoadPathEntry(
@@ -386,7 +399,7 @@ object CoqStandardLibrary {
 
     override def getValue(v : Variable) =
       if (v == CoqLocation) {
-        CoqProgram.run(Seq("-where")).readAll match {
+        path.get match {
           case (0, path) => Some(path.trim)
           case _ => None
         }
