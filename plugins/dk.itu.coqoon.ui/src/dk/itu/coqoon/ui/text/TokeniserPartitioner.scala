@@ -143,7 +143,7 @@ class TokeniserPartitioner(
          (label, delimited) <- mapping.get(t)) {
       val tr = Region(pos, length = s.length)
       if (tr.contains(offset) ||
-          (preferOpenPartitions && tr.extend(1).contains(offset)) ||
+          (preferOpenPartitions && !delimited && tr.end == offset) ||
           length == offset) {
         return tr.asTypedRegion(label)
       } else pos = tr.end
