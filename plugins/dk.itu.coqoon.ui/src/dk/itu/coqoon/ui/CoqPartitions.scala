@@ -19,9 +19,9 @@ object CoqPartitions {
   import dk.itu.coqoon.ui.text.coq.{CoqTokeniser, CoqRecogniser}
   private[CoqPartitions] lazy val mapping = {
     import CoqRecogniser.States._
-    Map(coq -> (Types.COQ, false),
-        coqString -> (Types.STRING, true),
-        coqComment -> (Types.COMMENT, true))
+    Map(coq -> (Types.COQ, 0),
+        coqString -> (Types.STRING, 1),
+        coqComment -> (Types.COMMENT, 2))
   }
 
   import org.eclipse.jface.text.{IDocument, IDocumentExtension3}

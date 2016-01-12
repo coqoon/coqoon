@@ -39,7 +39,7 @@ private object DocumentAdapter {
 class TokeniserPartitioner(
     t : Tokeniser, start : PushdownAutomaton.State,
     mapping : Map[PushdownAutomaton.State,
-      (String /* partition type */, Boolean /* delimited partition? */)])
+      (String /* partition type */, Int /* length of opening delimiter */)])
     extends IDocumentPartitioner
         with IDocumentPartitionerExtension
         with IDocumentPartitionerExtension2
@@ -140,10 +140,10 @@ class TokeniserPartitioner(
     val length = document.map(_.getLength).get
     var pos = 0
     for ((t, s) <- getTokens;
-         (label, delimited) <- mapping.get(t)) {
+         (label, leadin) <- mapping.get(t)) {
       val tr = Region(pos, length = s.length)
       if (tr.contains(offset) ||
-          (preferOpenPartitions && !delimited && tr.end == offset) ||
+          (preferOpenPartitions && leadin == 0 && tr.end == offset) ||
           length == offset) {
         return tr.asTypedRegion(label)
       } else pos = tr.end
