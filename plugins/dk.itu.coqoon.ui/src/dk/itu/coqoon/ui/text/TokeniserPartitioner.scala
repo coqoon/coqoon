@@ -30,9 +30,11 @@ private object DocumentAdapter {
     final lazy val length = end - start
     override def charAt(pos : Int) = d.getChar(start + pos)
     override def subSequence(start : Int, end : Int) =
-      new DocumentSequence(d, start + start, start + end)
+      new DocumentSequence(d, this.start + start, this.start + end)
+    override def toString = d.get(start, end - start)
+    def describe = s"DocumentSequence($d, start = $start, end = $end)"
   }
-  def makeSequence(d : IDocument) : CharSequence =
+  def makeSequence(d : IDocument) : DocumentSequence =
     new DocumentSequence(d, 0, d.getLength)
 }
 
