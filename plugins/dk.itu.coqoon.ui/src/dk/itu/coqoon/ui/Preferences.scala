@@ -46,12 +46,28 @@ class CoqoonFormattingPreferencePage
   import org.eclipse.jface.preference.StringFieldEditor
   import org.eclipse.jface.preference.BooleanFieldEditor
 
-  import CoqoonUIPreferences._
   override def createFieldEditors = {
-    addField(new BooleanFieldEditor(AutomaticFormatting.ID,
-        "Automatically format Coq code as you type", getFieldEditorParent))
-    addField(new StringFieldEditor(SpacesPerIndentationLevel.ID,
-        "Spaces per indentation level", getFieldEditorParent))
+    addField({
+      val parent = getFieldEditorParent
+      val ed = new BooleanFieldEditor(
+          CoqoonUIPreferences.AutomaticFormatting.ID,
+          "Automatically format Coq code as you type",
+          parent)
+      ed.getDescriptionControl(parent).setToolTipText(
+          "Attempt to indent Coq code and close sections and proofs " +
+          "automatically.")
+      ed
+    })
+    addField({
+      val parent = getFieldEditorParent
+      val ed = new StringFieldEditor(
+          CoqoonUIPreferences.SpacesPerIndentationLevel.ID,
+          "Spaces per indentation level",
+          parent)
+      ed.getLabelControl(parent).setToolTipText(
+          "The number of spaces at each indentation level.")
+      ed
+    })
   }
 }
 
