@@ -18,9 +18,9 @@ package dk.itu.coqoon.ui.text
 
 class Tokeniser(val automaton : PushdownAutomaton[Char]) {
   import Tokeniser._
-  import PushdownAutomaton.{State => Token}
+  import PushdownAutomaton.State
 
-  type TransitionInspector = Transition => Option[(Token, Int)]
+  type TransitionInspector = Transition => Option[(State, Int)]
   protected object TransitionInspector {
     def apply(transition : TransitionInspector) = append(transition)
     def append(transition : TransitionInspector) =
@@ -29,17 +29,17 @@ class Tokeniser(val automaton : PushdownAutomaton[Char]) {
       prependTransitionInspector(transition)
   }
   protected object InterestingTransition {
-    def apply(transition : Transition, begins : Token, leadin : Int) =
+    def apply(transition : Transition, begins : State, leadin : Int) =
       appendTransitionInspector {
         case t if t == transition => Some((begins, leadin))
         case _ => None
       }
   }
 
-  class TokenIterator(initialToken : Token, start : RType#Execution,
-      input : CharSequence) extends Iterator[(Token, String)] {
+  class TokenIterator(initialState : State, start : RType#Execution,
+      input : CharSequence) extends Iterator[Token] {
     private var lastTokenStart = 0
-    private var lastTokenType = initialToken
+    private var lastTokenType = initialState
     private var position = 0
     private var state = start
 
@@ -47,7 +47,7 @@ class Tokeniser(val automaton : PushdownAutomaton[Char]) {
       prime()
       nextToken != None
     }
-    override def next : (Token, String) = {
+    override def next : Token = {
       prime()
       nextToken match {
         case Some(t) =>
@@ -58,7 +58,7 @@ class Tokeniser(val automaton : PushdownAutomaton[Char]) {
       }
     }
 
-    private var nextToken : Option[(Token, String)] = None
+    private var nextToken : Option[Token] = None
     private def prime() : Unit = {
       import dk.itu.coqoon.core.utilities.Substring
       if (nextToken == None) {
@@ -103,11 +103,12 @@ class Tokeniser(val automaton : PushdownAutomaton[Char]) {
   private def prependTransitionInspector(t : TransitionInspector) =
     transitionInspectors +:= t
 
-  def tokens(start : PushdownAutomaton.State,
-      input : CharSequence) : Iterator[(Token, String)] =
+  def tokens(start : State, input : CharSequence) : Iterator[Token] =
     new TokenIterator(start, automaton.Execution(start, Seq()), input)
 }
 object Tokeniser {
+  type Token = (PushdownAutomaton.State, String)
+
   protected type RType = PushdownAutomaton[Char]
   protected type Transition = PushdownAutomaton.Transition[Char]
 }
