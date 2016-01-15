@@ -69,8 +69,10 @@ class PIDECoqEditor
   import org.eclipse.jface.text.IViewportListener
   object ViewportListener extends IViewportListener {
     override def viewportChanged(x : Int) =
-      uiMoveTask schedule {
-        checkedUpdate(List())
+      if (CoqoonUIPreferences.UsePerspective.get) {
+        uiMoveTask schedule {
+          checkedUpdate(List())
+        }
       }
   }
 
@@ -383,18 +385,16 @@ class PIDECoqEditor
 
 object Perspective {
   import isabelle.{Text, Document}
-  def makeEmpty(
-      overlays : Document.Node.Overlays = Document.Node.Overlays.empty) =
-    Document.Node.Perspective[Text.Edit, Text.Perspective](true,
-        Text.Perspective.empty, overlays)
   import org.eclipse.jface.text.IRegion
   def makePartial(region : IRegion,
       overlays : Document.Node.Overlays = Document.Node.Overlays.empty) =
-    Document.Node.Perspective[Text.Edit, Text.Perspective](true,
-        Text.Perspective(
-            Seq(Text.Range(
-                region.getOffset,
-                region.getOffset + region.getLength))), overlays)
+    if (CoqoonUIPreferences.UsePerspective.get) {
+      Document.Node.Perspective[Text.Edit, Text.Perspective](true,
+          Text.Perspective(
+              Seq(Text.Range(
+                  region.getOffset,
+                  region.getOffset + region.getLength))), overlays)
+    } else makeFull(overlays)
   def makeFull(
       overlays : Document.Node.Overlays = Document.Node.Overlays.empty) =
     Document.Node.Perspective[Text.Edit, Text.Perspective](true,

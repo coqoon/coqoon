@@ -68,6 +68,17 @@ class CoqoonEditorPreferencePage
           "The number of spaces at each indentation level.")
       ed
     })
+    addField({
+      val parent = getFieldEditorParent
+      val ed = new BooleanFieldEditor(
+          CoqoonUIPreferences.UsePerspective.ID,
+          "Enable perspective support (PIDE)",
+          parent)
+      ed.getDescriptionControl(parent).setToolTipText(
+          "Instruct Coq to only process proofs when they become visible in " +
+          "the editor. (Compilation is not affected by this setting.)")
+      ed
+    })
   }
 }
 
@@ -96,6 +107,7 @@ class CoqoonUIPreferences extends AbstractPreferenceInitializer {
 
     node.putInt(SpacesPerIndentationLevel.ID, 2)
     node.putBoolean(AutomaticFormatting.ID, true)
+    node.putBoolean(UsePerspective.ID, true)
 
     node.putBoolean(ProcessingAnnotations.ID, true)
   }
@@ -121,6 +133,11 @@ object CoqoonUIPreferences {
 
   object ProcessingAnnotations {
     final val ID = "enableProcessing"
+    def get() = store.getBoolean(ID)
+  }
+
+  object UsePerspective {
+    val ID = "usePerspective"
     def get() = store.getBoolean(ID)
   }
 }
