@@ -201,16 +201,16 @@
    <extension
          point="org.eclipse.ui.preferencePages">
       <page
-            category="dk.itu.coqoon.core.pref"
+            category="dk.itu.coqoon.ui.pref.editor"
             class="dk.itu.coqoon.ui.CoqoonColorPreferencePage"
             id="dk.itu.coqoon.ui.pref.color"
-            name="Interface">
+            name="Display">
       </page>
       <page
             category="dk.itu.coqoon.core.pref"
-            class="dk.itu.coqoon.ui.CoqoonFormattingPreferencePage"
-            id="Formatting"
-            name="Formatting">
+            class="dk.itu.coqoon.ui.CoqoonEditorPreferencePage"
+            id="dk.itu.coqoon.ui.pref.editor"
+            name="Editor">
       </page>
    </extension>
    <extension

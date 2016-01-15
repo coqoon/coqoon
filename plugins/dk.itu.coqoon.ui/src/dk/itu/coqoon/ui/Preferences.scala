@@ -27,16 +27,16 @@ class CoqoonColorPreferencePage
     addField({
       val parent = getFieldEditorParent
       val ed = new BooleanFieldEditor(ProcessingAnnotations.ID,
-          "Enable PIDE processing annotations (experimental)", parent)
+          "Enable processing annotations (PIDE)", parent)
       ed.getDescriptionControl(parent).setToolTipText(
           "Highlight commands that haven't yet been executed in the " +
-          "PIDE editor. (This option is known to have performance problems.)")
+          "PIDE editor.")
       ed
     })
   }
 }
 
-class CoqoonFormattingPreferencePage
+class CoqoonEditorPreferencePage
     extends FEPP(FEPP.GRID) with IWorkbenchPreferencePage {
   import org.eclipse.ui.IWorkbench
 
