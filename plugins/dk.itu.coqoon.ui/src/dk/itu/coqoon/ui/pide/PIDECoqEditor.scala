@@ -131,12 +131,16 @@ class PIDECoqEditor
         case Some(((offset, command), results, markup)) =>
           val sameCommand = lastCommand.contains(command)
 
+          /* Preserve the contents of the goal viewer if the currently selected
+           * command has an error */
+          val hasErrors =
+            results.exists(r => Responses.extractError(r._2) != None)
           markup.find(_._2.name == "goals") match {
             case Some((_, el))
                 if !sameCommand || goals == None =>
               setGoals(Responses.extractGoals(el))
-            case Some(el) => /* do nothing? */
-            case None => setGoals(None)
+            case None if !hasErrors => setGoals(None)
+            case _ => /* do nothing */
           }
 
           if (!sameCommand) {
