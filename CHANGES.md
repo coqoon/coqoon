@@ -1,3 +1,24 @@
+Coqoon 0.7.1.1
+==============
+
+15th January 2015
+
+This minor release fixes some minor bugs in the new syntax highlighting code
+and adds an option for disabling PIDE perspectives.
+
+Other significant features
+--------------------------
+
+* Coq path cache
+
+  Coqoon now caches the result of `coqtop -where` instead of running the
+  command every time it needs to find the standard library.
+
+* Better goal viewer behaviour
+
+  When the currently-selected command has an error, the goal viewer will no
+  longer be cleared.
+
 Coqoon 0.7.1
 ============
 
