@@ -1,7 +1,7 @@
 Coqoon 0.7.1.1
 ==============
 
-15th January 2015
+15th January 2016
 
 This minor release fixes some minor bugs in the new syntax highlighting code
 and adds an option for disabling PIDE perspectives.
