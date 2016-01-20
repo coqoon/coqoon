@@ -366,20 +366,38 @@ class PIDECoqEditor
     }
   }
 
-  override def findCommand(offset : Int) = {
-    var command : Option[(Int, Command)] = None
-    commands.find {
-      case q @ (o, c)
-          if o <= offset && !c.is_ignored =>
-        command = Some(q)
-        false
-      case (o, c) if o <= offset =>
-        /* Ignore ignored commands */
-        false
+  private def getCommandAtDocumentOffset(offset : Int) =
+    lastSnapshot.map(_.node).map(_.command_iterator(offset)) match {
+      case Some(it) if it.hasNext =>
+        val (c, o) = it.next
+        Some((o, c))
       case _ =>
-        true
+        None
     }
-    command
+
+  private def documentCommandToPresentationCommand(c : (Int, Command)) =
+    Option(c).collect {
+      case (o, c) if o >= ibLength => (o - ibLength, c)
+    }
+
+  private def getCommandAtPresentationOffset(offset : Int) =
+    getCommandAtDocumentOffset(offset + ibLength).flatMap(
+        documentCommandToPresentationCommand)
+
+  override def findCommand(offset : Int) = {
+    var itc = getCommandAtPresentationOffset(offset)
+    while (itc.exists(_._2.is_ignored))
+      itc = getCommandAtPresentationOffset(itc.get._1 - 1)
+    itc
+  }
+
+  private[pide] def getFirstCommand() = {
+    var itc = getCommandAtDocumentOffset(ibLength)
+    while (itc.exists(_._2.is_ignored)) {
+      val (o, c) = itc.get
+      itc = getCommandAtDocumentOffset(o + c.length)
+    }
+    itc.flatMap(documentCommandToPresentationCommand)
   }
 
   override protected[pide] def executeWithCommandsLock[A](
