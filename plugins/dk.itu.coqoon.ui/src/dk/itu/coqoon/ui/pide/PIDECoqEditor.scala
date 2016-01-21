@@ -522,10 +522,8 @@ private class PIDEReconciler(editor : PIDECoqEditor) extends EventReconciler {
       earliestOffset = Math.min(earliestOffset, ev.fOffset)
     }
 
-    val command = editor.findCommand(earliestOffset)
-    val stop = editor.executeWithCommandsLock {
-      command == editor.commands.headOption
-    }
+    val stop = editor.getFirstCommand.exists(
+        c => earliestOffset <= c._1 + c._2.length)
     if (stop)
       editor.getSession.stop
 
