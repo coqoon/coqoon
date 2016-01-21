@@ -54,16 +54,15 @@ class PIDECoqEditor
     e match {
       case Left(l) => PIDENavigationHost.openLeft(l)
       case Right((exec_id, (start, end))) =>
-        val command = ls.state.find_command(ls.version, exec_id)
-        command.foreach {
+        ls.state.find_command(ls.version, exec_id) foreach {
           case (_, command) =>
-            commands.find(e => e._2 == command).foreach {
-              case (offset, command) =>
+            ls.node.command_start(command).filter(_ >= ibLength).map(
+                _ - ibLength).foreach(offset => {
                 val s = (offset + start) - 1
                 val l = end - start
                 getSourceViewer.revealRange(s, l)
                 getSourceViewer.setSelectedRange(s, l)
-            }
+              })
         }
     }
   }
@@ -169,11 +168,6 @@ class PIDECoqEditor
   override protected def commandsUpdated(changed : Seq[Command]) = {
     val ls = getLastSnapshot.get
     val changedResultsAndMarkup = ({
-      commands =
-        (for (command <- ls.node.commands;
-              offset <- ls.node.command_start(command)
-                if offset >= ibLength)
-          yield (offset - ibLength, command)).toSeq
       for (c <- changed)
         yield {
           ls.node.command_start(c) match {
@@ -290,9 +284,6 @@ class PIDECoqEditor
       }
     }
   }
-
-  /* Synchronized on PIDESessionHost's CommandsLock */
-  private[pide] var commands : Seq[(Int, isabelle.Command)] = Seq()
 
   import dk.itu.coqoon.core.coqtop.CoqSentence
   import dk.itu.coqoon.core.utilities.TotalReader
