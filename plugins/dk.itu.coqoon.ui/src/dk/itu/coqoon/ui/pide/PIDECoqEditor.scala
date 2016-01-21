@@ -38,31 +38,35 @@ object PIDENavigationHost {
 class PIDECoqEditor
     extends BaseCoqEditor with CoqGoalsContainer with PIDESessionHost
                           with PIDENavigationHost {
-  override def getEntities(command : isabelle.Command) =
+  private[pide] def getLastSnapshot() =
     executeWithCommandsLock {
-      for ((range, elem) <- Responses.extractMarkup(lastSnapshot.get, command);
+      lastSnapshot
+    }
+
+  override def getEntities(command : isabelle.Command) = {
+    val ls = getLastSnapshot.get
+      for ((range, elem) <- Responses.extractMarkup(ls, command);
            entity <- Responses.extractEntity(elem))
         yield (range, entity)
+  }
+  override def selectEntity(e : Responses.Entity) = {
+    val ls = getLastSnapshot.get
+    e match {
+      case Left(l) => PIDENavigationHost.openLeft(l)
+      case Right((exec_id, (start, end))) =>
+        val command = ls.state.find_command(ls.version, exec_id)
+        command.foreach {
+          case (_, command) =>
+            commands.find(e => e._2 == command).foreach {
+              case (offset, command) =>
+                val s = (offset + start) - 1
+                val l = end - start
+                getSourceViewer.revealRange(s, l)
+                getSourceViewer.setSelectedRange(s, l)
+            }
+        }
     }
-  override def selectEntity(e : Responses.Entity) =
-    executeWithCommandsLock {
-      e match {
-        case Left(l) => PIDENavigationHost.openLeft(l)
-        case Right((exec_id, (start, end))) =>
-          val command = lastSnapshot.get.state.find_command(
-              lastSnapshot.get.version, exec_id)
-          command.foreach {
-            case (_, command) =>
-              commands.find(e => e._2 == command).foreach {
-                case (offset, command) =>
-                  val s = (offset + start) - 1
-                  val l = end - start
-                  getSourceViewer.revealRange(s, l)
-                  getSourceViewer.setSelectedRange(s, l)
-              }
-          }
-      }
-    }
+  }
 
   val uiMoveTask = new SupersedableTask(200)
 
@@ -117,16 +121,16 @@ class PIDECoqEditor
   import dk.itu.coqoon.ui.utilities.UIUtils.asyncExec
   private def caretPing() =
     asyncExec {
+      val ls = getLastSnapshot
       val caret = Option(getViewer).map(_.getTextWidget).filter(
           text => !text.isDisposed).map(_.getCaretOffset)
-      val commandResultsAndMarkup = caret.flatMap(caret =>
-        executeWithCommandsLock {
-          val c = findCommand(caret)
-          lastSnapshot.flatMap(snapshot => c.map(
-              c => (c,
-                  Responses.extractResults(snapshot, c._2),
-                  Responses.extractMarkup(snapshot, c._2))))
-        })
+      val commandResultsAndMarkup = caret.flatMap(caret => {
+        val c = findCommand(caret)
+        ls.flatMap(snapshot => c.map(
+            c => (c,
+                Responses.extractResults(snapshot, c._2),
+                Responses.extractMarkup(snapshot, c._2))))
+      })
       commandResultsAndMarkup match {
         case Some(((offset, command), results, markup)) =>
           val sameCommand = lastCommand.contains(command)
@@ -163,31 +167,29 @@ class PIDECoqEditor
   private var annotations : Map[Command, Annotation] = Map()
 
   override protected def commandsUpdated(changed : Seq[Command]) = {
-    val changedResultsAndMarkup =
-      (executeWithCommandsLock {
-        val ls = lastSnapshot.get
-        lastSnapshot.foreach(snapshot =>
-            commands =
-              (for (command <- snapshot.node.commands;
-                    offset <- snapshot.node.command_start(command)
-                      if offset >= ibLength)
-                yield (offset - ibLength, command)).toSeq)
-        for (c <- changed)
-          yield {
-            ls.node.command_start(c) match {
-              case Some(offset) if offset < ibLength =>
-                /* If the command's in the initialisation block, then hide
-                 * it, as annotating things the user can't see is unhelpful
-                 * (and, incidentally, will make JFace throw exceptions). */
-                None
-              case h =>
-                /* Otherwise, fix up the offset, if there was one, and keep
-                 * this command and its metadata for further processing. */
-                Some((h.map(_ - ibLength), c,
-                    Responses.extractResults(ls, c),
-                    Responses.extractMarkup(ls, c)))
-            }
+    val ls = getLastSnapshot.get
+    val changedResultsAndMarkup = ({
+      commands =
+        (for (command <- ls.node.commands;
+              offset <- ls.node.command_start(command)
+                if offset >= ibLength)
+          yield (offset - ibLength, command)).toSeq
+      for (c <- changed)
+        yield {
+          ls.node.command_start(c) match {
+            case Some(offset) if offset < ibLength =>
+              /* If the command's in the initialisation block, then hide
+               * it, as annotating things the user can't see is unhelpful
+               * (and, incidentally, will make JFace throw exceptions). */
+              None
+            case h =>
+              /* Otherwise, fix up the offset, if there was one, and keep
+               * this command and its metadata for further processing. */
+              Some((h.map(_ - ibLength), c,
+                  Responses.extractResults(ls, c),
+                  Responses.extractMarkup(ls, c)))
           }
+        }
       }).flatten
 
     asyncExec {
@@ -367,7 +369,7 @@ class PIDECoqEditor
   }
 
   private def getCommandAtDocumentOffset(offset : Int) =
-    lastSnapshot.map(_.node).map(_.command_iterator(offset)) match {
+    getLastSnapshot.map(_.node).map(_.command_iterator(offset)) match {
       case Some(it) if it.hasNext =>
         val (c, o) = it.next
         Some((o, c))
