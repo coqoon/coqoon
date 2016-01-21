@@ -276,7 +276,7 @@ class PIDECoqEditor
             !errorsToDelete.isEmpty)
           getFile.foreach(file =>
             new UpdateErrorsJob(file,
-                commands,
+                ls.node.commands,
                 toDelete.map(_._1) ++ errorsToDelete,
                 errorsToAdd.values.toSeq).schedule)
       }
@@ -428,7 +428,7 @@ object Perspective {
 import dk.itu.coqoon.core.utilities.{UniqueRule, JobUtilities}
 import org.eclipse.core.resources.{IFile, WorkspaceJob}
 import isabelle.Command
-class UpdateErrorsJob(file : IFile, commands : Seq[(Int, Command)],
+class UpdateErrorsJob(file : IFile, commands : Set[Command],
     removed : Seq[Command], added : Seq[(Command, (Int, Int), String)])
     extends WorkspaceJob("Update PIDE markers") {
   import UpdateErrorsJob._
@@ -460,7 +460,7 @@ class UpdateErrorsJob(file : IFile, commands : Seq[(Int, Command)],
                * new marker is going to be created for it. In either case, this
                * marker needs to be deleted */
               true
-            } else if (!commands.exists(_._2.id == commandID)) {
+            } else if (!commands.exists(_.id == commandID)) {
               /* The command associated with this marker doesn't actually exist
                * in the document; delete it. (As the builder doesn't care about
                * PIDE command identifiers, this also has the effect of deleting
