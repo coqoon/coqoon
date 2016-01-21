@@ -8,6 +8,7 @@
 package dk.itu.coqoon.ui.pide
 
 import dk.itu.coqoon.ui.utilities.UIXML
+import dk.itu.coqoon.core.utilities.CacheSlot
 import org.eclipse.swt.SWT
 import org.eclipse.swt.widgets.{Shell, Composite}
 import org.eclipse.swt.graphics.Point
@@ -20,6 +21,10 @@ class QueryPopup(
     shell: Shell, position: Point)
     extends PopupDialog(shell, SWT.RESIZE | SWT.ON_TOP, true, false, false,
         false, false, null, null) with OverlayListener {
+  import org.eclipse.swt.graphics.Cursor
+  private lazy val busyCursor = CacheSlot {
+    new Cursor(getShell.getDisplay, SWT.CURSOR_WAIT)
+  }
   import org.eclipse.swt.custom.{StyledText, StyleRange}
 
   import org.eclipse.jface.viewers.StyledString
@@ -28,9 +33,11 @@ class QueryPopup(
 
   def runQuery(query: String) = {
     editor.setOverlay(Some((Queries.coq_query(command, query), this)))
+    (getShell +: queryResults.toSeq).filterNot(
+          _.isDisposed).foreach(_.setCursor(busyCursor.get))
     appendResult(query + "\n", Stylers.Query)
-    (queryButton.toSeq ++ queryText.toSeq).filter(
-        !_.isDisposed).foreach(_.setEnabled(false))
+    (queryButton.toSeq ++ queryText.toSeq).filterNot(
+        _.isDisposed).foreach(_.setEnabled(false))
   }
 
   import dk.itu.coqoon.ui.utilities.UIUtils
@@ -44,8 +51,10 @@ class QueryPopup(
             (result, Stylers.Result)
         }
       appendResult(message + "\n", styler)
-      (queryButton.toSeq ++ queryText.toSeq).filter(
-          !_.isDisposed).foreach(_.setEnabled(true))
+      (queryButton.toSeq ++ queryText.toSeq).filterNot(
+          _.isDisposed).foreach(_.setEnabled(true))
+      (getShell +: queryResults.toSeq).filterNot(
+          _.isDisposed).foreach(_.setCursor(null))
       queryText.foreach(_.setFocus)
       editor.setOverlay(None)
     }
@@ -120,6 +129,12 @@ class QueryPopup(
 
   override def close() = {
     editor.setOverlay(None)
+    (getShell +: queryResults.toSeq).filterNot(
+          _.isDisposed).foreach(_.setCursor(null))
+    busyCursor.asOption.foreach(cursor => {
+      cursor.dispose
+      busyCursor.clear
+    })
     super.close()
   }
 }
