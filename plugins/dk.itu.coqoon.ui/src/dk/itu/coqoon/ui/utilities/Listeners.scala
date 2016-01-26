@@ -16,43 +16,33 @@
 
 package dk.itu.coqoon.ui.utilities
 
-import org.eclipse.swt.{SWT, events, widgets}
+import org.eclipse.swt.{SWT, widgets}
 
 object Event {
-  object Selection {
+  class _EventImpl[A] private[Event](kind : Int, f : widgets.Event => A) {
     def unapply(ev : widgets.Event) =
-      if (ev.`type` == SWT.Selection) {
-        Some(new events.SelectionEvent(ev))
+      if (ev.`type` == kind) {
+        Some(f(ev))
       } else None
   }
-  object DefaultSelection {
-    def unapply(ev : widgets.Event) =
-      if (ev.`type` == SWT.DefaultSelection) {
-        Some(new events.SelectionEvent(ev))
-      } else None
-  }
-  object Modify {
-    def unapply(ev : widgets.Event) =
-      if (ev.`type` == SWT.Modify) {
-        Some(new events.ModifyEvent(ev))
-      } else None
-  }
+  import org.eclipse.swt.events._
+  object Selection extends _EventImpl(SWT.Selection, new SelectionEvent(_))
+  object DefaultSelection extends _EventImpl(
+      SWT.DefaultSelection, new SelectionEvent(_))
+  object Modify extends _EventImpl(SWT.Modify, new ModifyEvent(_))
+  object MouseUp extends _EventImpl(SWT.MouseUp, new MouseEvent(_))
 }
 object Listener {
   def apply(f : PartialFunction[widgets.Event, Unit]) =
     new widgets.Listener {
       override def handleEvent(ev : widgets.Event) = f(ev)
     }
-  object Selection {
+  class _ListenerImpl private[Listener](kind : Int) {
     def apply(w : widgets.Widget, l : widgets.Listener) =
-      w.addListener(SWT.Selection, l)
+      w.addListener(kind, l)
   }
-  object DefaultSelection {
-    def apply(w : widgets.Widget, l : widgets.Listener) =
-      w.addListener(SWT.DefaultSelection, l)
-  }
-  object Modify {
-    def apply(w : widgets.Widget, l : widgets.Listener) =
-      w.addListener(SWT.Modify, l)
-  }
+  object Selection extends _ListenerImpl(SWT.Selection)
+  object DefaultSelection extends _ListenerImpl(SWT.DefaultSelection)
+  object Modify extends _ListenerImpl(SWT.Modify)
+  object MouseUp extends _ListenerImpl(SWT.MouseUp)
 }
