@@ -356,7 +356,7 @@ class PIDECoqEditor
       case Some(r) =>
         Perspective.makePartial(r, overlay)
       case _ =>
-        Perspective.makeFull(overlay)
+        Perspective.makeEmpty(overlay)
     }
   }
 
@@ -402,6 +402,12 @@ class PIDECoqEditor
 object Perspective {
   import isabelle.{Text, Document}
   import org.eclipse.jface.text.IRegion
+  def makeEmpty(
+      overlays : Document.Node.Overlays = Document.Node.Overlays.empty) =
+    if (CoqoonUIPreferences.UsePerspective.get) {
+      Document.Node.Perspective[Text.Edit, Text.Perspective](true,
+          Text.Perspective.empty, overlays)
+    } else makeFull(overlays)
   def makePartial(region : IRegion,
       overlays : Document.Node.Overlays = Document.Node.Overlays.empty) =
     if (CoqoonUIPreferences.UsePerspective.get) {
