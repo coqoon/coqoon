@@ -67,13 +67,12 @@ class PIDECoqEditor
     }
   }
 
-  val uiMoveTask = new SupersedableTask(200)
-
   import org.eclipse.jface.text.IViewportListener
   object ViewportListener extends IViewportListener {
-    override def viewportChanged(x : Int) =
+    val task = new SupersedableTask(200)
+    override def viewportChanged(unused : Int) =
       if (CoqoonUIPreferences.UsePerspective.get) {
-        uiMoveTask schedule {
+        task schedule {
           checkedUpdate(List())
         }
       }
@@ -89,6 +88,7 @@ class PIDECoqEditor
     reconciler.install(viewer)
     viewer.getTextWidget.addCaretListener(DocumentCaretListener)
     viewer.addViewportListener(ViewportListener)
+
     viewer
   }
 
@@ -109,8 +109,9 @@ class PIDECoqEditor
 
   import org.eclipse.swt.custom.{CaretEvent, CaretListener}
   object DocumentCaretListener extends CaretListener {
+    val task = new SupersedableTask(200)
     override def caretMoved(ev : CaretEvent) =
-      uiMoveTask schedule {
+      task schedule {
         caretPing
       }
   }
