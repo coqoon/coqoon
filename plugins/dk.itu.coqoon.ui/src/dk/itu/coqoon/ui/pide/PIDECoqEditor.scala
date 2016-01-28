@@ -2,6 +2,7 @@ package dk.itu.coqoon.ui.pide
 
 import dk.itu.coqoon.ui.{
   BaseCoqEditor, CoqGoalsContainer, CoqoonUIPreferences, ManifestIdentifiers}
+import dk.itu.coqoon.ui.text.Region
 import dk.itu.coqoon.ui.utilities.SupersedableTask
 
 trait PIDENavigationHost extends PIDESessionHost {
@@ -337,7 +338,6 @@ class PIDECoqEditor
   protected[ui] var ibLength : Int = 0
 
   override protected def getPerspective() = {
-    import org.eclipse.jface.text.Region
     val r = exec {
       Option(getViewer).flatMap {
         case v =>
@@ -345,7 +345,7 @@ class PIDECoqEditor
             (v.getTopIndexStartOffset, v.getBottomIndexEndOffset)
           if (end < start) {
             None
-          } else Some(new Region(ibLength + start, end - start))
+          } else Some(Region(ibLength + start, length = end - start))
       }
     }
     val overlay = getOverlay match {

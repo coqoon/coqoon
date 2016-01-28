@@ -7,6 +7,7 @@
 
 package dk.itu.coqoon.ui
 
+import dk.itu.coqoon.ui.text.Region
 import org.eclipse.jface.text.{IDocument, TextUtilities => TU, DocumentCommand,
   IAutoEditStrategy, DefaultIndentLineAutoEditStrategy}
 
@@ -93,9 +94,8 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
         _ => outerIdt + (" " * wsCount)).getOrElse("")
 
     val sentenceInfo = {
-      import org.eclipse.jface.text.Region
       val (_, content) = quickScanBack(d, c.offset)
-      new Region(c.offset - content.length, content.length)
+      Region(c.offset - content.length, length = content.length)
     }
     val sentence = d.get(sentenceInfo.getOffset, sentenceInfo.getLength)
 
@@ -289,12 +289,11 @@ class CoqMasterFormattingStrategy extends FormattingStrategyBase {
 
   override protected def format() = getMedium.foreach(document => {
     import dk.itu.coqoon.core.coqtop.CoqSentence
-    import org.eclipse.jface.text.Region
 
     val rawRegion =
       (getDocument, getRegion) match {
         case (Some(true), _) | (_, None) =>
-          new Region(0, document.getLength)
+          Region(0, length = document.getLength)
         case (_, Some(r)) =>
           r
       }
