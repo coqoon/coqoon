@@ -1,3 +1,24 @@
+Coqoon 0.7.1.2
+==============
+
+29th January 2016
+
+This minor release improves the performance and reduces the memory usage of
+the PIDE editor. (To improve the performance further, use this release
+together with an up-to-date version of the PIDE plugin for Coq.)
+
+Bug fixes
+---------
+
+* Clicking annotations now correctly triggers a perspective update
+
+Known issues
+------------
+
+* Progress annotation flickering
+
+  The PIDE editor's progress annotations flicker noticeably on some files.
+
 Coqoon 0.7.1.1
 ==============
 
