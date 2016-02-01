@@ -50,19 +50,34 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
       CreateFolderOperation, CreateProjectOperation}
 
     override def run(monitor_ : IProgressMonitor) = {
-      val monitor = SubMonitor.convert(monitor_, 3)
+      val monitor = SubMonitor.convert(monitor_, 4)
 
-      monitor.beginTask("New Coq project", 3)
+      monitor.beginTask("New Coq project", 4)
       import org.eclipse.core.runtime.Path
       val infoAdapter = WorkspaceUndoUtil.getUIInfoAdapter(getShell)
 
-      project.getCorrespondingResource.foreach(project => {
-        new CreateProjectOperation(ICoqProject.newDescription(project),
+      project.getCorrespondingResource.foreach(pr => {
+        val theories = pr.getFolder("theories")
+
+        new CreateProjectOperation(ICoqProject.newDescription(pr),
             "New Coq project").execute(monitor.newChild(1), infoAdapter)
-        new CreateFolderOperation(project.getFolder("src"), null,
+        new CreateFolderOperation(theories, null,
             "New source folder").execute(monitor.newChild(1), infoAdapter)
-        new CreateFolderOperation(project.getFolder("bin"), null,
+        new CreateFolderOperation(pr.getFolder("bin"), null,
             "New output folder").execute(monitor.newChild(1), infoAdapter)
+
+        /* Find the default SourceLoadPath entry, referring to the "src"
+         * folder, and replace it with one pointing to "theories" instead */
+        val lp = project.getLoadPathProviders
+        Option(project.getLoadPathProviders.indexWhere {
+          case SourceLoadPath(_, _) => true
+          case _ => false
+        }).filter(_ != -1) foreach {
+          case index =>
+            project.setLoadPathProviders(
+                lp.updated(index, SourceLoadPath(theories, None)),
+                monitor.newChild(1))
+        }
       })
     }
   }
