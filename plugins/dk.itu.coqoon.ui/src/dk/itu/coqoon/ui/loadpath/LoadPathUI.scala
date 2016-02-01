@@ -149,23 +149,29 @@ class LoadPathConfigurationPage
       override def selectionChanged(ev : SelectionChangedEvent) = {
         val selection =
           Option(ev.getSelection.asInstanceOf[TreeSelection].getFirstElement)
+
         selection match {
           case Some(_ : DefaultOutputLPE) =>
             /* Deleting default output entries is really not a good idea */
             dfb.setEnabled(false)
-          case Some(e : LPProvider) if e.getParent != None =>
-            /* Only allow top-level entries to be deleted */
+          case Some(e : LPBase) if e.getParent != None =>
+            /* Only allow top-level entries to be edited or deleted */
             dfb.setEnabled(false)
           case _ =>
             dfb.setEnabled(true)
         }
-        selection.flatMap(TryCast[LPProvider]).foreach(p => {
-          /* Only allow top-level entries to be moved up and down */
-          if (p.getParent == None) {
+
+        /* Only allow top-level entries to be moved up and down...*/
+        selection match {
+          case Some(p : LPProvider) =>
+            /* ... and don't allow the first element to be moved up or the last
+             * to be moved down */
             upb.setEnabled(p.getIndex != 0);
             dob.setEnabled(p.getIndex != loadPath.get.length - 1)
-          } else Seq(upb, dob).foreach(_.setEnabled(false))
-        })
+          case Some(e : LPBase) if e.getParent != None =>
+            Seq(upb, dob).foreach(_.setEnabled(false))
+          case _ =>
+        }
       }
     })
 
