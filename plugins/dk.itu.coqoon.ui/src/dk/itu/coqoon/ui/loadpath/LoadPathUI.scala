@@ -63,7 +63,7 @@ class LoadPathConfigurationPage
               <grid-data h-span="2" />
               Remove
             </button>
-            <button enabled="false">
+            <button name="edb">
               <grid-data h-span="2" />
               Edit...
             </button>
@@ -111,6 +111,40 @@ class LoadPathConfigurationPage
         }
     })
 
+    val edb = names.get[Button]("edb").get
+    Listener.Selection(edb, Listener {
+      case Event.Selection(_) =>
+        /* XXX: pass the current value to the page */
+        val (page, index) =
+          Option(tv1.getSelection.
+              asInstanceOf[TreeSelection].getFirstElement) match {
+            case Some(AbstractLPE(_, _, index)) =>
+              (Some(new NLPAbstractEntryPage), index)
+            case Some(SourceLPE(_, _, _, index)) =>
+              (Some(new NLPSourceEntryPage), index)
+            case Some(DefaultOutputLPE(_, _, index)) =>
+              (None, -1) /* XXX: add a page for this */
+            case Some(ProjectLPE(_, _, index)) =>
+              (Some(new NLPProjectEntryPage), index)
+            case Some(ExternalLPE(_, _, _, index)) =>
+              (Some(new NLPExternalEntryPage), index)
+            case _ =>
+              (None, -1)
+          }
+        page.foreach(page => {
+          val wiz = new EditLoadPathWizard(getElement, page)
+          if (new WizardDialog(c.getShell, wiz).open == Window.OK) {
+            val lp = loadPath.get
+            wiz.getResult.filter(!lp.contains(_)).foreach(element => {
+              lp.update(index, element)
+              tv1.refresh()
+              tv1.setSelection(new TreeSelection(new TreePath(Array(
+                  loadPath.get, translate(None, element, index)))))
+            })
+          }
+        })
+    })
+
     val upb = names.get[Button]("upb").get
     Listener.Selection(upb, Listener {
       case Event.Selection(_) =>
@@ -154,11 +188,14 @@ class LoadPathConfigurationPage
           case Some(_ : DefaultOutputLPE) =>
             /* Deleting default output entries is really not a good idea */
             dfb.setEnabled(false)
+            edb.setEnabled(true)
           case Some(e : LPBase) if e.getParent != None =>
             /* Only allow top-level entries to be edited or deleted */
             dfb.setEnabled(false)
+            edb.setEnabled(false)
           case _ =>
             dfb.setEnabled(true)
+            edb.setEnabled(true)
         }
 
         /* Only allow top-level entries to be moved up and down...*/
@@ -198,6 +235,20 @@ class NewLoadPathWizard(
     setResult(
       if (canFinish()) {
         selectionPage.getNextPage.createLoadPathEntry
+      } else None)
+    canFinish
+  }
+}
+
+class EditLoadPathWizard(override val project : IProject,
+    page : LPWizardPage) extends LoadPathWizard(project) {
+  addPage(page)
+
+  override def canFinish = page.isPageComplete
+  override def performFinish = {
+    setResult(
+      if (canFinish()) {
+        page.createLoadPathEntry
       } else None)
     canFinish
   }
