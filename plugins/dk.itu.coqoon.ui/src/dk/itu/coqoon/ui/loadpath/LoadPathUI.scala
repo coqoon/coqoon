@@ -173,21 +173,26 @@ class LoadPathConfigurationPage
   }
 }
 
-class NewLoadPathWizard(val project : IProject) extends Wizard {
+protected abstract class LoadPathWizard(
+    val project : IProject) extends Wizard {
+  private var result : Option[LoadPathProvider] = None
+  protected def setResult(r : Option[LoadPathProvider]) = (result = r)
+  def getResult() = result
+}
+
+class NewLoadPathWizard(
+    override val project : IProject) extends LoadPathWizard(project) {
   private val selectionPage = new NLPSelectionPage
   addPage(selectionPage)
   setForcePreviousAndNextButtons(true)
 
-  private var result : Option[LoadPathProvider] = None
-  def getResult() = result
-
   override def canFinish = selectionPage.isPageComplete &&
       Option(selectionPage.getNextPage).exists(_.isPageComplete)
   override def performFinish = {
-    result =
+    setResult(
       if (canFinish()) {
         selectionPage.getNextPage.createLoadPathEntry
-      } else None
+      } else None)
     canFinish
   }
 }
@@ -204,8 +209,8 @@ class NLPSelectionPage extends WizardPage(
       new NLPProjectEntryPage,
       new NLPExternalEntryPage)
 
-  private var nextPage : Option[NLPWizardPage] = None
-  override def getNextPage : NLPWizardPage = nextPage.orNull
+  private var nextPage : Option[LPWizardPage] = None
+  override def getNextPage : LPWizardPage = nextPage.orNull
 
   override def createControl(parent : Composite) = {
     val lv = new ListViewer(parent, SWT.BORDER)
@@ -218,13 +223,13 @@ class NLPSelectionPage extends WizardPage(
       }
     })
     lv.setLabelProvider(new LabelProvider {
-      override def getText(element : Any) = TryCast[NLPWizardPage](
+      override def getText(element : Any) = TryCast[LPWizardPage](
           element).map(_.getTitle).getOrElse(super.getText(element))
     })
     lv.addSelectionChangedListener(new ISelectionChangedListener {
       override def selectionChanged(ev : SelectionChangedEvent) = {
         nextPage = TryCast[IStructuredSelection](ev.getSelection).map(
-            _.getFirstElement).flatMap(TryCast[NLPWizardPage])
+            _.getFirstElement).flatMap(TryCast[LPWizardPage])
         nextPage.foreach(_.setWizard(getWizard))
         setPageComplete(nextPage != None)
         getContainer.updateButtons()
@@ -237,11 +242,11 @@ class NLPSelectionPage extends WizardPage(
 
 import org.eclipse.jface.resource.ImageDescriptor
 
-abstract class NLPWizardPage(
+abstract class LPWizardPage(
     name : String, title : String, descriptor : ImageDescriptor = null)
         extends WizardPage(name, title, descriptor) {
-  override def getWizard() : NewLoadPathWizard =
-    super.getWizard.asInstanceOf[NewLoadPathWizard]
+  override def getWizard() : LoadPathWizard =
+    super.getWizard.asInstanceOf[LoadPathWizard]
 
   /* Calling this method should be basically free, so it also serves as the
    * implementation of isPageComplete */
@@ -249,7 +254,7 @@ abstract class NLPWizardPage(
   override def isPageComplete() = (createLoadPathEntry != None)
 }
 
-class NLPAbstractEntryPage extends NLPWizardPage(
+class NLPAbstractEntryPage extends LPWizardPage(
     "nlpAEP", "Abstract dependency") {
   setDescription(
       "Add an identifier for a dependency which the environment must provide.")
@@ -375,7 +380,7 @@ class NLPAbstractEntryPage extends NLPWizardPage(
   }
 }
 
-class NLPSourceEntryPage extends NLPWizardPage(
+class NLPSourceEntryPage extends LPWizardPage(
     "nlpSEP", "Another source folder in this project") {
   setDescription(
       "Add an additional source folder to this project.")
@@ -483,7 +488,7 @@ class NLPSourceEntryPage extends NLPWizardPage(
   }
 }
 
-class NLPProjectEntryPage extends NLPWizardPage(
+class NLPProjectEntryPage extends LPWizardPage(
     "nlpPEP", "Another Coqoon project") {
   setDescription(
       "Add a dependency on another Coqoon project in the workspace.")
@@ -528,7 +533,7 @@ class NLPProjectEntryPage extends NLPWizardPage(
   }
 }
 
-class NLPExternalEntryPage extends NLPWizardPage(
+class NLPExternalEntryPage extends LPWizardPage(
     "nlpEEP", "External development") {
   setDescription(
       "Add a dependency on a Coq development built outside of Coqoon.")
