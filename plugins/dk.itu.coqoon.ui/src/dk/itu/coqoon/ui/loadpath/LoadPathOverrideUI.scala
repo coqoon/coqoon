@@ -1,4 +1,4 @@
-package dk.itu.coqoon.ui
+package dk.itu.coqoon.ui.loadpath
 
 import dk.itu.coqoon.ui.utilities.{Event, Listener}
 import dk.itu.coqoon.core.model.ICoqModel

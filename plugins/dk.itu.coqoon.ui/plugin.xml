@@ -402,7 +402,7 @@
    <extension
          point="org.eclipse.ui.propertyPages">
       <page
-            class="dk.itu.coqoon.ui.LoadPathConfigurationPage"
+            class="dk.itu.coqoon.ui.loadpath.LoadPathConfigurationPage"
             icon="icons/coqide.png"
             id="dk.itu.sdg.kopitiam.propertyPages.CoqLoadPath"
             name="Coq Load Path">
@@ -433,7 +433,7 @@
       </page>
       <page
             category="dk.itu.sdg.kopitiam.propertyPages.CoqLoadPath"
-            class="dk.itu.coqoon.ui.LoadPathOverridePreferencePage"
+            class="dk.itu.coqoon.ui.loadpath.LoadPathOverridePreferencePage"
             id="dk.itu.sdg.kopitiam.propertyPages.CoqLoadPath.override"
             name="Local overrides">
          <enabledWhen>
