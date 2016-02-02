@@ -82,6 +82,8 @@ class LoadPathConfigurationPage
             </label>
           </composite>
         </composite>, c)
+    val Seq(Some(afb), Some(dfb), Some(edb), Some(upb), Some(dob)) =
+      names.getMany[Button]("afb", "dfb", "edb", "upb", "dob")
 
     val tv1 = new TreeViewer(
         names.get[Composite]("tvc-container").get, SWT.SINGLE | SWT.BORDER)
@@ -89,7 +91,7 @@ class LoadPathConfigurationPage
     tv1.setContentProvider(new LoadPathContentProvider)
     tv1.setInput(loadPath.get)
 
-    Listener.Selection(names.get[Button]("afb").get, Listener {
+    Listener.Selection(afb, Listener {
       case Event.Selection(_) =>
         val wiz = new NewLoadPathWizard(getElement)
         if (new WizardDialog(c.getShell, wiz).open == Window.OK) {
@@ -98,8 +100,6 @@ class LoadPathConfigurationPage
           tv1.refresh()
         }
     })
-
-    val dfb = names.get[Button]("dfb").get
     Listener.Selection(dfb, Listener {
       case Event.Selection(_) =>
         Option(tv1.getSelection.
@@ -110,8 +110,6 @@ class LoadPathConfigurationPage
           case _ =>
         }
     })
-
-    val edb = names.get[Button]("edb").get
     Listener.Selection(edb, Listener {
       case Event.Selection(_) =>
         /* XXX: pass the current value to the page */
@@ -144,8 +142,6 @@ class LoadPathConfigurationPage
           }
         })
     })
-
-    val upb = names.get[Button]("upb").get
     Listener.Selection(upb, Listener {
       case Event.Selection(_) =>
         Option(tv1.getSelection.
@@ -161,8 +157,6 @@ class LoadPathConfigurationPage
           case _ =>
         }
     })
-
-    val dob = names.get[Button]("dob").get
     Listener.Selection(dob, Listener {
       case Event.Selection(_) =>
         Option(tv1.getSelection.
