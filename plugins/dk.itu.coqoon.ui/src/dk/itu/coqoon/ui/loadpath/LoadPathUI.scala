@@ -59,19 +59,19 @@ class LoadPathConfigurationPage
             <label separator="horizontal">
               <grid-data h-span="2" />
             </label>
-            <button name="dfb">
+            <button name="dfb" enabled="false">
               <grid-data h-span="2" />
               Remove
             </button>
-            <button name="edb">
+            <button name="edb" enabled="false">
               <grid-data h-span="2" />
               Edit...
             </button>
-            <button name="upb">
+            <button name="upb" enabled="false">
               <grid-data />
               Up
             </button>
-            <button name="dob">
+            <button name="dob" enabled="false">
               <grid-data />
               Down
             </button>
