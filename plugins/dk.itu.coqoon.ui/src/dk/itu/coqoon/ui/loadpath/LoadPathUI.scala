@@ -185,17 +185,17 @@ class LoadPathConfigurationPage
           Option(ev.getSelection.asInstanceOf[TreeSelection].getFirstElement)
 
         selection match {
-          case Some(_ : DefaultOutputLPE) =>
+          case Some(e : DefaultOutputLPE) if e.getParent == None =>
             /* Deleting default output entries is really not a good idea */
             dfb.setEnabled(false)
             edb.setEnabled(true)
-          case Some(e : LPBase) if e.getParent != None =>
+          case Some(e : LPProvider) if e.getParent == None =>
             /* Only allow top-level entries to be edited or deleted */
-            dfb.setEnabled(false)
-            edb.setEnabled(false)
-          case _ =>
             dfb.setEnabled(true)
             edb.setEnabled(true)
+          case _ =>
+            dfb.setEnabled(false)
+            edb.setEnabled(false)
         }
 
         /* Only allow top-level entries to be moved up and down...*/
@@ -205,9 +205,9 @@ class LoadPathConfigurationPage
              * to be moved down */
             upb.setEnabled(p.getIndex != 0);
             dob.setEnabled(p.getIndex != loadPath.get.length - 1)
-          case Some(e : LPBase) if e.getParent != None =>
-            Seq(upb, dob).foreach(_.setEnabled(false))
           case _ =>
+            upb.setEnabled(false)
+            dob.setEnabled(false)
         }
       }
     })
