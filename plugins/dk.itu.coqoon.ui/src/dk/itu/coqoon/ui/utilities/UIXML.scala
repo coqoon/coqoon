@@ -210,6 +210,10 @@ object UIXML extends UIXML {
     private[UIXML] var names = Map[String, widgets.Widget]()
     def get[A <: widgets.Widget](name : String)(implicit a0 : Manifest[A]) =
       names.get(name).flatMap(TryCast[A])
+    def getMany[A <: widgets.Widget](
+        names : String*)
+        (implicit a0 : Manifest[A]) =
+      names.map(n => this.names.get(n).flatMap(TryCast[A]))
   }
 
   private def first(x : xml.Node, attributes : String*) : Option[String] = {
