@@ -31,6 +31,7 @@ protected object LoadPathModel {
   abstract class LPProvider(
       parent : Option[LPProvider], index : Int) extends LPBase(parent) {
     def getIndex() = index
+    def getProvider() : LoadPathProvider
   }
 
   /* Load path model entries backed by an ICoqLoadPathProvider whose children
@@ -60,7 +61,8 @@ protected object LoadPathModel {
 
   case class AbstractLPE(parent : Option[LPProvider], identifier : String,
       index : Int) extends LPNSChild(parent, index) {
-    override def getLoadPath = AbstractLoadPath(identifier).getLoadPath
+    override def getLoadPath = getProvider.getLoadPath
+    override def getProvider = AbstractLoadPath(identifier)
   }
 
   import org.eclipse.core.resources.IFolder
@@ -69,10 +71,13 @@ protected object LoadPathModel {
       extends LPProvider(parent, index) {
     override def getChildren = Seq(OutputSLPE(Some(this), output))
     override def hasChildren = true
+    override def getProvider = SourceLoadPath(folder, output)
   }
 
   case class DefaultOutputLPE(parent : Option[LPProvider],
-      folder : IFolder, index : Int) extends LPProvider(parent, index)
+      folder : IFolder, index : Int) extends LPProvider(parent, index) {
+    override def getProvider = DefaultOutputLoadPath(folder)
+  }
 
   case class ProjectLPE(parent : Option[LPProvider], project : IProject,
       index : Int) extends LPProvider(parent, index) {
@@ -80,6 +85,7 @@ protected object LoadPathModel {
         ICoqModel.toCoqProject(project)).toSeq.map(
             _.getLoadPathProviders).flatMap(translate(Some(this), _))
     override def hasChildren = getChildren.size > 0
+    override def getProvider = ProjectLoadPath(project)
   }
 
   case class ExternalLPE(parent : Option[LPProvider], fsPath : IPath,
@@ -87,6 +93,7 @@ protected object LoadPathModel {
     override def getChildren =
       Seq(NamespaceSLPE(Some(this), LoadPathEntry(fsPath, dir)))
     override def hasChildren = true
+    override def getProvider = ExternalLoadPath(fsPath, dir)
   }
 
   case class OutputSLPE(parent : Option[LPProvider],
