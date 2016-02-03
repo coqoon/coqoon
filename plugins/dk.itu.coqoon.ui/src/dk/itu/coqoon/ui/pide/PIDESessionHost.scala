@@ -51,7 +51,7 @@ trait PIDESessionHost extends OverlayRunner {
         }
       case _ =>
     }
-    session.syslog_messages += Session.Consumer("Coqoon") {
+    /*session.syslog_messages += Session.Consumer("Coqoon") {
       case o : isabelle.Prover.Output
           if o.is_exit && o.properties.contains("return_code" -> "1") =>
         val lastLines =
@@ -69,7 +69,7 @@ trait PIDESessionHost extends OverlayRunner {
         getAnnotationModel.foreach(_.removeAllAnnotations)
         /* Raise an error? */
       case _ =>
-    }
+    }*/
   })
 
   def checkedUpdate(
