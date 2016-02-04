@@ -507,7 +507,7 @@ private class PIDEReconciler(editor : PIDECoqEditor) extends EventReconciler {
   import EventReconciler._
   import org.eclipse.core.resources.{IMarker,IResource}
 
-  override def reconcile(events : List[DecoratedEvent]) = {
+  override def process(events : List[DecoratedEvent]) = {
     import isabelle._
 
     var earliestOffset = Int.MaxValue

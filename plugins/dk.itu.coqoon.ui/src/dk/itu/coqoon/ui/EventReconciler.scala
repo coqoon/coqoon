@@ -4,29 +4,38 @@ import dk.itu.coqoon.ui.utilities.SupersedableTask
 import org.eclipse.jface.text.{
   IDocument, ITextViewer, DocumentEvent, IDocumentListener, ITextInputListener}
 
-abstract class EventReconciler {
-  import EventReconciler._
+abstract class BatchCollector[A](delay : Int = 400) {
+  private val collectTask = new SupersedableTask(delay)
+  private object CollectionLock {
+    var items : List[A] = List()
+  }
+  def add(item : A) =
+    CollectionLock synchronized {
+      CollectionLock.items :+= item
+      collectTask schedule {
+        val items =
+          CollectionLock synchronized {
+            try {
+              CollectionLock.items
+            } finally CollectionLock.items = List()
+          }
+        process(items)
+      }
+    }
 
-  private val reconcileTask = new SupersedableTask(400)
+  protected def process(items : List[A])
+}
+
+import EventReconciler.DecoratedEvent
+abstract class EventReconciler extends BatchCollector[DecoratedEvent]{
   private object ReconciliationLock {
     var events : List[DecoratedEvent] = List()
   }
 
   private class Listener extends IDocumentListener with ITextInputListener {
     override def documentAboutToBeChanged(ev : DocumentEvent) =
-      ReconciliationLock synchronized {
-        ReconciliationLock.events = ReconciliationLock.events :+
-          DecoratedEvent(ev, ev.fDocument.get(ev.fOffset, ev.fLength))
-        reconcileTask.schedule {
-          val events =
-            ReconciliationLock synchronized {
-              try {
-                ReconciliationLock.events
-              } finally ReconciliationLock.events = List()
-            }
-          reconcile(events)
-        }
-      }
+      add(DecoratedEvent(ev, ev.fDocument.get(ev.fOffset, ev.fLength)))
+
     override def documentChanged(ev : DocumentEvent) = ()
 
     override def inputDocumentAboutToBeChanged(
@@ -60,8 +69,6 @@ abstract class EventReconciler {
     viewer = None
     listener = None
   }
-
-  def reconcile(events : List[DecoratedEvent])
 }
 object EventReconciler {
   case class DecoratedEvent(ev : DocumentEvent, old : String)
