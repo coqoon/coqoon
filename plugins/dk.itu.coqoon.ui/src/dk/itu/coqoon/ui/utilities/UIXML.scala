@@ -24,14 +24,14 @@ import org.eclipse.jface.layout.{
 
 class UIXML {
   import UIXML._
-  def apply(x : xml.Node, context : widgets.Widget) = {
+  def apply(x : xml.Node, context : AnyRef) = {
     lazy val names = new NameMap
     go(x, context, names)
     names
   }
   private def go(
-      x : xml.Node, context : widgets.Widget, names : NameMap) : Unit = {
-    val widget : Option[widgets.Widget] = (context, x) match {
+      x : xml.Node, context : AnyRef, names : NameMap) : Unit = {
+    val result : Option[AnyRef] = (context, x) match {
       case (parent : widgets.Composite, xml.Elem(_, "label", _, _, _*)) =>
         var flags = getScrollableFlags(x)
 
@@ -197,20 +197,20 @@ class UIXML {
       case _ =>
         None
     }
-    widget.foreach(
-        widget => first(x, "name").foreach(names.names += _ -> widget))
-    widget.flatMap(TryCast[widgets.Control]).foreach(widget => {
-      widget.setEnabled(x \@ "enabled" != "false")
-      x.child.foreach(go(_, widget, names))
-    })
+    result.foreach(
+        result => first(x, "name").foreach(names.names += _ -> result))
+    result.flatMap(TryCast[widgets.Control]).foreach(
+        widget => widget.setEnabled(x \@ "enabled" != "false"))
+    result.foreach(
+        result => x.child.foreach(go(_, result, names)))
   }
 }
 object UIXML extends UIXML {
   class NameMap {
-    private[UIXML] var names = Map[String, widgets.Widget]()
-    def get[A <: widgets.Widget](name : String)(implicit a0 : Manifest[A]) =
+    private[UIXML] var names = Map[String, AnyRef]()
+    def get[A <: AnyRef](name : String)(implicit a0 : Manifest[A]) =
       names.get(name).flatMap(TryCast[A])
-    def getMany[A <: widgets.Widget](
+    def getMany[A <: AnyRef](
         names : String*)
         (implicit a0 : Manifest[A]) =
       names.map(n => this.names.get(n).flatMap(TryCast[A]))
