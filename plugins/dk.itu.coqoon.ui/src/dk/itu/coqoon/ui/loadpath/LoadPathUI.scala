@@ -7,7 +7,7 @@
 
 package dk.itu.coqoon.ui.loadpath
 
-import org.eclipse.core.resources.IProject
+import org.eclipse.core.resources.{IFolder, IProject}
 import dk.itu.coqoon.ui.utilities.{Event, UIXML, UIUtils, Listener}
 import dk.itu.coqoon.ui.OnlyFoldersFilter
 import dk.itu.coqoon.core.model._
@@ -121,7 +121,7 @@ class LoadPathConfigurationPage
             case Some(SourceLPE(_, _, _, index)) =>
               (Some(new NLPSourceEntryPage), index)
             case Some(DefaultOutputLPE(_, _, index)) =>
-              (None, -1) /* XXX: add a page for this */
+              (Some(new NLPDefaultOutputEntryPage), index)
             case Some(ProjectLPE(_, _, index)) =>
               (Some(new NLPProjectEntryPage), index)
             case Some(ExternalLPE(_, _, _, index)) =>
@@ -436,7 +436,6 @@ class NLPSourceEntryPage extends LPWizardPage(
   setDescription(
       "Add an additional source folder to this project.")
 
-  import org.eclipse.core.resources.IFolder
   private var folder : Option[IFolder] = None
   private var output : Option[IFolder] = None
   override def createLoadPathEntry =
@@ -516,6 +515,61 @@ class NLPSourceEntryPage extends LPWizardPage(
           } else None
         output = folder
         if (!folder.forall(_.exists())) {
+          setErrorMessage(
+                "The folder \"" + path + "\" does not exist in this project")
+        } else setErrorMessage(null)
+        getContainer.updateButtons
+    })
+    val ob = names.get[Button]("ob").get
+    Listener.Selection(ob, Listener {
+      case Event.Selection(_) =>
+        val ed = UIUtils.createWorkspaceElementDialog(ob.getShell)
+        ed.addFilter(new OnlyFoldersFilter)
+        ed.setInput(getWizard.project)
+        if (ed.open == Window.OK)
+          Option(ed.getFirstResult) match {
+            case Some(f : IFolder) =>
+              ot.setText(f.getProjectRelativePath.toString)
+            case _ =>
+          }
+    })
+
+    setControl(names.get[Composite]("root").get)
+  }
+}
+
+class NLPDefaultOutputEntryPage extends LPWizardPage(
+    "nlpDOEP", "Default output directory") {
+  setDescription(
+      "Change the default output directory for source folders.")
+  private var output : Option[IFolder] = None
+  override def createLoadPathEntry = output.map(DefaultOutputLoadPath(_))
+
+  override def createControl(parent : Composite) = {
+    val names = UIXML(
+        <composite name="root">
+          <grid-layout columns="3" />
+          <label>
+            Output folder:
+          </label>
+          <text name="ot" border="true">
+            <grid-data h-grab="true" />
+          </text>
+          <button name="ob" style="push">
+            Browse...
+          </button>
+        </composite>, parent)
+    val ot = names.get[Text]("ot").get
+    Listener.Modify(ot, Listener {
+      case Event.Modify(_) =>
+        val path = ot.getText.trim
+        val folder =
+          if (path.length > 0) {
+            Some(getWizard.project.getFolder(new Path(path)))
+          } else None
+        output = folder
+        if (!folder.forall(_.exists())) {
+          output = None
           setErrorMessage(
                 "The folder \"" + path + "\" does not exist in this project")
         } else setErrorMessage(null)
