@@ -112,10 +112,11 @@ class LoadPathConfigurationPage
     })
     Listener.Selection(edb, Listener {
       case Event.Selection(_) =>
+        val selection = Option(tv1.getSelection).flatMap(
+            TryCast[TreeSelection]).map(_.getFirstElement)
         /* XXX: pass the current value to the page */
         val (page, index) =
-          Option(tv1.getSelection.
-              asInstanceOf[TreeSelection].getFirstElement) match {
+          selection match {
             case Some(AbstractLPE(_, _, index)) =>
               (Some(new NLPAbstractEntryPage), index)
             case Some(SourceLPE(_, _, _, index)) =>
@@ -130,7 +131,9 @@ class LoadPathConfigurationPage
               (None, -1)
           }
         page.foreach(page => {
-          val wiz = new EditLoadPathWizard(getElement, page)
+          val entry =
+            selection.flatMap(TryCast[LPProvider]).map(_.getProvider).get
+          val wiz = new EditLoadPathWizard(getElement, page, entry)
           if (new WizardDialog(c.getShell, wiz).open == Window.OK) {
             val lp = loadPath.get
             wiz.getResult.filter(!lp.contains(_)).foreach(element => {
@@ -234,8 +237,8 @@ class NewLoadPathWizard(
   }
 }
 
-class EditLoadPathWizard(override val project : IProject,
-    page : LPWizardPage) extends LoadPathWizard(project) {
+class EditLoadPathWizard(override val project : IProject, page : LPWizardPage,
+    input : LoadPathProvider) extends LoadPathWizard(project) {
   addPage(page)
 
   override def canFinish = page.isPageComplete
