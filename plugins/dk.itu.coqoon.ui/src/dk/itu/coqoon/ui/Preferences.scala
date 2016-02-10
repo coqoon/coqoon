@@ -97,7 +97,7 @@ class CoqoonUIPreferences extends AbstractPreferenceInitializer {
     node.put(COQ_SENT_BACKGROUND,
         StringConverter.asString(new RGB(118, 255, 133)))
     node.put(COQ_PROCESSING_BACKGROUND,
-        StringConverter.asString(new RGB(244, 255, 200)))
+        StringConverter.asString(new RGB(255, 255, 0)))
     node.put(KEYWORD_COLOR,
         StringConverter.asString(new RGB(127, 6, 101)))
 
@@ -114,7 +114,7 @@ class CoqoonUIPreferences extends AbstractPreferenceInitializer {
 }
 object CoqoonUIPreferences {
   val COQ_SENT_BACKGROUND = "coqSentBg"
-  val COQ_PROCESSING_BACKGROUND = "coqSentProcessBg"
+  val COQ_PROCESSING_BACKGROUND = "dk.itu.coqoon.ui:coqProcessingBg"
   val KEYWORD_COLOR = "coqKeywordFg"
   val MATCHING_BRACKETS = "matchingBrackets"
   val MATCHING_BRACKETS_COLOR = "matchingBracketsColor"

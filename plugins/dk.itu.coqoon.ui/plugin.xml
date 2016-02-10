@@ -341,8 +341,8 @@
       </specification>
       <specification
             annotationType="dk.itu.coqoon.ui.annotationTypes.processing"
-            colorPreferenceKey="coqSentProcessBg"
-            colorPreferenceValue="255,241,117"
+            colorPreferenceKey="dk.itu.coqoon.ui:coqProcessingBg"
+            colorPreferenceValue="255,255,0"
             highlightPreferenceKey="dk.itu.sdg.kopitiam.processing.mycolorbackgroundhighlightkey"
             highlightPreferenceValue="true"
             includeOnPreferencePage="true"
