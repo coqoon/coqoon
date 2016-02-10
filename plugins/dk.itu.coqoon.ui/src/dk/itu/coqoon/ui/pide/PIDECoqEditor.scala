@@ -189,19 +189,16 @@ class PIDECoqEditor
       }).flatten
 
     asyncExec {
-      val am =
-        if (CoqoonUIPreferences.ProcessingAnnotations.get) {
-          getAnnotationModel
-        } else None
-      am.foreach(
-          model => Option(getViewer).map(_.getDocument).foreach(model.connect))
-
       import org.eclipse.jface.text.Position
       var toDelete : Seq[(Command, Option[Annotation])] = Seq()
       var annotationsToAdd : Seq[(Command, Annotation, Position)] = Seq()
       var errorsToAdd : Map[Int, ((Command, (Int, Int), String))] = Map()
       var errorsToDelete : Seq[Command] = Seq()
 
+      val am =
+        if (CoqoonUIPreferences.ProcessingAnnotations.get) {
+          getAnnotationModel
+        } else None
       try {
         for (i <- changedResultsAndMarkup) i match {
           case (Some(offset), command, results, markup) =>
@@ -248,25 +245,22 @@ class PIDECoqEditor
             toDelete :+= (command, annotations.get(command))
         }
       } finally {
-        am.foreach(model => {
-          import scala.collection.JavaConversions._
-          val del =
-            for ((command, Some(annotation)) <- toDelete)
-              yield {
-                annotations -= command
-                annotation
-              }
-          val add =
-            (for ((command, annotation, position) <- annotationsToAdd)
-              yield {
-                annotations += (command -> annotation)
-                (annotation -> position)
-              }).toMap
-          model.replaceAnnotations(del.toArray, add)
+        import scala.collection.JavaConversions._
+        val del =
+          for ((command, Some(annotation)) <- toDelete)
+            yield {
+              annotations -= command
+              annotation
+            }
+        val add =
+          (for ((command, annotation, position) <- annotationsToAdd)
+            yield {
+              annotations += (command -> annotation)
+              (annotation -> position)
+            }).toMap
 
-          model.disconnect(getViewer.getDocument)
-          getSourceViewer.invalidateTextPresentation
-        })
+        if (!del.isEmpty || !add.isEmpty)
+          am.foreach(_.replaceAnnotations(del.toArray, add))
 
         if (!toDelete.isEmpty || !errorsToAdd.isEmpty ||
             !errorsToDelete.isEmpty)
