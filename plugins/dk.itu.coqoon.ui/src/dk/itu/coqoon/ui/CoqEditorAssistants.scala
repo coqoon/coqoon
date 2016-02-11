@@ -75,29 +75,32 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
     import dk.itu.coqoon.core.coqtop.CoqSentence
     import CoqSentence.Classifier._
 
-    var qedCount = 0
-    var prStart : Int = c.offset
-    var containingAssertion : Option[String] = None
-    while (prStart != 0) {
-      val (newStart, sentence) = quickScanBack(d, prStart)
-      val whitespace = getHelpfulLeadingWhitespace(sentence)
-      prStart = sentence match {
-        case DefinitionSentence(_, _, _, _) | ProofStartSentence(_) =>
-          newStart /* keep going */
-        case AssertionSentence(_, _, _) if qedCount == 0 =>
-          containingAssertion = Some(sentence)
-          0 /* stop */
-        case AssertionSentence(_, _, _) =>
-          qedCount -= 1
-          newStart /* keep going */
-        case ProofEndSentence(_) if prStart != c.offset =>
-          qedCount += 1
-          newStart /* keep going */
-        case _ if qedCount < 0 || whitespace.length == 0 =>
-          0 /* stop */
-        case _ =>
-          newStart /* keep going */
+    val containingAssertion = {
+      var qedCount = 0
+      var prStart : Int = c.offset
+      var result : Option[String] = None
+      while (prStart != 0) {
+        val (newStart, sentence) = quickScanBack(d, prStart)
+        val whitespace = getHelpfulLeadingWhitespace(sentence)
+        prStart = sentence match {
+          case DefinitionSentence(_, _, _, _) | ProofStartSentence(_) =>
+            newStart /* keep going */
+          case AssertionSentence(_, _, _) if qedCount == 0 =>
+            result = Some(sentence)
+            0 /* stop */
+          case AssertionSentence(_, _, _) =>
+            qedCount -= 1
+            newStart /* keep going */
+          case ProofEndSentence(_) if prStart != c.offset =>
+            qedCount += 1
+            newStart /* keep going */
+          case _ if qedCount < 0 || whitespace.length == 0 =>
+            0 /* stop */
+          case _ =>
+            newStart /* keep going */
+        }
       }
+      result
     }
 
     /* The indentation level to be given to a command immediately outside of
@@ -130,9 +133,9 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
             sentence.substring(nlCount).dropWhile(_.isWhitespace)
           val fixedSentence = outerIdt + trimmedLine
           if (fixedSentence != sentence) {
-            d.replace(sentenceInfo.getOffset + nlCount,
-                sentenceInfo.getLength - nlCount, fixedSentence)
-            c.offset = sentenceInfo.getOffset + nlCount + fixedSentence.length
+            c.offset = sentenceInfo.getOffset + nlCount
+            c.length = sentenceInfo.getLength - nlCount
+            c.text = fixedSentence + c.text
           }
         }
         /* Appropriately indenting the next line is always a good idea */
