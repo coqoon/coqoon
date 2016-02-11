@@ -7,6 +7,7 @@
 
 package dk.itu.coqoon.ui
 
+import dk.itu.coqoon.ui.CoqoonUIPreferences.{SpacesPerIndentationLevel => SPIL}
 import dk.itu.coqoon.ui.text.Region
 import org.eclipse.jface.text.{IDocument, TextUtilities => TU, DocumentCommand,
   IAutoEditStrategy, DefaultIndentLineAutoEditStrategy}
@@ -87,11 +88,13 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
       }
     }
 
+    /* The indentation level to be given to a command immediately outside of
+     * this proof */
     val outerIdt = containingAssertion.map(
         getHelpfulLeadingWhitespace).getOrElse("")
-    val wsCount = CoqoonUIPreferences.SpacesPerIndentationLevel.get
+    /* The indentation level to be given to commands inside this proof */
     val innerIdt = containingAssertion.map(
-        _ => outerIdt + (" " * wsCount)).getOrElse("")
+        _ => outerIdt + (" " * SPIL.get)).getOrElse("")
 
     val sentenceInfo = {
       val (_, content) = quickScanBack(d, c.offset)
@@ -222,7 +225,6 @@ abstract class FormattingStrategyBase
 
 class CoqMasterFormattingStrategy extends FormattingStrategyBase {
   import CoqMasterFormattingStrategy._
-  import CoqoonUIPreferences.{SpacesPerIndentationLevel => SPIL}
 
   import dk.itu.coqoon.core.model._
 
