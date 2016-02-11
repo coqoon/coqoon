@@ -9,8 +9,8 @@ package dk.itu.coqoon.ui
 
 import dk.itu.coqoon.ui.CoqoonUIPreferences.{SpacesPerIndentationLevel => SPIL}
 import dk.itu.coqoon.ui.text.Region
-import org.eclipse.jface.text.{IDocument, TextUtilities => TU, DocumentCommand,
-  IAutoEditStrategy, DefaultIndentLineAutoEditStrategy}
+import org.eclipse.jface.text.{
+  IDocument, TextUtilities => TU, DocumentCommand, IAutoEditStrategy}
 
 class CoqAutoEditStrategy extends IAutoEditStrategy {
   override def customizeDocumentCommand(
@@ -23,8 +23,6 @@ class CoqAutoEditStrategy extends IAutoEditStrategy {
   }
 }
 object CoqAutoEditStrategy extends CoqAutoEditStrategy {
-  val indent = new DefaultIndentLineAutoEditStrategy
-
   object MatchStartFragment {
     val expr = ("^\\s*match\\s+(.*)\\s+with").r
     def unapply(input : CharSequence) = input match {
@@ -56,6 +54,20 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
          head <- Some(t) if head.exists(!_.isWhitespace))
       return head.takeWhile(_.isWhitespace)
     ""
+  }
+
+  private def getLastLineWhitespace(d : IDocument, c : DocumentCommand) = {
+    /* For indentation purposes, we treat simple bullets as whitespace
+     * characters */
+    def isWhitespaceesque(c : Char) =
+      c.isWhitespace || c == '+' || c == '-' || c == '*'
+    val p =
+      if (c.offset == d.getLength) {
+        c.offset - 1
+      } else c.offset
+    val info = d.getLineInformationOfOffset(p)
+    " " * (d.get(
+        info.getOffset, info.getLength).takeWhile(isWhitespaceesque).size)
   }
 
   private def adjustIndentation(d : IDocument, c : DocumentCommand) = {
@@ -103,10 +115,7 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
     val sentence = d.get(sentenceInfo.getOffset, sentenceInfo.getLength)
 
     sentence match {
-      case DefinitionSentence(_, _, _, _) =>
-        indent.customizeDocumentCommand(d, c)
       case AssertionSentence(keyword, identifier, body) =>
-        /* XXX: don't hard-code two spaces */
         c.text += outerIdt + "Proof.\n" + innerIdt
       case ProofStartSentence(keyword) =>
         c.text += innerIdt
@@ -129,7 +138,7 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
         /* Appropriately indenting the next line is always a good idea */
         c.text += outerIdt
       case _ =>
-        indent.customizeDocumentCommand(d, c)
+        c.text += getLastLineWhitespace(d, c)
     }
   }
 }
