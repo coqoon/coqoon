@@ -332,25 +332,30 @@ class PIDECoqEditor
   protected[ui] var ibLength : Int = 0
 
   override protected def getPerspective() = {
-    val r = exec {
-      Option(getViewer).flatMap {
-        case v =>
-          val (start, end) =
-            (v.getTopIndexStartOffset, v.getBottomIndexEndOffset)
-          if (end < start) {
-            None
-          } else Some(Region(ibLength + start, length = end - start))
-      }
-    }
     val overlay = getOverlay match {
       case Some((o, _)) => o.wrap
       case _ => Document.Node.Overlays.empty
     }
-    r match {
-      case Some(r) =>
-        Perspective.makePartial(r, overlay)
-      case _ =>
-        Perspective.makeEmpty(overlay)
+    if (CoqoonUIPreferences.UsePerspective.get) {
+      val r = exec {
+        Option(getViewer).flatMap {
+          case v =>
+            val (start, end) =
+              (v.getTopIndexStartOffset, v.getBottomIndexEndOffset)
+            if (end < start) {
+              None
+            } else Some(Region(ibLength + start, length = end - start))
+        }
+      }
+
+      r match {
+        case Some(r) =>
+          Perspective.makePartial(r, overlay)
+        case _ =>
+          Perspective.makeEmpty(overlay)
+      }
+    } else {
+      Perspective.makeFull(overlay)
     }
   }
 
