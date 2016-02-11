@@ -39,11 +39,6 @@ object PIDENavigationHost {
 class PIDECoqEditor
     extends BaseCoqEditor with CoqGoalsContainer with PIDESessionHost
                           with PIDENavigationHost {
-  private[pide] def getLastSnapshot() =
-    executeWithCommandsLock {
-      lastSnapshot
-    }
-
   override def getEntities(command : isabelle.Command) = {
     val ls = getLastSnapshot.get
       for ((range, elem) <- Responses.extractMarkup(ls, command);
@@ -393,8 +388,6 @@ class PIDECoqEditor
     itc.flatMap(documentCommandToPresentationCommand)
   }
 
-  override protected[pide] def executeWithCommandsLock[A](
-      f : => A) = super.executeWithCommandsLock(f)
   private[pide] def getSession() = session
 }
 

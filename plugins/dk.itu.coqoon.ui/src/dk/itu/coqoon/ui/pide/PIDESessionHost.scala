@@ -25,10 +25,13 @@ trait PIDESessionHost extends OverlayRunner {
   protected def generateInitialEdits() :
       List[Document.Node.Edit[Text.Edit, Text.Perspective]]
 
-  private object CommandsLock
-  protected var lastSnapshot : Option[Document.Snapshot] = None
-  protected def executeWithCommandsLock[A](f : => A) =
-    CommandsLock synchronized f
+  private object SnapshotLock {
+    var lastSnapshot : Option[Document.Snapshot] = None
+  }
+  protected def getLastSnapshot() =
+    SnapshotLock synchronized {
+      SnapshotLock.lastSnapshot
+    }
 
   private object DeadLock /* (no pun intended) */ {
     var dead : Boolean = false
@@ -37,8 +40,9 @@ trait PIDESessionHost extends OverlayRunner {
   session.addInitialiser(session => {
     session.commands_changed += Session.Consumer[Any]("Coqoon") {
       case changed : Session.Commands_Changed =>
-        CommandsLock synchronized {
-          lastSnapshot = getNodeName.map(n => session.snapshot(n))
+        val ls = getNodeName.map(n => session.snapshot(n))
+        SnapshotLock synchronized {
+          SnapshotLock.lastSnapshot = ls
         }
         commandsUpdated(changed.commands.toSeq)
 
@@ -46,7 +50,7 @@ trait PIDESessionHost extends OverlayRunner {
           case Some((o @ Overlay(command, _, _), listener))
               if changed.commands.contains(command) =>
             Responses.extractQueryResult(
-                lastSnapshot.get, command, o.id).foreach(listener.onResult)
+                ls.get, command, o.id).foreach(listener.onResult)
           case _ =>
         }
       case _ =>
