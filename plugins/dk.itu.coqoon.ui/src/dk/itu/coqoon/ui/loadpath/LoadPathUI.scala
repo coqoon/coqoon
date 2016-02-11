@@ -45,10 +45,9 @@ class LoadPathConfigurationPage
     val names = UIXML(
         <composite name="root">
           <grid-layout columns="2" />
-          <composite name="tvc-container">
+          <tree-viewer name="tv1">
             <grid-data h-grab="true" v-grab="true" />
-            <fill-layout />
-          </composite>
+          </tree-viewer>
           <composite>
             <grid-data />
             <grid-layout columns="2" equal-width="true" />
@@ -85,8 +84,7 @@ class LoadPathConfigurationPage
     val Seq(Some(afb), Some(dfb), Some(edb), Some(upb), Some(dob)) =
       names.getMany[Button]("afb", "dfb", "edb", "upb", "dob")
 
-    val tv1 = new TreeViewer(
-        names.get[Composite]("tvc-container").get, SWT.SINGLE | SWT.BORDER)
+    val tv1 = names.get[TreeViewer]("tv1").get
     tv1.setLabelProvider(new LoadPathLabelProvider)
     tv1.setContentProvider(new LoadPathContentProvider)
     tv1.setInput(loadPath.get)
@@ -324,10 +322,9 @@ class NLPAbstractEntryPage extends LPWizardPage(
             <grid-data h-grab="true" />
             Select from the list of available abstract dependencies
           </button>
-          <composite name="lv-container">
-            <grid-data h-grab="true" v-grab="true" />
-            <fill-layout />
-          </composite>
+          <tree-viewer name="lv">
+            <grid-data grab="true" />
+          </tree-viewer>
           <button name="b2" style="radio">
             <grid-data h-grab="true" />
             Manually specify the identifier of an abstract dependency
@@ -337,8 +334,7 @@ class NLPAbstractEntryPage extends LPWizardPage(
           </text>
         </composite>, parent)
 
-    val lv = new TreeViewer(
-        names.get[Composite]("lv-container").get, SWT.SINGLE | SWT.BORDER)
+    val lv = names.get[TreeViewer]("lv").get
     lv.setContentProvider(new FuturisticContentProvider[TreeViewer] {
       override def actuallyGetChildren(element : AnyRef) =
         element match {
