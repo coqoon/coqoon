@@ -19,6 +19,7 @@ package dk.itu.coqoon.ui.utilities
 import scala.xml
 import dk.itu.coqoon.core.utilities.TryCast
 import org.eclipse.swt.{SWT, custom, layout, widgets}
+import org.eclipse.jface.viewers
 import org.eclipse.jface.layout.{
   GridDataFactory, GridLayoutFactory, RowLayoutFactory}
 
@@ -122,6 +123,10 @@ class UIXML {
         val flags = getScrollableFlags(x)
         Some(new widgets.Composite(parent, flags))
       case (parent : widgets.Composite,
+          xml.Elem(_, "tree-viewer", _, _, _*)) =>
+        Some(new viewers.TreeViewer(parent,
+            SWT.H_SCROLL | SWT.V_SCROLL | SWT.SINGLE | SWT.BORDER))
+      case (parent : widgets.Composite,
           xml.Elem(_, "grid-layout", _, _, _*)) =>
         val gl = GridLayoutFactory.fillDefaults.create
 
@@ -194,6 +199,14 @@ class UIXML {
           xml.Elem(_, "tool-tip", _, _, _*)) =>
         context.setToolTipText(juice(x))
         None
+
+      /* If the context is a viewer, and this element has no particular
+       * significance for viewers, try to interpret it again using the viewer's
+       * control as the context. */
+      case (context : viewers.Viewer, c) =>
+        go(c, context.getControl, names)
+        None
+
       case _ =>
         None
     }
