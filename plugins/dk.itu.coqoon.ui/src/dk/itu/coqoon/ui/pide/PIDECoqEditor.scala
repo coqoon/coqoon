@@ -170,7 +170,7 @@ class PIDECoqEditor
   override protected def commandsUpdated(changed : Seq[Command]) = {
     val ls = getLastSnapshot.get
     val changedResultsAndMarkup = ({
-      for (c <- changed)
+      for (c <- changed if !c.is_ignored)
         yield {
           ls.node.command_start(c) match {
             case Some(offset) if offset < ibLength =>
