@@ -112,9 +112,14 @@ class PIDECoqEditor
       }
   }
 
-  private var lastCommand : Option[Command] = None
-
   import dk.itu.coqoon.ui.utilities.UIUtils.asyncExec
+  private var lastCommand : Option[Command] = None
+  session.addInitialiser(_ => asyncExec {
+    lastCommand = None
+    annotations = Map()
+    getAnnotationModel.foreach(_.removeAllAnnotations)
+  })
+
   private def caretPing() =
     asyncExec {
       val ls = getLastSnapshot

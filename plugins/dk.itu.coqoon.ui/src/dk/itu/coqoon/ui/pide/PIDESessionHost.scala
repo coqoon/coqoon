@@ -37,6 +37,10 @@ trait PIDESessionHost extends OverlayRunner {
     var dead : Boolean = false
   }
 
+  session.addInitialiser(_ =>
+    SnapshotLock synchronized {
+      SnapshotLock.lastSnapshot = None
+    })
   session.addInitialiser(session => {
     session.commands_changed += Session.Consumer[Any]("Coqoon") {
       case changed : Session.Commands_Changed =>
