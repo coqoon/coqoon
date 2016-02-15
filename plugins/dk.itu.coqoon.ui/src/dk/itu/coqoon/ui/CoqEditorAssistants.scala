@@ -118,6 +118,10 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
     val sentence = d.get(sentenceInfo.getOffset, sentenceInfo.getLength)
 
     sentence match {
+      case DefinitionSentence(_, _, _, _) =>
+        /* Because the classifiers are just dumb regular expressions,
+         * definitions that use ":=" are also caught by AssertionSentence */
+        c.text += getLastLineWhitespace(d, c)
       case AssertionSentence(keyword, identifier, body) =>
         c.text += outerIdt + "Proof.\n" + innerIdt
       case ProofStartSentence(keyword) =>
