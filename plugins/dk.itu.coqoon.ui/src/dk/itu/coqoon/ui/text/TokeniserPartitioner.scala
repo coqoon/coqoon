@@ -150,6 +150,7 @@ class TokeniserPartitioner(
         return tr.asTypedRegion(label)
       } else pos = tr.end
     }
-    return Region(offset, length = length - offset).asTypedRegion(start.label)
+    return Region(offset,
+        length = length - offset).asTypedRegion(mapping.get(start).get._1)
   }
 }
