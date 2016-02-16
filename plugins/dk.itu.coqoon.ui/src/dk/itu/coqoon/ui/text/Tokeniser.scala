@@ -42,6 +42,7 @@ class Tokeniser(val automaton : PushdownAutomaton[Char]) {
     private var lastTokenType = initialState
     private var position = 0
     private var state = start
+    private var exhausted = false
 
     override def hasNext = {
       prime()
@@ -61,7 +62,7 @@ class Tokeniser(val automaton : PushdownAutomaton[Char]) {
     private var nextToken : Option[Token] = None
     private def prime() : Unit = {
       import dk.itu.coqoon.core.utilities.Substring
-      if (nextToken == None) {
+      if (!exhausted && nextToken == None) {
         while (nextToken == None && position < input.length) {
           val c = input.charAt(position)
           state.accept(c) match {
@@ -85,13 +86,12 @@ class Tokeniser(val automaton : PushdownAutomaton[Char]) {
         }
 
         if (nextToken == None) {
-          /* Produce a final token if possible */
+          /* Produce a final token */
           val tokenContent =
             Substring(input, lastTokenStart, position)
-          if (tokenContent.length > 0) {
-            nextToken = Some((lastTokenType, tokenContent.toString))
-            lastTokenStart = position
-          }
+          nextToken = Some((lastTokenType, tokenContent.toString))
+          lastTokenStart = position
+          exhausted = true
         }
       }
     }
