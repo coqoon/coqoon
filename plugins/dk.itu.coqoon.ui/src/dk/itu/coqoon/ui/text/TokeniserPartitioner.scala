@@ -93,23 +93,79 @@ class TokeniserPartitioner(
     }
   override def getActiveRewriteSession() = session.orNull
 
+  private def scrutiniseToken(d : IDocument, ts : List[Tokeniser.Token],
+      idx : Int, t0 : Tokeniser.Token, pos : Int) : IRegion = {
+    val (t, s) = t0
+    val tr = Region(pos, length = s.length)
+    val Some((_, leadin)) = mapping.get(t)
+    val next =
+      if (idx < (ts.length - 1)) {
+        Some(ts(idx + 1))
+      } else None
+    val subsequentTokens = {
+      val rs = tr.start + leadin
+      this.t.tokens(t,
+          DocumentAdapter.makeSequence(d).subSequence(rs, d.getLength))
+    }
+
+    val (t1, t2) =
+      if (subsequentTokens.hasNext) {
+        val t1_ = subsequentTokens.next
+        /* The first token won't include its leadin sequence, so add it back */
+        val t1 = (t1_._1, d.get(tr.start, leadin) + t1_._2)
+        if (subsequentTokens.hasNext) {
+          (Some(t1), Some(subsequentTokens.next))
+        } else (Some(t1), None)
+      } else (None, None)
+
+    if (t1 == None) {
+      tokens.clear
+    } else if (t2 == next) {
+      /* Hooray! The next token wasn't affected by this change, so we can just
+       * swap out this token without redoing everything after this point */
+      if (t0 == t1.get) {
+        /* In fact, this change doesn't seem to have done anything at all, so
+         * let's just suppress it entirely */
+        return null
+      } else tokens.set(Some(ts.updated(idx, t1.get)))
+    } else {
+      /* XXX: can we do something cleverer when we introduce a new token at
+       * the end of the document? */
+      if (idx != 0) {
+        tokens.set(Some(ts.take(idx) ++ t1 ++ t2 ++ subsequentTokens.toList))
+      } else tokens.clear
+    }
+    Region(pos, length = d.getLength - pos)
+  }
+
   override def documentAboutToBeChanged(ev: DocumentEvent) : Unit = ()
-  /* This is a bit dodgy: we return the correct changed region of the document,
-   * but we completely destroy all of the cached tokens in the process! (We
-   * have to destroy at least some of the tokens to stop them becoming stale,
-   * though...) */
   override def documentChanged2(ev : DocumentEvent) : IRegion =
     tokens.asOption match {
       case Some(ts) =>
-        tokens.clear
         var pos = 0
-        for ((t, s) <- ts) {
-          val tr = Region(pos, length = s.length)
-          if (tr.contains(ev.fOffset)) {
-            return tr.resize(ev.fDocument.getLength - pos)
-          } else pos = tr.end
+        ts.zipWithIndex foreach {
+          case (t0 @ (t, s), idx)
+              if Region(pos, length = s.length).contains(ev.fOffset) =>
+            /* This is the affected region; see if we can get away with
+             * patching it out of the existing list of tokens */
+            val Some((_, leadin)) = mapping.get(t)
+            if (Region(pos, length = leadin).contains(ev.fOffset)) {
+              /* Oh no! The lead-in sequence may have been damaged! Let's try
+               * to recover by pretending that the /last/ token was the
+               * affected one */
+              val tP = ts(idx - 1)
+              return scrutiniseToken(
+                  ev.fDocument, ts, idx - 1, tP, pos - tP._2.length)
+            } else return scrutiniseToken(ev.fDocument, ts, idx, t0, pos)
+          case ((_, s), _) =>
+            pos += s.length
         }
-        null
+        /* If we've made it through all the tokens, then we're presumably at
+         * the end of the document; handle this change by examining the last
+         * token */
+        val tP = ts.last
+        scrutiniseToken(
+            ev.fDocument, ts, ts.length - 1, tP, pos - tP._2.length)
       case None =>
         /* To err on the safe side, claim that everything's changed */
         Region(0, length = ev.fDocument.getLength)
