@@ -1,3 +1,17 @@
+Coqoon 0.7.2
+============
+
+16th February 2016
+
+This release adds limited support for editing load path entries, improves
+the behaviour of the autocompletion code, and greatly improves the performance
+and reliability of syntax highlighting.
+
+Bug fixes
+---------
+
+* Outdated session information and annotations are now discarded properly
+
 Coqoon 0.7.1.2
 ==============
 
