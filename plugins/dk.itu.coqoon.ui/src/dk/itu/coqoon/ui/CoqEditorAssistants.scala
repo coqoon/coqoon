@@ -65,9 +65,11 @@ object CoqAutoEditStrategy extends CoqAutoEditStrategy {
       if (c.offset == d.getLength) {
         c.offset - 1
       } else c.offset
-    val info = d.getLineInformationOfOffset(p)
-    " " * (d.get(
-        info.getOffset, info.getLength).takeWhile(isWhitespaceesque).size)
+    if (p >= 0) {
+      val info = d.getLineInformationOfOffset(p)
+      " " * (d.get(
+          info.getOffset, info.getLength).takeWhile(isWhitespaceesque).size)
+    } else ""
   }
 
   private def adjustIndentation(d : IDocument, c : DocumentCommand) = {
