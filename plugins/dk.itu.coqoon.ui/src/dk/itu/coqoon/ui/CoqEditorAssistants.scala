@@ -157,12 +157,8 @@ import org.eclipse.jface.text.contentassist.ICompletionProposal
 class CoqQuickAssistProcessor extends IQuickAssistProcessor {
   import org.eclipse.jface.text.source.Annotation
 
-  override def canAssist(context : IQuickAssistInvocationContext) = {
-    println(this + ".canAssist(" + context + ")"); false
-  }
-  override def canFix(i : Annotation) = {
-    println(this + ".canFix(" + i + ")"); false
-  }
+  override def canAssist(context : IQuickAssistInvocationContext) = false
+  override def canFix(i : Annotation) = false
   override def computeQuickAssistProposals(
       context : IQuickAssistInvocationContext) : Array[ICompletionProposal] = {
     Array()
