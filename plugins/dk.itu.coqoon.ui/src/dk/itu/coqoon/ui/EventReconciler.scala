@@ -4,7 +4,7 @@ import dk.itu.coqoon.ui.utilities.SupersedableTask
 import org.eclipse.jface.text.{
   IDocument, ITextViewer, DocumentEvent, IDocumentListener, ITextInputListener}
 
-abstract class BatchCollector[A](delay : Int = 400) {
+abstract class BatchCollector[A](delay : Int = BatchCollector.DEFAULT_DELAY) {
   private val collectTask = new SupersedableTask(delay)
   private object CollectionLock {
     var items : List[A] = List()
@@ -25,9 +25,13 @@ abstract class BatchCollector[A](delay : Int = 400) {
 
   protected def process(items : List[A])
 }
+object BatchCollector {
+  final val DEFAULT_DELAY = 400
+}
 
 import EventReconciler.DecoratedEvent
-abstract class EventReconciler extends BatchCollector[DecoratedEvent]{
+abstract class EventReconciler(delay : Int = BatchCollector.DEFAULT_DELAY)
+    extends BatchCollector[DecoratedEvent](delay) {
   private object ReconciliationLock {
     var events : List[DecoratedEvent] = List()
   }
