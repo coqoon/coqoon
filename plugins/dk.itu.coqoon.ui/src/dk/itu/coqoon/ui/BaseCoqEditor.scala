@@ -28,6 +28,17 @@ abstract class BaseCoqEditor extends TextEditor {
             TryCast[ICoqVernacFile]).map(_.detach)
   }
 
+  object WorkingCopyListener extends CoqElementChangeListener {
+    override def coqElementChanged(ev : CoqElementEvent) =
+      ev match {
+        case CoqFileContentChangedEvent(f)
+            if workingCopy.get.contains(f) =>
+          println("Working copy changed, updating folding information")
+          updateFolding
+        case _ =>
+      }
+  }
+
   import org.eclipse.jface.text.source.SourceViewerConfiguration
   protected def createSourceViewerConfiguration() : SourceViewerConfiguration =
     new BaseCoqSourceViewerConfiguration(this)
@@ -49,15 +60,21 @@ abstract class BaseCoqEditor extends TextEditor {
       new TextFileDocumentProvider {
         override def getDefaultEncoding() = "UTF-8"
       }))
+    ICoqModel.getInstance.addListener(WorkingCopyListener)
     setSourceViewerConfiguration(createSourceViewerConfiguration)
     super.initializeEditor
+  }
+
+  override protected def dispose() = {
+    ICoqModel.getInstance.removeListener(WorkingCopyListener)
+    super.dispose
   }
 
   def getViewer() = super.getSourceViewer
 
   protected var annotationModel : Option[ProjectionAnnotationModel] = None
   protected var oldAnnotations : Array[Annotation] = Array()
-  protected[ui] def updateFolding() : Unit = {
+  private def updateFolding() : Unit = {
     import dk.itu.coqoon.core.utilities.Substring
 
     import scala.collection.JavaConversions._
@@ -86,10 +103,8 @@ abstract class BaseCoqEditor extends TextEditor {
   }
 
   override def isEditable =
-    TryCast[IFileEditorInput](
-        getEditorInput).map(_.getFile).flatMap(
-           ICoqModel.getInstance.toCoqElement) match {
-      case Some(q) =>
+    workingCopy.get match {
+      case Some(_) =>
         super.isEditable
       case None =>
         /* Anything without a backing ICoqElement isn't really part of Coqoon's

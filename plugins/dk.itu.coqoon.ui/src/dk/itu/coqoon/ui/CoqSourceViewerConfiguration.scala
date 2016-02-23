@@ -186,9 +186,7 @@ class WorkingCopyReconciler(
     editor : BaseCoqEditor) extends EventReconciler(delay = 500) {
   import EventReconciler._
 
-  override def process(events : List[DecoratedEvent]) = {
+  override def process(events : List[DecoratedEvent]) =
     editor.workingCopy.get.foreach(_.setContents(
         editor.getViewer.getDocument.get))
-    editor.updateFolding
-  }
 }
