@@ -83,8 +83,6 @@ class CoqEditor extends BaseCoqEditor with CoqTopEditorContainer {
     super.dispose
   }
 
-  final def getViewer = super.getSourceViewer
-
   override protected def createSourceViewerConfiguration =
     new CoqSourceViewerConfiguration(this)
 

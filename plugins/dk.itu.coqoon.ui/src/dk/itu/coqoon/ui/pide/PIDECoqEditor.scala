@@ -99,8 +99,6 @@ class PIDECoqEditor
     super.dispose
   }
 
-  def getViewer = super.getSourceViewer
-
   import isabelle.{Text, Command, Protocol, Document}
 
   import org.eclipse.swt.custom.{CaretEvent, CaretListener}

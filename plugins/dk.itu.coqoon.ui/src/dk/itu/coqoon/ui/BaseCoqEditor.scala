@@ -53,6 +53,8 @@ abstract class BaseCoqEditor extends TextEditor {
     super.initializeEditor
   }
 
+  def getViewer() = super.getSourceViewer
+
   protected var annotationModel : Option[ProjectionAnnotationModel] = None
   protected var oldAnnotations : Array[Annotation] = Array()
   protected[ui] def updateFolding() : Unit = {
