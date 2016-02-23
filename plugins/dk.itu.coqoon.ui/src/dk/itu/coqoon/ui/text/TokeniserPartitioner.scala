@@ -31,7 +31,7 @@ private object DocumentAdapter {
     override def charAt(pos : Int) = d.getChar(start + pos)
     override def subSequence(start : Int, end : Int) =
       new DocumentSequence(d, this.start + start, this.start + end)
-    override def toString = d.get(start, end - start)
+    override def toString = d.get(start, length)
     def describe = s"DocumentSequence($d, start = $start, end = $end)"
   }
   def makeSequence(d : IDocument) : DocumentSequence =
