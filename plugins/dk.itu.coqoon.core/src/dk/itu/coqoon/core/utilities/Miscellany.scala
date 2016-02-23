@@ -17,22 +17,14 @@
 package dk.itu.coqoon.core.utilities
 
 class Substring(val base : CharSequence, val start : Int, val end : Int)
-    extends CharSequence with Seq[Char] {
-  private class SubstringIterator extends Iterator[Char] {
-    private var position = 0
-    override def hasNext = (position < Substring.this.length)
-    override def next = try charAt(position) finally position = position + 1
-  }
+    extends CharSequence {
+  override final lazy val length = end - start
 
-  override def apply(offset : Int) = charAt(offset)
   override def charAt(offset : Int) = base.charAt(start + offset)
-  override def length = end - start
   override def subSequence(start : Int, end : Int) =
-    new Substring(this, start, end)
+    new Substring(base, this.start + start, this.start + end)
 
-  override def iterator : Iterator[Char] = new SubstringIterator
-
-  override def toString = mkString
+  override def toString = base.subSequence(start, end).toString
 }
 object Substring {
   def apply(base : CharSequence) : Substring =

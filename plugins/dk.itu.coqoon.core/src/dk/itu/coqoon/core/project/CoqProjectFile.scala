@@ -40,7 +40,7 @@ object CoqProjectFile {
         inString = !inString
         content = true; i += 1
       case q @ Backslash() =>
-        content = true; token ++= q.subSequence(1, 2); i += 2
+        content = true; token :+= q.charAt(1); i += 2
       case Whitespace() if !inString && !content =>
         i += 1
       case Whitespace() if !inString =>

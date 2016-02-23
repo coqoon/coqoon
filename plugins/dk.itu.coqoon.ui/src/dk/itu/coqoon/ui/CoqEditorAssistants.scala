@@ -317,7 +317,7 @@ class CoqMasterFormattingStrategy extends FormattingStrategyBase {
     val sentences =
       CoqSentence.getNextSentences(document.get, 0, rawEnd).map(_._1)
     val firstSentence = sentences.find(
-        s => s.start + s.takeWhile(
+        s => s.start + s.toString.takeWhile(
             _.isWhitespace).length >= rawRegion.getOffset)
     if (firstSentence != None) {
       val start = firstSentence.get.start

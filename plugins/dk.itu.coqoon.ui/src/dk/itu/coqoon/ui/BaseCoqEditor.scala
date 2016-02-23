@@ -64,7 +64,7 @@ abstract class BaseCoqEditor extends TextEditor {
       case f : ICoqScriptGroup
           if f.getChildren.size > 1 =>
         val padding = f.getText.takeWhile(_.isWhitespace).length
-        if (Substring(f.getText, padding).count(_ == '\n') < 3) {
+        if (Substring(f.getText, padding).toString.count(_ == '\n') < 3) {
           false
         } else {
           positions +:=
