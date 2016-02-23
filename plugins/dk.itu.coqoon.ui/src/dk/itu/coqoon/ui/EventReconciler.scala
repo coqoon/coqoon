@@ -32,7 +32,7 @@ abstract class EventReconciler extends BatchCollector[DecoratedEvent]{
     var events : List[DecoratedEvent] = List()
   }
 
-  private class Listener extends IDocumentListener with ITextInputListener {
+  private object Listener extends IDocumentListener with ITextInputListener {
     override def documentAboutToBeChanged(ev : DocumentEvent) =
       add(DecoratedEvent(ev, ev.fDocument.get(ev.fOffset, ev.fLength)))
 
@@ -48,27 +48,15 @@ abstract class EventReconciler extends BatchCollector[DecoratedEvent]{
   }
 
   private var viewer : Option[ITextViewer] = None
-  private var listener : Option[Listener] = None
 
-  def install(v : ITextViewer) = {
-    viewer = Option(v)
-    listener = listener.orElse(Some(new Listener))
-    (viewer, listener) match {
-      case (Some(viewer), Some(listener)) =>
-        viewer.addTextInputListener(listener)
-      case _ =>
-    }
-  }
-  def uninstall() = {
-    (viewer, listener) match {
-      case (Some(viewer), Some(listener)) =>
-        viewer.removeTextInputListener(listener)
-      case _ =>
-        
-    }
-    viewer = None
-    listener = None
-  }
+  def install(v : ITextViewer) = Option(v).foreach(viewer => {
+    viewer.addTextInputListener(Listener)
+    this.viewer = Some(viewer)
+  })
+  def uninstall() = viewer.foreach(viewer => {
+    viewer.removeTextInputListener(Listener)
+    this.viewer = None
+  })
 }
 object EventReconciler {
   case class DecoratedEvent(ev : DocumentEvent, old : String)
