@@ -37,12 +37,6 @@ class BaseCoqSourceViewerConfiguration(
     formatter
   }
 
-  override def getReconciler (v : ISourceViewer) : IReconciler = {
-    val strategy = new CoqWorkingCopyReconcilingStrategy(v.getDocument, editor)
-    val reconciler = new MonoReconciler(strategy, false)
-    reconciler
-  }
-
   override def getConfiguredContentTypes(v : ISourceViewer) =
     IDocument.DEFAULT_CONTENT_TYPE +: CoqPartitions.TYPES
   override def getConfiguredDocumentPartitioning(v : ISourceViewer) =
@@ -187,18 +181,14 @@ private object StringTokenScanner {
 }
 
 import org.eclipse.jface.text.IDocument
-import org.eclipse.jface.text.reconciler.IReconcilingStrategy
-class CoqWorkingCopyReconcilingStrategy(var document : IDocument,
-    editor : BaseCoqEditor) extends IReconcilingStrategy {
-  import org.eclipse.jface.text.{IRegion, Position}
-  import org.eclipse.jface.text.reconciler._
 
-  override def reconcile(dr : DirtyRegion, r : IRegion) = reconcile(dr)
+class WorkingCopyReconciler(
+    editor : BaseCoqEditor) extends EventReconciler(delay = 500) {
+  import EventReconciler._
 
-  override def reconcile(partition : IRegion) = UIUtils.asyncExec {
-    editor.workingCopy.get.foreach(_.setContents(document.get))
+  override def process(events : List[DecoratedEvent]) = {
+    editor.workingCopy.get.foreach(_.setContents(
+        editor.getViewer.getDocument.get))
     editor.updateFolding
   }
-
-  override def setDocument(doc : IDocument) = (document = doc)
 }

@@ -131,12 +131,15 @@ abstract class BaseCoqEditor extends TextEditor {
     updateFolding()
   }
 
+  private val reconciler = new WorkingCopyReconciler(this)
+
   //Create the source viewer as one that supports folding
   override protected def createSourceViewer(parent : Composite,
       ruler : IVerticalRuler, styles : Int) : ISourceViewer = {
     val viewer = new ProjectionViewer(
         parent, ruler, getOverviewRuler(), isOverviewRulerVisible(), styles)
     getSourceViewerDecorationSupport(viewer)
+    reconciler.install(viewer)
     viewer
   }
 
