@@ -24,6 +24,13 @@ class Substring(val base : CharSequence, val start : Int, val end : Int)
   override def subSequence(start : Int, end : Int) =
     new Substring(base, this.start + start, this.start + end)
 
+  private class Iterator extends scala.Iterator[Char] {
+    private var position = 0
+    override def hasNext() = (position < Substring.this.length)
+    override def next() = try charAt(position) finally position += 1
+  }
+  def iterator() : scala.Iterator[Char] = new Iterator
+
   override def toString = base.subSequence(start, end).toString
 }
 object Substring {

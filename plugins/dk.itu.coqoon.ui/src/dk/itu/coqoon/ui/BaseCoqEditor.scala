@@ -82,8 +82,9 @@ abstract class BaseCoqEditor extends TextEditor {
     workingCopy.get.foreach(_.accept(_ match {
       case f : ICoqScriptGroup
           if f.getChildren.size > 1 =>
-        val padding = f.getText.takeWhile(_.isWhitespace).length
-        if (Substring(f.getText, padding).toString.count(_ == '\n') < 3) {
+        val text = f.getText
+        val padding = text.takeWhile(_.isWhitespace).length
+        if (Substring(text, padding).iterator.count(_ == '\n') < 3) {
           false
         } else {
           positions +:=
