@@ -82,6 +82,29 @@ class CoqoonEditorPreferencePage
   }
 }
 
+class CoqoonFoldingPreferencePage
+    extends FEPP(FEPP.GRID) with IWorkbenchPreferencePage {
+  import org.eclipse.ui.IWorkbench
+
+  override def init(workbench : IWorkbench) =
+    setPreferenceStore(Activator.getDefault.getPreferenceStore)
+
+  import org.eclipse.jface.preference.BooleanFieldEditor
+
+  override def createFieldEditors = {
+    addField({
+      val parent = getFieldEditorParent
+      val ed = new BooleanFieldEditor(
+          CoqoonUIPreferences.Folding.ID,
+          "Enable folding",
+          parent)
+      ed.getDescriptionControl(parent).setToolTipText(
+          "Enable folding of Coq proofs and comments.")
+      ed
+    })
+  }
+}
+
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer
 
 class CoqoonUIPreferences extends AbstractPreferenceInitializer {
@@ -110,6 +133,8 @@ class CoqoonUIPreferences extends AbstractPreferenceInitializer {
     node.putBoolean(UsePerspective.ID, true)
 
     node.putBoolean(ProcessingAnnotations.ID, true)
+
+    node.putBoolean(Folding.ID, true)
   }
 }
 object CoqoonUIPreferences {
@@ -138,6 +163,11 @@ object CoqoonUIPreferences {
 
   object UsePerspective {
     val ID = "usePerspective"
+    def get() = store.getBoolean(ID)
+  }
+
+  object Folding {
+    val ID = "enableFolding"
     def get() = store.getBoolean(ID)
   }
 }

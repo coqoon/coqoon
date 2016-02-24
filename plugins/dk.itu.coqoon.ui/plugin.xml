@@ -212,6 +212,12 @@
             id="dk.itu.coqoon.ui.pref.editor"
             name="Editor">
       </page>
+      <page
+            category="dk.itu.coqoon.ui.pref.editor"
+            class="dk.itu.coqoon.ui.CoqoonFoldingPreferencePage"
+            id="dk.itu.coqoon.ui.pref.editor.folding"
+            name="Folding">
+      </page>
    </extension>
    <extension
          point="org.eclipse.ui.commands">

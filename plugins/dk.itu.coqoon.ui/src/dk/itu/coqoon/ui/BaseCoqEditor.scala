@@ -134,32 +134,33 @@ abstract class BaseCoqEditor extends TextEditor {
     import org.eclipse.jface.text.source.projection.ProjectionSupport
     super.createPartControl(parent)
 
-    //Create the necessary infrastructure for code folding
-    val projViewer = getSourceViewer.asInstanceOf[ProjectionViewer]
-    val projectionSupport = new ProjectionSupport(
-        projViewer, getAnnotationAccess(), getSharedColors())
-    import org.eclipse.jface.text.source.AnnotationPainter.NullStrategy
-    projectionSupport.setAnnotationPainterDrawingStrategy(new NullStrategy)
-    projectionSupport.install()
+    TryCast[ProjectionViewer](getSourceViewer).foreach(viewer => {
+      //Create the necessary infrastructure for code folding
+      val projectionSupport = new ProjectionSupport(
+          viewer, getAnnotationAccess(), getSharedColors())
+      import org.eclipse.jface.text.source.AnnotationPainter.NullStrategy
+      projectionSupport.setAnnotationPainterDrawingStrategy(new NullStrategy)
+      projectionSupport.install()
 
-    //turn projection mode on
-    projViewer.enableProjection
+      //turn projection mode on
+      viewer.enableProjection
 
-    annotationModel = Option(projViewer.getProjectionAnnotationModel)
-    updateFolding()
+      annotationModel = Option(viewer.getProjectionAnnotationModel)
+      updateFolding()
+    })
   }
 
   private val reconciler = new WorkingCopyReconciler(this)
 
-  //Create the source viewer as one that supports folding
   override protected def createSourceViewer(parent : Composite,
-      ruler : IVerticalRuler, styles : Int) : ISourceViewer = {
-    val viewer = new ProjectionViewer(
-        parent, ruler, getOverviewRuler(), isOverviewRulerVisible(), styles)
-    getSourceViewerDecorationSupport(viewer)
-    reconciler.install(viewer)
-    viewer
-  }
+      ruler : IVerticalRuler, styles : Int) : ISourceViewer =
+    if (CoqoonUIPreferences.Folding.get) {
+      val viewer = new ProjectionViewer(
+          parent, ruler, getOverviewRuler(), isOverviewRulerVisible(), styles)
+      getSourceViewerDecorationSupport(viewer)
+      reconciler.install(viewer)
+      viewer
+    } else super.createSourceViewer(parent, ruler, styles)
 
   import org.eclipse.ui.views.contentoutline.IContentOutlinePage
   // Support getting outline pages
