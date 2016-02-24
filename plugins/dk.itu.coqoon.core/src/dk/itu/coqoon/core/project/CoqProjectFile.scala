@@ -19,10 +19,6 @@ package dk.itu.coqoon.core.project
 import dk.itu.coqoon.core.utilities.Substring
 
 object CoqProjectFile {
-  final val Backslash = "^\\\\".r.unanchored
-  final val Whitespace = "^\\s".r.unanchored
-  final val QuotationMark = "^\"".r.unanchored
-
   type CoqProjectFile = Seq[CoqProjectEntry]
   def toString(f : CoqProjectFile) =
     f.map(_.toTokens).map(_.mkString(" ")).mkString("\n")
@@ -35,19 +31,22 @@ object CoqProjectFile {
     var content = false
     var token = List[Char]()
     var results = List[String]()
-    while (i < s.length) Substring(s, i) match {
-      case q @ QuotationMark() =>
+    while (i < s.length) s.charAt(i) match {
+/*    case '#' if !inString =>
+        while (i < s.length && s.charAt(i) != '\n')
+          i += 1 */
+      case '"' =>
         inString = !inString
         content = true; i += 1
-      case q @ Backslash() =>
-        content = true; token :+= q.charAt(1); i += 2
-      case Whitespace() if !inString && !content =>
+      case '\\' =>
+        content = true; token :+= s.charAt(i + 1); i += 2
+      case c if c.isWhitespace && !inString && !content =>
         i += 1
-      case Whitespace() if !inString =>
+      case c if c.isWhitespace && !inString =>
         results :+= token.mkString
         content = false; token = List(); i += 1
-      case q =>
-        content = true; token :+= q.charAt(0); i += 1
+      case c =>
+        content = true; token :+= c; i += 1
     }
     if (content)
       results :+= token.mkString
