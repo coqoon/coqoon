@@ -138,10 +138,12 @@ abstract class BaseCoqEditor extends TextEditor {
     val projViewer = getSourceViewer.asInstanceOf[ProjectionViewer]
     val projectionSupport = new ProjectionSupport(
         projViewer, getAnnotationAccess(), getSharedColors())
+    import org.eclipse.jface.text.source.AnnotationPainter.NullStrategy
+    projectionSupport.setAnnotationPainterDrawingStrategy(new NullStrategy)
     projectionSupport.install()
 
     //turn projection mode on
-    projViewer.doOperation(ProjectionViewer.TOGGLE)
+    projViewer.enableProjection
 
     annotationModel = Option(projViewer.getProjectionAnnotationModel)
     updateFolding()
