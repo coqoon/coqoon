@@ -12,7 +12,7 @@
 # without warning: any local changes you may have made will not be preserved.
 
 # Remember to keep this value in sync with CoqBuildScript.scala
-_configure_coqoon_version = 19
+_configure_coqoon_version = 20
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -217,7 +217,7 @@ aborting""")
         for vn, val in vs.iteritems():
             if not vn in variables:
                 info(("using cached value \"%s\" " +
-                      "for variable %s") % (vn, val))
+                      "for variable %s") % (val, vn))
                 variables[vn] = val
 
 def prompt_for(vn, prompt, default = None):
