@@ -210,44 +210,45 @@ private class CoqProjectImpl(
 
     import CoqProjectFile._
     private[CoqProjectImpl] final val projectFile =
-        CacheSlot[CoqProjectFile] {
+        CacheSlot[Seq[Seq[String]]] {
       val f = res.map(_.getFile("_CoqProject"))
       /* Option.exists followed by IResource.exists, since you ask */
       if (f.exists(_.exists)) {
-        CoqProjectFile.fromString(TotalReader.read(f.get.getContents))
+        (CoqProjectFile.fromString(
+            TotalReader.read(f.get.getContents)).collect {
+          case q @ VariableEntry(name, value)
+              if name.startsWith("KOPITIAM_") =>
+            shellTokenise(value)
+        })
       } else Seq()
     }
 
     private[CoqProjectImpl] final val loadPathProviders =
         CacheSlot[Seq[LoadPathProvider]] {
       def _util(
-        seq : Seq[CoqProjectEntry]) : Seq[LoadPathProvider] = seq match {
-        /* XXX: also parse the -R options later? */
-        case (q @ VariableEntry(name, value)) :: tail
-            if name.startsWith("KOPITIAM_") =>
-          val res = CoqProjectImpl.this.res.get
-          CoqProjectFile.shellTokenise(value) match {
-            case "DefaultOutput" :: bindir :: Nil =>
-              DefaultOutputLoadPath(res.getFolder(bindir)) +: _util(tail)
-            case "ProjectLoadPath" :: project :: Nil =>
-              ProjectLoadPath(
+          lines : Seq[Seq[String]]) : Seq[LoadPathProvider] = {
+        val res = CoqProjectImpl.this.res.get
+        lines match {
+          case Seq("DefaultOutput", bindir) +: tail =>
+            DefaultOutputLoadPath(res.getFolder(bindir)) +: _util(tail)
+          case Seq("ProjectLoadPath", project) +: tail =>
+            ProjectLoadPath(
                 res.getWorkspace.getRoot.getProject(project)) +: _util(tail)
-            case "SourceLoadPath" :: srcdir :: Nil =>
-              SourceLoadPath(res.getFolder(srcdir)) +: _util(tail)
-            case "SourceLoadPath" :: srcdir :: bindir :: Nil =>
+          case Seq("SourceLoadPath", srcdir) +: tail =>
+            SourceLoadPath(res.getFolder(srcdir)) +: _util(tail)
+          case Seq("SourceLoadPath", srcdir, bindir) +: tail =>
               SourceLoadPath(res.getFolder(srcdir),
                 Option(res.getFolder(bindir))) +: _util(tail)
-            case "ExternalLoadPath" :: physical :: Nil =>
-              ExternalLoadPath(new Path(physical), Nil) +: _util(tail)
-            case "ExternalLoadPath" :: physical :: logical :: Nil =>
-              ExternalLoadPath(
-                  new Path(physical), logical.split('.')) +: _util(tail)
-            case "AbstractLoadPath" :: identifier :: Nil =>
+          case Seq("ExternalLoadPath", physical) +: tail =>
+            ExternalLoadPath(new Path(physical), Nil) +: _util(tail)
+          case Seq("ExternalLoadPath", physical, logical) +: tail =>
+            ExternalLoadPath(
+                new Path(physical), logical.split('.')) +: _util(tail)
+          case Seq("AbstractLoadPath", identifier) +: tail =>
               AbstractLoadPath(identifier) +: _util(tail)
-            case _ => _util(tail)
-          }
-        case _ :: tail => _util(tail)
-        case Nil => Seq.empty
+          case _ +: tail => _util(tail)
+          case Nil => Seq.empty
+        }
       }
       projectFile.get match {
         case _ if res == None => Seq()
@@ -287,10 +288,8 @@ private class CoqProjectImpl(
     } else if (f.exists) {
       f.delete(IResource.KEEP_HISTORY, monitor)
     }
-    getCache.projectFile.set(Option(cfg))
+    getCache.projectFile.clear
   }
-  private def getProjectConfiguration : CoqProjectFile =
-    getCache.projectFile.get
 
   override def getLoadPath() = getCache.loadPath.get
 
