@@ -284,14 +284,14 @@ private class CoqProjectImpl(
   import CoqProjectFile._
   import java.io.ByteArrayInputStream
   private def setProjectConfiguration(
-      cfg : CoqProjectFile, monitor : IProgressMonitor) = if (res != None) {
-    val f = res.get.getFile("_CoqProject")
-    if (!cfg.isEmpty) {
-      val contents = new ByteArrayInputStream(
-        CoqProjectFile.toString(cfg).getBytes)
+      cfg_ : Seq[Seq[String]], monitor : IProgressMonitor) = if (res != None) {
+    val f = res.get.getFile(".coqoonProject")
+    if (!cfg_.isEmpty) {
+      val cfg = cfg_.map(_.mkString(" ")).mkString("\n")
+      val contents = new ByteArrayInputStream(cfg.getBytes)
       if (f.exists) {
         f.setContents(contents, IResource.NONE, monitor)
-      } else f.create(contents, IResource.NONE, monitor)
+      } else f.create(contents, IResource.HIDDEN, monitor)
     } else if (f.exists) {
       f.delete(IResource.KEEP_HISTORY, monitor)
     }
@@ -304,42 +304,34 @@ private class CoqProjectImpl(
     getCache.loadPathProviders.get
   override def setLoadPathProviders(
       lp : Seq[LoadPathProvider], monitor : IProgressMonitor) = {
-    var coqPart : List[CoqProjectEntry] = Nil
-    var kopitiamPart : List[CoqProjectEntry] = Nil
-    var count = 0
+    var lines : Seq[Seq[String]] = Seq()
     for (i <- lp) {
-      kopitiamPart :+= VariableEntry("KOPITIAM_" + count, (i match {
+      val line = (i match {
         case AbstractLoadPath(identifier) =>
           Seq("AbstractLoadPath", identifier)
         case DefaultOutputLoadPath(bin) =>
           val path = bin.getProjectRelativePath.toString
-          coqPart :+= RecursiveEntry(path, "")
           Seq("DefaultOutput", bin.getProjectRelativePath.toString)
         case ExternalLoadPath(path_, Nil) =>
           val path = path_.toString
-          coqPart :+= RecursiveEntry(path, "")
           Seq("ExternalLoadPath", path)
         case ExternalLoadPath(path_, coqdir) =>
           val path = path_.toString
-          coqPart :+= RecursiveEntry(path, coqdir.mkString("."))
           Seq("ExternalLoadPath", path, coqdir.mkString("."))
         case ProjectLoadPath(project) =>
           val path = project.getName
           Seq("ProjectLoadPath", project.getName)
         case SourceLoadPath(src, None) =>
           val srcPath = src.getProjectRelativePath.toString
-          coqPart :+= RecursiveEntry(srcPath, "")
           Seq("SourceLoadPath", srcPath)
         case SourceLoadPath(src, Some(bin)) =>
           val srcPath = src.getProjectRelativePath.toString
           val binPath = bin.getProjectRelativePath.toString
-          coqPart ++= Seq(
-            RecursiveEntry(srcPath, ""), RecursiveEntry(binPath, ""))
           Seq("SourceLoadPath", srcPath, binPath)
-      }).map(CoqProjectEntry.escape).mkString(" "))
-      count += 1
+      }).map(CoqProjectEntry.escape)
+      lines :+= line
     }
-    setProjectConfiguration(coqPart ++ kopitiamPart, monitor)
+    setProjectConfiguration(lines, monitor)
   }
 
   import dk.itu.coqoon.core.ManifestIdentifiers
