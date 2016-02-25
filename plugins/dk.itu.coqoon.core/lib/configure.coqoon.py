@@ -12,7 +12,7 @@
 # without warning: any local changes you may have made will not be preserved.
 
 # Remember to keep this value in sync with CoqBuildScript.scala
-_configure_coqoon_version = 21
+_configure_coqoon_version = 22
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -151,7 +151,7 @@ class Path:
     def isdir(self):
         return os.path.isdir(str(self))
     def isfile(self):
-        return os.path.isdir(str(self))
+        return os.path.isfile(str(self))
 
     # Convenience file operations
     def open(self, mode = "r", encoding = "utf_8"):
@@ -220,7 +220,7 @@ aborting""")
                       "for variable %s") % (val, vn))
                 variables[vn] = val
 
-def prompt_for(vn, prompt, default = None):
+def prompt_for(vn, prompt, default = None, checker = None):
     if vn in variables:
         return variables[vn]
     elif not args.prompt:
@@ -234,7 +234,15 @@ def prompt_for(vn, prompt, default = None):
             pn = "%s [%s]: " % (vn, default)
         val = raw_input(pn)
         if len(val) > 0:
-            return val
+            if checker == None:
+                return val
+            else:
+                status = checker(val)
+                if status == None:
+                    return val
+                else:
+                    warn(status)
+                    return prompt_for(vn, prompt, default, checker)
     except EOFError:
         pass
     return default
@@ -560,6 +568,13 @@ for srcdir, bindir in source_directories:
 if not deps:
     err("no source files were found, aborting")
 
+def check_is_project(directory):
+    if Path(directory).append(".project").isfile():
+        return None
+    else:
+        return """\
+the directory "%s" does not contain a Coqoon project""" % directory
+
 def resolve_load_path(alp_dirs, configuration):
     # This method produces two sequences of (coqdir, resolved directory) pairs:
     # the first is not expanded, but the second is. (The second is used to
@@ -625,9 +640,11 @@ def resolve_load_path(alp_dirs, configuration):
             elif "WORKSPACE" in variables:
                 path = Path(variables["WORKSPACE"]).append(pn)
 
-            if path == None or not path.isdir():
+            if path == None or not path.isdir() \
+                            or not path.append(".project").isfile():
                 val = prompt_for(pn_var, \
-                    "Specify the path to the \"%s\" project." % pn, path)
+                    "Specify the path to the \"%s\" project." % pn, path,
+                    check_is_project)
                 if val != None:
                     variables[pn_var] = val
                     path = Path(val)
