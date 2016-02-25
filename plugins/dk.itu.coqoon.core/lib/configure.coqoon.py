@@ -3,7 +3,7 @@
 
 # configure.coqoon.py, a configure script for Coqoon projects
 # A component of Coqoon, an integrated development environment for Coq proofs
-# Copyright © 2014, 2015 Alexander Faithfull
+# Copyright © 2014, 2015, 2016 Alexander Faithfull
 #
 # This script is free software; its author grants unlimited permission to use,
 # copy, modify and/or redistribute it.
@@ -12,7 +12,7 @@
 # without warning: any local changes you may have made will not be preserved.
 
 # Remember to keep this value in sync with CoqBuildScript.scala
-_configure_coqoon_version = 20
+_configure_coqoon_version = 21
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -241,7 +241,12 @@ def prompt_for(vn, prompt, default = None):
 
 doomed = False
 
-def load_coq_project_configuration(cwd, path):
+def coqproject_is_variable(line):
+    return line.startswith("COQOON_") or line.startswith("KOPITIAM_")
+def coqproject_unpack_variable(line):
+    return shlex.split(shlex.split(line)[2])
+
+def load_coq_project_configuration(cwd):
     configuration = []
     # When cwd is none, all the relative paths in @configuration will remain
     # relative; note that this is only ever tolerable for paths known to be
@@ -249,44 +254,48 @@ def load_coq_project_configuration(cwd, path):
     if cwd == None:
         cwd = Path(None)
     default_output = str(cwd.append("bin"))
+    c = None
     try:
-        # We don't care whether @path is absolute or relative as long as we can
-        # open it, but the paths that we read from it are guaranteed to be
-        # relative and we need them to be absolute
-        with io.open(path, mode = "r", encoding = "utf_8") as file:
-            for line in file:
-                if not (line.startswith("COQOON_") or \
-                        line.startswith("KOPITIAM_")):
-                    continue
-                split_line = shlex.split(line)
-                (_, _, num) = split_line[0].partition("_")
-                lp = shlex.split(split_line[2])
-                configuration.append(lp)
-
-                if lp[0] == "SourceLoadPath":
-                    lp[1] = str(cwd.append(lp[1]))
-                    if len(lp) > 2:
-                        lp[2] = str(cwd.append(lp[2]))
-                elif lp[0] == "DefaultOutput":
-                    lp[1] = str(cwd.append(lp[1]))
-                    default_output = lp[1]
-                elif lp[0] == "ExternalLoadPath":
-                    if os.path.isdir(lp[1]):
-                        pass
-                    else:
-                        elp_name = lp[2] if len(lp) > 2 else "(unknown)"
-                        # Deriving the variable name from the position in the
-                        # _CoqProject file is hardly ideal, but we don't have
-                        # much else to go on for external load paths...
-                        lp[1] = prompt_for("EXT_" + num, """\
-Specify the path to the \"%s\" library.""" % elp_name, lp[1])
-                        if not os.path.isdir(lp[1]):
-                            warn("""\
-the library "%s" (EXT_%s) could not be found; dependencies on it will not be \
-resolved correctly""" % (elp_name, num))
-                            doomed = True
+        with cwd.append(".coqoonProject").open() as file:
+            c = map(shlex.split, file)
     except IOError:
-        # If _CoqProject is missing, then use Coqoon's default settings
+        try:
+            with cwd.append("_CoqProject").open() as file:
+                c = map(coqproject_unpack_variable,
+                        filter(coqproject_is_variable, file))
+        except IOError:
+            pass
+    if c != None:
+        pv = 0
+        for lp in c:
+            configuration.append(lp)
+
+            # Make the relative paths absolute
+            if lp[0] == "SourceLoadPath":
+                lp[1] = str(cwd.append(lp[1]))
+                if len(lp) > 2:
+                    lp[2] = str(cwd.append(lp[2]))
+            elif lp[0] == "DefaultOutput":
+                lp[1] = str(cwd.append(lp[1]))
+                default_output = lp[1]
+            elif lp[0] == "ExternalLoadPath":
+                if os.path.isdir(lp[1]):
+                    pass
+                else:
+                    elp_name = lp[2] if len(lp) > 2 else "(unknown)"
+                    # Deriving the variable name from its position is hardly
+                    # ideal, but we don't have much else to go on for external
+                    # load paths...
+                    lp[1] = prompt_for("EXT_" + str(pv), """\
+Specify the path to the \"%s\" library.""" % elp_name, lp[1])
+                    if not os.path.isdir(lp[1]):
+                        warn("""\
+the library "%s" (EXT_%d) could not be found; dependencies on it will not be \
+resolved correctly""" % (elp_name, pv))
+                        doomed = True
+            pv += 1
+    else:
+        # If there's no project configuration, use Coqoon's default settings
         configuration = [["SourceLoadPath", str(cwd.append("src"))],
                          ["DefaultOutput", str(cwd.append("bin"))],
                          ["AbstractLoadPath",
@@ -294,8 +303,7 @@ resolved correctly""" % (elp_name, num))
     return (default_output, configuration)
 
 # Read this project's configuration
-default_output, configuration = \
-    load_coq_project_configuration(None, "_CoqProject")
+default_output, configuration = load_coq_project_configuration(None)
 
 # This script can only support abstract load paths with some help from Coqoon,
 # which produces a "configure.coqoon.vars" file specifying incomplete paths to
@@ -625,7 +633,7 @@ def resolve_load_path(alp_dirs, configuration):
                     path = Path(val)
 
             if path != None and path.isdir():
-                _, cfg = load_coq_project_configuration(path, str(path.append("_CoqProject")))
+                _, cfg = load_coq_project_configuration(path)
                 ads = substitute_variables(*structure_vars(load_vars(str(path.append("configure.coqoon.vars")))))
                 ulp, elp = resolve_load_path(ads, cfg)
                 unexpanded_load_path.extend(ulp)
