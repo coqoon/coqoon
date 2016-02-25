@@ -211,16 +211,21 @@ private class CoqProjectImpl(
     import CoqProjectFile._
     private[CoqProjectImpl] final val projectFile =
         CacheSlot[Seq[Seq[String]]] {
-      val f = res.map(_.getFile("_CoqProject"))
+      val p = res.map(_.getFile(".coqoonProject"))
       /* Option.exists followed by IResource.exists, since you ask */
-      if (f.exists(_.exists)) {
-        (CoqProjectFile.fromString(
-            TotalReader.read(f.get.getContents)).collect {
-          case q @ VariableEntry(name, value)
-              if name.startsWith("KOPITIAM_") =>
-            shellTokenise(value)
-        })
-      } else Seq()
+      if (p.exists(_.exists)) {
+        shellTokeniseWithLines(TotalReader.read(p.get.getContents))
+      } else {
+        val f = res.map(_.getFile("_CoqProject"))
+        if (f.exists(_.exists)) {
+          (CoqProjectFile.fromString(
+              TotalReader.read(f.get.getContents)).collect {
+            case q @ VariableEntry(name, value)
+                if name.startsWith("KOPITIAM_") =>
+              shellTokenise(value)
+          })
+        } else Seq()
+      }
     }
 
     private[CoqProjectImpl] final val loadPathProviders =
