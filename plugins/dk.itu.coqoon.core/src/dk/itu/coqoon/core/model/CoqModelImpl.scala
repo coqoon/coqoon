@@ -176,13 +176,15 @@ private class CoqProjectImpl(
       /* XXX: Is this a sensible place to send notifications from? */
 
       val delta = ev.getDelta
-      res.map(res => delta.findMember(
-          res.getFile("_CoqProject").getFullPath)) match {
-        case Some(delta) =>
+      val oldConfig = res.map(_.getFile("_CoqProject").getFullPath)
+      val newConfig = res.map(_.getFile(".coqoonProject").getFullPath)
+      (oldConfig.map(delta.findMember),
+          newConfig.map(delta.findMember)) match {
+        case (_, Some(_)) | (Some(_), None) =>
           destroy
           notifyListeners(CoqProjectLoadPathChangedEvent(CoqProjectImpl.this))
           return
-        case None =>
+        case _ =>
       }
 
       /* XXX: This is over-enthusiastic -- only directories in the load path
