@@ -12,7 +12,7 @@
 # without warning: any local changes you may have made will not be preserved.
 
 # Remember to keep this value in sync with CoqBuildScript.scala
-_configure_coqoon_version = 22
+_configure_coqoon_version = 23
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -273,7 +273,7 @@ def load_coq_project_configuration(cwd):
                         filter(coqproject_is_variable, file))
         except IOError:
             pass
-    if c != None:
+    if c != None && len(c) > 0:
         pv = 0
         for lp in c:
             configuration.append(lp)

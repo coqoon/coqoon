@@ -259,7 +259,7 @@ private class CoqProjectImpl(
       }
       projectFile.get match {
         case _ if res == None => Seq()
-        case Nil => List(
+        case Seq() => List(
           SourceLoadPath(res.get.getFolder("src")),
           DefaultOutputLoadPath(res.get.getFolder("bin")),
           AbstractLoadPath(CoqStandardLibrary.ID))
