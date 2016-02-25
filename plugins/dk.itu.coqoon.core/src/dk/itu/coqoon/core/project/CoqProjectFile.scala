@@ -25,32 +25,94 @@ object CoqProjectFile {
   def fromString(s : String) : CoqProjectFile =
     CoqProjectEntry.fromTokens(shellTokenise(s))
 
-  def shellTokenise(s : CharSequence) : Seq[String] = {
+  def shellTokenise(s : CharSequence) = shellTokeniseWithLines(s).flatten
+  def shellTokeniseWithLines(s : CharSequence) : Seq[Seq[String]] = {
     var i = 0
-    var inString = false
+    var inString : Option[Char] = None
     var content = false
-    var token = List[Char]()
-    var results = List[String]()
-    while (i < s.length) s.charAt(i) match {
-/*    case '#' if !inString =>
-        while (i < s.length && s.charAt(i) != '\n')
-          i += 1 */
-      case '"' =>
-        inString = !inString
-        content = true; i += 1
-      case '\\' =>
-        content = true; token :+= s.charAt(i + 1); i += 2
-      case c if c.isWhitespace && !inString && !content =>
-        i += 1
-      case c if c.isWhitespace && !inString =>
-        results :+= token.mkString
-        content = false; token = List(); i += 1
-      case c =>
-        content = true; token :+= c; i += 1
+    var lines = List[List[String]]()
+    var words = List[String]()
+    var chars = List[Char]()
+    def finishWord() =
+      if (content) {
+        words :+= chars.mkString
+        chars = Nil; content = false
+      }
+    def finishLine() = {
+      finishWord
+      if (!words.isEmpty) {
+        lines :+= words
+        words = Nil
+      }
     }
-    if (content)
-      results :+= token.mkString
-    results
+    while (i < s.length) s.charAt(i) match {
+      case '#' if inString.isEmpty =>
+        finishLine
+        while (i < s.length && s.charAt(i) != '\n')
+          i += 1
+        i += 1 /* Skip over the (possible) newline */
+      case '\n' if inString.isEmpty =>
+        finishLine; i += 1
+
+      /* Beginning and ending strings */
+      case '"' if inString.isEmpty =>
+        inString = Some('"')
+        content = true; i += 1
+      case '\'' if inString.isEmpty =>
+        inString = Some('\'')
+        content = true; i += 1
+      case c if inString.contains(c) =>
+        inString = None
+        i += 1
+
+      case '\\' if inString.isEmpty =>
+        s.charAt(i + 1) match {
+          case '\n' =>
+            /* Escaped newlines should be ignored */
+          case q =>
+            content = true
+            chars :+= q
+        }
+        i += 2
+      case '\\' if inString.contains('\"') =>
+        /* Inside double quotes, backslashes can only escape dollar signs,
+         * backticks, backslashes, double quotes and newlines, and are
+         * otherwise treated as actual backslashes */
+        s.charAt(i + 1) match {
+          case q @ ('$' | '`' | '\"' | '\\') =>
+            chars :+= q
+          case '\n' =>
+            /* Escaped newlines should be ignored */
+          case e =>
+            chars :+= '\\'
+            chars :+= e
+        }
+        i += 2
+      /* Inside single quotes, backslashes do nothing, so there's no case
+       * for them */
+
+      case c if c.isWhitespace && inString.isEmpty && !content =>
+        i += 1
+      case c if c.isWhitespace && inString.isEmpty =>
+        finishWord; i += 1
+      case c =>
+        content = true; chars :+= c; i += 1
+    }
+    finishLine
+    lines
+  }
+
+  def main(args : Array[String]) = {
+    var file = List[String]()
+    var line : Option[String] = None
+    do {
+      line.foreach(line => {
+        file :+= line
+      })
+      line = Option(readLine).filter(!_.isEmpty).map(_.trim)
+    } while (line != None)
+    println(shellTokeniseWithLines(file.mkString("\n")).map(
+        _.mkString("[", "; ", "]")).mkString("[", "; ", "]"))
   }
 }
 
