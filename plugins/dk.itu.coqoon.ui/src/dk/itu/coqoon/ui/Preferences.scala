@@ -60,6 +60,17 @@ class CoqoonEditorPreferencePage
     })
     addField({
       val parent = getFieldEditorParent
+      val ed = new BooleanFieldEditor(
+          CoqoonUIPreferences.SubstituteSequences.ID,
+          "Enable automatic Unicode character substitution",
+          parent)
+      ed.getDescriptionControl(parent).setToolTipText(
+          "Automatically convert certain escape sequences to Unicode " +
+          "characters.")
+      ed
+    })
+    addField({
+      val parent = getFieldEditorParent
       val ed = new StringFieldEditor(
           CoqoonUIPreferences.SpacesPerIndentationLevel.ID,
           "Spaces per indentation level",
@@ -130,6 +141,7 @@ class CoqoonUIPreferences extends AbstractPreferenceInitializer {
 
     node.putInt(SpacesPerIndentationLevel.ID, 2)
     node.putBoolean(AutomaticFormatting.ID, true)
+    node.putBoolean(SubstituteSequences.ID, true)
     node.putBoolean(UsePerspective.ID, true)
 
     node.putBoolean(ProcessingAnnotations.ID, true)
@@ -153,6 +165,11 @@ object CoqoonUIPreferences {
 
   object AutomaticFormatting {
     final val ID = "automaticFormatting"
+    def get() = store.getBoolean(ID)
+  }
+
+  object SubstituteSequences {
+    val ID = "substituteSequences"
     def get() = store.getBoolean(ID)
   }
 

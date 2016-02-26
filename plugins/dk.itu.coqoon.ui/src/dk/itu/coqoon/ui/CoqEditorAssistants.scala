@@ -11,23 +11,124 @@ import dk.itu.coqoon.ui.CoqoonUIPreferences.{SpacesPerIndentationLevel => SPIL}
 import dk.itu.coqoon.ui.text.Region
 import org.eclipse.jface.text.{
   IDocument, TextUtilities => TU, DocumentCommand, IAutoEditStrategy}
+import org.eclipse.jface.text.rules.ICharacterScanner
+
+class TrivialDocumentScanner(
+    d : IDocument, start : Int, forwards : Boolean = true) extends ICharacterScanner {
+  private var pos = start
+
+  override def getColumn() : Int = ???
+  override def getLegalLineDelimiters() =
+    d.getLegalLineDelimiters.map(_.toCharArray)
+  def read() : Int =
+    if (pos >= 0 && pos < d.getLength) {
+      try d.getChar(pos) finally pos += (if (forwards) 1 else -1)
+    } else ICharacterScanner.EOF
+  override def unread() = pos -= (if (forwards) 1 else -1)
+
+  def getPosition() = pos
+}
 
 class CoqAutoEditStrategy extends IAutoEditStrategy {
   override def customizeDocumentCommand(
       d : IDocument, c : DocumentCommand) = {
     val t = Option(c.text)
-    if (c.length == 0 && c.offset <= d.getLength &&
-        t.exists(TU.endsWith(d.getLegalLineDelimiters, _) != -1) &&
-        CoqoonUIPreferences.AutomaticFormatting.get)
-      CoqAutoEditStrategy.adjustIndentation(d, c)
+
+    if (CoqoonUIPreferences.SubstituteSequences.get) {
+      if (c.length == 0 &&
+          !c.text.lastOption.exists(CoqWordDetector.isWordEnd))
+        CoqAutoEditStrategy.trySubstituteUnicode(d, c)
+    }
+
+    if (CoqoonUIPreferences.AutomaticFormatting.get) {
+      if (c.length == 0 && c.offset <= d.getLength &&
+          t.exists(TU.endsWith(d.getLegalLineDelimiters, _) != -1))
+        CoqAutoEditStrategy.adjustIndentation(d, c)
+    }
   }
 }
 object CoqAutoEditStrategy extends CoqAutoEditStrategy {
+  import org.eclipse.jface.text.rules.{Token => RToken}
+  import dk.itu.coqoon.ui.text.ExtensibleRecogniser
+  private final val mappings = Map(
+      "\\alpha" -> "α",
+      "\\beta" -> "β",
+      "\\gamma" -> "γ",
+      "\\delta" -> "δ",
+      "\\epsilon" -> "ε",
+      "\\zeta" -> "ζ",
+      "\\eta" -> "η",
+      "\\theta" -> "θ",
+      "\\iota" -> "ι",
+      "\\kappa" -> "κ",
+      "\\lambda" -> "λ",
+      "\\mu" -> "μ",
+      "\\nu" -> "ν",
+      "\\xi" -> "ξ",
+      "\\pi" -> "π",
+      "\\rho" -> "ρ",
+      "\\sigma" -> "σ",
+      "\\tau" -> "τ",
+      "\\upsilon" -> "υ",
+      "\\phi" -> "ϕ",
+      "\\chi" -> "χ",
+      "\\psi" -> "ψ",
+      "\\omega" -> "ω",
+      "\\Gamma" -> "Γ",
+      "\\Delta" -> "Δ",
+      "\\Theta" -> "Θ",
+      "\\Lambda" -> "Λ",
+      "\\Xi" -> "Ξ",
+      "\\Pi" -> "Π",
+      "\\Sigma" -> "Σ",
+      "\\Upsilon" -> "Υ",
+      "\\Phi" -> "Φ",
+      "\\Psi" -> "Ψ",
+      "\\Omega" -> "Ω",
+
+      "\\nat" -> "ℕ",
+      "\\complex" -> "ℂ",
+      "\\real" -> "ℝ",
+      "\\int" -> "ℤ",
+      "\\rat" -> "ℚ",
+
+      /* Utf8_core.v */
+      "\\forall" -> "∀",
+      "\\exists" -> "∃",
+      "\\or" -> "∨",
+      "\\and" -> "∧",
+      "\\if" -> "→",
+      "\\iff" -> "↔",
+      "\\not" -> "¬",
+      "\\neq" -> "≠",
+
+      /* Utf8.v */
+      "\\le" -> "≤",
+      "\\ge" -> "≥")
+  private final lazy val mappingRecogniser = {
+    val r = new ExtensibleRecogniser
+    for ((k, v) <- mappings)
+      r.recognise(k.reverse, new RToken(v))
+    r
+  }
+
   object MatchStartFragment {
     val expr = ("^\\s*match\\s+(.*)\\s+with").r
     def unapply(input : CharSequence) = input match {
       case expr(ident) => Some(ident)
       case _ => None
+    }
+  }
+
+  private def trySubstituteUnicode(d : IDocument, c : DocumentCommand) = {
+    val s = new TrivialDocumentScanner(d, c.offset - 1, false)
+    mappingRecogniser.evaluate(s) match {
+      case t : RToken if t.isOther =>
+        val matchLength = (c.offset - 1) - s.getPosition
+        c.offset -= matchLength
+        c.length = matchLength
+        c.text = t.getData.asInstanceOf[String] + c.text
+      case _ =>
     }
   }
 
