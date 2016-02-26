@@ -33,7 +33,6 @@ abstract class BaseCoqEditor extends TextEditor {
       ev match {
         case CoqFileContentChangedEvent(f)
             if workingCopy.get.contains(f) =>
-          println("Working copy changed, updating folding information")
           updateFolding
         case _ =>
       }
