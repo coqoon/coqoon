@@ -1,3 +1,38 @@
+Coqoon 0.7.3
+============
+
+26th February 2016
+
+This release adds limited support for Unicode substitution sequences and moves
+Coqoon project configuration into the new `.coqoonProject` file. (Projects
+already using the `_CoqProject` file will not be immediately affected by this
+change.)
+
+Unicode substitution sequences
+------------------------------
+
+The Coq editor will now replace certain input sequences, like `\forall` and
+`\lambda`, with appropriate Unicode characters. (Using these characters in
+proofs requires the use of the `Coq.Unicode.Utf8` library.)
+
+This behaviour can be switched on or off with the *Coqoon &rarr; Editor &rarr;
+Enable automatic Unicode character substitution* preference.
+
+Other significant changes
+-------------------------
+
+* Made code folding optional
+
+  Code folding may cause performance problems on some platforms, so this
+  release adds a preference page, *Coqoon &rarr; Editor &rarr; Folding*, to
+  switch code folding support on and off.
+
+Bug fixes
+---------
+
+* The automatic indentation code shouldn't crash on the first line
+* Improved the performance of some substring processing code
+
 Coqoon 0.7.2
 ============
 
