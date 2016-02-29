@@ -1,0 +1,116 @@
+\documentclass{article}
+
+\usepackage{wrapfig}
+\usepackage[colorlinks=true]{hyperref}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage[utf8]{inputenc}
+\usepackage{verbatim}
+
+\author{
+	Alexander Faithfull\\IT University of Copenhagen\\\texttt{alef@itu.dk}
+	\and
+	Jesper Bengtson\\IT University of Copenhagen\\\texttt{jebe@itu.dk}}
+\title{Coqoon: further adventures in\\Coq IDE development}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\noindent
+At last year's Coq Workshop in Vienna, we presented Coqoon\cite{Faithfull2014Coqoon},
+an IDE for Coq with sophisticated features like syntax highlighting,
+context-aware search functionality driven by a rich model of Coq code,
+and an integrated build system with automatic dependency
+resolution.
+
+We continue to work on Coqoon, and we discuss some recent developments below.
+
+\begin{comment}
+
+Since then, we have added (experimental) support for the PIDE protocol,
+bringing automatic and asynchronous re-evaluation of proofs; added a user
+interface for managing Coq load paths; and implemented a
+clone of Coqoon's build system in Python, making it even easier for people to
+work on Coqoon projects without having to use it.
+
+\end{comment}
+
+\subsubsection*{Asynchronous proofs with PIDE}
+
+In another of the presentations at last year's Coq Workshop, Tankink presented
+a prototype Coq editor\cite{Tankink2014PIDE} using the PIDE protocol to
+communicate asynchronously with the Coq backend. As part of this work, PIDE,
+originally
+developed as part of the Isabelle proof assistant, was ported to Coq, built
+atop the
+STM mechanism added in Coq 8.5.
+
+Working with Tankink in the months after the Coq workshop, we have added
+support for the PIDE protocol to Coqoon. The PIDE editor, the default since
+version 0.5.0, automatically re-evaluates commands and their dependencies
+whenever they change.
+
+\paragraph{Future work}
+
+There are still many features in the PIDE protocol that Coqoon does not yet
+make use of; in particular, although PIDE sends back a parse tree for the
+commands that it has evaluated, we do not yet incorporate this into the Coqoon
+model of Coq code. We expect to start taking advantage of these features once
+Coq 8.5 is properly released.
+
+\subsubsection*{Load path management}
+
+Coqoon uses the Eclipse project abstraction to give structure to Coq
+developments, and its internal representation of a project's Coq load path is
+richer than just a list of directories. This representation makes it possible
+to portably depend on things that might not be in the same place on every
+computer, like other projects in the Eclipse workspace.
+
+Unfortunately, when
+we last presented Coqoon, most of
+these complex dependencies were not possible to create without manually editing
+configuration files.
+Version 0.4.7, released in January of this year, fixed this by adding a proper
+user interface for
+configuring projects' load paths.
+
+\subsubsection*{Better support for non-Coqoon users}
+
+To make it possible for non-Coqoon users to work with Coqoon projects, the
+Coqoon build system used to finish building a project by writing out a snapshot
+of its dependency tree as a Makefile with rules that simulated Coqoon's own
+behaviour. However, these Makefiles only worked
+reliably for simple projects---when projects depended on other projects, or on
+external developments, the resulting Makefile was totally unportable. Worse
+yet, the build system's constant attempts to regenerate this file often led to
+version control merge conflicts.
+
+Recent versions of Coqoon adopt a different approach. The builder, instead of
+producing a project-specific Makefile, now adds a \emph{generic} configure
+script to
+every project; when run, this script parses the Coqoon project configuration
+and produces a machine-specific Makefile from it, prompting the user if they
+need to provide a path for a dependency that cannot be resolved automatically.
+
+The generic build script changes much less frequently than the old Makefiles,
+and---to minimise merge conflicts even further---Coqoon will only attempt to
+update it if that particular installation of Coqoon created it in the first
+place (or if the user explicitly chooses to update it).
+
+\subsubsection*{Conclusion}
+
+Coqoon continues to develop, and the new support for asynchronous proof editing
+makes it behave more like an IDE than ever before.
+
+More information about Coqoon, including installation instructions and links to
+both precompiled Eclipse plugins and the source code, is available from
+\linebreak
+\url{https://coqoon.github.io/}.
+
+\bibliographystyle{plainurl}
+\bibliography{coq7}
+
+\end{document}
