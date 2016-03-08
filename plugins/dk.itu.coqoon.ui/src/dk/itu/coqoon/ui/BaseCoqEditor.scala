@@ -22,17 +22,19 @@ abstract class BaseCoqEditor extends TextEditor {
   import dk.itu.coqoon.core.model._
   import dk.itu.coqoon.core.utilities.CacheSlot
   import org.eclipse.ui.IFileEditorInput
-  protected[ui] val workingCopy = CacheSlot[Option[IDetachedCoqVernacFile]] {
+  private lazy val workingCopy = CacheSlot[Option[IDetachedCoqVernacFile]] {
     TryCast[IFileEditorInput](getEditorInput).map(_.getFile).flatMap(
         ICoqModel.getInstance.toCoqElement).flatMap(
             TryCast[ICoqVernacFile]).map(_.detach)
   }
 
+  def getWorkingCopy() = workingCopy
+
   object WorkingCopyListener extends CoqElementChangeListener {
     override def coqElementChanged(ev : CoqElementEvent) =
       ev match {
-        case CoqFileContentChangedEvent(f)
-            if workingCopy.get.contains(f) =>
+        case CoqFileContentChangedEvent(f : ICoqVernacFile)
+            if getWorkingCopy.get.contains(f) =>
           updateFolding
         case _ =>
       }
@@ -78,7 +80,7 @@ abstract class BaseCoqEditor extends TextEditor {
 
     import scala.collection.JavaConversions._
     var positions : Seq[Position] = Seq()
-    workingCopy.get.foreach(_.accept(_ match {
+    getWorkingCopy.get.foreach(_.accept(_ match {
       case f : ICoqScriptGroup
           if f.getChildren.size > 1 =>
         val text = f.getText
@@ -103,7 +105,7 @@ abstract class BaseCoqEditor extends TextEditor {
   }
 
   override def isEditable =
-    workingCopy.get match {
+    getWorkingCopy.get match {
       case Some(_) =>
         super.isEditable
       case None =>
@@ -166,7 +168,7 @@ abstract class BaseCoqEditor extends TextEditor {
   var outlinePage : Option[CoqContentOutlinePage] = None
   private def createOutlinePage() : CoqContentOutlinePage = {
     val page = new CoqContentOutlinePage
-    workingCopy.get.foreach(page.setInput)
+    getWorkingCopy.get.foreach(page.setInput)
     page
   }
 

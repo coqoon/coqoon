@@ -187,6 +187,6 @@ class WorkingCopyReconciler(
   import EventReconciler._
 
   override def process(events : List[DecoratedEvent]) =
-    editor.workingCopy.get.foreach(_.setContents(
+    editor.getWorkingCopy.get.foreach(_.setContents(
         editor.getViewer.getDocument.get))
 }
