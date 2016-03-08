@@ -623,9 +623,10 @@ trait ICoqSectionStartSentence extends ICoqScriptSentence {
 }
 
 trait ICoqScriptGroup extends ICoqScriptElement with IParent {
-  override def getText = getChildren.map(_.getText).mkString
-  override def getLength = getChildren.foldLeft(0)((a, b) => a + b.getLength)
-  override def getOffset = getChildren.head.getOffset
+  override lazy val getText = getChildren.map(_.getText).mkString
+  override lazy val getLength =
+    getChildren.foldLeft(0)((a, b) => a + b.getLength)
+  override lazy val getOffset = getChildren.head.getOffset
 
   def getDeterminingSentence() : ICoqScriptSentence =
     getChildren.head.asInstanceOf[ICoqScriptSentence]

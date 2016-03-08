@@ -681,9 +681,9 @@ private class CoqScriptSentenceImpl(
     private val sentence : Sentence,
     private val parent : ICoqElement with IParent)
         extends CoqElementImpl(None, parent) with ICoqScriptSentence {
-  override def getText = sentence._1.toString
-  override def getOffset = sentence._1.start
-  override def getLength = sentence._1.length
+  override lazy val getText = sentence._1.toString
+  override lazy val getOffset = sentence._1.start
+  override lazy val getLength = sentence._1.length
 
   override def isSynthetic = sentence._2
 
