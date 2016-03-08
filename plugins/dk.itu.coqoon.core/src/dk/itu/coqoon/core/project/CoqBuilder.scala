@@ -18,6 +18,7 @@ package dk.itu.coqoon.core.project
 
 import dk.itu.coqoon.core.{CoqoonPreferences, ManifestIdentifiers}
 import dk.itu.coqoon.core.model._
+import dk.itu.coqoon.core.model.CoqEnforcement.{Issue, Severity}
 import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
 import dk.itu.coqoon.core.coqtop.CoqProgram
 import dk.itu.coqoon.core.coqtop.CoqSentence
@@ -175,6 +176,8 @@ class CoqBuilder extends IncrementalProjectBuilder {
               val vernac = inF.flatMap(coqProject.get.getModel.toCoqElement)
               (inF, vernac) match {
                 case (Some(inF), Some(vernac : ICoqVernacFile)) =>
+                  CoqEnforcement.createMarkers(vernac,
+                      CoqEnforcement.check(vernac, StandardEnforcementContext))
                   val runner = new CoqCompilerRunner(inF,
                       vernac.getParent.get.getCoqdir.get)
                   runner.setTicker(
