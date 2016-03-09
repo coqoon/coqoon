@@ -295,7 +295,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
     cleanProject(coqProject.get)
 
     CoqoonDebugPreferences.ProjectBuild.log(
-        s"Build for ${getProject} finished; dependency state is ${deps}")
+        s"Build for ${getProject} finished (interrupted " +
+        s"= ${isInterrupted}, monitor.isCanceled = ${monitor.isCanceled}); " +
+        s"dependency state is ${deps}")
 
     coqProject.get.getLoadPathProviders.collect {
       case ProjectLoadPath(p) => p
