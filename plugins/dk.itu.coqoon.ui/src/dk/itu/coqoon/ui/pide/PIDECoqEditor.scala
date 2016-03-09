@@ -204,12 +204,14 @@ class PIDECoqEditor
               !(Protocol.Status.make(
                   markup.map(_._2.markup).iterator).is_running)
 
-            val sentence = getWorkingCopy.get.get.getSentenceAt(offset).get
+            lazy val sentence =
+              getWorkingCopy.get.get.getSentenceAt(offset).get
             /* This sorts out the difference between the offset of the Coqoon
              * model sentence, which may include whitespace, and the PIDE span
              * offset, which doesn't */
-            val diff = offset - sentence.getOffset
-            /* Extract and display error messages */
+            lazy val diff = offset - sentence.getOffset
+
+            /* Extract and display error messages and warnings */
             import dk.itu.coqoon.core.model.CoqEnforcement.{Issue, Severity}
             /* We use a map here in order to merge errors with the same ID
              * together */
@@ -217,18 +219,30 @@ class PIDECoqEditor
             for ((_, tree) <- results) {
               Responses.extractError(tree) match {
                 case (Some((id, msg, Some(start), Some(end)))) =>
-                  errors += id -> Issue("interactive/pide",
+                  errors += id -> Issue("interactive/pide-error",
                       diff + start - 1, (end - start),
                       msg, Severity.Error)
                 case Some((id, msg, _, _)) =>
-                  errors += id -> Issue("interactive/pide",
+                  errors += id -> Issue("interactive/pide-error",
                       diff, command.source.length,
                       msg, Severity.Error)
                 case _ =>
+                  Responses.extractWarning(tree) match {
+                    case Some((id, msg, Some(start), Some(end))) =>
+                      errors += id -> Issue("interactive/pide-warning",
+                          diff + start - 1, (end - start),
+                          msg, Severity.Warning)
+                    case Some((id, msg, _, _)) =>
+                      errors += id -> Issue("interactive/pide-warning",
+                          diff, command.source.length,
+                          msg, Severity.Warning)
+                    case _ =>
+                  }
               }
             }
-            sentence.setIssues(
-                errors.values.toSeq.map(issue => (issue, Severity.Error)))
+            if (!errors.isEmpty)
+              sentence.setIssues(errors.values.toSeq.map(
+                  issue => (issue, issue.severityHint)))
 
             val oldAnnotation = annotations.get(command)
             val newAnnotation =
