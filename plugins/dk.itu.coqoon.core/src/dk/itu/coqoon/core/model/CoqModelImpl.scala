@@ -66,21 +66,27 @@ private abstract class CoqElementImpl[
 
 import CoqEnforcement._
 
-object IssueTranslator extends CoqElementChangeListener {
-  override def coqElementChanged(ev : CoqElementEvent) = ev match {
-    case CoqIssuesChangedEvent(el : ICoqScriptElement) =>
-      el.getContainingResource.foreach(r =>
-          new MarkerUpdateJob(r, el, el.getIssues).schedule)
-    case _ =>
-  }
+private[model] object IssueTranslator extends CoqElementChangeListener {
+  override def coqElementChanged(ev : CoqElementEvent) =
+    ev match {
+      case CoqIssuesChangedEvent(el : ICoqScriptElement) =>
+        el.getContainingResource.foreach(r =>
+            new MarkerUpdateJob(r, Some(el), el.getIssues).schedule)
+      case CoqFileContentChangedEvent(el : ICoqVernacFile) =>
+        /* When a file's content is updated, all of its sentences are
+         * discarded, so delete their markers as well */
+        el.getCorrespondingResource.foreach(r =>
+            new MarkerUpdateJob(r, None, Seq()).schedule)
+      case _ =>
+    }
 }
 
 import dk.itu.coqoon.core.utilities.UniqueRule
 import dk.itu.coqoon.core.utilities.JobUtilities.MultiRule
 import org.eclipse.core.resources.WorkspaceJob
 
-private class MarkerUpdateJob(
-    r : IResource, el : ICoqScriptElement, issues : Seq[(Issue, Severity)])
+private class MarkerUpdateJob(r : IResource,
+    el : Option[ICoqScriptElement], issues : Seq[(Issue, Severity)])
     extends WorkspaceJob("Update Coq markers") {
   setRule(MultiRule(
       ResourcesPlugin.getWorkspace.getRuleFactory.markerRule(r),
@@ -94,17 +100,18 @@ private class MarkerUpdateJob(
       r.findMarkers(MARKER_PROBLEM, false, IResource.DEPTH_ZERO)
     currentMarkers.foreach(_.delete)
     import scala.collection.JavaConversions._
-    issues foreach {
-      case (Issue(_, offset, length, message, _), severity) =>
-        r.createMarker(MARKER_PROBLEM).setAttributes(Map(
-            IMarker.MESSAGE -> message.trim,
-            IMarker.SEVERITY ->
-                MarkerUpdateJob.severityToMarkerSeverity(severity),
-            IMarker.LOCATION -> s"offset $offset",
-            IMarker.CHAR_START -> (el.getOffset + offset),
-            IMarker.CHAR_END -> (el.getOffset + offset + length),
-            IMarker.TRANSIENT -> true))
-    }
+    el.foreach(el =>
+      issues foreach {
+        case (Issue(_, offset, length, message, _), severity) =>
+          r.createMarker(MARKER_PROBLEM).setAttributes(Map(
+              IMarker.MESSAGE -> message.trim,
+              IMarker.SEVERITY ->
+                  MarkerUpdateJob.severityToMarkerSeverity(severity),
+              IMarker.LOCATION -> s"offset $offset",
+              IMarker.CHAR_START -> (el.getOffset + offset),
+              IMarker.CHAR_END -> (el.getOffset + offset + length),
+              IMarker.TRANSIENT -> true))
+      })
     Status.OK_STATUS
   }
 }
