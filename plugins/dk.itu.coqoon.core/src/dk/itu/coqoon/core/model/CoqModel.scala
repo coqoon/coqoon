@@ -523,6 +523,8 @@ import java.io.InputStream
 trait ICoqVernacFile extends ICoqFile with IParent {
   override def getChildren() : Seq[ICoqScriptElement]
 
+  def getSentenceAt(offset : Int) : Option[ICoqScriptSentence]
+
   def detach() : IDetachedCoqVernacFile
 }
 object ICoqVernacFile {
