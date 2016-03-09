@@ -489,18 +489,6 @@ private object CoqBuilder {
     l.addIssue((Issue("compiler/internal-error",
         l, errorMessage, Severity.Error), Severity.Error))
 
-  def createRegionErrorMarker(
-      r : IResource, s : String, region : (Int, Int)) = {
-    import scala.collection.JavaConversions._
-    Option(r).filter(_.exists).foreach(
-        _.createMarker(ManifestIdentifiers.MARKER_PROBLEM).setAttributes(Map(
-            (IMarker.MESSAGE, reduceError(s)),
-            (IMarker.SEVERITY, IMarker.SEVERITY_ERROR),
-            (IMarker.LOCATION, s"offset ${region._1}"),
-            (IMarker.CHAR_START, region._1),
-            (IMarker.CHAR_END, region._2))))
-  }
-
   def createResourceErrorMarker(r : IResource, s : String) = {
     import scala.collection.JavaConversions._
     Option(r).filter(_.exists).foreach(
