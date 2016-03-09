@@ -52,10 +52,11 @@ private abstract class CoqElementImpl[
   private var issues : Seq[(Issue, Severity)] = Seq()
   override def getIssues() = issues
   override def addIssue(issue : (Issue, Severity)) = setIssues(issues :+ issue)
-  override def setIssues(issues : Seq[(Issue, Severity)]) = {
-    this.issues = issues
-    notifyListeners(CoqIssuesChangedEvent(this))
-  }
+  override def setIssues(issues : Seq[(Issue, Severity)]) =
+    if (this.issues != issues) {
+      this.issues = issues
+      notifyListeners(CoqIssuesChangedEvent(this))
+    }
 
   protected[model] def notifyListeners(ev : CoqElementEvent) : Unit =
     getModel.notifyListeners(ev)
