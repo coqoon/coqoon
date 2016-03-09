@@ -84,27 +84,6 @@ object CoqEnforcement {
     })
     complaints
   }
-
-  def createMarkers(
-      f : ICoqVernacFile, results : Seq[(Issue, Severity)]) = {
-    import dk.itu.coqoon.core.ManifestIdentifiers
-    import org.eclipse.core.resources.IMarker
-    import scala.collection.JavaConversions._
-    for (f <- f.getCorrespondingResource;
-         (Issue(_, offset, length, message, _), severity) <- results)
-      f.createMarker(ManifestIdentifiers.MARKER_PROBLEM).setAttributes(Map(
-          IMarker.MESSAGE -> message.trim,
-          IMarker.SEVERITY -> (severity match {
-            case Severity.Information => IMarker.SEVERITY_INFO
-            case Severity.Warning => IMarker.SEVERITY_WARNING
-            case Severity.Error => IMarker.SEVERITY_ERROR
-            case _ => IMarker.SEVERITY_INFO
-          }),
-          IMarker.LOCATION -> s"offset $offset",
-          IMarker.CHAR_START -> offset,
-          IMarker.CHAR_END -> (offset + length),
-          IMarker.TRANSIENT -> true))
-  }
 }
 
 import CoqEnforcement.{Issue, Severity}
