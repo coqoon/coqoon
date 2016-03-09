@@ -204,23 +204,31 @@ class PIDECoqEditor
               !(Protocol.Status.make(
                   markup.map(_._2.markup).iterator).is_running)
 
+            val sentence = getWorkingCopy.get.get.getSentenceAt(offset).get
+            /* This sorts out the difference between the offset of the Coqoon
+             * model sentence, which may include whitespace, and the PIDE span
+             * offset, which doesn't */
+            val diff = offset - sentence.getOffset
             /* Extract and display error messages */
-            var commandHasErrors = false
+            import dk.itu.coqoon.core.model.CoqEnforcement.{Issue, Severity}
+            /* We use a map here in order to merge errors with the same ID
+             * together */
+            var errors : Map[Int, Issue] = Map()
             for ((_, tree) <- results) {
-              (getFile, Responses.extractError(tree)) match {
-                case (Some(f), Some((id, msg, Some(start), Some(end)))) =>
-                  errorsToAdd += id -> (command,
-                      (offset + start - 1, offset + end - 1), msg)
-                  commandHasErrors = true
-                case (Some(f), Some((id, msg, _, _))) =>
-                  errorsToAdd += id -> (command,
-                      (offset, offset + command.source.length), msg)
-                  commandHasErrors = true
+              Responses.extractError(tree) match {
+                case (Some((id, msg, Some(start), Some(end)))) =>
+                  errors += id -> Issue("interactive/pide",
+                      diff + start - 1, (end - start),
+                      msg, Severity.Error)
+                case Some((id, msg, _, _)) =>
+                  errors += id -> Issue("interactive/pide",
+                      diff, command.source.length,
+                      msg, Severity.Error)
                 case _ =>
               }
             }
-            if (!commandHasErrors)
-              errorsToDelete :+= command
+            sentence.setIssues(
+                errors.values.toSeq.map(issue => (issue, Severity.Error)))
 
             val oldAnnotation = annotations.get(command)
             val newAnnotation =
@@ -259,14 +267,6 @@ class PIDECoqEditor
 
         if (!del.isEmpty || !add.isEmpty)
           am.foreach(_.replaceAnnotations(del.toArray, add))
-
-        if (!toDelete.isEmpty || !errorsToAdd.isEmpty ||
-            !errorsToDelete.isEmpty)
-          getFile.foreach(file =>
-            new UpdateErrorsJob(file,
-                ls.node.commands,
-                toDelete.map(_._1) ++ errorsToDelete,
-                errorsToAdd.values.toSeq).schedule)
       }
 
       lastCommand match {
@@ -416,84 +416,6 @@ object Perspective {
       overlays : Document.Node.Overlays = Document.Node.Overlays.empty) =
     Document.Node.Perspective[Text.Edit, Text.Perspective](true,
         Text.Perspective.full, overlays)
-}
-
-import dk.itu.coqoon.core.utilities.{UniqueRule, JobUtilities}
-import org.eclipse.core.resources.{IFile, WorkspaceJob}
-import isabelle.Command
-class UpdateErrorsJob(file : IFile, commands : Set[Command],
-    removed : Seq[Command], added : Seq[(Command, (Int, Int), String)])
-    extends WorkspaceJob("Update PIDE markers") {
-  import UpdateErrorsJob._
-
-  setRule(JobUtilities.MultiRule(
-      file.getWorkspace.getRuleFactory.markerRule(file),
-      rule))
-  setSystem(true)
-
-  import org.eclipse.core.runtime.{Status, IProgressMonitor}
-  import org.eclipse.core.resources.{IMarker, IResource}
-  override def runInWorkspace(monitor : IProgressMonitor) = {
-    import dk.itu.coqoon.core
-    import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
-
-    val m = file.findMarkers(core.ManifestIdentifiers.MARKER_PROBLEM,
-        false, IResource.DEPTH_ZERO)
-    val ids =
-      removed.map(_.id.asInstanceOf[Int]) ++
-          added.map(_._1.id.asInstanceOf[Int])
-    /* Delete all errors associated with these commands */
-    val deletedMarkers =
-      (for (i <- m)
-        yield {
-          val commandID = i.getAttribute("__command", Int.MaxValue)
-          val delete =
-            if (ids.contains(commandID)) {
-              /* The command associated with this marker has been deleted, or a
-               * new marker is going to be created for it. In either case, this
-               * marker needs to be deleted */
-              true
-            } else if (!commands.exists(_.id == commandID)) {
-              /* The command associated with this marker doesn't actually exist
-               * in the document; delete it. (As the builder doesn't care about
-               * PIDE command identifiers, this also has the effect of deleting
-               * any markers that it may have created.) */
-              true
-            } else false
-          if (delete) {
-            i.delete
-            Some((commandID, i))
-          } else None
-        }).flatten
-    import scala.collection.JavaConversions._
-    val addedMarkers =
-      for ((c, (start, end), msg) <- added)
-        yield {
-          val q = file.createMarker(
-              core.ManifestIdentifiers.MARKER_PROBLEM)
-          val id = c.id.asInstanceOf[Int]
-          q.setAttributes(Map(
-              IMarker.MESSAGE -> reduceError(msg).replaceAll("\\s+", " ").trim,
-              IMarker.SEVERITY -> IMarker.SEVERITY_ERROR,
-              IMarker.LOCATION -> s"offset ${start}",
-              IMarker.CHAR_START -> start,
-              IMarker.CHAR_END -> end,
-              IMarker.TRANSIENT -> true,
-              "__command" -> id))
-          (id, q)
-        }
-    CoqoonDebugPreferences.PIDEMarkers.log(
-      s"UpdateErrorsJob(${removed}, ${added}):\n" +
-      s"ids = ${ids},\n" +
-      s"deleted ${deletedMarkers.toList}, added ${addedMarkers.toList}")
-    Status.OK_STATUS
-  }
-}
-private object UpdateErrorsJob {
-  /* Sync with CoqBuilder */
-  def reduceError(s : String) = s.lines.toSeq.takeRight(20).mkString("\n")
-
-  val rule = new dk.itu.coqoon.core.utilities.UniqueRule
 }
 
 import dk.itu.coqoon.ui.EventReconciler
