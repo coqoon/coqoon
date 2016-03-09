@@ -44,6 +44,11 @@ trait ICoqElement {
     getCorrespondingResource.orElse(getParent.flatMap(_.getContainingResource))
   def getModel : ICoqModel = getAncestor[ICoqModel].get
 
+  import CoqEnforcement.{Issue, Severity}
+  def getIssues() : Seq[(Issue, Severity)]
+  def addIssue(issue : (Issue, Severity))
+  def setIssues(issues : Seq[(Issue, Severity)])
+
   def accept(f : ICoqElement => Boolean)
 }
 
@@ -61,10 +66,13 @@ trait ICoqModel extends ICoqElement with IParent {
   def removeListener(l : CoqElementChangeListener)
 }
 object ICoqModel {
-  def create(root : IWorkspaceRoot) : ICoqModel =
-    new CoqModelImpl(Option(root))
+  def create(root : IWorkspaceRoot) : ICoqModel = {
+    val impl = new CoqModelImpl(Option(root))
+    impl.addListener(IssueTranslator)
+    impl
+  }
 
-  private val instance =
+  private lazy val instance =
     create(org.eclipse.core.resources.ResourcesPlugin.getWorkspace.getRoot)
   def getInstance : ICoqModel = instance
 
@@ -87,6 +95,8 @@ abstract class CoqElementChangedEvent(
     override val element : ICoqElement) extends CoqElementEvent(element)
 case class CoqFileContentChangedEvent(
     override val element : ICoqFile) extends CoqElementChangedEvent(element)
+case class CoqIssuesChangedEvent(
+    override val element : ICoqElement) extends CoqElementChangedEvent(element)
 case class CoqProjectLoadPathChangedEvent(
     override val element : ICoqProject) extends CoqElementChangedEvent(element)
 

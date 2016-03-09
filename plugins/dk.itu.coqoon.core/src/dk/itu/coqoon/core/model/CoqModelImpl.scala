@@ -48,10 +48,67 @@ private abstract class CoqElementImpl[
 
   override def getModel() : CoqModelImpl = getAncestor[CoqModelImpl].get
 
+  import CoqEnforcement._
+  private var issues : Seq[(Issue, Severity)] = Seq()
+  override def getIssues() = issues
+  override def addIssue(issue : (Issue, Severity)) = setIssues(issues :+ issue)
+  override def setIssues(issues : Seq[(Issue, Severity)]) = {
+    this.issues = issues
+    notifyListeners(CoqIssuesChangedEvent(this))
+  }
+
   protected[model] def notifyListeners(ev : CoqElementEvent) : Unit =
     getModel.notifyListeners(ev)
 
   override def accept(f : ICoqElement => Boolean) = f(this)
+}
+
+import CoqEnforcement._
+
+object IssueTranslator extends CoqElementChangeListener {
+  override def coqElementChanged(ev : CoqElementEvent) = ev match {
+    case CoqIssuesChangedEvent(el : ICoqScriptElement) =>
+      el.getContainingResource.foreach(r =>
+          new MarkerUpdateJob(r, el, el.getIssues).schedule)
+    case _ =>
+  }
+}
+
+import org.eclipse.core.resources.WorkspaceJob
+
+private class MarkerUpdateJob(
+    r : IResource, el : ICoqScriptElement, issues : Seq[(Issue, Severity)])
+    extends WorkspaceJob("Update Coq markers") {
+  setRule(r)
+
+  import org.eclipse.core.runtime.{Status, IStatus}
+  override def runInWorkspace(monitor : IProgressMonitor) : IStatus = {
+    import dk.itu.coqoon.core.ManifestIdentifiers.MARKER_PROBLEM
+    val currentMarkers =
+      r.findMarkers(MARKER_PROBLEM, false, IResource.DEPTH_ZERO)
+    currentMarkers.foreach(_.delete)
+    import scala.collection.JavaConversions._
+    issues foreach {
+      case (Issue(_, offset, length, message, _), severity) =>
+        r.createMarker(MARKER_PROBLEM).setAttributes(Map(
+            IMarker.MESSAGE -> message.trim,
+            IMarker.SEVERITY ->
+                MarkerUpdateJob.severityToMarkerSeverity(severity),
+            IMarker.LOCATION -> s"offset $offset",
+            IMarker.CHAR_START -> (el.getOffset + offset),
+            IMarker.CHAR_END -> (el.getOffset + offset + length),
+            IMarker.TRANSIENT -> true))
+    }
+    Status.OK_STATUS
+  }
+}
+private object MarkerUpdateJob {
+  def severityToMarkerSeverity(s : Severity) =
+    s match {
+      case Severity.Error => IMarker.SEVERITY_ERROR
+      case Severity.Warning => IMarker.SEVERITY_WARNING
+      case _ => IMarker.SEVERITY_INFO
+    }
 }
 
 private trait ICache {
