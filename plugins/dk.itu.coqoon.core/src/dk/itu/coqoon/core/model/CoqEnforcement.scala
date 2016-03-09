@@ -49,14 +49,12 @@ object CoqEnforcement {
     class Runner extends CoqEnforcement.Runner {
       private var requireDone = false
       override def getIssues(i : ICoqElement) = {
-        // println(i)
         i match {
           case s : ICoqRequireSentence if requireDone =>
             Seq(IsolatedRequire(s))
           case s : ICoqRequireSentence => Seq()
           case s : ICoqScriptSentence if s.isSynthetic => Seq()
           case s : ICoqScriptElement =>
-            println(s"Bailing out after $s")
             requireDone = true
             Seq()
           case _ => Seq()
