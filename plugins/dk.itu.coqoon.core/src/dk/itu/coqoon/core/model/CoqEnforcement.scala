@@ -64,10 +64,10 @@ object CoqEnforcement {
   }
 
   def check(f : ICoqVernacFile, context : CoqEnforcementContext) :
-      Map[ICoqElement, Seq[(Issue, Severity)]] = {
+      Map[ICoqElement, Map[Issue, Severity]] = {
     val runners = Seq(IsolatedRequire.makeRunner)
 
-    var complaints : Map[ICoqElement, Seq[(Issue, Severity)]] = Map()
+    var complaints : Map[ICoqElement, Map[Issue, Severity]] = Map()
     f.accept(element => {
       val filtered = runners.flatMap(
           runner => runner.getIssues(element)).flatMap(issue => {
@@ -77,7 +77,7 @@ object CoqEnforcement {
         } else None
       })
       if (!filtered.isEmpty)
-        complaints += (element -> filtered)
+        complaints += (element -> filtered.toMap)
       true
     })
     complaints

@@ -45,9 +45,11 @@ trait ICoqElement {
   def getModel : ICoqModel = getAncestor[ICoqModel].get
 
   import CoqEnforcement.{Issue, Severity}
-  def getIssues() : Seq[(Issue, Severity)]
-  def addIssue(issue : (Issue, Severity))
-  def setIssues(issues : Seq[(Issue, Severity)])
+  def getIssues() : Map[Issue, Severity]
+  def setIssues(issues : Map[Issue, Severity])
+
+  def addIssue(issue : (Issue, Severity)) = setIssues(getIssues + issue)
+  def addIssues(issues : Map[Issue, Severity]) = setIssues(getIssues ++ issues)
 
   def accept(f : ICoqElement => Boolean)
 }

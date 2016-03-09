@@ -242,7 +242,7 @@ class PIDECoqEditor
             }
             if (!errors.isEmpty)
               sentence.setIssues(errors.values.toSeq.map(
-                  issue => (issue, issue.severityHint)))
+                  issue => (issue -> issue.severityHint)).toMap)
 
             val oldAnnotation = annotations.get(command)
             val newAnnotation =

@@ -49,10 +49,9 @@ private abstract class CoqElementImpl[
   override def getModel() : CoqModelImpl = getAncestor[CoqModelImpl].get
 
   import CoqEnforcement._
-  private var issues : Seq[(Issue, Severity)] = Seq()
+  private var issues : Map[Issue, Severity] = Map()
   override def getIssues() = issues
-  override def addIssue(issue : (Issue, Severity)) = setIssues(issues :+ issue)
-  override def setIssues(issues : Seq[(Issue, Severity)]) =
+  override def setIssues(issues : Map[Issue, Severity]) =
     if (this.issues != issues) {
       this.issues = issues
       notifyListeners(CoqIssuesChangedEvent(this))
@@ -76,7 +75,7 @@ private[model] object IssueTranslator extends CoqElementChangeListener {
         /* When a file's content is updated, all of its sentences are
          * discarded, so delete their markers as well */
         el.getCorrespondingResource.foreach(r =>
-            new MarkerUpdateJob(r, None, Seq()).schedule)
+            new MarkerUpdateJob(r, None, Map()).schedule)
       case _ =>
     }
 }
@@ -86,7 +85,7 @@ import dk.itu.coqoon.core.utilities.JobUtilities.MultiRule
 import org.eclipse.core.resources.WorkspaceJob
 
 private class MarkerUpdateJob(r : IResource,
-    el : Option[ICoqScriptElement], issues : Seq[(Issue, Severity)])
+    el : Option[ICoqScriptElement], issues : Map[Issue, Severity])
     extends WorkspaceJob("Update Coq markers") {
   import MarkerUpdateJob._
 
