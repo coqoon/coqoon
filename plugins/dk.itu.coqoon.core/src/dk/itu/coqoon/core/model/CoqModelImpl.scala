@@ -88,9 +88,10 @@ import org.eclipse.core.resources.WorkspaceJob
 private class MarkerUpdateJob(r : IResource,
     el : Option[ICoqScriptElement], issues : Seq[(Issue, Severity)])
     extends WorkspaceJob("Update Coq markers") {
+  import MarkerUpdateJob._
+
   setRule(MultiRule(
-      ResourcesPlugin.getWorkspace.getRuleFactory.markerRule(r),
-      MarkerUpdateJob.rule))
+      ResourcesPlugin.getWorkspace.getRuleFactory.markerRule(r), rule))
   setSystem(true)
 
   import org.eclipse.core.runtime.{Status, IStatus}
@@ -98,24 +99,34 @@ private class MarkerUpdateJob(r : IResource,
     import dk.itu.coqoon.core.ManifestIdentifiers.MARKER_PROBLEM
     val currentMarkers =
       r.findMarkers(MARKER_PROBLEM, false, IResource.DEPTH_ZERO)
-    currentMarkers.foreach(_.delete)
-    import scala.collection.JavaConversions._
-    el.foreach(el =>
-      issues foreach {
-        case (Issue(_, offset, length, message, _), severity) =>
-          r.createMarker(MARKER_PROBLEM).setAttributes(Map(
-              IMarker.MESSAGE -> message.trim,
-              IMarker.SEVERITY ->
-                  MarkerUpdateJob.severityToMarkerSeverity(severity),
-              IMarker.LOCATION -> s"offset $offset",
-              IMarker.CHAR_START -> (el.getOffset + offset),
-              IMarker.CHAR_END -> (el.getOffset + offset + length),
-              IMarker.TRANSIENT -> true))
-      })
+    el match {
+      case Some(el) =>
+        val elo = el.getOffset
+        import scala.collection.JavaConversions._
+        currentMarkers.foreach(m =>
+          if (m.getAttribute(SECRET_OFFSET, Int.MinValue) == elo) {
+            m.delete
+          })
+        issues foreach {
+          case (Issue(_, offset, length, message, _), severity) =>
+            r.createMarker(MARKER_PROBLEM).setAttributes(Map(
+                IMarker.MESSAGE -> message.trim,
+                IMarker.SEVERITY -> severityToMarkerSeverity(severity),
+                IMarker.LOCATION -> s"offset $offset",
+                IMarker.CHAR_START -> (elo + offset),
+                IMarker.CHAR_END -> (elo + offset + length),
+                IMarker.TRANSIENT -> false,
+                SECRET_OFFSET -> elo))
+        }
+      case None =>
+        currentMarkers.foreach(_.delete)
+    }
+
     Status.OK_STATUS
   }
 }
 private object MarkerUpdateJob {
+  final val SECRET_OFFSET = "coqoon_secretOffset"
   final val rule = new dk.itu.coqoon.core.utilities.UniqueRule
   def severityToMarkerSeverity(s : Severity) =
     s match {
