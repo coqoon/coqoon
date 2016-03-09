@@ -486,12 +486,8 @@ private object CoqBuilder {
 
   def createSentenceErrorMarker(
       l : ICoqScriptSentence, errorMessage : String) =
-    l.getContainingResource.foreach(r => {
-      val leadingWhitespace = l.getText.takeWhile(_.isWhitespace).size
-      createRegionErrorMarker(r, errorMessage,
-          (l.getOffset + leadingWhitespace,
-           l.getOffset + l.getLength))
-    })
+    l.addIssue((Issue("compiler/internal-error",
+        l, errorMessage, Severity.Error), Severity.Error))
 
   def createRegionErrorMarker(
       r : IResource, s : String, region : (Int, Int)) = {
