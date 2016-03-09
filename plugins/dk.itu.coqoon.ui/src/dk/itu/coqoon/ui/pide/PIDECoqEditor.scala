@@ -4,6 +4,7 @@ import dk.itu.coqoon.ui.{
   BaseCoqEditor, CoqGoalsContainer, CoqoonUIPreferences, ManifestIdentifiers}
 import dk.itu.coqoon.ui.text.Region
 import dk.itu.coqoon.ui.utilities.SupersedableTask
+import dk.itu.coqoon.core.model.{CoqEnforcement, CoqEnforcementContext}
 
 trait PIDENavigationHost extends PIDESessionHost {
   def getEntities(command : isabelle.Command) :
@@ -290,6 +291,11 @@ class PIDECoqEditor
           caretPing
         case _ =>
       }
+
+      import dk.itu.coqoon.core.model.CoqEnforcement
+      for ((el, issues) <- CoqEnforcement.check(getWorkingCopy.get.get,
+          PIDEEnforcementContext))
+        el.addIssues(issues)
     }
   }
 
@@ -430,6 +436,17 @@ object Perspective {
       overlays : Document.Node.Overlays = Document.Node.Overlays.empty) =
     Document.Node.Perspective[Text.Edit, Text.Perspective](true,
         Text.Perspective.full, overlays)
+}
+
+import dk.itu.coqoon.core.model.{CoqEnforcement, CoqEnforcementContext}
+
+object PIDEEnforcementContext extends CoqEnforcementContext {
+  def getSeverity(i : CoqEnforcement.Issue) = i.id match {
+    case CoqEnforcement.IsolatedRequire.ID =>
+      CoqEnforcement.Severity.Error
+    case _ =>
+      i.severityHint
+  }
 }
 
 import dk.itu.coqoon.ui.EventReconciler
