@@ -176,8 +176,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
               val vernac = inF.flatMap(coqProject.get.getModel.toCoqElement)
               (inF, vernac) match {
                 case (Some(inF), Some(vernac : ICoqVernacFile)) =>
-                  CoqEnforcement.createMarkers(vernac,
-                      CoqEnforcement.check(vernac, StandardEnforcementContext))
+                  for ((el, issues) <- CoqEnforcement.check(
+                      vernac, StandardEnforcementContext))
+                    el.setIssues(issues)
                   val runner = new CoqCompilerRunner(inF,
                       vernac.getParent.get.getCoqdir.get)
                   runner.setTicker(

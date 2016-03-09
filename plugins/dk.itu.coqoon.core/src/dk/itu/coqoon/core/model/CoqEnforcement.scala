@@ -19,16 +19,6 @@ package dk.itu.coqoon.core.model
 object CoqEnforcement {
   case class Issue(val id : String, val offset : Int,
       val length : Int, val message : String, val severityHint : Severity)
-  object Issue {
-    def apply(id : String, sentence : ICoqScriptSentence,
-        message : String, severityHint : Severity) : Issue = {
-      val leadingWhitespace = sentence.getText.takeWhile(_.isWhitespace).size
-      Issue(id,
-          sentence.getOffset + leadingWhitespace,
-          sentence.getLength - leadingWhitespace,
-          message, severityHint)
-    }
-  }
 
   abstract sealed class Severity
   object Severity {
@@ -48,10 +38,13 @@ object CoqEnforcement {
 
   object IsolatedRequire extends RunnerProvider {
     final val ID = "enforcement/isolatedRequire"
-    def apply(sentence : ICoqRequireSentence) =
-      Issue(IsolatedRequire.ID, sentence,
+    def apply(sentence : ICoqRequireSentence) = {
+      val leadingWhitespace = sentence.getText.takeWhile(_.isWhitespace).size
+      Issue(IsolatedRequire.ID,
+          leadingWhitespace, sentence.getLength - leadingWhitespace,
           "Require sentences should only occur at the beginning of a file",
           Severity.Warning)
+    }
     override def makeRunner = new Runner
     class Runner extends CoqEnforcement.Runner {
       private var requireDone = false
@@ -72,21 +65,24 @@ object CoqEnforcement {
     }
   }
 
-  def check(f : ICoqVernacFile,
-      context : CoqEnforcementContext) : Seq[(Issue, Severity)] = {
+  def check(f : ICoqVernacFile, context : CoqEnforcementContext) :
+      Map[ICoqElement, Seq[(Issue, Severity)]] = {
     val runners = Seq(IsolatedRequire.makeRunner)
 
-    var complaints : Seq[Issue] = Seq()
-    f.accept(i => {
-      runners.foreach(complaints ++= _.getIssues(i))
+    var complaints : Map[ICoqElement, Seq[(Issue, Severity)]] = Map()
+    f.accept(element => {
+      val filtered = runners.flatMap(
+          runner => runner.getIssues(element)).flatMap(issue => {
+        val severity = context.getSeverity(issue)
+        if (severity != Severity.Suppressed) {
+          Some((issue, severity))
+        } else None
+      })
+      if (!filtered.isEmpty)
+        complaints += (element -> filtered)
       true
     })
-    complaints.flatMap(c => {
-      val severity = context.getSeverity(c)
-      if (severity != Severity.Suppressed) {
-        Some((c, severity))
-      } else None
-    })
+    complaints
   }
 
   def createMarkers(
