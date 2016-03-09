@@ -75,12 +75,17 @@ object IssueTranslator extends CoqElementChangeListener {
   }
 }
 
+import dk.itu.coqoon.core.utilities.UniqueRule
+import dk.itu.coqoon.core.utilities.JobUtilities.MultiRule
 import org.eclipse.core.resources.WorkspaceJob
 
 private class MarkerUpdateJob(
     r : IResource, el : ICoqScriptElement, issues : Seq[(Issue, Severity)])
     extends WorkspaceJob("Update Coq markers") {
-  setRule(r)
+  setRule(MultiRule(
+      ResourcesPlugin.getWorkspace.getRuleFactory.markerRule(r),
+      MarkerUpdateJob.rule))
+  setSystem(true)
 
   import org.eclipse.core.runtime.{Status, IStatus}
   override def runInWorkspace(monitor : IProgressMonitor) : IStatus = {
@@ -104,6 +109,7 @@ private class MarkerUpdateJob(
   }
 }
 private object MarkerUpdateJob {
+  final val rule = new dk.itu.coqoon.core.utilities.UniqueRule
   def severityToMarkerSeverity(s : Severity) =
     s match {
       case Severity.Error => IMarker.SEVERITY_ERROR
