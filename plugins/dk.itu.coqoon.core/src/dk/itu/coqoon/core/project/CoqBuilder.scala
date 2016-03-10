@@ -64,8 +64,10 @@ class CoqBuilder extends IncrementalProjectBuilder {
     buildFiles(changedFiles, args, monitor)
   }
 
-  private def objectToSource(o : IPath) =
-    CoqBuilder.objectToSource(coqProject.get)(o)
+  private def asObjectFile(f : IFile) =
+    ICoqModel.getInstance.toCoqElement(f).flatMap(TryCast[ICoqObjectFile])
+  private def asVernacFile(f : IFile) =
+    ICoqModel.getInstance.toCoqElement(f).flatMap(TryCast[ICoqVernacFile])
 
   private def makePathRelative(f : IPath) =
     CoqBuilder.makePathRelative(getProject.getLocation, f)
@@ -89,14 +91,13 @@ class CoqBuilder extends IncrementalProjectBuilder {
      * source file */
     traverse[IFile](getProject,
         a => TryCast[IFile](a).flatMap(extensionFilter("vo", "vio")).filter(
-            f => objectToSource(f.getLocation).size == 0),
+            f => asObjectFile(f).exists(_.getVernacFiles.size == 0)),
         a => a.delete(IResource.NONE, null))
 
     /* Recalculate the dependencies for all of the files that have changed (if
      * those files are actually buildable in this project) */
     for (i <- files;
-         in <- ICoqModel.getInstance.toCoqElement(i).flatMap(
-             TryCast[ICoqVernacFile]);
+         in <- asVernacFile(i);
          out <- in.getObjectFile;
          inLoc <- in.getCorrespondingResource.map(_.getLocation);
          outLoc <- out.getCorrespondingResource.map(_.getLocation)) {
@@ -172,12 +173,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
 
       override def run() = setResult(
         try {
-          objectToSource(out) match {
-            case in :: Nil =>
-              val inF = makePathRelativeFile(in)
-              val vernac = inF.flatMap(coqProject.get.getModel.toCoqElement)
-              (inF, vernac) match {
-                case (Some(inF), Some(vernac : ICoqVernacFile)) =>
+          makePathRelativeFile(out).flatMap(
+              asObjectFile).map(_.getVernacFiles) match {
+            case Some(Seq(vernac)) =>
+              vernac.getCorrespondingResource match {
+                case Some(inF) =>
                   for ((el, issues) <- CoqEnforcement.check(
                       vernac, StandardEnforcementContext))
                     el.setIssues(issues)
@@ -186,12 +186,14 @@ class CoqBuilder extends IncrementalProjectBuilder {
                   runner.setTicker(
                     Some(() => !isInterrupted && !monitor.isCanceled))
                   CompilerDone(runner.run(null))
-                case f =>
-                  println(":-( " + f)
-                  Error("Couldn't retrieve source file handle for " + out)
               }
-            case Nil => Error("Not enough source files for " + out)
-            case _ => Error("Too many source files for " + out)
+            case Some(Seq()) =>
+              Error(s"$out has no corresponding source file")
+            case Some(_) =>
+              Error(s"$out has too many corresponding source files")
+            case None =>
+              Error("Couldn't map the output file " +
+                  "to a model object (shouldn't happen!)")
           }
         } catch {
           case e : CoreException => Error(e.getStatus.getMessage.trim)
@@ -238,25 +240,23 @@ class CoqBuilder extends IncrementalProjectBuilder {
         }
 
         for (i <- tasks;
-             inPath :: Nil <- Option(objectToSource(i.out))) {
-          val (in, out) =
-            (makePathRelativeFile(inPath),
-                makePathRelativeFile(i.out))
+             outHandle <- makePathRelativeFile(i.out).flatMap(asObjectFile);
+             Seq(inHandle) <- Some(outHandle.getVernacFiles);
+             in <- inHandle.getCorrespondingResource;
+             out <- outHandle.getCorrespondingResource)
           i.getResult match {
             case CompilerDone(s : CoqCompilerSuccess) =>
-              out.foreach(p => s.save(p, null))
+              s.save(out, null)
             case CompilerDone(CoqCompilerFailure(
                 _, _, CompilationError(_, line, _, _, message))) =>
-              in.foreach(
-                createLineErrorMarker(_, line.toInt, message.trim))
+              createLineErrorMarker(in, line.toInt, message.trim)
             case CompilerDone(CoqCompilerFailure(_, _, GeneralError(text))) =>
-              in.foreach(createResourceErrorMarker(_, text.trim))
+              createResourceErrorMarker(in, text.trim)
             case CompilerDone(CoqCompilerFailure(_, _, text)) =>
-              in.foreach(createResourceErrorMarker(_, text.trim))
+              createResourceErrorMarker(in, text.trim)
             case Error(text) =>
-              in.foreach(createResourceErrorMarker(_, text.trim))
+              createResourceErrorMarker(in, text.trim)
           }
-        }
       }
       completed ++= candidates
 
@@ -285,8 +285,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
 
     /* Create error markers for files with unsatisfied dependencies */
     for (i <- deps.getUnresolved;
-         j :: Nil <- Some(objectToSource(i));
-         f <- makePathRelativeFile(j);
          ((Some(sentence), identifier), _, None) <- deps.getDependencies(i))
       createSentenceErrorMarker(sentence,
           s"""Couldn't find library "${identifier}" in load path""")
@@ -508,27 +506,7 @@ private object CoqBuilder {
             (IMarker.LINE_NUMBER, line),
             (IMarker.SEVERITY, IMarker.SEVERITY_ERROR))))
   }
-  def objectToSourceRaw(project : ICoqProject)(location : IPath) : Seq[IPath] = {
-    var candidates : Seq[IPath] = Seq()
-    for (i <- project.getLoadPathProviders) i match {
-      case SourceLoadPath(src, bin_)
-          if bin_.getOrElse(project.getDefaultOutputLocation.get).
-              getLocation.isPrefixOf(location) =>
-        val bin = bin_.getOrElse(project.getDefaultOutputLocation.get)
-        val base = location.removeFirstSegments(
-            bin.getLocation.segmentCount).removeFileExtension
-        candidates :+= src.getLocation.append(base).addFileExtension("v")
-      case _ =>
-    }
-    candidates
-  }
-  def objectToSource(project : ICoqProject)(location : IPath) : Seq[IPath] = {
-    val handle = project.getCorrespondingResource.get
-    for (i <- objectToSourceRaw(project)(location);
-         j <- makePathRelative(handle.getLocation, i);
-         k <- Option(handle.findMember(j)))
-      yield i
-  }
+
   def makePathRelative(base : IPath, path : IPath) : Option[IPath] =
     if (base.isPrefixOf(path)) {
       Some(path.setDevice(null).removeFirstSegments(base.segmentCount))
