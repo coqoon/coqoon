@@ -68,14 +68,14 @@ import CoqEnforcement._
 private[model] object IssueTranslator extends CoqElementChangeListener {
   override def coqElementChanged(ev : CoqElementEvent) =
     ev match {
-      case CoqIssuesChangedEvent(el : ICoqScriptElement) =>
+      case CoqIssuesChangedEvent(el : ICoqElement) =>
         el.getContainingResource.foreach(r =>
-            new MarkerUpdateJob(r, Some(el), el.getIssues).schedule)
+            new MarkerUpdateJob(r, el, el.getIssues).schedule)
       case CoqFileContentChangedEvent(el : ICoqVernacFile) =>
         /* When a file's content is updated, all of its sentences are
          * discarded, so delete their markers as well */
         el.getCorrespondingResource.foreach(r =>
-            new MarkerUpdateJob(r, None, Map()).schedule)
+            new MarkerUpdateJob(r, el, Map()).schedule)
       case _ =>
     }
 }
@@ -84,8 +84,8 @@ import dk.itu.coqoon.core.utilities.UniqueRule
 import dk.itu.coqoon.core.utilities.JobUtilities.MultiRule
 import org.eclipse.core.resources.WorkspaceJob
 
-private class MarkerUpdateJob(r : IResource,
-    el : Option[ICoqScriptElement], issues : Map[Issue, Severity])
+private class MarkerUpdateJob(
+    r : IResource, el : ICoqElement, issues : Map[Issue, Severity])
     extends WorkspaceJob("Update Coq markers") {
   import MarkerUpdateJob._
 
@@ -98,10 +98,12 @@ private class MarkerUpdateJob(r : IResource,
     import dk.itu.coqoon.core.ManifestIdentifiers.MARKER_PROBLEM
     val currentMarkers =
       r.findMarkers(MARKER_PROBLEM, false, IResource.DEPTH_ZERO)
+    import scala.collection.JavaConversions._
     el match {
-      case Some(el) =>
+      case el : ICoqScriptElement =>
+        /* As script elements are in some sense immutable, we use their offset
+         * in the document as a unique identifier. */
         val elo = el.getOffset
-        import scala.collection.JavaConversions._
         currentMarkers.foreach(m =>
           if (m.getAttribute(SECRET_OFFSET, Int.MinValue) == elo) {
             m.delete
@@ -117,8 +119,17 @@ private class MarkerUpdateJob(r : IResource,
                 IMarker.TRANSIENT -> false,
                 SECRET_OFFSET -> elo))
         }
-      case None =>
+      case el : ICoqFile if issues.isEmpty =>
         currentMarkers.foreach(_.delete)
+      case el : ICoqFile =>
+        issues foreach {
+          case (Issue(_, offset, length, message, _), severity) =>
+            r.createMarker(MARKER_PROBLEM).setAttributes(Map(
+                IMarker.MESSAGE -> message.trim,
+                IMarker.SEVERITY -> severityToMarkerSeverity(severity),
+                IMarker.TRANSIENT -> false))
+        }
+      case _ =>
     }
 
     Status.OK_STATUS
