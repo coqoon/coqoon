@@ -740,6 +740,26 @@ private class CoqVernacFileImpl(
 
   override def getChildren = getCache.sentences.get
 
+  override def getObjectFile() : Option[ICoqObjectFile] = {
+    import dk.itu.coqoon.core.CoqoonPreferences
+    for (m <- getAncestor[ICoqModel];
+         r <- getCorrespondingResource;
+         location = r.getLocation;
+         p <- getAncestor[ICoqProject];
+         SourceLoadPath(src, bin) <- p.getLoadPathProviders
+             if src.getLocation.isPrefixOf(location);
+         partialObjectPath = location.removeFirstSegments(
+             src.getLocation.segmentCount).removeFileExtension;
+         objectPath = partialObjectPath.addFileExtension(
+             if (CoqoonPreferences.UseQuick.get) "vio" else "vo");
+         output = bin.getOrElse(p.getDefaultOutputLocation.get);
+         objectFile = output.getFile(objectPath);
+         f <- m.toCoqElement(objectFile).flatMap(
+             TryCast[ICoqObjectFile]))
+      return Some(f)
+    None
+  }
+
   override def getSentenceAt(offset : Int) : Option[ICoqScriptSentence] = {
     accept {
       /* Recurse into ICoqScriptGroups that contain the sentence we're looking
