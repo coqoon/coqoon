@@ -744,10 +744,10 @@ private class CoqVernacFileImpl(
     import dk.itu.coqoon.core.CoqoonPreferences
     for (m <- getAncestor[ICoqModel];
          r <- getCorrespondingResource;
-         location = r.getLocation;
          p <- getAncestor[ICoqProject];
          SourceLoadPath(src, bin) <- p.getLoadPathProviders
-             if src.getLocation.isPrefixOf(location);
+             if src.contains(r);
+         location = r.getLocation;
          partialObjectPath = location.removeFirstSegments(
              src.getLocation.segmentCount).removeFileExtension;
          objectPath = partialObjectPath.addFileExtension(
@@ -902,7 +902,22 @@ private case class CoqObjectFileImpl(
     private val res : Option[IFile],
     private val parent : ICoqPackageFragment)
     extends CoqElementImpl(res, parent) with ICoqObjectFile {
-  override def getVernacFile = None
+  override def getVernacFiles() : Seq[ICoqVernacFile] =
+    for (m <- getAncestor[ICoqModel].toSeq;
+         r <- getCorrespondingResource.toSeq;
+         p <- getAncestor[ICoqProject].toSeq;
+         default = p.getDefaultOutputLocation.get;
+         SourceLoadPath(src, bin_) <- p.getLoadPathProviders
+             if bin_.getOrElse(default).contains(r);
+         bin = bin_.getOrElse(default);
+         location = r.getLocation;
+         partialSourcePath = location.removeFirstSegments(
+             bin.getLocation.segmentCount).removeFileExtension;
+         sourcePath = partialSourcePath.addFileExtension("v");
+         sourceFile = src.getFile(sourcePath);
+         f <- m.toCoqElement(sourceFile).flatMap(
+             TryCast[ICoqVernacFile]) if f.exists)
+      yield f
 
   override def isQuick =
     (res.map(_.getLocation.getFileExtension == "vio")).getOrElse(false)

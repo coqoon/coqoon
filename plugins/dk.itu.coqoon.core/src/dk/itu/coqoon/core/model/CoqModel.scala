@@ -651,7 +651,10 @@ trait ICoqScriptGroup extends ICoqScriptElement with IParent {
 }
 
 trait ICoqObjectFile extends ICoqFile {
-  def getVernacFile : Option[ICoqVernacFile]
+  /* Returns the (actually extant) source files that could have produced this
+   * object file. (Having more than one file in this sequence should normally
+   * be treated as an error.) */
+  def getVernacFiles() : Seq[ICoqVernacFile]
 
   def isQuick() : Boolean
 }
