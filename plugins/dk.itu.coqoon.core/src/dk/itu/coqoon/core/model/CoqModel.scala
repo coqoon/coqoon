@@ -27,22 +27,22 @@ import org.eclipse.core.resources.{
   IFile, IFolder, IProject, IWorkspace, IWorkspaceRoot}
 
 trait IParent {
-  def getChildren : Seq[ICoqElement]
-  def hasChildren : Boolean = (!getChildren.isEmpty)
+  def getChildren() : Seq[ICoqElement]
+  def hasChildren() : Boolean = (!getChildren.isEmpty)
 }
 
 trait ICoqElement {
-  def exists : Boolean
+  def exists() : Boolean
   def getAncestor[A]()(implicit a0 : Manifest[A]) : Option[A] =
     this match {
       case q : A => Some(q)
       case _ => getParent.flatMap(_.getAncestor[A])
     }
-  def getParent : Option[ICoqElement with IParent]
-  def getCorrespondingResource : Option[IResource]
-  def getContainingResource : Option[IResource] =
+  def getParent() : Option[ICoqElement with IParent]
+  def getCorrespondingResource() : Option[IResource]
+  def getContainingResource() : Option[IResource] =
     getCorrespondingResource.orElse(getParent.flatMap(_.getContainingResource))
-  def getModel : ICoqModel = getAncestor[ICoqModel].get
+  def getModel() : ICoqModel = getAncestor[ICoqModel].get
 
   import CoqEnforcement.{Issue, Severity}
   def getIssues() : Map[Issue, Severity]
@@ -59,8 +59,8 @@ trait ICoqModel extends ICoqElement with IParent {
   override def getCorrespondingResource : Option[IWorkspaceRoot]
 
   def getProject(name : String) : ICoqProject
-  def getProjects : Seq[ICoqProject]
-  def hasProjects : Boolean = (!getProjects.isEmpty)
+  def getProjects() : Seq[ICoqProject]
+  def hasProjects() : Boolean = (!getProjects.isEmpty)
 
   def toCoqElement(resource : IResource) : Option[ICoqElement]
 
@@ -76,7 +76,7 @@ object ICoqModel {
 
   private lazy val instance =
     create(org.eclipse.core.resources.ResourcesPlugin.getWorkspace.getRoot)
-  def getInstance : ICoqModel = instance
+  def getInstance() : ICoqModel = instance
 
   def toCoqProject(project : IProject) : ICoqProject =
     getInstance.toCoqElement(project).flatMap(TryCast[ICoqProject]).orNull
@@ -423,8 +423,8 @@ object CoqStandardLibrary {
 }
 
 trait ICoqProject extends ICoqElement with IParent {
-  override def getParent : Option[ICoqModel]
-  override def getCorrespondingResource : Option[IProject]
+  override def getParent() : Option[ICoqModel]
+  override def getCorrespondingResource() : Option[IProject]
 
   /* Note that this method automatically applies any project-defined local
    * overrides for external paths; callers of the getLoadPathProviders method
@@ -438,11 +438,11 @@ trait ICoqProject extends ICoqElement with IParent {
   def getLocalOverrides() : Map[IPath, IPath]
   def setLocalOverrides(overrides : Map[IPath, IPath])
 
-  def getDefaultOutputLocation : Option[IFolder]
+  def getDefaultOutputLocation() : Option[IFolder]
 
   def getPackageFragmentRoot(folder : IPath) : ICoqPackageFragmentRoot
-  def getPackageFragmentRoots : Seq[ICoqPackageFragmentRoot]
-  def hasPackageFragmentRoots : Boolean = (!getPackageFragmentRoots.isEmpty)
+  def getPackageFragmentRoots() : Seq[ICoqPackageFragmentRoot]
+  def hasPackageFragmentRoots() : Boolean = (!getPackageFragmentRoots.isEmpty)
 
   override def getChildren : Seq[ICoqPackageFragmentRoot]
 }
@@ -487,8 +487,8 @@ trait ICoqPackageFragmentRoot extends ICoqElement with IParent {
   override def getParent : Option[ICoqProject]
 
   def getPackageFragment(folder : IPath) : ICoqPackageFragment
-  def getPackageFragments : Seq[ICoqPackageFragment]
-  def hasPackageFragments : Boolean = (!getPackageFragments.isEmpty)
+  def getPackageFragments() : Seq[ICoqPackageFragment]
+  def hasPackageFragments() : Boolean = (!getPackageFragments.isEmpty)
 
   override def getChildren : Seq[ICoqPackageFragment]
 }
@@ -500,17 +500,17 @@ trait ICoqPackageFragment extends ICoqElement with IParent {
   def getCoqdir() : Option[Seq[String]]
 
   def getVernacFile(file : IPath) : ICoqVernacFile
-  def getVernacFiles : Seq[ICoqVernacFile]
-  def hasVernacFiles : Boolean = (!getVernacFiles.isEmpty)
+  def getVernacFiles() : Seq[ICoqVernacFile]
+  def hasVernacFiles() : Boolean = (!getVernacFiles.isEmpty)
 
   def getObjectFile(file : IPath) : ICoqObjectFile
-  def getObjectFiles : Seq[ICoqObjectFile]
-  def hasObjectFiles : Boolean = (!getObjectFiles.isEmpty)
+  def getObjectFiles() : Seq[ICoqObjectFile]
+  def hasObjectFiles() : Boolean = (!getObjectFiles.isEmpty)
 
-  def hasCoqFiles : Boolean = (hasVernacFiles || hasObjectFiles)
+  def hasCoqFiles() : Boolean = (hasVernacFiles || hasObjectFiles)
 
-  def getNonCoqFiles : Seq[IFile]
-  def hasNonCoqFiles : Boolean = (!getNonCoqFiles.isEmpty)
+  def getNonCoqFiles() : Seq[IFile]
+  def hasNonCoqFiles() : Boolean = (!getNonCoqFiles.isEmpty)
 
   override def getChildren : Seq[ICoqFile]
 }
