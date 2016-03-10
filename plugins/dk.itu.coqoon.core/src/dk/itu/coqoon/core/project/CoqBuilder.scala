@@ -64,8 +64,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
     buildFiles(changedFiles, args, monitor)
   }
 
-  private def sourceToObject(s : IPath) =
-    CoqBuilder.sourceToObject(coqProject.get)(s)
   private def objectToSource(o : IPath) =
     CoqBuilder.objectToSource(coqProject.get)(o)
 
@@ -97,11 +95,15 @@ class CoqBuilder extends IncrementalProjectBuilder {
     /* Recalculate the dependencies for all of the files that have changed (if
      * those files are actually buildable in this project) */
     for (i <- files;
-         j <- sourceToObject(i.getLocation)) {
-      if (i.exists) {
-        deps.setDependencies(j, generateDeps(i))
-      } else deps.clearDependencies(j)
-      deps.unresolveDependenciesUpon(i.getLocation, j)
+         in <- ICoqModel.getInstance.toCoqElement(i).flatMap(
+             TryCast[ICoqVernacFile]);
+         out <- in.getObjectFile;
+         inLoc <- in.getCorrespondingResource.map(_.getLocation);
+         outLoc <- out.getCorrespondingResource.map(_.getLocation)) {
+      if (in.exists) {
+        deps.setDependencies(outLoc, generateDeps(in))
+      } else deps.clearDependencies(outLoc)
+      deps.unresolveDependenciesUpon(inLoc, outLoc)
     }
 
     /* Pre-create all of the possible output directories so that the complete
@@ -308,11 +310,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
     deps.clearDependencies
 
+    var files : Set[IFile] = Set()
     traverse[IFile](getProject,
         a => TryCast[IFile](a).flatMap(extensionFilter("v")),
-        a => sourceToObject(a.getLocation).foreach(
-            b => deps.setDependencies(b, generateDeps(a))))
-    buildFiles(Set(), args, monitor)
+        a => files += a)
+    buildFiles(files, args, monitor)
   }
 
   override protected def clean(monitor : IProgressMonitor) = {
@@ -447,12 +449,12 @@ class CoqBuilder extends IncrementalProjectBuilder {
 
   private final val emptyPath = Option.empty[IPath]
 
-  private def generateDeps(file : IFile) : Seq[TrackerT#Dependency] = {
+  private def generateDeps(
+      file : ICoqVernacFile) : Seq[TrackerT#Dependency] = {
+    val location = file.getCorrespondingResource.get.getLocation
     var deps = Seq.newBuilder[TrackerT#Dependency]
-    deps +=
-        ((None, "(self)"), resolveDummy(file.getLocation)(_), emptyPath)
-    ICoqModel.getInstance.toCoqElement(file).flatMap(
-        TryCast[ICoqVernacFile]).foreach(_.accept(_ match {
+    deps += ((None, "(self)"), resolveDummy(location)(_), emptyPath)
+    file accept {
       case l : ICoqLoadSentence =>
         deps += ((Some(l), l.getIdent()), resolveLoad(_), emptyPath)
         false
@@ -471,7 +473,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
         false
       case e : IParent => true
       case _ => false
-    }))
+    }
     deps.result
   }
 
@@ -505,20 +507,6 @@ private object CoqBuilder {
             (IMarker.LOCATION, "line " + line),
             (IMarker.LINE_NUMBER, line),
             (IMarker.SEVERITY, IMarker.SEVERITY_ERROR))))
-  }
-  def sourceToObject(project : ICoqProject)(location : IPath) : Option[IPath] = {
-    for (i <- project.getLoadPathProviders) i match {
-      case SourceLoadPath(src, bin)
-          if src.getLocation.isPrefixOf(location) =>
-        val base = location.removeFirstSegments(
-            src.getLocation.segmentCount).removeFileExtension
-        val output = bin.getOrElse(
-            project.getDefaultOutputLocation.get).getLocation
-        return Some(output.append(base).addFileExtension(
-            if (CoqoonPreferences.UseQuick.get) "vio" else "vo"))
-      case _ =>
-    }
-    None
   }
   def objectToSourceRaw(project : ICoqProject)(location : IPath) : Seq[IPath] = {
     var candidates : Seq[IPath] = Seq()
