@@ -71,6 +71,9 @@ private[model] object IssueTranslator extends CoqElementChangeListener {
       case CoqIssuesChangedEvent(el : ICoqElement) =>
         el.getContainingResource.foreach(r =>
             new MarkerUpdateJob(r, el, el.getIssues).schedule)
+      case CoqElementRemovedEvent(el) =>
+        el.getCorrespondingResource.foreach(r =>
+            new MarkerUpdateJob(r, el, Map()).schedule)
       case CoqFileContentChangedEvent(el : ICoqVernacFile) =>
         /* When a file's content is updated, all of its sentences are
          * discarded, so delete their markers as well */
