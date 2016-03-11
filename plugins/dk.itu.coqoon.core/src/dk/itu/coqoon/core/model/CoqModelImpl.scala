@@ -801,23 +801,12 @@ private class CoqVernacFileImpl(
   }
 
   override def getSentenceAt(offset : Int) : Option[ICoqScriptSentence] = {
-    accept {
-      /* Recurse into ICoqScriptGroups that contain the sentence we're looking
-       * for... */
-      case s : ICoqScriptGroup
-          if offset >= s.getOffset && offset < (s.getOffset + s.getLength) =>
-        true
-      /* ... and ignore the ones that don't. */
-      case s : ICoqScriptGroup => false
-
-      case s : ICoqScriptSentence
-          if offset >= s.getOffset && offset < (s.getOffset + s.getLength) =>
-        return Some(s)
-
-      case p : IParent =>
-        true
-      case _ =>
-        false
+    var pos = 0
+    for (i <- getCache.sentences.get) {
+      val end = pos + i.getLength
+      if (offset >= pos && offset < end) {
+        return Some(i)
+      } else pos = end
     }
     None
   }
