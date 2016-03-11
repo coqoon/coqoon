@@ -877,17 +877,53 @@ private class CoqAssertionSentenceImpl(
         extends CoqScriptSentenceImpl(sentence, parent)
             with ICoqAssertionSentence
 
+private class CoqModuleStartSentenceImpl(
+    private val sentence : Sentence,
+    private val parent : ICoqElement with IParent)
+        extends CoqScriptSentenceImpl(sentence, parent)
+            with ICoqModuleStartSentence
+
 private class CoqSectionStartSentenceImpl(
     private val sentence : Sentence,
     private val parent : ICoqElement with IParent)
         extends CoqScriptSentenceImpl(sentence, parent)
             with ICoqSectionStartSentence
 
-private class CoqModuleStartSentenceImpl(
+private class CoqIdentifiedEndSentenceImpl(
     private val sentence : Sentence,
     private val parent : ICoqElement with IParent)
         extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqModuleStartSentence
+            with ICoqIdentifiedEndSentence
+
+private class CoqProofStartSentenceImpl(
+    private val sentence : Sentence,
+    private val parent : ICoqElement with IParent)
+        extends CoqScriptSentenceImpl(sentence, parent)
+            with ICoqProofStartSentence
+
+private class CoqProofEndSentenceImpl(
+    private val sentence : Sentence,
+    private val parent : ICoqElement with IParent)
+        extends CoqScriptSentenceImpl(sentence, parent)
+            with ICoqProofEndSentence
+
+private class CoqSubproofStartSentenceImpl(
+    private val sentence : Sentence,
+    private val parent : ICoqElement with IParent)
+        extends CoqScriptSentenceImpl(sentence, parent)
+            with ICoqSubproofStartSentence
+
+private class CoqSubproofEndSentenceImpl(
+    private val sentence : Sentence,
+    private val parent : ICoqElement with IParent)
+        extends CoqScriptSentenceImpl(sentence, parent)
+            with ICoqSubproofEndSentence
+
+private class CoqBulletSentenceImpl(
+    private val sentence : Sentence,
+    private val parent : ICoqElement with IParent)
+        extends CoqScriptSentenceImpl(sentence, parent)
+            with ICoqBulletSentence
 
 private class CoqScriptGroupImpl(
     val elements : Seq[ICoqScriptElement],

@@ -638,6 +638,28 @@ trait ICoqSectionStartSentence extends ICoqScriptSentence {
   def getIdentifier() = Classifier.SectionStartSentence.unapply(getText).get
 }
 
+trait ICoqIdentifiedEndSentence extends ICoqScriptSentence {
+  import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
+  def getIdentifier() = Classifier.IdentifiedEndSentence.unapply(getText).get
+}
+
+trait ICoqProofStartSentence extends ICoqScriptSentence {
+  import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
+  def getKind() = Classifier.ProofStartSentence.unapply(getText).get
+}
+
+trait ICoqProofEndSentence extends ICoqScriptSentence {
+  import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
+  def getKind() = Classifier.ProofEndSentence.unapply(getText).get
+}
+
+trait ICoqSubproofStartSentence extends ICoqScriptSentence
+trait ICoqSubproofEndSentence extends ICoqScriptSentence
+trait ICoqBulletSentence extends ICoqScriptSentence {
+  import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier
+  def getKind() = Classifier.BulletSentence.unapply(getText).get
+}
+
 trait ICoqScriptGroup extends ICoqScriptElement with IParent {
   override lazy val getText = getChildren.map(_.getText).mkString
   override lazy val getLength =
