@@ -555,7 +555,7 @@ private class CoqVernacFileImpl(
     val res : Option[IFile], val parent : ICoqPackageFragment)
     extends ParentImpl(res, parent) with ICoqVernacFile {
   protected class Cache extends ICache {
-    override def destroy = Seq(sentences).map(_.clear)
+    override def destroy = Seq(sentences, groups).map(_.clear)
 
     override def update(ev : IResourceChangeEvent) = {
       destroy
@@ -563,10 +563,50 @@ private class CoqVernacFileImpl(
     }
 
     import dk.itu.coqoon.core.coqtop.{CoqSentence, ParserStack}
-    final val sentences = CacheSlot[Seq[ICoqScriptElement]] {
+    final val sentences = CacheSlot[Seq[ICoqScriptSentence]] {
+      val content = CoqVernacFileImpl.this.getContents
+      val sentences = CoqSentence.getNextSentences(content, 0, content.length)
+
+      import CoqSentence.Classifier._
+      for (i <- sentences) yield i match {
+        case h @ (LtacSentence(_, _), _) =>
+          new CoqLtacSentenceImpl(h, CoqVernacFileImpl.this)
+        case h @ (FixpointSentence(_, _, _), _) =>
+          new CoqFixpointSentenceImpl(h, CoqVernacFileImpl.this)
+        case h @ (InductiveSentence(_, _, _), _) =>
+          new CoqInductiveSentenceImpl(h, CoqVernacFileImpl.this)
+        case h @ (DefinitionSentence(_, _, _, _), _) =>
+          new CoqDefinitionSentenceImpl(h, CoqVernacFileImpl.this)
+        case h @ (LoadSentence(_), _) =>
+          new CoqLoadSentenceImpl(h, CoqVernacFileImpl.this)
+        case h @ (RequireSentence(_, _), _) =>
+          new CoqRequireSentenceImpl(h, CoqVernacFileImpl.this)
+        case h @ (FromRequireSentence(_, _, _), _) =>
+          new CoqFromRequireSentenceImpl(h, CoqVernacFileImpl.this)
+        case h @ (DeclareMLSentence(_), _) =>
+          new CoqDeclareMLSentenceImpl(h, CoqVernacFileImpl.this)
+        case h @ (AssertionSentence(_, _, _), _) =>
+          new CoqAssertionSentenceImpl(h, CoqVernacFileImpl.this)
+        case h @ (SectionStartSentence(_), _) =>
+          new CoqSectionStartSentenceImpl(h, CoqVernacFileImpl.this)
+        case h @ (IdentifiedEndSentence(_), _) =>
+          new CoqIdentifiedEndSentenceImpl(h, CoqVernacFileImpl.this)
+        case h @ (ProofStartSentence(_), _) =>
+          new CoqProofStartSentenceImpl(h, CoqVernacFileImpl.this)
+        case h @ (ProofEndSentence(_), _) =>
+          new CoqProofEndSentenceImpl(h, CoqVernacFileImpl.this)
+        case h @ (SubproofSentence(), _) =>
+          new CoqSubproofStartSentenceImpl(h, CoqVernacFileImpl.this)
+        case h @ (EndSubproofSentence(), _) =>
+          new CoqSubproofEndSentenceImpl(h, CoqVernacFileImpl.this)
+        case h =>
+          new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this)
+      }
+    }
+
+    final val groups = CacheSlot[Seq[ICoqScriptElement]] {
       val content = CoqVernacFileImpl.this.getContents
       var sentences = CoqSentence.getNextSentences(content, 0, content.length)
-
       val stack = new ParserStack[ICoqScriptElement, String]()
 
       def _closeUntil(contextLabel : String) = {
@@ -738,7 +778,7 @@ private class CoqVernacFileImpl(
   protected def getContents() =
     res.map(f => TotalReader.read(f.getContents)).getOrElse("")
 
-  override def getChildren = getCache.sentences.get
+  override def getChildren = getCache.groups.get
 
   override def getObjectFile() : Option[ICoqObjectFile] = {
     import dk.itu.coqoon.core.CoqoonPreferences
@@ -802,7 +842,7 @@ private class DetachedCoqVernacFileImpl(
   override def getContents = content.get
   override def setContents(contents : String) = {
     content.set(Option(contents))
-    getCache.sentences.clear
+    getCache.destroy
     /* XXX: should it be possible to distinguish between multiple detached
      * versions of a single file? */
     notifyListeners(CoqFileContentChangedEvent(this))
