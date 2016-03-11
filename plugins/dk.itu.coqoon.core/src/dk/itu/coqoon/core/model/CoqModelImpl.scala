@@ -605,8 +605,6 @@ private class CoqVernacFileImpl(
     }
 
     final val groups = CacheSlot[Seq[ICoqScriptElement]] {
-      val content = CoqVernacFileImpl.this.getContents
-      var sentences = CoqSentence.getNextSentences(content, 0, content.length)
       val stack = new ParserStack[ICoqScriptElement, String]()
 
       def _closeUntil(contextLabel : String) = {
@@ -618,78 +616,74 @@ private class CoqVernacFileImpl(
           context = stack.getInnermostContext
         }
       }
+      def innermostIs(s : String) = stack.getInnermostContext.contains(s)
 
+      var sentences = this.sentences.get
       while (sentences != Nil) {
-        import CoqSentence.Classifier._
         sentences = sentences match {
-          case (h @ (SectionStartSentence(identifier), _)) :: tail =>
-            stack.pushContext(s"section-${identifier}")
-            stack.push(
-                new CoqSectionStartSentenceImpl(h, CoqVernacFileImpl.this))
+          case (h : ICoqSectionStartSentence) :: tail =>
+            stack.pushContext(s"section-${h.getIdentifier}")
+            stack.push(h)
             tail
-          case (h @ (IdentifiedEndSentence(id), _)) :: tail
-              if stack.getInnermostContext == Some(s"section-${id}") =>
-            stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
+          case (h : ICoqIdentifiedEndSentence) :: tail
+              if innermostIs(s"section-${h.getIdentifier}") =>
+            stack.push(h)
             val (tag, body) = stack.popContext
             stack.push(new CoqScriptGroupImpl(
                 body.reverse, CoqVernacFileImpl.this))
             tail
 
-          case (h @ (ModuleStartSentence(identifier), _)) :: tail =>
-            stack.pushContext(s"module-${identifier}")
-            stack.push(
-                new CoqModuleStartSentenceImpl(h, CoqVernacFileImpl.this))
+          case (h : ICoqModuleStartSentence) :: tail =>
+            stack.pushContext(s"module-${h.getIdentifier}")
+            stack.push(h)
             tail
-          case (h @ (IdentifiedEndSentence(id), _)) :: tail
-              if stack.getInnermostContext == Some(s"module-${id}") =>
-            stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
+          case (h : ICoqIdentifiedEndSentence) :: tail
+              if innermostIs(s"module-${h.getIdentifier}") =>
+            stack.push(h)
             val (tag, body) = stack.popContext
             stack.push(
                 new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
             tail
 
-          case (h @ (DefinitionSentence(_, identifier, _, _), _)) :: tail =>
-            stack.push(
-                new CoqDefinitionSentenceImpl(h, CoqVernacFileImpl.this))
+          case (h : ICoqDefinitionSentence) :: tail =>
+            stack.push(h)
             tail
-          case (h @ (LtacSentence(identifier, _), _)) :: tail =>
-            stack.push(new CoqLtacSentenceImpl(h, CoqVernacFileImpl.this))
+          case (h : ICoqLtacSentence) :: tail =>
+            stack.push(h)
             tail
-          case (h @ (FixpointSentence(_, identifier, _), _)) :: tail =>
-            stack.push(new CoqFixpointSentenceImpl(h, CoqVernacFileImpl.this))
+          case (h : ICoqFixpointSentence) :: tail =>
+            stack.push(h)
             tail
-          case (h @ (InductiveSentence(_, identifier, _), _)) :: tail =>
-            stack.push(new CoqInductiveSentenceImpl(h, CoqVernacFileImpl.this))
-            tail
-
-          case (h @ (LoadSentence(ident), _)) :: tail =>
-            stack.push(new CoqLoadSentenceImpl(h, CoqVernacFileImpl.this))
-            tail
-          case (h @ (RequireSentence(_, what), _)) :: tail =>
-            stack.push(new CoqRequireSentenceImpl(h, CoqVernacFileImpl.this))
-            tail
-          case (h @ (FromRequireSentence(_, _, _), _)) :: tail =>
-            stack.push(
-                new CoqFromRequireSentenceImpl(h, CoqVernacFileImpl.this))
-            tail
-          case (h @ (DeclareMLSentence(_), _)) :: tail =>
-            stack.push(
-                new CoqDeclareMLSentenceImpl(h, CoqVernacFileImpl.this))
+          case (h : ICoqInductiveSentence) :: tail =>
+            stack.push(h)
             tail
 
-          case (h @ (AssertionSentence(_, identifier, _), _)) :: tail =>
-            stack.pushContext(s"proof-${identifier}")
-            stack.push(new CoqAssertionSentenceImpl(h, CoqVernacFileImpl.this))
+          case (h : ICoqLoadSentence) :: tail =>
+            stack.push(h)
             tail
-          case (h @ (ProofEndSentence(_), _)) ::
-               (i @ (ProofStartSentence(_), _)) :: tail =>
+          case (h : ICoqRequireSentence) :: tail =>
+            stack.push(h)
+            tail
+          case (h : ICoqFromRequireSentence) :: tail =>
+            stack.push(h)
+            tail
+          case (h : ICoqDeclareMLSentence) :: tail =>
+            stack.push(h)
+            tail
+
+          case (h : ICoqAssertionSentence) :: tail =>
+            stack.pushContext(s"proof-${h.getIdentifier}")
+            stack.push(h)
+            tail
+          case (h : ICoqProofEndSentence) ::
+               (i : ICoqProofStartSentence) :: tail =>
             /* This isn't really the end of a proof (perhaps Program is being
              * used?) */
-            stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
-            stack.push(new CoqScriptSentenceImpl(i, CoqVernacFileImpl.this))
+            stack.push(h)
+            stack.push(i)
             tail
 
-          case (h @ (ProofEndSentence(_), _)) :: tail
+          case (h : ICoqProofEndSentence) :: tail
               if stack.getContext {
                 case f if f.startsWith("proof-") => true
                 case _ => false
@@ -700,35 +694,35 @@ private class CoqVernacFileImpl(
                 case _ => false
               }).get
             _closeUntil(label)
-            stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
+            stack.push(h)
             val (tag, body) = stack.popContext
             stack.push(
                 new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
             tail
 
-          case (h @ (SubproofSentence(), _)) :: tail =>
+          case (h : ICoqSubproofStartSentence) :: tail =>
             stack.pushContext(s"subproof-curly")
-            stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
+            stack.push(h)
             tail
 
           /* If we encounter a "}" (and no new proof has started since we saw
            * the corresponding "{"), then close any intervening subproofs
            * before also closing this one */
-          case (h @ (EndSubproofSentence(), _)) :: tail
+          case (h : ICoqSubproofEndSentence) :: tail
               if stack.getContext {
                 case f if f == "subproof-curly" => true
                 case f if f.startsWith("proof-") => true
                 case _ => false
               } == Some("subproof-curly") =>
             _closeUntil("subproof-curly")
-            stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
+            stack.push(h)
             val (tag, body) = stack.popContext
             stack.push(
                 new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
             tail
 
-          case (h @ (BulletSentence(b), _)) :: tail =>
-            val label = s"bullet-$b"
+          case (h : ICoqBulletSentence) :: tail =>
+            val label = s"bullet-${h.getKind}"
             if (stack.getContext {
                   case f if f == label => true
                   case f if f == "subproof-curly" => true
@@ -741,20 +735,20 @@ private class CoqVernacFileImpl(
                   new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
             }
             stack.pushContext(label)
-            stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
+            stack.push(h)
             tail
 
           /* Something of the form "Foo. Proof." is probably a proof, even if
            * we don't recognise what "Foo." means (unless it's a comment) */
-          case (h @ (_, false)) :: (i @ (ProofStartSentence(_), _)) :: tail =>
+          case h :: (i : ICoqProofStartSentence) :: tail =>
             /* XXX: scan "h" for a proof identifier? */
             stack.pushContext("proof-baffling")
-            stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
-            stack.push(new CoqScriptSentenceImpl(i, CoqVernacFileImpl.this))
+            stack.push(h)
+            stack.push(i)
             tail
 
           case h :: tail =>
-            stack.push(new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this))
+            stack.push(h)
             tail
           case Nil =>
             Nil
