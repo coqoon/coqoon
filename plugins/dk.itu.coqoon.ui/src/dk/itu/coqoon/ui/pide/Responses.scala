@@ -150,9 +150,10 @@ object Responses {
     case _ => None
   }
 
-  /* The left tuple is (path to file, (start offset, end offset)), and the
-   * right, used for things defined in this PIDE session, is (defining
-   * execution ID, (start offset, end offset)). */
+  /* The left tuple is (path to file, (start file offset, end file offset)),
+   * and the right, used for things defined in this PIDE session, is (defining
+   * execution ID, (start command offset, end command offset)). All offsets
+   * are zero-based (or have been corrected to be zero-based). */
   type Entity = Either[
     (String, (Int, Int)),
     (isabelle.Document_ID.Generic, (Int, Int))]
@@ -165,13 +166,13 @@ object Responses {
             Some(def_file), Some(def_offset_), Some(def_end_offset_), _) =>
           val def_offset = Integer.parseInt(def_offset_, 10)
           val def_end_offset = Integer.parseInt(def_end_offset_, 10)
-          Some(Left(def_file, (def_offset, def_end_offset)))
+          Some(Left(def_file, (def_offset - 1, def_end_offset)))
         case Seq(
             None, Some(def_offset_), Some(def_end_offset_), Some(def_id_)) =>
           val def_id = Integer.parseInt(def_id_, 10)
           val def_offset = Integer.parseInt(def_offset_, 10)
           val def_end_offset = Integer.parseInt(def_end_offset_, 10)
-          Some(Right(def_id, (def_offset, def_end_offset)))
+          Some(Right(def_id, (def_offset - 1, def_end_offset - 1)))
         case x =>
           None
       }
