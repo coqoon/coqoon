@@ -188,6 +188,8 @@ class PIDECoqEditor
       }).flatten
 
     asyncExec {
+      val workingCopy = getWorkingCopy.get.get
+
       import org.eclipse.jface.text.Position
       var toDelete : Seq[(Command, Option[Annotation])] = Seq()
       var annotationsToAdd : Seq[(Command, Annotation, Position)] = Seq()
@@ -205,8 +207,7 @@ class PIDECoqEditor
               !(Protocol.Status.make(
                   markup.map(_._2.markup).iterator).is_running)
 
-            lazy val sentence =
-              getWorkingCopy.get.get.getSentenceAt(offset).get
+            lazy val sentence = workingCopy.getSentenceAt(offset).get
             /* This sorts out the difference between the offset of the Coqoon
              * model sentence, which may include whitespace, and the PIDE span
              * offset, which doesn't */
@@ -244,6 +245,13 @@ class PIDECoqEditor
             if (!errors.isEmpty)
               sentence.setIssues(errors.values.toSeq.map(
                   issue => (issue -> issue.severityHint)).toMap)
+
+            sentence.setEntities(
+              (for ((range, elem) <- markup;
+                   location <- getFile.map(_.getLocation);
+                   entity <- PIDEEntity.makeModelEntity(
+                       ibLength, ls, location, elem))
+                yield (diff + range.start, range.length) -> entity).toMap)
 
             val oldAnnotation = annotations.get(command)
             val newAnnotation =
@@ -293,7 +301,7 @@ class PIDECoqEditor
       }
 
       import dk.itu.coqoon.core.model.CoqEnforcement
-      for ((el, issues) <- CoqEnforcement.check(getWorkingCopy.get.get,
+      for ((el, issues) <- CoqEnforcement.check(workingCopy,
           PIDEEnforcementContext))
         el.addIssues(issues)
     }
