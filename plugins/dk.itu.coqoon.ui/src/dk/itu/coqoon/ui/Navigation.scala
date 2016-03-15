@@ -24,64 +24,24 @@ class OpenDeclarationHandler extends EditorHandler {
 
   override def execute(ev : ExecutionEvent) : AnyRef = {
     getViewer.foreach(viewer => {
-      adaptEditor[pide.PIDENavigationHost] match {
-        case Some(an) =>
-          val position_ = positionFromViewer(viewer)
-          an.findCommand(position_) match {
-            case Some((offset, command)) =>
-              val position = position_ - offset
-              for ((range, ent) <- an.getEntities(command)
-                   if position >= range.start && position <= range.stop) {
-                an.selectEntity(ent)
-                return null
-              }
-            case None =>
-          }
+      adaptEditor[BaseCoqEditor] match {
+        case Some(ed) =>
+          ed.getWorkingCopy.get.foreach(wc => {
+            val position_ = positionFromViewer(viewer)
+            wc.getSentenceAt(position_).foreach {
+              case sentence =>
+                val position = position_ - sentence.getOffset
+                for (((offset, length), i) <- sentence.getEntities
+                    if position >= offset &&
+                       position <= (offset + length)) {
+                  i.open
+                  return null
+                }
+            }
+          })
           return null
         case None =>
       }
-      val file = getEditor.flatMap(fileFromEditor)
-      file.flatMap(ICoqModel.getInstance.toCoqElement).foreach(element => {
-        val document = viewer.getDocument
-        val cursorPosition = positionFromViewer(viewer)
-        var (start, end) = (cursorPosition, cursorPosition)
-        while (isWordStart(document.getChar(start - 1)) ||
-               isWordPart(document.getChar(start - 1)))
-          start -= 1
-        while (isWordPart(document.getChar(end)) ||
-               isWordEnd(document.getChar(end)))
-          end += 1
-        if (start != end) {
-          val identifier = document.get(start, end - start)
-          var result : Option[ICoqScriptElement] = None
-          element.getAncestor[ICoqProject].foreach(_.accept(_ match {
-            case e : ICoqLtacSentence
-                if e.getIdentifier() == identifier =>
-              result = Some(e); false
-            case e : ICoqFixpointSentence
-                if e.getIdentifier() == identifier =>
-              result = Some(e); false
-            case e : ICoqInductiveSentence
-                if e.getIdentifier() == identifier =>
-              result = Some(e); false
-            case e : ICoqDefinitionSentence
-                if e.getIdentifier() == identifier =>
-              result = Some(e); false
-            case e : ICoqSectionStartSentence
-                if e.getIdentifier() == identifier =>
-              result = Some(e); false
-            case e : ICoqModuleStartSentence
-                if e.getIdentifier() == identifier =>
-              result = Some(e); false
-            case e : ICoqAssertionSentence
-                if e.getIdentifier() == identifier =>
-              result = Some(e); false
-            case p : IParent if result == None => true
-            case f => false
-          }))
-          result.foreach(highlightElement)
-        }
-      })
     })
     null
   }
