@@ -476,3 +476,54 @@ private class PIDEReconciler(editor : PIDECoqEditor) extends EventReconciler {
     editor.checkedUpdate(List(Document.Node.Edits(edits)))
   }
 }
+
+import dk.itu.coqoon.core.model.ICoqEntity
+import org.eclipse.core.runtime.{Path, IPath}
+private class PIDEEntity(
+    path : IPath, start : Int, length : Int) extends ICoqEntity {
+  override def getPath = path
+  override def getLength = start
+  override def getOffset = length
+
+  override def open = {
+    import dk.itu.coqoon.ui.utilities.UIUtils
+    import dk.itu.coqoon.core.utilities.TryAdapt
+    import org.eclipse.ui.ide.IDE
+    import org.eclipse.core.runtime.Path
+    import org.eclipse.core.resources.ResourcesPlugin
+    import org.eclipse.core.filesystem.EFS
+    import org.eclipse.jface.text.source.ISourceViewer
+    val file = EFS.getLocalFileSystem.getStore(path)
+    val page =
+      UIUtils.getWorkbench.getActiveWorkbenchWindow.getActivePage
+    Option(IDE.openInternalEditorOnFileStore(page, file)).
+        flatMap(TryAdapt[ISourceViewer]) match {
+      case Some(viewer) =>
+        viewer.revealRange(start, length)
+        viewer.setSelectedRange(start, length)
+      case _ =>
+    }
+  }
+}
+private object PIDEEntity {
+  import isabelle.XML._
+  def makeModelEntity(ibLength : Int, s : isabelle.Document.Snapshot,
+      filePath : IPath, e : Tree) : Option[ICoqEntity] = {
+    Responses.extractEntity(e) match {
+      case Some(Left((file, (start, end)))) =>
+        Some(new PIDEEntity(new Path(file), start, end - start))
+      case Some(Right((exec_id, (start, end)))) =>
+        s.state.find_command(s.version, exec_id) flatMap {
+          case (_, command) =>
+            s.node.command_start(command).filter(_ >= ibLength).map(
+                _ - ibLength).map(offset => {
+                val s = offset + start
+                val l = end - start
+                new PIDEEntity(filePath, s, l)
+              })
+      }
+      case None =>
+        None
+    }
+  }
+}
