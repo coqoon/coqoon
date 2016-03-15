@@ -102,6 +102,10 @@ case class CoqIssuesChangedEvent(
 case class CoqProjectLoadPathChangedEvent(
     override val element : ICoqProject) extends CoqElementChangedEvent(element)
 
+case class CoqEntitiesChangedEvent(
+    override val element : ICoqScriptSentence)
+        extends CoqElementChangedEvent(element)
+
 final case class LoadPathEntry(
     path : IPath, coqdir : Seq[String], expandML : Boolean = false) {
   import dk.itu.coqoon.core.CoqoonPreferences
@@ -559,6 +563,19 @@ sealed trait ICoqScriptElement extends ICoqElement {
 
 trait ICoqScriptSentence extends ICoqScriptElement {
   def isSynthetic() : Boolean
+
+  def getEntities() : Map[(Int, Int), ICoqEntity]
+  def setEntities(entities : Map[(Int, Int), ICoqEntity])
+  def addEntity(position : Int, length : Int, entity : ICoqEntity) =
+    setEntities(getEntities + ((position, length) -> entity))
+}
+
+trait ICoqEntity {
+  def getPath() : IPath
+  def getLength() : Int
+  def getOffset() : Int
+
+  def open() : Unit
 }
 
 trait ICoqLtacSentence extends ICoqScriptSentence {

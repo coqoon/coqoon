@@ -848,6 +848,14 @@ private class CoqScriptSentenceImpl(
   override def isSynthetic = sentence._2
 
   override def toString = s"(${getClass.getSimpleName})" + getText
+
+  private var entities : Map[(Int, Int), ICoqEntity] = Map()
+  override def getEntities = entities
+  override def setEntities(entities : Map[(Int, Int), ICoqEntity]) =
+    if (entities != this.entities) {
+      this.entities = entities
+      notifyListeners(CoqEntitiesChangedEvent(this))
+    }
 }
 
 private class CoqLtacSentenceImpl(
