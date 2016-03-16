@@ -185,9 +185,11 @@ private class CoqModelImpl(
             val entry = cache synchronized { cache.get(el) }
             entry.foreach(_.destroy)
             notifyListeners(CoqElementRemovedEvent(el))
-          case _ =>
+          case IResourceDelta.CHANGED
+              if (d.getFlags() & IResourceDelta.CONTENT) != 0 =>
             val entry = cache synchronized { cache.get(el) }
             entry.foreach(_.update(ev))
+          case _ =>
         })
         true
       }
