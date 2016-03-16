@@ -82,7 +82,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     if (!CoqProgram.check) {
       createElementErrorMarker(coqProject.get, "Can't find the Coq compiler")
       return Array()
-    }
+    } else coqProject.get.setIssues(Map())
 
     CoqoonDebugPreferences.ProjectBuild.log(
         s"Build for ${getProject} started: changed files are ${files}")
