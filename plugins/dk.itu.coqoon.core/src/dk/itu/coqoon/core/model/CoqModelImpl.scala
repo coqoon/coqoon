@@ -102,7 +102,7 @@ private class MarkerUpdateJob(
     val currentMarkers =
       if (r.exists) {
         r.findMarkers(MARKER_PROBLEM, false, IResource.DEPTH_ZERO)
-      } else Array()
+      } else Array[IMarker]()
     import scala.collection.JavaConversions._
     el match {
       case el : ICoqScriptElement =>
