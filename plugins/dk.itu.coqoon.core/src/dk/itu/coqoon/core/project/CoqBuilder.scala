@@ -125,9 +125,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
     completeLoadPath = coqProject.get.getLoadPath.flatMap(_.expand)
     deps.resolveDependencies
 
-    getProject.deleteMarkers(
-        ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_INFINITE)
-
     var canBuildCache : Set[IPath] = Set()
     def canBuild(path : IPath,
         chain : Seq[TrackerT#Dependency] = Seq()) : Boolean =
@@ -342,8 +339,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
           a => TryCast[IFile](a).flatMap(extensionFilter("vo", "vio")),
           a => a.delete(IResource.NONE, monitor))
     deps.clearDependencies
-    getProject.deleteMarkers(
-        ManifestIdentifiers.MARKER_PROBLEM, true, IResource.DEPTH_INFINITE)
     for (i <- coqProject.get.getLoadPathProviders) i match {
       case SourceLoadPath(src, Some(bin)) => deleteObjects(bin)
       case DefaultOutputLoadPath(bin) => deleteObjects(bin)
