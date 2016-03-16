@@ -525,32 +525,26 @@ private class CoqPackageFragmentImpl(
   override def getVernacFile(file : IPath) =
     new CoqVernacFileImpl(res.map(_.getFile(file)), this)
   override def getVernacFiles =
-    res.toSeq.flatMap(_.members).collect(fileCollector).filter(
+    res.toSeq.flatMap(_.members).flatMap(TryCast[IFile]).filter(
         isVernacFile).map(f => new CoqVernacFileImpl(Some(f), this))
 
   override def getObjectFile(file : IPath) =
     new CoqObjectFileImpl(res.map(_.getFile(file)), this)
   override def getObjectFiles =
-    res.toSeq.flatMap(_.members).collect(fileCollector).filter(
+    res.toSeq.flatMap(_.members).flatMap(TryCast[IFile]).filter(
         isObjectFile).map(f => new CoqObjectFileImpl(Some(f), this))
 
   override def getNonCoqFiles =
-    res.toSeq.flatMap(_.members).collect(fileCollector).filterNot(
+    res.toSeq.flatMap(_.members).flatMap(TryCast[IFile]).filterNot(
         f => isVernacFile(f) || isObjectFile(f))
 
   override def getChildren = getVernacFiles ++ getObjectFiles
 }
 private object CoqPackageFragmentImpl {
-  val fileCollector : PartialFunction[AnyRef, IFile] = {
-    case a : IFile => a
-  }
-
-  def isVernacFile(a : IFile) = Option(a).map(_.getProjectRelativePath).map(
-      _.getFileExtension == "v").getOrElse(false)
-
-  def isObjectFile(a : IFile) = Option(a).map(_.getProjectRelativePath).map(
-      f => f.getFileExtension == "vo" ||
-           f.getFileExtension == "vio").getOrElse(false)
+  def isVernacFile(a : IFile) =
+    Option(a).map(_.getFileExtension).contains("v")
+  def isObjectFile(a : IFile) =
+    Option(a).map(_.getFileExtension).exists(e => e == "vo" || e == "vio")
 }
 
 import java.io.InputStream
