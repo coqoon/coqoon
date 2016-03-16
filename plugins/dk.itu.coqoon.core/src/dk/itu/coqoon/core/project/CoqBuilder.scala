@@ -514,7 +514,7 @@ private object CoqBuilder {
   private val GeneralError = """(?ms)Error: (.*)$""".r.unanchored
   private val CompilationError =
     ("""(?s)File "(.*)", line (\d+), characters (\d+)-(\d+):""" +
-     """\s+Error:\s+(.*)$""").r.unanchored
+     """\s+(?:Syntax |)Error:\s+(.*)$""").r.unanchored
 
   def cleanProject(project : ICoqProject) : Unit =
     for (i <- project.getLoadPathProviders) i match {
