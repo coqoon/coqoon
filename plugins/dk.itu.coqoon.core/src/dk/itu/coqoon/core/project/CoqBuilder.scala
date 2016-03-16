@@ -251,8 +251,26 @@ class CoqBuilder extends IncrementalProjectBuilder {
             case CompilerDone(s : CoqCompilerSuccess) =>
               s.save(out, null)
             case CompilerDone(CoqCompilerFailure(
-                _, _, CompilationError(_, line, _, _, message))) =>
-              createLineErrorMarker(in, line.toInt, message.trim)
+                _, _, CompilationError(_, line_, start__, end__, message))) =>
+              import Integer.parseInt
+              import dk.itu.coqoon.core.utilities.OffsetCorrection.{
+                utf8OffsetToCharOffset => fix}
+              val (line, start_, end_) =
+                (parseInt(line_), parseInt(start__), parseInt(end__))
+              inHandle.getLineOffset(line).foreach(lo => {
+                inHandle.getSentenceAt(lo).foreach(s => {
+                  val diff = lo - s.getOffset
+                  val line = s.getText.substring(diff)
+                  (fix(start_, line), fix(end_, line)) match {
+                    case (Some(start), Some(end)) =>
+                      s.addIssue(Issue(
+                          "compiler/coq-error",
+                          diff + start, (end - start), message,
+                          Severity.Error), Severity.Error)
+                    case _ =>
+                  }
+                })
+              })
             case CompilerDone(CoqCompilerFailure(_, _, GeneralError(text))) =>
               createElementErrorMarker(inHandle, text.trim)
             case CompilerDone(CoqCompilerFailure(_, _, text)) =>
