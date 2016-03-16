@@ -125,11 +125,9 @@ private class MarkerUpdateJob(
                 SECRET_OFFSET -> elo))
         }
 
-      case el : ICoqElement
-          if el.getCorrespondingResource != None && issues.isEmpty =>
+      case el : ICoqElement if issues.isEmpty =>
         currentMarkers.foreach(_.delete)
-      case el : ICoqElement
-          if el.getCorrespondingResource != None =>
+      case el : ICoqElement =>
         issues foreach {
           case (Issue(_, offset, length, message, _), severity) =>
             r.createMarker(MARKER_PROBLEM).setAttributes(Map(
