@@ -14,7 +14,7 @@
  * License for the specific language governing permissions and limitations
  * under the License. */
 
-package dk.itu.coqoon.ui.utilities
+package dk.itu.coqoon.core.utilities
 
 object OffsetCorrection {
   private def utf8len(codepoint : Int) =

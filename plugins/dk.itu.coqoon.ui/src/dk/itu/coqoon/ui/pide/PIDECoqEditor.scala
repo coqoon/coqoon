@@ -111,7 +111,7 @@ class PIDECoqEditor
   private var annotations : Map[Command, Annotation] = Map()
 
   private def fixPair(seq : CharSequence, start : Int, end : Int) = {
-    import dk.itu.coqoon.ui.utilities.OffsetCorrection.utf8OffsetToCharOffset
+    import dk.itu.coqoon.core.utilities.OffsetCorrection.utf8OffsetToCharOffset
     (utf8OffsetToCharOffset(start, seq), utf8OffsetToCharOffset(end, seq))
   }
 
@@ -463,7 +463,7 @@ private class PIDEEntity(
         flatMap(TryAdapt[ISourceViewer]) match {
       case Some(viewer) =>
         import dk.itu.coqoon.ui.text.DocumentAdapter.makeSequence
-        import dk.itu.coqoon.ui.utilities.OffsetCorrection.{
+        import dk.itu.coqoon.core.utilities.OffsetCorrection.{
           utf8OffsetToCharOffset => fix}
         val seq = makeSequence(viewer.getDocument)
         (fix(start, seq), fix(end, seq)) match {
