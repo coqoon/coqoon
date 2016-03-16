@@ -432,11 +432,9 @@ private class PIDEReconciler(editor : PIDECoqEditor) extends EventReconciler {
 import dk.itu.coqoon.core.model.ICoqEntity
 import org.eclipse.core.runtime.{Path, IPath}
 private class PIDEEntity(
-    path : IPath, start : Int, length : Int) extends ICoqEntity {
-  override def getPath = path
-  override def getLength = start
-  override def getOffset = length
-
+    path : IPath, start : Int, end : Int) extends ICoqEntity {
+  /* We get UTF-8 byte offsets out of Coq, and we can't make sense of them
+   * until we have an actual editor open on the right buffer... */
   override def open = {
     import dk.itu.coqoon.ui.utilities.UIUtils
     import dk.itu.coqoon.core.utilities.TryAdapt
@@ -451,8 +449,16 @@ private class PIDEEntity(
     Option(IDE.openInternalEditorOnFileStore(page, file)).
         flatMap(TryAdapt[ISourceViewer]) match {
       case Some(viewer) =>
-        viewer.revealRange(start, length)
-        viewer.setSelectedRange(start, length)
+        import dk.itu.coqoon.ui.text.DocumentAdapter.makeSequence
+        import dk.itu.coqoon.ui.utilities.OffsetCorrection.{
+          utf8OffsetToCharOffset => fix}
+        val seq = makeSequence(viewer.getDocument)
+        (fix(start, seq), fix(end, seq)) match {
+          case (Some(start), Some(end)) =>
+            viewer.revealRange(start, end)
+            viewer.setSelectedRange(start, end)
+          case _ =>
+        }
       case _ =>
     }
   }

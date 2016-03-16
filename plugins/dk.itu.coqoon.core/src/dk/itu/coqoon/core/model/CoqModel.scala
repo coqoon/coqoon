@@ -571,10 +571,6 @@ trait ICoqScriptSentence extends ICoqScriptElement {
 }
 
 trait ICoqEntity {
-  def getPath() : IPath
-  def getLength() : Int
-  def getOffset() : Int
-
   def open() : Unit
 }
 
