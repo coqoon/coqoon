@@ -561,16 +561,20 @@ private class CoqVernacFileImpl(
     val res : Option[IFile], val parent : ICoqPackageFragment)
     extends ParentImpl(res, parent) with ICoqVernacFile {
   protected class Cache extends ICache {
-    override def destroy = Seq(sentences, groups).map(_.clear)
+    override def destroy = Seq(contents, sentences, groups).map(_.clear)
 
     override def update(ev : IResourceChangeEvent) = {
       destroy
       notifyListeners(CoqFileContentChangedEvent(CoqVernacFileImpl.this))
     }
 
+    final val contents = CacheSlot[String] {
+      res.map(f => TotalReader.read(f.getContents)).getOrElse("")
+    }
+
     import dk.itu.coqoon.core.coqtop.{CoqSentence, ParserStack}
     final val sentences = CacheSlot[Seq[ICoqScriptSentence]] {
-      val content = CoqVernacFileImpl.this.getContents
+      val content = contents.get
       val sentences = CoqSentence.getNextSentences(content, 0, content.length)
 
       import CoqSentence.Classifier._
@@ -774,10 +778,6 @@ private class CoqVernacFileImpl(
   }
   protected def getCache() = getModel.getCacheFor(this, new Cache)
 
-  /* Called from within the cache! */
-  protected def getContents() =
-    res.map(f => TotalReader.read(f.getContents)).getOrElse("")
-
   override def getChildren = getCache.groups.get
 
   override def getObjectFile() : Option[ICoqObjectFile] = {
@@ -818,22 +818,21 @@ private class DetachedCoqVernacFileImpl(
     val original : CoqVernacFileImpl)
     extends CoqVernacFileImpl(original.res, original.parent)
         with IDetachedCoqVernacFile {
-  private val content = CacheSlot[String](super.getContents)
-  content.get
+  getCache.contents.get
 
-  override def properties = Seq(original)
+  lazy val id = Math.random
+  override def properties = Seq(original, id)
 
   import java.io.{ByteArrayInputStream => BAIS}
   override def commit(monitor : IProgressMonitor) =
     original.res.foreach(_.setContents(new BAIS(getContents.getBytes("UTF-8")),
         IResource.KEEP_HISTORY, monitor))
 
-  override def getContents = content.get
+  override def getContents = getCache.contents.get
   override def setContents(contents : String) = {
-    content.set(Option(contents))
-    getCache.destroy
-    /* XXX: should it be possible to distinguish between multiple detached
-     * versions of a single file? */
+    getCache.contents.set(Option(contents))
+    getCache.sentences.clear
+    getCache.groups.clear
     notifyListeners(CoqFileContentChangedEvent(this))
   }
 }
