@@ -100,7 +100,9 @@ private class MarkerUpdateJob(
   override def runInWorkspace(monitor : IProgressMonitor) : IStatus = {
     import dk.itu.coqoon.core.ManifestIdentifiers.MARKER_PROBLEM
     val currentMarkers =
-      r.findMarkers(MARKER_PROBLEM, false, IResource.DEPTH_ZERO)
+      if (r.exists) {
+        r.findMarkers(MARKER_PROBLEM, false, IResource.DEPTH_ZERO)
+      } else Array()
     import scala.collection.JavaConversions._
     el match {
       case el : ICoqScriptElement =>
