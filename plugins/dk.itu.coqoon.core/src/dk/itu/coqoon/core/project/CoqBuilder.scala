@@ -69,11 +69,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
   private def asVernacFile(f : IFile) =
     ICoqModel.getInstance.toCoqElement(f).flatMap(TryCast[ICoqVernacFile])
 
-  private def makePathRelative(f : IPath) =
-    CoqBuilder.makePathRelative(getProject.getLocation, f)
-  private def makePathRelativeFile(f : IPath) =
-    makePathRelative(f).map(getProject.getFile)
-
   private var mlLoadPath : Seq[(Seq[String], java.io.File)] = Seq()
   private var completeLoadPath : Seq[(Seq[String], java.io.File)] = Seq()
 
@@ -110,7 +105,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
     /* Pre-create all of the possible output directories so that the complete
      * load path is actually complete */
     for ((path, _) <- deps.getDependencies;
-         file <- makePathRelativeFile(path))
+         file <- getFileForLocation(path))
       new FolderCreationRunner(file).run(null)
 
     /* Expand the project load path and use it to resolve all the
@@ -170,7 +165,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
 
       override def run() = setResult(
         try {
-          makePathRelativeFile(out).flatMap(
+          getFileForLocation(out).flatMap(
               asObjectFile).map(_.getVernacFiles) match {
             case Some(Seq(vernac)) =>
               vernac.getCorrespondingResource match {
@@ -240,7 +235,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
         }
 
         for (i <- tasks;
-             outHandle <- makePathRelativeFile(i.out).flatMap(asObjectFile);
+             outHandle <- getFileForLocation(i.out).flatMap(asObjectFile);
              Seq(inHandle) <- Some(outHandle.getVernacFiles);
              in <- inHandle.getCorrespondingResource;
              out <- outHandle.getCorrespondingResource)
@@ -292,7 +287,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
           Nil
         case (can, cannot) => can.partition(mustBuild) match {
           case (need, needNot) =>
-            need.flatMap(makePathRelativeFile).foreach(
+            need.flatMap(getFileForLocation).foreach(
                 _.delete(IResource.NONE, null))
             completed ++= needNot
             monitor.setWorkRemaining(need.size + cannot.size)
@@ -509,10 +504,10 @@ private object CoqBuilder {
     el.addIssue((Issue("compiler/internal-error",
         0, 0, s, Severity.Error), Severity.Error))
 
-  def makePathRelative(base : IPath, path : IPath) : Option[IPath] =
-    if (base.isPrefixOf(path)) {
-      Some(path.setDevice(null).removeFirstSegments(base.segmentCount))
-    } else None
+  import org.eclipse.core.resources.ResourcesPlugin
+  private lazy val gffl =
+    ResourcesPlugin.getWorkspace.getRoot.getFileForLocation(_)
+  private def getFileForLocation(f : IPath) = Option(gffl(f))
 
   private val GeneralError = """(?ms)Error: (.*)$""".r.unanchored
   private val CompilationError =
