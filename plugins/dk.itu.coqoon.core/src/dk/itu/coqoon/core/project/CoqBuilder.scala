@@ -509,16 +509,6 @@ private object CoqBuilder {
     el.addIssue((Issue("compiler/internal-error",
         0, 0, s, Severity.Error), Severity.Error))
 
-  def createLineErrorMarker(f : IFile, line : Int, s : String) = {
-    import scala.collection.JavaConversions._
-    Option(f).filter(_.exists).foreach(
-        _.createMarker(ManifestIdentifiers.MARKER_PROBLEM).setAttributes(Map(
-            (IMarker.MESSAGE, reduceError(s)),
-            (IMarker.LOCATION, "line " + line),
-            (IMarker.LINE_NUMBER, line),
-            (IMarker.SEVERITY, IMarker.SEVERITY_ERROR))))
-  }
-
   def makePathRelative(base : IPath, path : IPath) : Option[IPath] =
     if (base.isPrefixOf(path)) {
       Some(path.setDevice(null).removeFirstSegments(base.segmentCount))
