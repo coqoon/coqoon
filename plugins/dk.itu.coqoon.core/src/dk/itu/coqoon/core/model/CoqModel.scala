@@ -531,6 +531,7 @@ trait ICoqVernacFile extends ICoqFile with IParent {
 
   def getObjectFile() : Option[ICoqObjectFile]
 
+  def getLineOffset(line : Int) : Option[Int]
   def getSentenceAt(offset : Int) : Option[ICoqScriptSentence]
 
   def detach() : IDetachedCoqVernacFile

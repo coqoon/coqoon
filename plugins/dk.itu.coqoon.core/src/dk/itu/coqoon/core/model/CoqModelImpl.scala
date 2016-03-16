@@ -802,6 +802,16 @@ private class CoqVernacFileImpl(
     None
   }
 
+  override def getLineOffset(line_ : Int) : Option[Int] = {
+    val line = line_ - 1
+    import CoqVernacFileImpl.Newline
+    val lineOffsets =
+      0 +: Newline.findAllMatchIn(getCache.contents.get).toSeq.map(_.end)
+    if (line >= 0 && line <= lineOffsets.length) {
+      Some(lineOffsets(line))
+    } else None
+  }
+
   override def getSentenceAt(offset : Int) : Option[ICoqScriptSentence] = {
     var pos = 0
     for (i <- getCache.sentences.get) {
@@ -814,6 +824,9 @@ private class CoqVernacFileImpl(
   }
 
   override def detach = new DetachedCoqVernacFileImpl(this)
+}
+object CoqVernacFileImpl {
+  private final val Newline = "\n".r
 }
 
 private class DetachedCoqVernacFileImpl(
