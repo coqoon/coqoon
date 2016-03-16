@@ -186,6 +186,9 @@ class CoqBuilder extends IncrementalProjectBuilder {
                   runner.setTicker(
                     Some(() => !isInterrupted && !monitor.isCanceled))
                   CompilerDone(runner.run(null))
+                case None =>
+                  Error("Couldn't map the source file to a workspace " +
+                      "resource (shouldn't happen!)")
               }
             case Some(Seq()) =>
               Error(s"$out has no corresponding source file")
