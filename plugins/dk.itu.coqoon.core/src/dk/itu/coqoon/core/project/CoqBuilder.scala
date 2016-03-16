@@ -80,7 +80,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   private def buildFiles(files : Set[IFile],
       args : Map[String, String], monitor : SubMonitor) : Array[IProject] = {
     if (!CoqProgram.check) {
-      createResourceErrorMarker(getProject, "Can't find the Coq compiler")
+      createElementErrorMarker(coqProject.get, "Can't find the Coq compiler")
       return Array()
     }
 
@@ -251,11 +251,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
                 _, _, CompilationError(_, line, _, _, message))) =>
               createLineErrorMarker(in, line.toInt, message.trim)
             case CompilerDone(CoqCompilerFailure(_, _, GeneralError(text))) =>
-              createResourceErrorMarker(in, text.trim)
+              createElementErrorMarker(inHandle, text.trim)
             case CompilerDone(CoqCompilerFailure(_, _, text)) =>
-              createResourceErrorMarker(in, text.trim)
+              createElementErrorMarker(inHandle, text.trim)
             case Error(text) =>
-              createResourceErrorMarker(in, text.trim)
+              createElementErrorMarker(inHandle, text.trim)
           }
       }
       completed ++= candidates
@@ -489,13 +489,9 @@ private object CoqBuilder {
     l.addIssue((Issue("compiler/internal-error",
         l, errorMessage, Severity.Error), Severity.Error))
 
-  def createResourceErrorMarker(r : IResource, s : String) = {
-    import scala.collection.JavaConversions._
-    Option(r).filter(_.exists).foreach(
-        _.createMarker(ManifestIdentifiers.MARKER_PROBLEM).setAttributes(Map(
-            (IMarker.MESSAGE, reduceError(s)),
-            (IMarker.SEVERITY, IMarker.SEVERITY_ERROR))))
-  }
+  def createElementErrorMarker(el : ICoqElement, s : String) =
+    el.addIssue((Issue("compiler/internal-error",
+        0, 0, s, Severity.Error), Severity.Error))
 
   def createLineErrorMarker(f : IFile, line : Int, s : String) = {
     import scala.collection.JavaConversions._
