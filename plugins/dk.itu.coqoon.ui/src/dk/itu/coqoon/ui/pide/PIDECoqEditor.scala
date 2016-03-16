@@ -151,18 +151,19 @@ class PIDECoqEditor
               !(Protocol.Status.make(
                   markup.map(_._2.markup).iterator).is_running)
 
-            lazy val sentence = workingCopy.getSentenceAt(offset).get
+            lazy val sentence = workingCopy.getSentenceAt(offset)
             /* This sorts out the difference between the offset of the Coqoon
              * model sentence, which may include whitespace, and the PIDE span
              * offset, which doesn't */
-            lazy val diff = offset - sentence.getOffset
+            lazy val diff = sentence.map(offset - _.getOffset)
 
             /* Extract and display error messages and warnings */
             import dk.itu.coqoon.core.model.CoqEnforcement.{Issue, Severity}
             /* We use a map here in order to merge errors with the same ID
              * together */
             var errors : Map[Int, Issue] = Map()
-            for ((_, tree) <- results) {
+            for (diff <- diff;
+                (_, tree) <- results) {
               Responses.extractError(tree) match {
                 case (Some((id, msg, Some(start), Some(end)))) =>
                   errors += id -> Issue("interactive/pide-error",
@@ -187,15 +188,16 @@ class PIDECoqEditor
               }
             }
             if (!errors.isEmpty)
-              sentence.setIssues(errors.values.toSeq.map(
-                  issue => (issue -> issue.severityHint)).toMap)
+              sentence.foreach(_.setIssues(errors.values.toSeq.map(
+                  issue => (issue -> issue.severityHint)).toMap))
 
-            sentence.setEntities(
+            sentence.foreach(_.setEntities(
               (for ((range, elem) <- markup;
-                   location <- getFile.map(_.getLocation);
-                   entity <- PIDEEntity.makeModelEntity(
-                       ibLength, ls, location, elem))
-                yield (diff + range.start, range.length) -> entity).toMap)
+                    location <- getFile.map(_.getLocation);
+                    diff <- diff;
+                    entity <- PIDEEntity.makeModelEntity(
+                        ibLength, ls, location, elem))
+                yield (diff + range.start, range.length) -> entity).toMap))
 
             val oldAnnotation = annotations.get(command)
             val newAnnotation =
