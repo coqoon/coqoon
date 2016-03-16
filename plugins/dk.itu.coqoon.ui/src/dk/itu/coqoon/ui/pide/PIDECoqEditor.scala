@@ -110,6 +110,11 @@ class PIDECoqEditor
   import org.eclipse.jface.text.source.Annotation
   private var annotations : Map[Command, Annotation] = Map()
 
+  private def fixPair(seq : CharSequence, start : Int, end : Int) = {
+    import dk.itu.coqoon.ui.utilities.OffsetCorrection.utf8OffsetToCharOffset
+    (utf8OffsetToCharOffset(start, seq), utf8OffsetToCharOffset(end, seq))
+  }
+
   override protected def commandsUpdated(changed : Seq[Command]) = {
     val ls = getLastSnapshot.get
     val changedResultsAndMarkup = ({
@@ -162,29 +167,35 @@ class PIDECoqEditor
             /* We use a map here in order to merge errors with the same ID
              * together */
             var errors : Map[Int, Issue] = Map()
+
+            def processError(
+                diff : Int, i : (Int, String, Option[Int], Option[Int]),
+                label : String, severity : Severity) =
+              i match {
+                case (id, msg, Some(start_), Some(end_)) =>
+                  fixPair(command.source, start_ - 1, end_ - 1) match {
+                    case (Some(start), Some(end)) =>
+                      errors += id -> Issue(label,
+                          diff + start, (end - start),
+                          msg, severity)
+                    case _ =>
+                  }
+                case (id, msg, _, _) =>
+                  errors += id -> Issue(label,
+                      diff, command.source.length,
+                      msg, severity)
+              }
+
             for (diff <- diff;
                 (_, tree) <- results) {
               Responses.extractError(tree) match {
-                case (Some((id, msg, Some(start), Some(end)))) =>
-                  errors += id -> Issue("interactive/pide-error",
-                      diff + start - 1, (end - start),
-                      msg, Severity.Error)
-                case Some((id, msg, _, _)) =>
-                  errors += id -> Issue("interactive/pide-error",
-                      diff, command.source.length,
-                      msg, Severity.Error)
+                case Some(t) =>
+                  processError(
+                      diff, t, "interactive/pide-error", Severity.Error)
                 case _ =>
-                  Responses.extractWarning(tree) match {
-                    case Some((id, msg, Some(start), Some(end))) =>
-                      errors += id -> Issue("interactive/pide-warning",
-                          diff + start - 1, (end - start),
-                          msg, Severity.Warning)
-                    case Some((id, msg, _, _)) =>
-                      errors += id -> Issue("interactive/pide-warning",
-                          diff, command.source.length,
-                          msg, Severity.Warning)
-                    case _ =>
-                  }
+                  Responses.extractWarning(tree).foreach(t =>
+                    processError(
+                        diff, t, "interactive/pide-warning", Severity.Warning))
               }
             }
             if (!errors.isEmpty)
