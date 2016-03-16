@@ -24,7 +24,7 @@ import org.eclipse.jface.text.{DocumentEvent, IDocumentPartitioner,
 
 import dk.itu.coqoon.core.utilities.CacheSlot
 
-private object DocumentAdapter {
+object DocumentAdapter {
   class DocumentSequence(
       d : IDocument, start : Int, end : Int) extends CharSequence {
     final lazy val length = end - start
