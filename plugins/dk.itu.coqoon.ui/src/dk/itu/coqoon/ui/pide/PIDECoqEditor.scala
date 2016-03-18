@@ -474,8 +474,8 @@ private class PIDEEntity(
         val seq = makeSequence(viewer.getDocument)
         (fix(start, seq), fix(end, seq)) match {
           case (Some(start), Some(end)) =>
-            viewer.revealRange(start, end)
-            viewer.setSelectedRange(start, end)
+            viewer.revealRange(start, (end - start))
+            viewer.setSelectedRange(start, (end - start))
           case _ =>
         }
       case _ =>
@@ -494,9 +494,7 @@ private object PIDEEntity {
           case (_, command) =>
             s.node.command_start(command).filter(_ >= ibLength).map(
                 _ - ibLength).map(offset => {
-                val s = offset + start
-                val l = end - start
-                new PIDEEntity(filePath, s, l)
+                new PIDEEntity(filePath, offset + start, offset + end)
               })
       }
       case None =>
