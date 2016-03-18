@@ -112,7 +112,9 @@ class PIDECoqEditor
 
   private def fixPair(seq : CharSequence, start : Int, end : Int) = {
     import dk.itu.coqoon.core.utilities.OffsetCorrection.utf8OffsetToCharOffset
-    (utf8OffsetToCharOffset(start, seq), utf8OffsetToCharOffset(end, seq))
+    utf8OffsetToCharOffset(start, seq).flatMap(
+        start => utf8OffsetToCharOffset(end, seq).map(
+            end => (start, end)))
   }
 
   override protected def commandsUpdated(changed : Seq[Command]) = {
@@ -174,7 +176,7 @@ class PIDECoqEditor
               i match {
                 case (id, msg, Some(start_), Some(end_)) =>
                   fixPair(command.source, start_ - 1, end_ - 1) match {
-                    case (Some(start), Some(end)) =>
+                    case Some((start, end)) =>
                       errors += id -> Issue(label,
                           diff + start, (end - start),
                           msg, severity)
@@ -203,12 +205,16 @@ class PIDECoqEditor
                   issue => (issue -> issue.severityHint)).toMap))
 
             sentence.foreach(_.setEntities(
-              (for ((range, elem) <- markup;
+              (for ((r, elem) <- markup;
                     location <- getFile.map(_.getLocation);
                     diff <- diff;
                     entity <- PIDEEntity.makeModelEntity(
-                        ibLength, ls, location, elem))
-                yield (diff + range.start, range.length) -> entity).toMap))
+                        ibLength, ls, location, elem);
+                    (start, end) <- fixPair(command.source, r.start, r.stop))
+                yield {
+                  (diff + start, diff + (end - start)) -> entity
+                }).toMap))
+            sentence.foreach(s => println(s.getEntities))
 
             val oldAnnotation = annotations.get(command)
             val newAnnotation =
