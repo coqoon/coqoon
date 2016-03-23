@@ -214,7 +214,6 @@ class PIDECoqEditor
                 yield {
                   (diff + start, diff + (end - start)) -> entity
                 }).toMap))
-            sentence.foreach(s => println(s.getEntities))
 
             val oldAnnotation = annotations.get(command)
             val newAnnotation =
