@@ -132,5 +132,8 @@
    <feature url="features/dk.itu.coqoon.feature_0.7.3.jar" id="dk.itu.coqoon.feature" version="0.7.3">
       <category name="coqoon"/>
    </feature>
+   <feature url="features/dk.itu.coqoon.feature_0.7.4.jar" id="dk.itu.coqoon.feature" version="0.7.4">
+      <category name="coqoon"/>
+   </feature>
    <category-def name="coqoon" label="Coqoon"/>
 </site>
