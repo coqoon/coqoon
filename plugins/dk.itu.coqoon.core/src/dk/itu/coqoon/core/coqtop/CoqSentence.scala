@@ -69,7 +69,11 @@ object CoqSentence {
           content = true
         i += 1
     }
-    None
+    if (offset != i) {
+      /* If we have some actual Coq content at the end of the input sequence,
+       * then tack it on at the end as an incomplete synthetic sentence */
+      Some((Substring(doc, offset, i)), true)
+    } else None
   }
 
   def getNextSentences(
