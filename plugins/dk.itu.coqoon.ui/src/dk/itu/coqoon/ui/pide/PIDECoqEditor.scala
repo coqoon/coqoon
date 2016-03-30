@@ -181,6 +181,11 @@ class PIDECoqEditor
                           diff + start, (end - start),
                           msg, severity)
                     case _ =>
+                      /* Fixing the offsets up didn't work, so just associate
+                       * this problem with the whole command */
+                      errors += id -> Issue(label,
+                          diff, command.source.length,
+                          msg, severity)
                   }
                 case (id, msg, _, _) =>
                   errors += id -> Issue(label,
