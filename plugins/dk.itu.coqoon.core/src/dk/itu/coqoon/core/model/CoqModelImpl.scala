@@ -575,38 +575,38 @@ private class CoqVernacFileImpl(
 
       import CoqSentence.Classifier._
       for (i <- sentences) yield i match {
-        case h @ (LtacSentence(_, _), _) =>
-          new CoqLtacSentenceImpl(h, CoqVernacFileImpl.this)
-        case h @ (FixpointSentence(_, _, _), _) =>
-          new CoqFixpointSentenceImpl(h, CoqVernacFileImpl.this)
-        case h @ (InductiveSentence(_, _, _), _) =>
-          new CoqInductiveSentenceImpl(h, CoqVernacFileImpl.this)
-        case h @ (DefinitionSentence(_, _, _, _), _) =>
-          new CoqDefinitionSentenceImpl(h, CoqVernacFileImpl.this)
-        case h @ (LoadSentence(_), _) =>
-          new CoqLoadSentenceImpl(h, CoqVernacFileImpl.this)
-        case h @ (RequireSentence(_, _), _) =>
-          new CoqRequireSentenceImpl(h, CoqVernacFileImpl.this)
-        case h @ (FromRequireSentence(_, _, _), _) =>
-          new CoqFromRequireSentenceImpl(h, CoqVernacFileImpl.this)
-        case h @ (DeclareMLSentence(_), _) =>
-          new CoqDeclareMLSentenceImpl(h, CoqVernacFileImpl.this)
-        case h @ (AssertionSentence(_, _, _), _) =>
-          new CoqAssertionSentenceImpl(h, CoqVernacFileImpl.this)
-        case h @ (SectionStartSentence(_), _) =>
-          new CoqSectionStartSentenceImpl(h, CoqVernacFileImpl.this)
-        case h @ (IdentifiedEndSentence(_), _) =>
-          new CoqIdentifiedEndSentenceImpl(h, CoqVernacFileImpl.this)
-        case h @ (ProofStartSentence(_), _) =>
-          new CoqProofStartSentenceImpl(h, CoqVernacFileImpl.this)
-        case h @ (ProofEndSentence(_), _) =>
-          new CoqProofEndSentenceImpl(h, CoqVernacFileImpl.this)
-        case h @ (SubproofSentence(), _) =>
-          new CoqSubproofStartSentenceImpl(h, CoqVernacFileImpl.this)
-        case h @ (EndSubproofSentence(), _) =>
-          new CoqSubproofEndSentenceImpl(h, CoqVernacFileImpl.this)
+        case (LtacSentence(_, _), _) =>
+          new CoqLtacSentenceImpl(i, CoqVernacFileImpl.this)
+        case (FixpointSentence(_, _, _), _) =>
+          new CoqFixpointSentenceImpl(i, CoqVernacFileImpl.this)
+        case (InductiveSentence(_, _, _), _) =>
+          new CoqInductiveSentenceImpl(i, CoqVernacFileImpl.this)
+        case (DefinitionSentence(_, _, _, _), _) =>
+          new CoqDefinitionSentenceImpl(i, CoqVernacFileImpl.this)
+        case (LoadSentence(_), _) =>
+          new CoqLoadSentenceImpl(i, CoqVernacFileImpl.this)
+        case (RequireSentence(_, _), _) =>
+          new CoqRequireSentenceImpl(i, CoqVernacFileImpl.this)
+        case (FromRequireSentence(_, _, _), _) =>
+          new CoqFromRequireSentenceImpl(i, CoqVernacFileImpl.this)
+        case (DeclareMLSentence(_), _) =>
+          new CoqDeclareMLSentenceImpl(i, CoqVernacFileImpl.this)
+        case (AssertionSentence(_, _, _), _) =>
+          new CoqAssertionSentenceImpl(i, CoqVernacFileImpl.this)
+        case (SectionStartSentence(_), _) =>
+          new CoqSectionStartSentenceImpl(i, CoqVernacFileImpl.this)
+        case (IdentifiedEndSentence(_), _) =>
+          new CoqIdentifiedEndSentenceImpl(i, CoqVernacFileImpl.this)
+        case (ProofStartSentence(_), _) =>
+          new CoqProofStartSentenceImpl(i, CoqVernacFileImpl.this)
+        case (ProofEndSentence(_), _) =>
+          new CoqProofEndSentenceImpl(i, CoqVernacFileImpl.this)
+        case (SubproofSentence(), _) =>
+          new CoqSubproofStartSentenceImpl(i, CoqVernacFileImpl.this)
+        case (EndSubproofSentence(), _) =>
+          new CoqSubproofEndSentenceImpl(i, CoqVernacFileImpl.this)
         case h =>
-          new CoqScriptSentenceImpl(h, CoqVernacFileImpl.this)
+          new CoqScriptSentenceImpl(i, CoqVernacFileImpl.this)
       }
     }
 
