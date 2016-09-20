@@ -85,6 +85,11 @@ class UIXML {
         val l = new widgets.Button(parent, flags)
         l.setText(juice(x))
         Some(l)
+      case (parent : widgets.Composite, xml.Elem(_, "combo", _, _, _*)) =>
+        var flags = getControlFlags(x)
+
+        val l = new widgets.Combo(parent, flags)
+        Some(l)
       case (parent : widgets.Composite, xml.Elem(_, "text", a, _, _*)) =>
         var flags = getScrollableFlags(x)
 
