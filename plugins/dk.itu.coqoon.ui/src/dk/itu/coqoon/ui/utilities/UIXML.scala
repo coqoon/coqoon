@@ -31,7 +31,7 @@ class UIXML {
     names
   }
   private def go(
-      x : xml.Node, context : AnyRef, names : NameMap) : Unit = {
+      x : xml.Node, context : AnyRef, names : NameMap) : Option[AnyRef] = {
     val result : Option[AnyRef] = (context, x) match {
       case (parent : widgets.Composite, xml.Elem(_, "label", _, _, _*)) =>
         var flags = getScrollableFlags(x)
@@ -126,6 +126,15 @@ class UIXML {
           xml.Elem(_, "tree-viewer", _, _, _*)) =>
         Some(new viewers.TreeViewer(parent,
             SWT.H_SCROLL | SWT.V_SCROLL | SWT.SINGLE | SWT.BORDER))
+      case (parent : widgets.Composite, xml.Elem(_, "tab-folder", _, _, _*)) =>
+        val flags = getScrollableFlags(x)
+        Some(new widgets.TabFolder(parent, flags))
+      case (parent : widgets.TabFolder, xml.Elem(_, "tab", _, _, _*)) =>
+        val t = new widgets.TabItem(parent, SWT.NONE)
+        t.setText(x \@ "label")
+        Some(t)
+
+      /* Configuration elements that don't create new widgets */
       case (parent : widgets.Composite,
           xml.Elem(_, "grid-layout", _, _, _*)) =>
         val gl = GridLayoutFactory.fillDefaults.create
@@ -207,15 +216,30 @@ class UIXML {
         go(c, context.getControl, names)
         None
 
+      /* If the context is a TabItem, then interpret this element using the
+       * parent TabFolder; if that produces a control, then install it into the
+       * TabItem */
+      case (context : widgets.TabItem, c) =>
+        go(c, context.getParent, names) match {
+          case Some(r : widgets.Control) =>
+            context.setControl(r)
+          case Some(r : viewers.Viewer) =>
+            context.setControl(r.getControl)
+          case _ =>
+        }
+        None
+
       case _ =>
         None
     }
+
     result.foreach(
         result => first(x, "name").foreach(names.names += _ -> result))
     result.flatMap(TryCast[widgets.Control]).foreach(
         widget => widget.setEnabled(x \@ "enabled" != "false"))
     result.foreach(
         result => x.child.foreach(go(_, result, names)))
+    result
   }
 }
 object UIXML extends UIXML {
