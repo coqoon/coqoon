@@ -492,7 +492,7 @@ private object PIDEEntity {
       filePath : IPath, e : Tree) : Option[ICoqEntity] = {
     Responses.extractEntity(e) match {
       case Some(Left((file, (start, end)))) =>
-        Some(new PIDEEntity(new Path(file), start, end - start))
+        Some(new PIDEEntity(new Path(file), start, end))
       case Some(Right((exec_id, (start, end)))) =>
         s.state.find_command(s.version, exec_id) flatMap {
           case (_, command) =>
