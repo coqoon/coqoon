@@ -136,6 +136,18 @@ class UIXML {
           xml.Elem(_, "tree-viewer", _, _, _*)) =>
         Some(new viewers.TreeViewer(parent,
             SWT.H_SCROLL | SWT.V_SCROLL | SWT.SINGLE | SWT.BORDER))
+      case (parent : viewers.TreeViewer,
+          xml.Elem(_, "column", _, _, _*)) =>
+        val flags =
+          x \@ "style" match {
+            case "left" => SWT.LEFT
+            case "center" => SWT.CENTER
+            case "right" => SWT.RIGHT
+          }
+        val c = new viewers.TreeViewerColumn(parent, flags)
+        c.getColumn.setText(x \@ "label")
+        Some(c)
+
       case (parent : widgets.Composite,
           xml.Elem(_, "combo-viewer", _, _, _*)) =>
         Some(new viewers.ComboViewer(parent, SWT.READ_ONLY | SWT.BORDER))
