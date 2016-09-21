@@ -29,10 +29,11 @@ class LoadPathOverridePreferencePage
     val names = UIXML(
         <composite name="root">
           <grid-layout columns="2" equal-width="false" />
-          <composite name="tv-container">
+          <table-viewer name="tv0">
             <grid-data grab="true" />
-            <fill-layout />
-          </composite>
+            <column style="left" label="External path" />
+            <column style="left" label="Override" />
+          </table-viewer>
           <composite>
             <grid-data />
             <grid-layout columns="1" />
@@ -46,17 +47,11 @@ class LoadPathOverridePreferencePage
             </button>
           </composite>
         </composite>, parent)
-    val tv = new TableViewer(
-        names.get[Composite]("tv-container").get,
-        SWT.BORDER | SWT.FULL_SELECTION)
+    val tv = names.get[TableViewer]("tv0").get
     this.tableViewer = Some(tv)
     tv.getTable.setLinesVisible(true)
     tv.getTable.setHeaderVisible(true)
     tv.setColumnProperties(Array("from", "to"))
-    val epc = new TableViewerColumn(tv, SWT.LEFT)
-    epc.getColumn.setText("External path")
-    val oc = new TableViewerColumn(tv, SWT.LEFT)
-    oc.getColumn.setText("Override")
     tv.setCellEditors(Array(
         new TextCellEditor(tv.getTable),
         new TextCellEditor(tv.getTable)))
