@@ -88,6 +88,10 @@ class UIXML {
       case (parent : widgets.Composite, xml.Elem(_, "combo", _, _, _*)) =>
         var flags = getControlFlags(x)
 
+        if (x \@ "read-only" == "true") {
+          flags |= SWT.READ_ONLY
+        }
+
         val l = new widgets.Combo(parent, flags)
         Some(l)
       case (parent : widgets.Composite, xml.Elem(_, "text", a, _, _*)) =>
@@ -131,6 +135,9 @@ class UIXML {
           xml.Elem(_, "tree-viewer", _, _, _*)) =>
         Some(new viewers.TreeViewer(parent,
             SWT.H_SCROLL | SWT.V_SCROLL | SWT.SINGLE | SWT.BORDER))
+      case (parent : widgets.Composite,
+          xml.Elem(_, "combo-viewer", _, _, _*)) =>
+        Some(new viewers.ComboViewer(parent, SWT.READ_ONLY | SWT.BORDER))
       case (parent : widgets.Composite, xml.Elem(_, "tab-folder", _, _, _*)) =>
         val flags = getScrollableFlags(x)
         Some(new widgets.TabFolder(parent, flags))
