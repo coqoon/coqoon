@@ -188,6 +188,10 @@ class UIXML {
             Integer.parseInt).foreach(gl.horizontalSpacing = _)
         first(x, "v-spacing", "spacing").map(
             Integer.parseInt).foreach(gl.verticalSpacing = _)
+        first(x,"h-margin", "margin").map(
+            Integer.parseInt).foreach(gl.marginWidth = _)
+        first(x,"v-margin", "margin").map(
+            Integer.parseInt).foreach(gl.marginHeight = _)
 
         parent.setLayout(gl)
         None
