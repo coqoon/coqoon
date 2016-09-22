@@ -46,7 +46,7 @@ object CoqEnforcement {
 
   object IsolatedRequire extends RunnerProvider {
     final val ID = "enforcement/isolatedRequire"
-    def apply(sentence : ICoqRequireSentence) =
+    def apply(sentence : ICoqScriptSentence) =
       Issue(IsolatedRequire.ID, sentence,
           "Require sentences should only occur at the beginning of a file",
           Severity.Warning)
@@ -57,8 +57,13 @@ object CoqEnforcement {
         i match {
           case s : ICoqRequireSentence if requireDone =>
             Seq(IsolatedRequire(s))
+          case s : ICoqFromRequireSentence if requireDone =>
+            Seq(IsolatedRequire(s))
+
           case s : ICoqRequireSentence => Seq()
+          case s : ICoqFromRequireSentence => Seq()
           case s : ICoqScriptSentence if s.isSynthetic => Seq()
+
           case s : ICoqScriptElement =>
             requireDone = true
             Seq()
