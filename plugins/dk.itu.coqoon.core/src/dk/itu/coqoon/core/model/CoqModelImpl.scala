@@ -185,8 +185,7 @@ private class CoqModelImpl(
             val entry = cache synchronized { cache.get(el) }
             entry.foreach(_.destroy)
             notifyListeners(CoqElementRemovedEvent(el))
-          case IResourceDelta.CHANGED
-              if (d.getFlags() & IResourceDelta.CONTENT) != 0 =>
+          case IResourceDelta.CHANGED =>
             val entry = cache synchronized { cache.get(el) }
             entry.foreach(_.update(ev))
           case _ =>
@@ -278,8 +277,8 @@ private class CoqProjectImpl(
       val delta = ev.getDelta
       val oldConfig = res.map(_.getFile("_CoqProject").getFullPath)
       val newConfig = res.map(_.getFile(".coqoonProject").getFullPath)
-      (oldConfig.map(delta.findMember),
-          newConfig.map(delta.findMember)) match {
+      (oldConfig.flatMap(m => Option(delta.findMember(m))),
+          newConfig.flatMap(m => Option(delta.findMember(m)))) match {
         case (_, Some(_)) | (Some(_), None) =>
           destroy
           notifyListeners(CoqProjectLoadPathChangedEvent(CoqProjectImpl.this))
