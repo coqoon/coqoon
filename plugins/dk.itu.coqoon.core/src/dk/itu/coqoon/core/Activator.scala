@@ -40,6 +40,7 @@ object ManifestIdentifiers {
   final val PLUGIN = "dk.itu.coqoon.core"
   final val BUILDER_COQ = "dk.itu.sdg.kopitiam.CoqBuilder"
   final val EXTENSION_POINT_LOADPATH = "dk.itu.coqoon.core.loadpath"
+  final val EXTENSION_POINT_OVERRIDE = "dk.itu.coqoon.core.coqtop"
   final val CONTENT_TYPE_COQFILE = "dk.itu.coqoon.core.CoqFile"
   final val CONTENT_TYPE_COQOBJECTFILE = "dk.itu.coqoon.core.CoqObjectFile"
   final val MARKER_PROBLEM = "dk.itu.sdg.kopitiam.problemmarker"

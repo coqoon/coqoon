@@ -28,15 +28,16 @@ class CoqoonPreferencesPage
 
   import org.eclipse.jface.preference._
   override def createFieldEditors = {
-    addField({
-      val parent = getFieldEditorParent
-      val ed = new DirectoryFieldEditor(CoqoonPreferences.CoqPath.ID,
-          "Folder containing Coq", parent)
-      ed.getLabelControl(parent).setToolTipText(
-          "The directory containing the coqtop program (or coqtop.exe on " +
-          "Windows systems).")
-      ed
-    })
+    if (!CoqoonPreferences.CoqPath.isOverridden)
+      addField({
+        val parent = getFieldEditorParent
+        val ed = new DirectoryFieldEditor(CoqoonPreferences.CoqPath.ID,
+            "Folder containing Coq", parent)
+        ed.getLabelControl(parent).setToolTipText(
+            "The directory containing the coqtop program (or coqtop.exe on " +
+            "Windows systems).")
+        ed
+      })
     addField({
       val parent = getFieldEditorParent
       val ed = new StringFieldEditor(
@@ -98,14 +99,36 @@ class CoqoonPreferences extends AbstractPreferenceInitializer {
     node.putBoolean(UseQuick.ID, false)
   }
 }
+
+import org.eclipse.core.runtime.{Path, IPath}
+
+trait ICoqPathOverride {
+  def getCoqPath() : IPath
+}
+
 object CoqoonPreferences {
   object CoqPath {
     final val ID = "coqpath"
 
-    import org.eclipse.core.runtime.{Path, IPath}
+    final lazy val pathOverride = {
+      import dk.itu.coqoon.core.utilities.TryCast
+      import org.eclipse.core.runtime.RegistryFactory
+      RegistryFactory.getRegistry.getConfigurationElementsFor(
+          ManifestIdentifiers.EXTENSION_POINT_OVERRIDE).filter(
+              _.getName == "override").headOption.map(
+                  _.createExecutableExtension("override")).flatMap(
+                      TryCast[ICoqPathOverride])
+    }
+    def isOverridden() = pathOverride != None
+
     def get() : Option[IPath] =
-      Option(Activator.getDefault.getPreferenceStore.getString(ID)).
-          map(_.trim).filter(_.length != 0).map(p => new Path(p))
+      pathOverride match {
+      case Some(o) =>
+        Some(o.getCoqPath)
+      case None =>
+        Option(Activator.getDefault.getPreferenceStore.getString(ID)).
+            map(_.trim).filter(_.length != 0).map(p => new Path(p))
+    }
 
     private final val candidates = Seq(
         ("/usr/local/bin", "coqtop"),

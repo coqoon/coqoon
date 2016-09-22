@@ -2,6 +2,7 @@
 <?eclipse version="3.4"?>
 <plugin>
    <extension-point id="dk.itu.coqoon.core.loadpath" name="Abstract load path providers" schema="schema/dk.itu.coqoon.core.loadpath.exsd"/>
+   <extension-point id="dk.itu.coqoon.core.coqtop" name="coqtop directory override" schema="schema/dk.itu.coqoon.core.coqtop.exsd"/>
    <extension
          id="dk.itu.sdg.kopitiam.CoqBuilder"
          name="Coq Builder"
