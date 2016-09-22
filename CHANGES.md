@@ -1,3 +1,18 @@
+Coqoon 0.7.5
+============
+
+22nd September 2016
+
+This release fixes a cache invalidation bug that was causing the load path
+configuration UI to show outdated information and adds an extension point to
+allow other plug-ins to specify the path to the `coqtop` program.
+
+Bug fixes
+---------
+
+* Use the right length for PIDE entities
+* Show errors even when specific location information is missing
+
 Coqoon 0.7.4
 ============
 
