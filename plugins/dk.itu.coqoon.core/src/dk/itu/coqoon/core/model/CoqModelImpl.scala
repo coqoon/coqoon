@@ -269,7 +269,8 @@ private class CoqProjectImpl(
     val res : Option[IProject], val parent : ICoqModel)
     extends ParentImpl(res, parent) with ICoqProject {
   private class Cache extends ICache {
-    def destroy = Seq(projectFile, loadPathProviders, loadPath).map(_.clear)
+    def destroy = Seq(
+        projectFile, loadPathProviders, provides, loadPath).foreach(_.clear())
 
     override def update(ev : IResourceChangeEvent) : Unit = {
       /* XXX: Is this a sensible place to send notifications from? */
@@ -366,6 +367,23 @@ private class CoqProjectImpl(
       }
     }
 
+    private[CoqProjectImpl] final val provides =
+        CacheSlot[Seq[String]] {
+      def _util(
+          lines : Seq[Seq[String]]) : Seq[String] =
+        lines match {
+          case Seq("Provides", identifier) +: tail =>
+            identifier +: _util(tail)
+          case _ +: tail => _util(tail)
+          case Nil => Seq()
+        }
+      projectFile.get match {
+        case _ if res == None => Seq()
+        case Seq() => Seq()
+        case pc => _util(pc)
+      }
+    }
+
     private[CoqProjectImpl] final val loadPath =
         CacheSlot[Seq[LoadPathEntry]] {
       val localOverrides = getLocalOverrides
@@ -432,6 +450,8 @@ private class CoqProjectImpl(
     }
     setProjectConfiguration(lines, monitor)
   }
+
+  override def getProvides() = getCache.provides.get
 
   import dk.itu.coqoon.core.ManifestIdentifiers
   import org.eclipse.core.runtime.Path
@@ -556,7 +576,7 @@ private class CoqVernacFileImpl(
     val res : Option[IFile], val parent : ICoqPackageFragment)
     extends ParentImpl(res, parent) with ICoqVernacFile {
   protected class Cache extends ICache {
-    override def destroy = Seq(contents, sentences, groups).map(_.clear)
+    override def destroy = Seq(contents, sentences, groups).foreach(_.clear())
 
     override def update(ev : IResourceChangeEvent) = {
       destroy

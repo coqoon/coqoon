@@ -342,6 +342,8 @@ object AbstractLoadPathManager {
   private final val instance = new LoadPathManager
   def getInstance() = instance
 
+  getInstance.addProvider(new ProvidesLoadPathProvider)
+
   import org.eclipse.core.runtime.{CoreException, RegistryFactory}
 
   for (ice <- RegistryFactory.getRegistry.getConfigurationElementsFor(
@@ -438,6 +440,8 @@ trait ICoqProject extends ICoqElement with IParent {
   def getLoadPathProviders() : Seq[LoadPathProvider]
   def setLoadPathProviders(
       lp : Seq[LoadPathProvider], monitor : IProgressMonitor)
+
+  def getProvides() : Seq[String]
 
   def getLocalOverrides() : Map[IPath, IPath]
   def setLocalOverrides(overrides : Map[IPath, IPath])

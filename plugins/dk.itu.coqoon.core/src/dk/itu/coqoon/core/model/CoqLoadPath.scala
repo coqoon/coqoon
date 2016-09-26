@@ -18,6 +18,36 @@ package dk.itu.coqoon.core.model
 
 import dk.itu.coqoon.core.ManifestIdentifiers
 
+class ProvidesLoadPathProvider extends LoadPathImplementationProvider {
+  import dk.itu.coqoon.core.model.{ICoqModel, ICoqProject}
+
+  case class Implementation(val project : ICoqProject,
+      val identifier : String) extends LoadPathImplementation {
+    override def getProvider = ProvidesLoadPathProvider.this
+    override def getName() = {
+      val r = project.getCorrespondingResource.map(
+          "project " + _.getName).getOrElse("(mystery project)")
+      s"$identifier (provided by $r)"
+    }
+    override def getIdentifier() = identifier
+    override def getAuthor() = ""
+    override def getDescription() = ""
+    override def getLoadPath = Right(project.getLoadPath)
+  }
+
+  override def getImplementation(
+      id : String) : Option[LoadPathImplementation] = {
+    for (p <- ICoqModel.getInstance.getProjects;
+         provides <- p.getProvides if provides == id) {
+      return Some(new Implementation(p, provides))
+    }
+    return None
+  }
+  override def getImplementations() = Nil
+
+  override def getName() = "(Provides)"
+}
+
 class ProjectLoadPathProvider extends LoadPathImplementationProvider {
   import ProjectLoadPathProvider._
 
