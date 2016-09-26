@@ -335,7 +335,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
           a => a.delete(IResource.NONE, monitor))
     deps.clearDependencies
     for (i <- coqProject.get.getLoadPathProviders) i match {
-      case SourceLoadPath(src, Some(bin)) => deleteObjects(bin)
+      case SourceLoadPath(src, Some(bin), _) => deleteObjects(bin)
       case DefaultOutputLoadPath(bin) => deleteObjects(bin)
       case _ =>
     }
@@ -367,7 +367,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
         if (!bin.exists()) {
           bin.create(IResource.FORCE | IResource.DERIVED, true, null)
         } else bin.setDerived(true, null)
-      case SourceLoadPath(_, Some(bin)) =>
+      case SourceLoadPath(_, Some(bin), _) =>
         if (!bin.exists()) {
           bin.create(IResource.FORCE | IResource.DERIVED, true, null)
         } else bin.setDerived(true, null)
@@ -516,7 +516,7 @@ private object CoqBuilder {
 
   def cleanProject(project : ICoqProject) : Unit =
     for (i <- project.getLoadPathProviders) i match {
-      case SourceLoadPath(_, Some(output)) => cleanHierarchy(output, true)
+      case SourceLoadPath(_, Some(output), _) => cleanHierarchy(output, true)
       case DefaultOutputLoadPath(output) => cleanHierarchy(output, true)
       case _ =>
     }

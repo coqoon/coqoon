@@ -113,7 +113,8 @@ protected object LoadPathModel {
       provider : LoadPathProvider, index : Int) : LPProvider =
     provider match {
       case AbstractLoadPath(a) => AbstractLPE(parent, a, index)
-      case SourceLoadPath(a, b) => SourceLPE(parent, a, b, index)
+      case SourceLoadPath(a, b, _ /* FIXME */) =>
+        SourceLPE(parent, a, b, index)
       case DefaultOutputLoadPath(a) => DefaultOutputLPE(parent, a, index)
       case ProjectLoadPath(a) => ProjectLPE(parent, a, index)
       case ExternalLoadPath(a, b) => ExternalLPE(parent, a, b, index)

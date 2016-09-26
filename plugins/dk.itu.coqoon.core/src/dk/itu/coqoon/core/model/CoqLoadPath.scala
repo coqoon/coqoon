@@ -96,14 +96,15 @@ class SourceLoadPathProvider extends LoadPathImplementationProvider {
       import ProjectLoadPathProvider.getRoot
       import dk.itu.coqoon.core.project.CoqProjectFile
       CoqProjectFile.shellTokenise(rest) match {
-        case project :: tail =>
+        case project +: tail =>
           val proj = getRoot.getProject(project)
           tail match {
-            case folder :: Nil =>
-              Some(new Implementation(this, proj.getFolder(folder), None))
-            case folder :: output :: Nil =>
+            case folder +: "" +: coqdir +: Seq()  =>
+              Some(new Implementation(this,
+                  proj.getFolder(folder), None, coqdir.split("\\.").toSeq))
+            case folder +: output +: coqdir +: Seq() =>
               Some(new Implementation(this, proj.getFolder(folder),
-                  Some(proj.getFolder(output))))
+                  Some(proj.getFolder(output)), coqdir.split("\\.").toSeq))
             case _ =>
               None
           }
@@ -121,26 +122,29 @@ object SourceLoadPathProvider {
 
   case class Implementation(
       private val provider : SourceLoadPathProvider, val folder : IFolder,
-      val output : Option[IFolder]) extends LoadPathImplementation {
+      val output : Option[IFolder], val coqdir : Seq[String])
+      extends LoadPathImplementation {
     override def getProvider() : LoadPathImplementationProvider = provider
 
     override def getName() = folder.getName
-    override def getIdentifier() = makeIdentifier(folder, output)
+    override def getIdentifier() = makeIdentifier(folder, output, coqdir)
 
     override def getAuthor() = ""
     override def getDescription() = ""
 
     override def getLoadPath() =
       Right(Seq(
-          LoadPathEntry(folder.getLocation, Nil)) ++
-          output.map(output => LoadPathEntry(output.getLocation, Nil)))
+          LoadPathEntry(folder.getLocation, coqdir)) ++
+          output.map(output => LoadPathEntry(output.getLocation, coqdir)))
   }
 
   import dk.itu.coqoon.core.project.CoqProjectEntry.escape
-  def makeIdentifier(folder : IFolder, output : Option[IFolder]) = {
+  def makeIdentifier(
+      folder : IFolder, output : Option[IFolder], coqdir : Seq[String]) = {
     val parts = Seq(folder.getProject.getName,
-        folder.getProjectRelativePath.toString) ++
-        output.map(_.getProjectRelativePath.toString).toSeq
+        folder.getProjectRelativePath.toString,
+        output.map(_.getProjectRelativePath.toString).getOrElse(""),
+        coqdir.mkString("."))
     s"source:" + parts.map(escape).mkString(" ")
   }
 }

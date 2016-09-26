@@ -219,10 +219,10 @@ private class CoqModelImpl(
     case f : IFolder if hasNature(f.getProject) =>
       val project = getProject(f.getProject.getName)
       for (i <- project.getLoadPathProviders) i match {
-        case SourceLoadPath(src, bin) if src.contains(f) =>
+        case SourceLoadPath(src, bin, _) if src.contains(f) =>
           return Some(new CoqPackageFragmentImpl(Some(f),
               new CoqPackageFragmentRootImpl(Some(src), project)))
-        case SourceLoadPath(src, Some(bin)) if bin.contains(f) =>
+        case SourceLoadPath(src, Some(bin), _) if bin.contains(f) =>
           return Some(new CoqPackageFragmentImpl(Some(f),
               new CoqPackageFragmentRootImpl(Some(bin), project)))
         case DefaultOutputLoadPath(bin) if bin.contains(f) =>
@@ -344,8 +344,16 @@ private class CoqProjectImpl(
           case Seq("SourceLoadPath", srcdir) +: tail =>
             SourceLoadPath(res.getFolder(srcdir)) +: _util(tail)
           case Seq("SourceLoadPath", srcdir, bindir) +: tail =>
-              SourceLoadPath(res.getFolder(srcdir),
+            SourceLoadPath(res.getFolder(srcdir),
                 Option(res.getFolder(bindir))) +: _util(tail)
+          case Seq("SourceLoadPathWithCoqdir", srcdir, coqdir) +: tail =>
+            SourceLoadPath(res.getFolder(srcdir),
+                None, coqdir.split("\\.").toSeq) +: _util(tail)
+          case Seq("SourceLoadPathWithCoqdir",
+              srcdir, coqdir, bindir) +: tail =>
+            SourceLoadPath(res.getFolder(srcdir),
+                Option(res.getFolder(bindir)),
+                coqdir.split("\\.").toSeq) +: _util(tail)
           case Seq("ExternalLoadPath", physical) +: tail =>
             ExternalLoadPath(new Path(physical), Nil) +: _util(tail)
           case Seq("ExternalLoadPath", physical, logical) +: tail =>
@@ -438,13 +446,21 @@ private class CoqProjectImpl(
         case ProjectLoadPath(project) =>
           val path = project.getName
           Seq("ProjectLoadPath", project.getName)
-        case SourceLoadPath(src, None) =>
+        case SourceLoadPath(src, None, Seq()) =>
           val srcPath = src.getProjectRelativePath.toString
           Seq("SourceLoadPath", srcPath)
-        case SourceLoadPath(src, Some(bin)) =>
+        case SourceLoadPath(src, Some(bin), Seq()) =>
           val srcPath = src.getProjectRelativePath.toString
           val binPath = bin.getProjectRelativePath.toString
           Seq("SourceLoadPath", srcPath, binPath)
+        case SourceLoadPath(src, None, coqdir) =>
+          val srcPath = src.getProjectRelativePath.toString
+          Seq("SourceLoadPathWithCoqdir", srcPath, coqdir.mkString("."))
+        case SourceLoadPath(src, Some(bin), coqdir) =>
+          val srcPath = src.getProjectRelativePath.toString
+          val binPath = bin.getProjectRelativePath.toString
+          Seq("SourceLoadPathWithCoqdir",
+              srcPath, coqdir.mkString("."), binPath)
       }).map(CoqProjectEntry.escape)
       lines :+= line
     }
@@ -497,7 +513,7 @@ private class CoqProjectImpl(
   override def getPackageFragmentRoot(folder : IPath) =
     new CoqPackageFragmentRootImpl(res.map(_.getFolder(folder)), this)
   override def getPackageFragmentRoots = getLoadPathProviders.collect {
-    case SourceLoadPath(folder, output)
+    case SourceLoadPath(folder, output, _)
         if (res == Some(folder.getProject)) =>
       new CoqPackageFragmentRootImpl(Some(folder), this)
     case DefaultOutputLoadPath(folder)
@@ -800,13 +816,14 @@ private class CoqVernacFileImpl(
     for (m <- getAncestor[ICoqModel];
          r <- getCorrespondingResource;
          p <- getAncestor[ICoqProject];
-         SourceLoadPath(src, bin) <- p.getLoadPathProviders
+         SourceLoadPath(src, bin, coqdir) <- p.getLoadPathProviders
              if src.contains(r);
          location = r.getLocation;
          partialObjectPath = location.removeFirstSegments(
              src.getLocation.segmentCount).removeFileExtension;
-         objectPath = partialObjectPath.addFileExtension(
-             if (CoqoonPreferences.UseQuick.get) "vio" else "vo");
+         objectPath = new Path(coqdir.mkString("/")).append(
+             partialObjectPath.addFileExtension(
+                 if (CoqoonPreferences.UseQuick.get) "vio" else "vo"));
          output = bin.getOrElse(p.getDefaultOutputLocation.get);
          objectFile = output.getFile(objectPath);
          f <- m.toCoqElement(objectFile).flatMap(
@@ -1007,12 +1024,12 @@ private case class CoqObjectFileImpl(
          r <- getCorrespondingResource.toSeq;
          p <- getAncestor[ICoqProject].toSeq;
          default = p.getDefaultOutputLocation.get;
-         SourceLoadPath(src, bin_) <- p.getLoadPathProviders
+         SourceLoadPath(src, bin_, coqdir) <- p.getLoadPathProviders
              if bin_.getOrElse(default).contains(r);
          bin = bin_.getOrElse(default);
          location = r.getLocation;
          partialSourcePath = location.removeFirstSegments(
-             bin.getLocation.segmentCount).removeFileExtension;
+             bin.getLocation.segmentCount + coqdir.size).removeFileExtension;
          sourcePath = partialSourcePath.addFileExtension("v");
          sourceFile = src.getFile(sourcePath);
          f <- m.toCoqElement(sourceFile).flatMap(

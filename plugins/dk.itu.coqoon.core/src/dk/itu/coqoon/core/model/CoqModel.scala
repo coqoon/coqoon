@@ -220,11 +220,12 @@ object ProjectLoadPath {
 
 object SourceLoadPath {
   import SourceLoadPathProvider._
-  def apply(folder : IFolder, output : Option[IFolder] = None) =
-    LoadPathProvider(makeIdentifier(folder, output))
+  def apply(folder : IFolder, output : Option[IFolder] = None,
+      coqdir : Seq[String] = Nil) =
+    LoadPathProvider(makeIdentifier(folder, output, coqdir))
   def unapply(p : LoadPathProvider) =
     p.getImplementation.flatMap(TryCast[Implementation]).map(
-        a => (a.folder, a.output))
+        a => (a.folder, a.output, a.coqdir))
 }
 
 object DefaultOutputLoadPath {

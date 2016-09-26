@@ -70,7 +70,7 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
          * folder, and replace it with one pointing to "theories" instead */
         val lp = project.getLoadPathProviders
         Option(project.getLoadPathProviders.indexWhere {
-          case SourceLoadPath(_, _) => true
+          case SourceLoadPath(_, _, _) => true
           case _ => false
         }).filter(_ != -1) foreach {
           case index =>
@@ -113,7 +113,7 @@ class NoOutputFoldersFilter extends ViewerFilter {
            i <- project.getLoadPathProviders) i match {
         case DefaultOutputLoadPath(out) if f == out =>
           return false
-        case SourceLoadPath(_, out) if f == out =>
+        case SourceLoadPath(_, out, _) if f == out =>
           return false
         case _ =>
       }
