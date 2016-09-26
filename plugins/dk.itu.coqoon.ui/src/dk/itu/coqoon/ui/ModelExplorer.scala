@@ -15,15 +15,44 @@ import org.eclipse.jface.action.{
   Action, MenuManager, IMenuManager, IMenuListener}
 import org.eclipse.jface.viewers._
 
+private object ActionFactory {
+  import org.eclipse.jface.action.Action
+  def apply(label : String, action: => Unit) =
+    new Action(label) {
+      override def run = action
+    }
+}
+
 class ModelExplorer extends ViewPart {
   private var tree : TreeViewer = null
 
   private val menuManager : MenuManager = new MenuManager
   menuManager.setRemoveAllWhenShown(true)
   menuManager.addMenuListener(new IMenuListener {
+    private def _makePath(c : ICoqElement) : Seq[ICoqElement] =
+      c.getParent match {
+        case Some(parent) =>
+          _makePath(parent) :+ c
+        case None =>
+          Seq()
+      }
+    private def makePath(c : ICoqElement) =
+      new TreePath(_makePath(c).toArray)
     override def menuAboutToShow(manager : IMenuManager) =
       Option(tree).map(_.getSelection) match {
-        case Some(s : IStructuredSelection) if s.size == 1 =>
+        case Some(s : IStructuredSelection) => s.getFirstElement match {
+          case f : ICoqVernacFile =>
+            menuManager.add(ActionFactory("Show corresponding object", {
+              f.getObjectFile.foreach(o =>
+                tree.setSelection(new TreeSelection(makePath(o))))
+            }))
+          case f : ICoqObjectFile =>
+            menuManager.add(ActionFactory("Show corresponding source file", {
+              f.getVernacFiles.headOption.foreach(s =>
+                tree.setSelection(new TreeSelection(makePath(s))))
+            }))
+          case _ =>
+        }
         case _ =>
       }
   })
