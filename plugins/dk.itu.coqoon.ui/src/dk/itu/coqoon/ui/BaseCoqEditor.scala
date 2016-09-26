@@ -6,7 +6,7 @@ package dk.itu.coqoon.ui
 import dk.itu.coqoon.core.utilities.TryCast
 import org.eclipse.ui.editors.text.TextEditor
 
-abstract class BaseCoqEditor extends TextEditor {
+abstract class BaseCoqEditor extends ScalaTextEditor {
   import org.eclipse.ui.editors.text.EditorsUI
   import org.eclipse.ui.texteditor.ChainedPreferenceStore
   setPreferenceStore(new ChainedPreferenceStore(Array(
@@ -164,22 +164,16 @@ abstract class BaseCoqEditor extends TextEditor {
     } else super.createSourceViewer(parent, ruler, styles)
 
   import org.eclipse.ui.views.contentoutline.IContentOutlinePage
-  // Support getting outline pages
-  var outlinePage : Option[CoqContentOutlinePage] = None
-  private def createOutlinePage() : CoqContentOutlinePage = {
+  /* Support getting outline pages
+   * Note: 
+   *   outlinePage : Option[CoqContentOutlinePage] = None
+   * is declared in ScalaTextEditor to work around a type issue
+   */
+  protected def createOutlinePage() : CoqContentOutlinePage = {
     val page = new CoqContentOutlinePage
     getWorkingCopy.get.foreach(page.setInput)
     page
   }
-
-  override def getAdapter(adapter : Class[_]) =
-    if (adapter == classOf[ISourceViewer]) {
-      getSourceViewer
-    } else if (adapter == classOf[IContentOutlinePage]) {
-      if (outlinePage == None && getSourceViewer != null)
-        outlinePage = Some(createOutlinePage)
-      outlinePage.orNull
-    } else super.getAdapter(adapter)
 
   override def initializeKeyBindingScopes =
     setKeyBindingScopes(Array("dk.itu.coqoon.ui.contexts.coq"))
