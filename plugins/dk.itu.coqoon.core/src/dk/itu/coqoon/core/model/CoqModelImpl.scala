@@ -155,7 +155,7 @@ private object MarkerUpdateJob {
 private trait ICache {
   /* Clear the cache, in whole or in part, in response to the changes
    * represented by @ev. */
-  def update(ev : IResourceChangeEvent) = destroy
+  def update(d : IResourceDelta) = destroy
   /* Forget all information stored in the cache. */
   def destroy()
 }
@@ -187,7 +187,7 @@ private class CoqModelImpl(
             notifyListeners(CoqElementRemovedEvent(el))
           case IResourceDelta.CHANGED =>
             val entry = cache synchronized { cache.get(el) }
-            entry.foreach(_.update(ev))
+            entry.foreach(_.update(d))
           case _ =>
         })
         true
@@ -272,10 +272,8 @@ private class CoqProjectImpl(
     def destroy = Seq(
         projectFile, loadPathProviders, provides, loadPath).foreach(_.clear())
 
-    override def update(ev : IResourceChangeEvent) : Unit = {
+    override def update(delta : IResourceDelta) : Unit = {
       /* XXX: Is this a sensible place to send notifications from? */
-
-      val delta = ev.getDelta
       val oldConfig = res.map(_.getFile("_CoqProject").getFullPath)
       val newConfig = res.map(_.getFile(".coqoonProject").getFullPath)
       (oldConfig.flatMap(m => Option(delta.findMember(m))),
@@ -594,10 +592,11 @@ private class CoqVernacFileImpl(
   protected class Cache extends ICache {
     override def destroy = Seq(contents, sentences, groups).foreach(_.clear())
 
-    override def update(ev : IResourceChangeEvent) = {
-      destroy
-      notifyListeners(CoqFileContentChangedEvent(CoqVernacFileImpl.this))
-    }
+    override def update(d : IResourceDelta) =
+      if ((d.getFlags() & IResourceDelta.CONTENT) != 0) {
+        destroy
+        notifyListeners(CoqFileContentChangedEvent(CoqVernacFileImpl.this))
+      }
 
     final val contents = CacheSlot[String] {
       res.map(f => TotalReader.read(f.getContents)).getOrElse("")
