@@ -635,6 +635,8 @@ private class CoqVernacFileImpl(
           new CoqProofStartSentenceImpl(i, CoqVernacFileImpl.this)
         case (ProofEndSentence(_), _) =>
           new CoqProofEndSentenceImpl(i, CoqVernacFileImpl.this)
+        case (BulletSentence(_), _) =>
+          new CoqBulletSentenceImpl(i, CoqVernacFileImpl.this)
         case (SubproofSentence(), _) =>
           new CoqSubproofStartSentenceImpl(i, CoqVernacFileImpl.this)
         case (EndSubproofSentence(), _) =>
