@@ -154,14 +154,17 @@ abstract class BaseCoqEditor extends ScalaTextEditor {
   private val reconciler = new WorkingCopyReconciler(this)
 
   override protected def createSourceViewer(parent : Composite,
-      ruler : IVerticalRuler, styles : Int) : ISourceViewer =
-    if (CoqoonUIPreferences.Folding.get) {
-      val viewer = new ProjectionViewer(
-          parent, ruler, getOverviewRuler(), isOverviewRulerVisible(), styles)
-      getSourceViewerDecorationSupport(viewer)
-      reconciler.install(viewer)
-      viewer
-    } else super.createSourceViewer(parent, ruler, styles)
+      ruler : IVerticalRuler, styles : Int) : ISourceViewer = {
+    val viewer =
+      if (CoqoonUIPreferences.Folding.get) {
+        val viewer = new ProjectionViewer(
+            parent, ruler, getOverviewRuler(), isOverviewRulerVisible(), styles)
+        getSourceViewerDecorationSupport(viewer)
+        viewer
+      } else super.createSourceViewer(parent, ruler, styles)
+    reconciler.install(viewer)
+    viewer
+  }
 
   import org.eclipse.ui.views.contentoutline.IContentOutlinePage
   /* Support getting outline pages
