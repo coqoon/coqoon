@@ -257,8 +257,11 @@ private class CoqModelImpl(
   override def addListener(l : CoqElementChangeListener) = (listeners += l)
   override def removeListener(l : CoqElementChangeListener) = (listeners -= l)
 
-  override protected[model] def notifyListeners(ev : CoqElementEvent) =
+  override protected[model] def notifyListeners(ev : CoqElementEvent) = {
+    import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
+    CoqoonDebugPreferences.ModelBroadcasts.log(ev.toString)
     listeners.foreach(_.coqElementChanged(ev))
+  }
 }
 private object CoqModelImpl {
   def hasNature(a : IProject) =

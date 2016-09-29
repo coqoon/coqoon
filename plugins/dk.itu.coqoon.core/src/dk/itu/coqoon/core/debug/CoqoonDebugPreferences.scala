@@ -117,6 +117,10 @@ object CoqoonDebugPreferences {
       "Log project build events",
       "Log debugging messages whenever a project build operation starts or " +
       "stops.")
+  object ModelBroadcasts extends ChannelPreference("debug.model",
+      "Log Coq model event notifications",
+      "Log debugging messages whenever the Coq model emits a change " +
+      "notification.")
 
   val allPrefs = Seq[Preference[_]](
       SuppressStackTraces,
@@ -127,5 +131,6 @@ object CoqoonDebugPreferences {
       PIDEMarkers,
       LoadPathResolution,
       LoadPathExpansion,
-      ProjectBuild)
+      ProjectBuild,
+      ModelBroadcasts)
 }
