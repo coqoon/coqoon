@@ -428,7 +428,9 @@ private class CoqProjectImpl(
     } else if (f.exists) {
       f.delete(IResource.KEEP_HISTORY, monitor)
     }
-    getCache.projectFile.clear
+    /* Virtually everything in the CoqProjectImpl cache depends on the content
+     * of the project configuration file, so... */
+    getCache.destroy
   }
 
   override def getLoadPath() = getCache.loadPath.get
