@@ -18,7 +18,8 @@ package dk.itu.coqoon.core.model
 
 import dk.itu.coqoon.core.project.{
   CoqProjectFile, CoqProjectEntry, VariableEntry, RecursiveEntry}
-import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot, TotalReader}
+import dk.itu.coqoon.core.utilities.{
+  TryCast, CacheSlot, TotalReader, BatchCollector}
 
 import org.eclipse.core.runtime.{Path, IPath, IProgressMonitor}
 import org.eclipse.core.resources._
@@ -65,77 +66,83 @@ private abstract class CoqElementImpl[
 
 import CoqEnforcement._
 
-private[model] object IssueTranslator extends CoqElementChangeListener {
+private[model] object IssueTranslator
+    extends BatchCollector[_IssueTranslator.IssueTuple](delay = 200)
+        with CoqElementChangeListener {
   override def coqElementChanged(ev : CoqElementEvent) =
     ev match {
       case CoqIssuesChangedEvent(el : ICoqElement) =>
-        el.getContainingResource.foreach(r =>
-            new MarkerUpdateJob(r, el, el.getIssues).schedule)
+        el.getContainingResource.foreach(r => add(r, el, el.getIssues))
       case CoqElementRemovedEvent(el) =>
-        el.getCorrespondingResource.foreach(r =>
-            new MarkerUpdateJob(r, el, Map()).schedule)
+        el.getCorrespondingResource.foreach(r => add(r, el, Map()))
       case CoqFileContentChangedEvent(el : ICoqVernacFile) =>
         /* When a file's content is updated, all of its sentences are
          * discarded, so delete their markers as well */
-        el.getCorrespondingResource.foreach(r =>
-            new MarkerUpdateJob(r, el, Map()).schedule)
+        el.getCorrespondingResource.foreach(r => add(r, el, Map()))
       case _ =>
     }
+  override def process(items : List[_IssueTranslator.IssueTuple]) =
+    new MarkerUpdateJob(items).schedule
+}
+private object _IssueTranslator {
+  type IssueTuple = (IResource, ICoqElement, Map[Issue, Severity])
 }
 
 import dk.itu.coqoon.core.utilities.UniqueRule
 import dk.itu.coqoon.core.utilities.JobUtilities.MultiRule
 import org.eclipse.core.resources.WorkspaceJob
 
-private class MarkerUpdateJob(
-    r : IResource, el : ICoqElement, issues : Map[Issue, Severity])
+private class MarkerUpdateJob(tasks : List[_IssueTranslator.IssueTuple])
     extends WorkspaceJob("Update Coq markers") {
   import MarkerUpdateJob._
 
   setRule(MultiRule(
-      ResourcesPlugin.getWorkspace.getRuleFactory.markerRule(r), rule))
+      rule +: tasks.map(_._1).map(
+          ResourcesPlugin.getWorkspace.getRuleFactory.markerRule) : _*))
   setSystem(true)
 
   import org.eclipse.core.runtime.{Status, IStatus}
   override def runInWorkspace(monitor : IProgressMonitor) : IStatus = {
-    import dk.itu.coqoon.core.ManifestIdentifiers.MARKER_PROBLEM
-    val currentMarkers =
-      if (r.exists) {
-        r.findMarkers(MARKER_PROBLEM, false, IResource.DEPTH_ZERO)
-      } else Array[IMarker]()
-    import scala.collection.JavaConversions._
-    el match {
-      case el : ICoqScriptElement =>
-        /* As script elements are in some sense immutable, we use their offset
-         * in the document as a unique identifier. */
-        val elo = el.getOffset
-        currentMarkers.foreach(m =>
-          if (m.getAttribute(SECRET_OFFSET, Int.MinValue) == elo) {
-            m.delete
-          })
-        issues foreach {
-          case (Issue(_, offset, length, message, _), severity) =>
-            r.createMarker(MARKER_PROBLEM).setAttributes(Map(
-                IMarker.MESSAGE -> message.trim,
-                IMarker.SEVERITY -> severityToMarkerSeverity(severity),
-                IMarker.LOCATION -> s"offset $offset",
-                IMarker.CHAR_START -> (elo + offset),
-                IMarker.CHAR_END -> (elo + offset + length),
-                IMarker.TRANSIENT -> false,
-                SECRET_OFFSET -> elo))
-        }
+    for ((r, el, issues) <- tasks) {
+      import dk.itu.coqoon.core.ManifestIdentifiers.MARKER_PROBLEM
+      val currentMarkers =
+        if (r.exists) {
+          r.findMarkers(MARKER_PROBLEM, false, IResource.DEPTH_ZERO)
+        } else Array[IMarker]()
+      import scala.collection.JavaConversions._
+      el match {
+        case el : ICoqScriptElement =>
+          /* As script elements are in some sense immutable, we use their
+           * offset in the document as a unique identifier. */
+          val elo = el.getOffset
+          currentMarkers.foreach(m =>
+            if (m.getAttribute(SECRET_OFFSET, Int.MinValue) == elo) {
+              m.delete
+            })
+          issues foreach {
+            case (Issue(_, offset, length, message, _), severity) =>
+              r.createMarker(MARKER_PROBLEM).setAttributes(Map(
+                  IMarker.MESSAGE -> message.trim,
+                  IMarker.SEVERITY -> severityToMarkerSeverity(severity),
+                  IMarker.LOCATION -> s"offset $offset",
+                  IMarker.CHAR_START -> (elo + offset),
+                  IMarker.CHAR_END -> (elo + offset + length),
+                  IMarker.TRANSIENT -> false,
+                  SECRET_OFFSET -> elo))
+          }
 
-      case el : ICoqElement if issues.isEmpty =>
-        currentMarkers.foreach(_.delete)
-      case el : ICoqElement =>
-        issues foreach {
-          case (Issue(_, offset, length, message, _), severity) =>
-            r.createMarker(MARKER_PROBLEM).setAttributes(Map(
-                IMarker.MESSAGE -> message.trim,
-                IMarker.SEVERITY -> severityToMarkerSeverity(severity),
-                IMarker.TRANSIENT -> false))
-        }
-      case _ =>
+        case el : ICoqElement if issues.isEmpty =>
+          currentMarkers.foreach(_.delete)
+        case el : ICoqElement =>
+          issues foreach {
+            case (Issue(_, offset, length, message, _), severity) =>
+              r.createMarker(MARKER_PROBLEM).setAttributes(Map(
+                  IMarker.MESSAGE -> message.trim,
+                  IMarker.SEVERITY -> severityToMarkerSeverity(severity),
+                  IMarker.TRANSIENT -> false))
+          }
+        case _ =>
+      }
     }
 
     Status.OK_STATUS
