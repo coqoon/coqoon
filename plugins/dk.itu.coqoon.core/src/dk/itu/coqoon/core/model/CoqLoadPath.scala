@@ -99,12 +99,19 @@ class SourceLoadPathProvider extends LoadPathImplementationProvider {
         case project +: tail =>
           val proj = getRoot.getProject(project)
           tail match {
-            case folder +: "" +: coqdir +: Seq()  =>
-              Some(new Implementation(this,
-                  proj.getFolder(folder), None, coqdir.split("\\.").toSeq))
-            case folder +: output +: coqdir +: Seq() =>
-              Some(new Implementation(this, proj.getFolder(folder),
-                  Some(proj.getFolder(output)), coqdir.split("\\.").toSeq))
+            case folder +: output_ +: coqdir_ +: Seq()  =>
+              val output =
+                if (!output_.isEmpty) {
+                  Some(proj.getFolder(output_))
+                } else None
+              val coqdir =
+                if (!coqdir_.isEmpty) {
+                  coqdir_.split("\\.").toSeq
+                } else Seq()
+              val i = new Implementation(this,
+                  proj.getFolder(folder), output, coqdir)
+              println(i)
+              Some(i)
             case _ =>
               None
           }
