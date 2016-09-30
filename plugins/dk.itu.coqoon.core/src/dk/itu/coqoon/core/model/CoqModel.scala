@@ -68,7 +68,7 @@ trait ICoqModel extends ICoqElement with IParent {
   def removeListener(l : CoqElementChangeListener)
 }
 object ICoqModel {
-  def create(root : IWorkspaceRoot) : ICoqModel = {
+  private def create(root : IWorkspaceRoot) : ICoqModel = {
     val impl = new CoqModelImpl(Option(root))
     impl.addListener(IssueTranslator)
     impl

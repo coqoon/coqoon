@@ -85,9 +85,9 @@ class NewCoqProjectWizard extends Wizard with INewWizard {
   def createProject : IProject = {
     val project = creationPage.getProjectHandle()
     if (!project.exists()) {
-      val mm = ICoqModel.create(project.getWorkspace.getRoot)
       getContainer().run(
-          true, true, new ProjectCreator(mm.getProject(project.getName)))
+          true, true, new ProjectCreator(
+              ICoqModel.getInstance.getProject(project.getName)))
     }
     return project
   }
