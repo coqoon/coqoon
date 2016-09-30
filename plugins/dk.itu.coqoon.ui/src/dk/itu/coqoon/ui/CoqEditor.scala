@@ -3,11 +3,11 @@
 
 package dk.itu.coqoon.ui
 
-import dk.itu.coqoon.ui.utilities.{UIUtils, SupersedableTask}
+import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core.{ManifestIdentifiers => CMI}
 import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.coqtop.CoqTopIdeSlave_v20120710
-import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
+import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt, SupersedableTask}
 
 import org.eclipse.jface.text.IDocument
 

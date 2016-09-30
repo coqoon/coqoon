@@ -1,33 +1,8 @@
 package dk.itu.coqoon.ui
 
-import dk.itu.coqoon.ui.utilities.SupersedableTask
+import dk.itu.coqoon.core.utilities.BatchCollector
 import org.eclipse.jface.text.{
   IDocument, ITextViewer, DocumentEvent, IDocumentListener, ITextInputListener}
-
-abstract class BatchCollector[A](delay : Int = BatchCollector.DEFAULT_DELAY) {
-  private val collectTask = new SupersedableTask(delay)
-  private object CollectionLock {
-    var items : List[A] = List()
-  }
-  def add(item : A) =
-    CollectionLock synchronized {
-      CollectionLock.items :+= item
-      collectTask schedule {
-        val items =
-          CollectionLock synchronized {
-            try {
-              CollectionLock.items
-            } finally CollectionLock.items = List()
-          }
-        process(items)
-      }
-    }
-
-  protected def process(items : List[A])
-}
-object BatchCollector {
-  final val DEFAULT_DELAY = 400
-}
 
 import EventReconciler.DecoratedEvent
 abstract class EventReconciler(delay : Int = BatchCollector.DEFAULT_DELAY)

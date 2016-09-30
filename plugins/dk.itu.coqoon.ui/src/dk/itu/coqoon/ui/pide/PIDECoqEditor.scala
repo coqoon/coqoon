@@ -3,8 +3,8 @@ package dk.itu.coqoon.ui.pide
 import dk.itu.coqoon.ui.{
   BaseCoqEditor, CoqGoalsContainer, CoqoonUIPreferences, ManifestIdentifiers}
 import dk.itu.coqoon.ui.text.Region
-import dk.itu.coqoon.ui.utilities.SupersedableTask
 import dk.itu.coqoon.core.model.{CoqEnforcement, CoqEnforcementContext}
+import dk.itu.coqoon.core.utilities.SupersedableTask
 
 class PIDECoqEditor
     extends BaseCoqEditor with CoqGoalsContainer with PIDESessionHost {
