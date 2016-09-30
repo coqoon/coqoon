@@ -19,14 +19,11 @@ class PIDECoqEditor
       }
   }
 
-  private val reconciler = new PIDEReconciler(this)
-
   import org.eclipse.swt.widgets.Composite
   import org.eclipse.jface.text.source.IVerticalRuler
   override protected def createSourceViewer(
       parent : Composite, ruler : IVerticalRuler, styles : Int) = {
     val viewer = super.createSourceViewer(parent, ruler, styles)
-    reconciler.install(viewer)
     viewer.getTextWidget.addCaretListener(DocumentCaretListener)
     viewer.addViewportListener(ViewportListener)
 
@@ -387,6 +384,29 @@ class PIDECoqEditor
   }
 
   private[pide] def getSession() = session
+
+  import dk.itu.coqoon.ui.EventReconciler._
+  def reconcileEvents(events : List[DecoratedEvent]) = {
+    import isabelle._
+
+    var earliestOffset = Int.MaxValue
+    var edits : List[Text.Edit] = List()
+    for (DecoratedEvent(ev, pre) <- events) {
+      if (ev.fLength > 0)
+        edits :+= Text.Edit.remove(ibLength + ev.fOffset, pre)
+      if (!ev.fText.isEmpty)
+        edits :+= Text.Edit.insert(ibLength + ev.fOffset, ev.fText)
+      earliestOffset = Math.min(earliestOffset, ev.fOffset)
+    }
+
+    val stop = getFirstCommand.exists(
+        c => earliestOffset <= c._1 + c._2.length)
+    if (stop)
+      getSession.stop
+
+    checkedUpdate(List(Document.Node.Edits(edits)))
+  }
+  getReconciler.addHandler(reconcileEvents)
 }
 
 object Perspective {
@@ -421,34 +441,6 @@ object PIDEEnforcementContext extends CoqEnforcementContext {
       CoqEnforcement.Severity.Error
     case _ =>
       i.severityHint
-  }
-}
-
-import dk.itu.coqoon.ui.EventReconciler
-
-private class PIDEReconciler(editor : PIDECoqEditor) extends EventReconciler {
-  import EventReconciler._
-  import org.eclipse.core.resources.{IMarker,IResource}
-
-  override def process(events : List[DecoratedEvent]) = {
-    import isabelle._
-
-    var earliestOffset = Int.MaxValue
-    var edits : List[Text.Edit] = List()
-    for (DecoratedEvent(ev, pre) <- events) {
-      if (ev.fLength > 0)
-        edits :+= Text.Edit.remove(editor.ibLength + ev.fOffset, pre)
-      if (!ev.fText.isEmpty)
-        edits :+= Text.Edit.insert(editor.ibLength + ev.fOffset, ev.fText)
-      earliestOffset = Math.min(earliestOffset, ev.fOffset)
-    }
-
-    val stop = editor.getFirstCommand.exists(
-        c => earliestOffset <= c._1 + c._2.length)
-    if (stop)
-      editor.getSession.stop
-
-    editor.checkedUpdate(List(Document.Node.Edits(edits)))
   }
 }
 
