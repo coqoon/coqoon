@@ -11,22 +11,19 @@ import org.eclipse.jface.text.source.ISourceViewer;
  * All that clearly SUCKS!
  */
 public abstract class ScalaTextEditor extends TextEditor {
-	
-  public scala.Option<CoqContentOutlinePage> outlinePage = null;
+  private CoqContentOutlinePage outlinePage = null;
   protected abstract CoqContentOutlinePage createOutlinePage();
+
   @Override
+  @SuppressWarnings({"rawtypes", "unchecked"})
   public final Object getAdapter(Class adapter) {
-	    if (adapter.isAssignableFrom(ISourceViewer.class)) {
-	        return getSourceViewer();
-	    }
-	    if (adapter.isAssignableFrom(IContentOutlinePage.class)) {
-	        if (outlinePage.isEmpty() && getSourceViewer() != null) {
-	          outlinePage = scala.Option.apply(createOutlinePage());
-	          return outlinePage.get();
-	        }
-	        return null;
-	    }
-	    return super.getAdapter(adapter);
+    if (adapter.isAssignableFrom(ISourceViewer.class)) {
+      return getSourceViewer();
+    } else if (adapter.isAssignableFrom(IContentOutlinePage.class)) {
+      if (outlinePage == null && getSourceViewer() != null)
+        outlinePage = createOutlinePage();
+      return outlinePage;
+    } else return super.getAdapter(adapter);
   }
 
   public ScalaTextEditor() { super(); }
