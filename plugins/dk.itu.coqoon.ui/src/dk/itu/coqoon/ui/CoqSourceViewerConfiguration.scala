@@ -180,13 +180,3 @@ private object StringTokenScanner {
       UIUtils.Color(0, 0, 255), CoqTokenScanner.white, 0))
 }
 
-import org.eclipse.jface.text.IDocument
-
-class WorkingCopyReconciler(
-    editor : BaseCoqEditor) extends EventReconciler(delay = 500) {
-  import EventReconciler._
-
-  override def process(events : List[DecoratedEvent]) =
-    editor.getWorkingCopy.get.foreach(_.setContents(
-        editor.getViewer.getDocument.get))
-}

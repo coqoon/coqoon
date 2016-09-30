@@ -151,7 +151,13 @@ abstract class BaseCoqEditor extends ScalaTextEditor {
     })
   }
 
-  private val reconciler = new WorkingCopyReconciler(this)
+  private val reconciler = new MultiReconciler
+  protected def getReconciler() = reconciler
+
+  private def reconcileEvents(events : List[EventReconciler.DecoratedEvent]) =
+    getWorkingCopy.get.foreach(
+        _.setContents(getViewer.getDocument.get))
+  getReconciler().addHandler(reconcileEvents)
 
   override protected def createSourceViewer(parent : Composite,
       ruler : IVerticalRuler, styles : Int) : ISourceViewer = {
