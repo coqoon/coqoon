@@ -65,3 +65,12 @@ abstract class EventReconciler(delay : Int = BatchCollector.DEFAULT_DELAY)
 object EventReconciler {
   case class DecoratedEvent(ev : DocumentEvent, old : String)
 }
+
+class MultiReconciler(delay : Int = BatchCollector.DEFAULT_DELAY)
+    extends EventReconciler(delay) {
+  private var handlers : List[List[DecoratedEvent] => Unit] = List()
+  def addHandler(f : List[DecoratedEvent] => Unit) = (handlers :+= f)
+
+  override def process(items : List[DecoratedEvent]) =
+    handlers.foreach(handler => handler(items))
+}
