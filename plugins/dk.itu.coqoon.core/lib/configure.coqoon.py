@@ -12,7 +12,7 @@
 # without warning: any local changes you may have made will not be preserved.
 
 # Remember to keep this value in sync with CoqBuildScript.scala
-_configure_coqoon_version = 25
+_configure_coqoon_version = 26
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -298,6 +298,10 @@ def load_coq_project_configuration(cwd):
                 lp[1] = str(cwd.append(lp[1]))
                 if len(lp) > 2:
                     lp[2] = str(cwd.append(lp[2]))
+            elif lp[0] == "SourceLoadPathWithCoqdir":
+                lp[1] = str(cwd.append(lp[1]))
+                if len(lp) > 3:
+                    lp[3] = str(cwd.append(lp[3]))
             elif lp[0] == "DefaultOutput":
                 lp[1] = str(cwd.append(lp[1]))
                 default_output = lp[1]
@@ -419,10 +423,14 @@ correctly""" % (vn, aalps))
 alp_directories = substitute_variables(*structure_vars(vs))
 
 # Find all source directories and their corresponding output directories
-source_directories = [] # sequence of (source directory, output directory)
+source_directories = [] # sequence of (source directory, source directory
+                        # coqdir, output directory)
 for i in configuration:
     if i[0] == "SourceLoadPath":
-        entry = (i[1], i[2] if len(i) > 2 else default_output)
+        entry = (i[1], "", i[2] if len(i) > 2 else default_output)
+        source_directories.append(entry)
+    elif i[0] == "SourceLoadPathWithCoqdir":
+        entry = (i[1], i[2], i[3] if len(i) > 3 else default_output)
         source_directories.append(entry)
 
 # Keep this in sync with CoqSentence.getNextSentence
@@ -554,7 +562,7 @@ def is_name_valid(name):
 # Populate the dependency map with the basics: objects depend on sources
 deps = {} # Target path -> sequence of dependency paths
 to_be_resolved = {}
-for srcdir, bindir in source_directories:
+for srcdir, coqdir, bindir in source_directories:
     srcroot = Path(srcdir)
     binroot = Path(bindir)
     for current, dirs, files in os.walk(srcdir):
@@ -562,7 +570,9 @@ for srcdir, bindir in source_directories:
         if not is_name_valid(curbase):
             continue
         srcpath = Path(current)
-        binpath = binroot.append_path(srcpath.drop_first(len(srcroot)))
+        binpath = \
+          binroot.append(coqdir.replace(".", "/")).append_path(
+              srcpath.drop_first(len(srcroot)))
         if not binpath.isdir():
             # Although the Makefile will be able to create this folder, the
             # load path expansion code needs it to exist in order to work
@@ -625,6 +635,15 @@ def resolve_load_path(alp_dirs, configuration):
         if i[0] == "SourceLoadPath":
             s, b = (i[1], i[2] if len(i) > 2 else default_output)
             expanded_load_path.extend(expand_pair("", s))
+            expanded_load_path.extend(expand_pair("", b))
+        elif i[0] == "SourceLoadPathWithCoqdir":
+            s, b = (i[1], i[3] if len(i) > 3 else default_output)
+            coqdir = i[2]
+            # We specify the coqdir for the source directory to make sure that
+            # the output file gets the right library name, but we don't do
+            # anything for the binary path because that's always at the root of
+            # the coqdir hierarchy
+            expanded_load_path.extend(expand_pair(coqdir, s))
             expanded_load_path.extend(expand_pair("", b))
         elif i[0] == "DefaultOutput":
             expanded_load_path.extend(expand_pair("", i[1]))
@@ -783,13 +802,13 @@ override COQFLAGS += -Q "%s" "%s"
           file.write(u"""\
 override COQFLAGS += -quick
 """)
-        for srcdir, bindir in source_directories:
+        for srcdir, coqdir, bindir in source_directories:
             object_extension = "vo" if not args.go_fast else "vio"
             file.write(u"""\
 %s/%%.%s: %s/%%.v
 	$(_COQCMD)
 
-""" % (bindir, object_extension, srcdir))
+""" % (str(Path(bindir).append(coqdir.replace(".", "/"))), object_extension, srcdir))
 
         file.write(u"""\
 OBJECTS = \\
