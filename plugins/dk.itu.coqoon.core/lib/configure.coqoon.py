@@ -12,7 +12,7 @@
 # without warning: any local changes you may have made will not be preserved.
 
 # Remember to keep this value in sync with CoqBuildScript.scala
-_configure_coqoon_version = 26
+_configure_coqoon_version = 27
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -96,15 +96,12 @@ def err(error, usage = True):
         sys.stderr.write("Try \"%s --help\" for more information.\n" % prog)
     sys.exit(1)
 
-def striplist(l):
-    return map(lambda s: s.rstrip("/"), l)
-
 # This utility class is modelled loosely upon org.eclipse.core.runtime.Path,
 # although is nowhere near as complicated
 class Path:
     def __init__(self, i = None):
-        if i != None:
-            self._bits = striplist(i.split("/"))
+        if i != None and i != "":
+            self._bits = i.split("/")
         else:
             self._bits = []
 
@@ -139,13 +136,7 @@ class Path:
         return len(self._bits)
 
     def append(self, i):
-        if len(i) != 0:
-            p = Path()
-            p._bits.extend(self._bits)
-            p._bits.append(i.rstrip("/"))
-            return p
-        else:
-            return self
+        return self.append_path(Path(i))
     def append_path(self, i):
         if len(i._bits) != 0:
             p = Path()
