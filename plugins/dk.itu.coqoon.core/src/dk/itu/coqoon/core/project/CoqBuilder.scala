@@ -447,7 +447,6 @@ class CoqBuilder extends IncrementalProjectBuilder {
     for ((coqdir, location) <- mlLoadPath) {
       val base = new Path(location.getAbsolutePath).append(libname)
       for (p <- Seq(base.addFileExtension("cmxs"))) {
-        println(p)
         val f = p.toFile
         if (f.exists)
           return Some(p)

@@ -110,7 +110,6 @@ class SourceLoadPathProvider extends LoadPathImplementationProvider {
                 } else Seq()
               val i = new Implementation(this,
                   proj.getFolder(folder), output, coqdir)
-              println(i)
               Some(i)
             case _ =>
               None
