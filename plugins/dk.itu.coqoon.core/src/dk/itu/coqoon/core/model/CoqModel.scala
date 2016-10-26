@@ -443,6 +443,7 @@ trait ICoqProject extends ICoqElement with IParent {
       lp : Seq[LoadPathProvider], monitor : IProgressMonitor)
 
   def getProvides() : Seq[String]
+  def setProvides(ps : Seq[String], monitor : IProgressMonitor)
 
   def getLocalOverrides() : Map[IPath, IPath]
   def setLocalOverrides(overrides : Map[IPath, IPath])
