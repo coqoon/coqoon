@@ -48,7 +48,7 @@ protected object LoadPathModel {
           Nil
         case head :: tail =>
           result ++= Seq(
-              NamespaceSLPE(Some(this), head),
+              NamespaceSLPE(Some(this), head.coqdir),
               LocationSLPE(Some(this), head))
           if (tail != Nil)
             result :+= SeparatorSLPE(Some(this))
@@ -67,9 +67,10 @@ protected object LoadPathModel {
 
   import org.eclipse.core.resources.IFolder
   case class SourceLPE(parent : Option[LPProvider], folder : IFolder,
-      output : Option[IFolder], index : Int)
+      coqdir : Seq[String], output : Option[IFolder], index : Int)
       extends LPProvider(parent, index) {
-    override def getChildren = Seq(OutputSLPE(Some(this), output))
+    override def getChildren =
+      Seq(OutputSLPE(Some(this), output), NamespaceSLPE(Some(this), coqdir))
     override def hasChildren = true
     override def getProvider = SourceLoadPath(folder, output)
   }
@@ -91,7 +92,7 @@ protected object LoadPathModel {
   case class ExternalLPE(parent : Option[LPProvider], fsPath : IPath,
       dir : Seq[String], index : Int) extends LPProvider(parent, index) {
     override def getChildren =
-      Seq(NamespaceSLPE(Some(this), LoadPathEntry(fsPath, dir)))
+      Seq(NamespaceSLPE(Some(this), dir))
     override def hasChildren = true
     override def getProvider = ExternalLoadPath(fsPath, dir)
   }
@@ -99,7 +100,7 @@ protected object LoadPathModel {
   case class OutputSLPE(parent : Option[LPProvider],
       output : Option[IFolder]) extends LPBase(parent)
   case class NamespaceSLPE(parent : Option[LPProvider],
-      cl : LoadPathEntry) extends LPBase(parent)
+      coqdir : Seq[String]) extends LPBase(parent)
   case class LocationSLPE(parent : Option[LPProvider],
       cl : LoadPathEntry) extends LPBase(parent)
   case class SeparatorSLPE(parent : Option[LPProvider]) extends LPBase(parent)
@@ -113,8 +114,8 @@ protected object LoadPathModel {
       provider : LoadPathProvider, index : Int) : LPProvider =
     provider match {
       case AbstractLoadPath(a) => AbstractLPE(parent, a, index)
-      case SourceLoadPath(a, b, _ /* FIXME */) =>
-        SourceLPE(parent, a, b, index)
+      case SourceLoadPath(a, b, c) =>
+        SourceLPE(parent, a, c, b, index)
       case DefaultOutputLoadPath(a) => DefaultOutputLPE(parent, a, index)
       case ProjectLoadPath(a) => ProjectLPE(parent, a, index)
       case ExternalLoadPath(a, b) => ExternalLPE(parent, a, b, index)
@@ -137,7 +138,7 @@ private class LoadPathLabelProvider extends StyledCellLabelProvider {
             case None =>
               s.append(identifier, ColourStyler(ERROR))
           }
-        case SourceLPE(_, folder, _, i) =>
+        case SourceLPE(_, folder, _, _, i) =>
           s.append(s"${i + 1}. Source folder: ")
           s.append(
               folder.getProjectRelativePath.addTrailingSeparator.toString,
@@ -161,11 +162,11 @@ private class LoadPathLabelProvider extends StyledCellLabelProvider {
             ColourStyler(if (fsPath.toFile.exists) VALID else ERROR)
           s.append(fsPath.addTrailingSeparator.toString, styler)
 
-        case NamespaceSLPE(_, lpe) =>
+        case NamespaceSLPE(_, coqdir) =>
           s.append("Namespace: ")
           val label =
-            if (lpe.coqdir != Nil) {
-              lpe.coqdir.mkString(".")
+            if (coqdir != Nil) {
+              coqdir.mkString(".")
             } else "(root)"
           s.append(label, ColourStyler(NSLOC))
         case LocationSLPE(_, lpe) =>

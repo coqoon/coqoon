@@ -117,7 +117,7 @@ class LoadPathConfigurationPage
           selection match {
             case Some(AbstractLPE(_, _, index)) =>
               (Some(new NLPAbstractEntryPage), index)
-            case Some(SourceLPE(_, _, _, index)) =>
+            case Some(SourceLPE(_, _, _, _, index)) =>
               (Some(new NLPSourceEntryPage), index)
             case Some(DefaultOutputLPE(_, _, index)) =>
               (Some(new NLPDefaultOutputEntryPage), index)
