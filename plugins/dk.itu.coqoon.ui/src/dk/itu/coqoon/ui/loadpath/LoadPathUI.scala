@@ -436,13 +436,19 @@ class NLPSourceEntryPage extends LPWizardPage(
       "Add an additional source folder to this project.")
 
   private var folder : Option[IFolder] = None
+  private var coqdir : Option[Seq[String]] = Some(Seq())
   private var output : Option[IFolder] = None
   override def createLoadPathEntry =
-    (folder, output) match {
-      case (Some(f), Some(o)) if o.exists() =>
+    (folder, coqdir, output) match {
+      case (Some(f), Some(Seq()), Some(o)) if o.exists() =>
         Some(SourceLoadPath(f, Some(o)))
-      case (Some(f), None) =>
+      case (Some(f), Some(Seq()), None) =>
         Some(SourceLoadPath(f, None))
+
+      case (Some(f), Some(cd), Some(o)) if o.exists() =>
+        Some(SourceLoadPath(f, Some(o), cd))
+      case (Some(f), Some(cd), None) =>
+        Some(SourceLoadPath(f, None, cd))
       case _ =>
         None
     }
@@ -461,6 +467,16 @@ class NLPSourceEntryPage extends LPWizardPage(
           <button name="sb" style="push">
             Browse...
           </button>
+          <label>
+            Namespace prefix:
+          </label>
+          <text name="nt" border="true">
+            <grid-data h-grab="true" h-span="2" />
+            <tool-tip>
+The part of the coqdir namespace that this source folder corresponds to
+(optional; defaults to the root).
+            </tool-tip>
+          </text>
           <label>
             Output folder:
           </label>
@@ -502,6 +518,27 @@ class NLPSourceEntryPage extends LPWizardPage(
               st.setText(f.getProjectRelativePath.toString)
             case _ =>
           }
+    })
+
+    val nt = names.get[Text]("nt").get
+    Listener.Modify(nt, Listener {
+      case Event.Modify(_) =>
+        val ct = nt.getText.trim
+        val cd =
+          if (!ct.isEmpty) {
+            ct.split("\\.")
+          } else Array()
+        /* XXX: Coq library name validation should be done properly
+         * somewhere! */
+        if (!cd.forall(
+            part => (!part.isEmpty) && part.forall(_.isLetterOrDigit))) {
+          coqdir = None
+          setErrorMessage(s""""$ct" is not a valid Coq namespace prefix""")
+        } else {
+          coqdir = Some(cd)
+          setErrorMessage(null)
+        }
+        getContainer.updateButtons
     })
 
     val ot = names.get[Text]("ot").get
