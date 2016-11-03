@@ -12,7 +12,7 @@
 # without warning: any local changes you may have made will not be preserved.
 
 # Remember to keep this value in sync with CoqBuildScript.scala
-_configure_coqoon_version = 28
+_configure_coqoon_version = 29
 
 import io, os, re, sys, shlex, codecs
 from argparse import ArgumentParser
@@ -77,6 +77,13 @@ parser.add_argument(
     dest = "go_fast",
     help = "use the quick compilation process to produce .vio files (Coq " +
            "8.5+ only)")
+parser.add_argument(
+    "-u", "--use-provides",
+    metavar = "PROJECT",
+    action = "append",
+    dest = "provides",
+    help = "resolve PROJECT to a Coqoon project and, where possible, use it " +
+           "to satisfy abstract dependencies")
 
 args = parser.parse_args()
 
@@ -328,6 +335,26 @@ resolved correctly""" % (elp_name, vns[0]))
 # Read this project's configuration
 default_output, configuration = load_coq_project_configuration(None)
 
+def get_project_path(pn):
+    pn_var = "project:%s" % pn
+
+    path = None
+    if pn_var in variables:
+        path = Path(variables[pn_var])
+    elif "workspace" in variables:
+        path = Path(variables["workspace"]).append(pn)
+
+    if path == None or not path.isdir() \
+                    or not path.append(".project").isfile():
+        val = prompt_for([pn_var], \
+            "Specify the path to the \"%s\" project." % pn, path,
+            check_is_project)
+        if val != None:
+            variables[pn_var] = val
+            path = Path(val)
+
+    return path
+
 # This script can only support abstract load paths with some help from Coqoon,
 # which produces a "configure.coqoon.vars" file specifying incomplete paths to
 # the Coq load path entries that are associated with the abstract load paths
@@ -372,6 +399,10 @@ def structure_vars(vs):
             expected_vars[i[1]] = i[2]
         elif i[0] == "alp":
             aid = i[1]
+            # Skip any definition for an abstract load path that's been
+            # explicitly provided by another Coqoon project
+            if aid in provided:
+                continue
             if i[2] == "name":
                 alp_names[aid] = i[3]
             elif i[2] == "include":
@@ -380,35 +411,42 @@ def structure_vars(vs):
                 alp_dirs_with_vars.append((aid, i[3], i[4], True))
     return (expected_vars, alp_names, alp_dirs_with_vars)
 
-vs = load_vars("configure.coqoon.vars")
-if len(vs) == 0:
-    warn("""\
-the "configure.coqoon.vars" file is missing, empty, or unreadable; \
-non-trivial dependency resolution may fail""")
-
 def substitute_variables(expected_vars, alp_names, alp_dirs_with_vars):
     for vn in expected_vars:
-        val = prompt_for([vn],
-            "Specify a value for \"%s\"." % expected_vars[vn])
-        if val != None:
-            variables[vn] = val
+        if vn in variables:
+            continue
 
-        if not vn in variables:
-            affected_alps = []
-            for aid, directory, _, _ in alp_dirs_with_vars:
-                name = "\"%s\"" % alp_names.get(aid, aid)
-                if ("$(%s)" % vn) in directory and not name in affected_alps:
-                    affected_alps.append(name)
-            aalps = None
-            if len(affected_alps) == 1:
-                aalps = affected_alps[0]
-            elif len(affected_alps) > 1:
-                aalps = ", ".join(affected_alps[0:-1]) + " and " + affected_alps[-1]
-            warn("""\
+        affected_alps = []
+        for aid, directory, _, _ in alp_dirs_with_vars:
+            name = "\"%s\"" % alp_names.get(aid, aid)
+            if ("$(%s)" % vn) in directory and not name in affected_alps:
+                affected_alps.append(name)
+
+        if len(affected_alps) > 0:
+            val = prompt_for([vn],
+                "Specify a value for \"%s\"." % expected_vars[vn])
+            if val != None:
+                variables[vn] = val
+            else:
+                aalps = None
+                if len(affected_alps) == 1:
+                    aalps = affected_alps[0]
+                elif len(affected_alps) > 1:
+                    aalps = ", ".join(affected_alps[0:-1]) + \
+                            " and " + affected_alps[-1]
+                warn("""\
 the variable %s is not defined; dependencies on %s will not be resolved \
 correctly""" % (vn, aalps))
+        else:
+            warn("""\
+the variable %s is not used in the definition of any abstract load \
+path, skipping""" % vn)
     alp_dirs = {} # Abstract load path ID -> sequence of (possibly resolved
                   # directory, coqdir, recursive)
+    # Always include the abstract load paths explicitly provided by other
+    # Coqoon projects
+    for aid in provided:
+        alp_dirs[aid] = provided[aid]
     for aid, directory, coqdir, recursive in alp_dirs_with_vars:
         for vn, vv in variables.items():
             directory = directory.replace("$(%s)" % vn, vv)
@@ -416,6 +454,131 @@ correctly""" % (vn, aalps))
         alp_elements.append((directory, coqdir, recursive))
         alp_dirs[aid] = alp_elements
     return alp_dirs
+
+def is_name_valid(name):
+    # Keep this in sync with CoqCompiler.scala
+    for c in name:
+        if c.isspace() or c == '.':
+            return False
+    return True
+
+def resolve_load_path(alp_dirs, configuration):
+    # This method produces two sequences of (coqdir, resolved directory) pairs:
+    # the first is not expanded, but the second is. (The second is used to
+    # resolve unqualified or partially-qualified names, and so will only be
+    # non-empty if we're not enforcing fully-qualified names.)
+    unexpanded_load_path = []
+    def expand_pair(coqdir, directory):
+        if not os.path.isdir(directory):
+            warn("couldn't find directory \"%s\"" % directory)
+            return []
+        unexpanded_load_path.append((coqdir, directory))
+        if args.require_qualification:
+            return [] # We don't actually need to do any expansion
+        expansion = []
+        base = Path(directory)
+        for current, _, _ in os.walk(directory):
+            curbase = os.path.basename(current)
+            if not is_name_valid(curbase):
+                continue
+            relative = Path(current).drop_first(len(base))
+            sub = ".".join(relative)
+            full = None
+            if len(coqdir) == 0:
+                full = sub
+            elif len(sub) == 0:
+                full = coqdir
+            else:
+                full = "%s.%s" % (coqdir, sub)
+            expansion.append((full, current))
+        return expansion
+    expanded_load_path = []
+    for i in configuration:
+        if i[0] == "SourceLoadPath":
+            s, b = (i[1], i[2] if len(i) > 2 else default_output)
+            expanded_load_path.extend(expand_pair("", s))
+            expanded_load_path.extend(expand_pair("", b))
+        elif i[0] == "SourceLoadPathWithCoqdir":
+            s, b = (i[1], i[3] if len(i) > 3 else default_output)
+            coqdir = i[2]
+            # We specify the coqdir for the source directory to make sure that
+            # the output file gets the right library name, but we don't do
+            # anything for the binary path because that's always at the root of
+            # the coqdir hierarchy
+            expanded_load_path.extend(expand_pair(coqdir, s))
+            expanded_load_path.extend(expand_pair("", b))
+        elif i[0] == "DefaultOutput":
+            expanded_load_path.extend(expand_pair("", i[1]))
+        elif i[0] == "ExternalLoadPath":
+            directory = i[1]
+            coqdir = i[2] if len(i) > 2 else ""
+            expanded_load_path.extend(expand_pair(coqdir, directory))
+        elif i[0] == "AbstractLoadPath":
+            # The abstract load paths provided by other projects have been
+            # included in here already by the substitute_variables function
+            alp_elements = alp_dirs.get(i[1])
+            if alp_elements != None:
+                # We should care about the third entry (recursive descent) in
+                # these tuples, but as of Coq 8.5, we seem not to have a
+                # choice...
+                for d, cd, _ in alp_elements:
+                    if not os.path.isdir(d):
+                        # Unresolved directory; skip it
+                        warn("couldn't find directory \"%s\"" % d)
+                        continue
+                    else:
+                        expanded_load_path.extend(expand_pair(cd, d))
+        elif i[0] == "ProjectLoadPath":
+            pn = i[1]
+            path = get_project_path(pn)
+
+            if path != None and path.isdir():
+                _, cfg = load_coq_project_configuration(path)
+                ads = substitute_variables(*structure_vars(load_vars(str(path.append("configure.coqoon.vars")))))
+                ulp, elp = resolve_load_path(ads, cfg)
+                unexpanded_load_path.extend(ulp)
+                expanded_load_path.extend(elp)
+            else:
+                warning = """\
+the project "%s" could not be found; dependencies on it will not be resolved \
+correctly""" % pn
+                if path == None:
+                    warning += """ \
+(either specify its path with the %s variable or specify the path to its \
+parent directory with the WORKSPACE variable)""" % (pn_var)
+                warn(warning)
+    return (unexpanded_load_path, expanded_load_path)
+
+provided = {} # Abstract load path ID -> sequence of (possibly resolved
+              # directory, coqdir, recursive)
+if args.provides:
+    for pn in args.provides:
+        pp = get_project_path(pn)
+        if pp != None:
+            _, cfg = load_coq_project_configuration(pp)
+            provides = map(
+                lambda k: k[1],
+                filter(
+                    lambda k: k[0] == "Provides",
+                    cfg))
+            if len(provides) == 0:
+                warn("""\
+the project "%s" does not declare that it provides any abstract \
+dependencies""" % pn)
+                continue
+
+            ads = substitute_variables(
+                *structure_vars(
+                    load_vars(str(pp.append("configure.coqoon.vars")))))
+            ulp, elp = resolve_load_path(ads, cfg)
+            for aid in provides:
+                provided[aid] = map(lambda (cd, d): (d, cd, True), ulp)
+
+vs = load_vars("configure.coqoon.vars")
+if len(vs) == 0:
+    warn("""\
+the "configure.coqoon.vars" file is missing, empty, or unreadable; \
+non-trivial dependency resolution may fail""")
 
 alp_directories = substitute_variables(*structure_vars(vs))
 
@@ -549,13 +712,6 @@ def extract_dependency_identifiers(f):
             continue
     return identifiers
 
-def is_name_valid(name):
-    # Keep this in sync with CoqCompiler.scala
-    for c in name:
-        if c.isspace() or c == '.':
-            return False
-    return True
-
 # Populate the dependency map with the basics: objects depend on sources
 deps = {} # Target path -> sequence of dependency paths
 to_be_resolved = {}
@@ -596,106 +752,6 @@ def check_is_project(directory):
     else:
         return """\
 the directory "%s" does not contain a Coqoon project""" % directory
-
-def resolve_load_path(alp_dirs, configuration):
-    # This method produces two sequences of (coqdir, resolved directory) pairs:
-    # the first is not expanded, but the second is. (The second is used to
-    # resolve unqualified or partially-qualified names, and so will only be
-    # non-empty if we're not enforcing fully-qualified names.)
-    unexpanded_load_path = []
-    def expand_pair(coqdir, directory):
-        if not os.path.isdir(directory):
-            warn("couldn't find directory \"%s\"" % directory)
-            return []
-        unexpanded_load_path.append((coqdir, directory))
-        if args.require_qualification:
-            return [] # We don't actually need to do any expansion
-        expansion = []
-        base = Path(directory)
-        for current, _, _ in os.walk(directory):
-            curbase = os.path.basename(current)
-            if not is_name_valid(curbase):
-                continue
-            relative = Path(current).drop_first(len(base))
-            sub = ".".join(relative)
-            full = None
-            if len(coqdir) == 0:
-                full = sub
-            elif len(sub) == 0:
-                full = coqdir
-            else:
-                full = "%s.%s" % (coqdir, sub)
-            expansion.append((full, current))
-        return expansion
-    expanded_load_path = []
-    for i in configuration:
-        if i[0] == "SourceLoadPath":
-            s, b = (i[1], i[2] if len(i) > 2 else default_output)
-            expanded_load_path.extend(expand_pair("", s))
-            expanded_load_path.extend(expand_pair("", b))
-        elif i[0] == "SourceLoadPathWithCoqdir":
-            s, b = (i[1], i[3] if len(i) > 3 else default_output)
-            coqdir = i[2]
-            # We specify the coqdir for the source directory to make sure that
-            # the output file gets the right library name, but we don't do
-            # anything for the binary path because that's always at the root of
-            # the coqdir hierarchy
-            expanded_load_path.extend(expand_pair(coqdir, s))
-            expanded_load_path.extend(expand_pair("", b))
-        elif i[0] == "DefaultOutput":
-            expanded_load_path.extend(expand_pair("", i[1]))
-        elif i[0] == "ExternalLoadPath":
-            directory = i[1]
-            coqdir = i[2] if len(i) > 2 else ""
-            expanded_load_path.extend(expand_pair(coqdir, directory))
-        elif i[0] == "AbstractLoadPath":
-            alp_elements = alp_dirs.get(i[1])
-            if alp_elements != None:
-                # We should care about the third entry (recursive descent) in
-                # these tuples, but as of Coq 8.5, we seem not to have a
-                # choice...
-                for d, cd, _ in alp_elements:
-                    if not os.path.isdir(d):
-                        # Unresolved directory; skip it
-                        warn("couldn't find directory \"%s\"" % d)
-                        continue
-                    else:
-                        expanded_load_path.extend(expand_pair(cd, d))
-        elif i[0] == "ProjectLoadPath":
-            pn = i[1]
-            pn_var = "project:%s" % pn
-
-            path = None
-            if pn_var in variables:
-                path = Path(variables[pn_var])
-            elif "workspace" in variables:
-                path = Path(variables["workspace"]).append(pn)
-
-            if path == None or not path.isdir() \
-                            or not path.append(".project").isfile():
-                val = prompt_for([pn_var], \
-                    "Specify the path to the \"%s\" project." % pn, path,
-                    check_is_project)
-                if val != None:
-                    variables[pn_var] = val
-                    path = Path(val)
-
-            if path != None and path.isdir():
-                _, cfg = load_coq_project_configuration(path)
-                ads = substitute_variables(*structure_vars(load_vars(str(path.append("configure.coqoon.vars")))))
-                ulp, elp = resolve_load_path(ads, cfg)
-                unexpanded_load_path.extend(ulp)
-                expanded_load_path.extend(elp)
-            else:
-                warning = """\
-the project "%s" could not be found; dependencies on it will not be resolved \
-correctly""" % pn
-                if path == None:
-                    warning += """ \
-(either specify its path with the %s variable or specify the path to its \
-parent directory with the WORKSPACE variable)""" % (pn_var)
-                warn(warning)
-    return (unexpanded_load_path, expanded_load_path)
 
 unexpanded_load_path, complete_load_path = \
     resolve_load_path(alp_directories, configuration)
