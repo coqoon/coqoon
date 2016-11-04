@@ -1,3 +1,30 @@
+Coqoon 0.8.0
+============
+
+4th November 2016
+
+This release adds `_CoqProject` generation support to the Python configure
+script, makes error handling much more reliable, adds support for several
+alternative ways of structuring Coq projects, and makes it possible to compile
+Coqoon with recent versions of Eclipse.
+
+Other significant changes
+-------------------------
+
+* External paths in the Python build script
+
+  The Python build script should now do a much less awful job of resolving
+  external dependencies.
+
+Bug fixes
+---------
+
+* Sentences of the form "From A.B Require C." no longer produce weird errors
+* The Coq model now classifies bullets correctly (again)
+* The invalidation code for the Coq model cache is now much less trigger-happy
+* The Coq model now works properly even when code folding is off(!)
+* Opening a file in a newly-created project no longer creates a broken editor
+
 Coqoon 0.7.5
 ============
 

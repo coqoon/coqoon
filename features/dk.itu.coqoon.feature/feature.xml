@@ -2,7 +2,7 @@
 <feature
       id="dk.itu.coqoon.feature"
       label="Coqoon"
-      version="0.7.5"
+      version="0.8.0"
       provider-name="IT University of Copenhagen">
 
    <description>
@@ -307,7 +307,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    </license>
 
    <url>
-      <update label="Coqoon" url="http://www.itu.dk/research/tomeso/coqoon/e42"/>
+      <update label="Coqoon" url="https://www.itu.dk/research/tomeso/coqoon/e42"/>
    </url>
 
    <requires>
