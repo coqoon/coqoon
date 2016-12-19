@@ -10,7 +10,13 @@ class SupersedableTask(delay : Long) {
   def schedule(f : => Unit) : Unit = lock synchronized {
     last.map(_.cancel)
     last = Some(new TimerTask() {
-      override def run = { f }
+      override def run =
+        try {
+          f
+        } catch {
+          case e : Exception =>
+            e.printStackTrace
+        }
     })
     last.map(SupersedableTask.timer.schedule(_, delay))
   }
