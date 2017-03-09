@@ -12,15 +12,18 @@ import dk.itu.coqoon.core.utilities.CacheSlot
 import org.eclipse.swt.SWT
 import org.eclipse.swt.widgets.{Shell, Composite}
 import org.eclipse.swt.graphics.Point
-import org.eclipse.jface.dialogs.PopupDialog
+import org.eclipse.jface.dialogs.{PopupDialog, IDialogSettings}
 import org.eclipse.jface.resource.JFaceResources
 
 class QueryPopup(
     editor : PIDECoqEditor,
     command : isabelle.Command,
-    shell: Shell, position: Point)
-    extends PopupDialog(shell, SWT.RESIZE | SWT.ON_TOP, true, false, false,
+    shell: Shell, position: Point,
+    settings : IDialogSettings)
+    extends PopupDialog(shell, SWT.RESIZE | SWT.ON_TOP, true, true, false,
         false, false, null, null) with OverlayListener {
+  override protected def getDialogSettings = settings
+
   import org.eclipse.swt.graphics.Cursor
   private lazy val busyCursor = CacheSlot {
     new Cursor(getShell.getDisplay, SWT.CURSOR_WAIT)

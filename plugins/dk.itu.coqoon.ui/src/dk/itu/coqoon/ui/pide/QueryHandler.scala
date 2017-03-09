@@ -19,6 +19,10 @@ import org.eclipse.jface.dialogs.{Dialog, PopupDialog}
 import org.eclipse.jface.viewers.StyledString
 
 class QueryHandler extends EditorHandler {
+  private val settings =
+    new org.eclipse.jface.dialogs.DialogSettings(
+        "Transient query dialog settings")
+
   import dk.itu.coqoon.ui.utilities.UIUtils
   override def execute(ev : ExecutionEvent) = {
     getEditor.flatMap(TryCast[PIDECoqEditor]).foreach(editor => {
@@ -42,7 +46,8 @@ class QueryHandler extends EditorHandler {
       val command = editor.findCommand(
           editor.getViewer.getTextWidget.getCaretOffset)
       command.foreach(c =>
-          new QueryPopup(editor, c._2, text.getShell, new Point(rx, ry)).open)
+          new QueryPopup(
+              editor, c._2, text.getShell, new Point(rx, ry), settings).open)
     })
     null
   }
