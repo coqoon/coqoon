@@ -89,7 +89,7 @@ class QueryPopup(
   private var queryButton : Option[Button] = None
 
   override def getDefaultLocation(initialSize: Point) = position
-  override def getDefaultSize() = new Point(400, 250)
+  override def getDefaultSize() = new Point(500, 350)
   override def createDialogArea(parent_ : Composite) = {
     val parent = super.createDialogArea(parent_)
     val names = UIXML(
