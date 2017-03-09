@@ -35,7 +35,9 @@ class QueryPopup(
     editor.setOverlay(Some((Queries.coq_query(command, query), this)))
     (getShell +: queryResults.toSeq).filterNot(
           _.isDisposed).foreach(_.setCursor(busyCursor.get))
-    appendResult(query + "\n", Stylers.Query)
+    val (message, styler) = (query + "\n", Stylers.Query)
+    editor.queryHistory :+= (message, styler)
+    appendResult(message, styler)
     (queryButton.toSeq ++ queryText.toSeq).filterNot(
         _.isDisposed).foreach(_.setEnabled(false))
   }
@@ -50,6 +52,7 @@ class QueryPopup(
           case Right(result) =>
             (result, Stylers.Result)
         }
+      editor.queryHistory :+= (message + "\n", styler)
       appendResult(message + "\n", styler)
       (queryButton.toSeq ++ queryText.toSeq).filterNot(
           _.isDisposed).foreach(_.setEnabled(true))
@@ -123,6 +126,11 @@ class QueryPopup(
     }
     queryButton.foreach(Listener.Selection(_, l))
     queryText.foreach(Listener.DefaultSelection(_, l))
+
+    editor.queryHistory.foreach {
+      case (result, styler) =>
+        appendResult(result, styler)
+    }
 
     parent
   }

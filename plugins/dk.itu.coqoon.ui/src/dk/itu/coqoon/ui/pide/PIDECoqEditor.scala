@@ -8,6 +8,9 @@ import dk.itu.coqoon.core.utilities.SupersedableTask
 
 class PIDECoqEditor
     extends BaseCoqEditor with CoqGoalsContainer with PIDESessionHost {
+  import org.eclipse.jface.viewers.StyledString.Styler
+  protected[pide] var queryHistory : Seq[(String, Styler)] = Seq()
+
   import org.eclipse.jface.text.IViewportListener
   object ViewportListener extends IViewportListener {
     val task = new SupersedableTask(200)
