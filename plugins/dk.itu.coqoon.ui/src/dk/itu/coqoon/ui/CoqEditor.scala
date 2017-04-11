@@ -142,7 +142,7 @@ import org.eclipse.jface.viewers.IStructuredSelection
 import org.eclipse.ui.dialogs.WizardNewFileCreationPage
 class NewCoqFileWizardPage (selection: IStructuredSelection) extends WizardNewFileCreationPage("NewCoqFileWizardPage", selection) {
   setTitle("Coq File")
-  setDescription("Creates a new Coq file")
+  setDescription("Create a new, empty Coq source file.")
   setFileExtension("v")
 }
 

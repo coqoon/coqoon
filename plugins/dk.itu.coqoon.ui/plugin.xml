@@ -380,6 +380,9 @@
             icon="icons/coqide.png"
             id="Kopitiam.newCoqFileWizard"
             name="Coq File">
+         <description>
+            Create a new, empty Coq source file.
+         </description>
       </wizard>
       <wizard
             category="dk.itu.coqoon.ui.newWizards.coq"
@@ -390,6 +393,9 @@
             name="Coq Project"
             preferredPerspectives="dk.itu.sdg.kopitiam.CoqPerspective"
             project="true">
+         <description>
+            Create a new, empty Coq project.
+         </description>
       </wizard>
       <category
             id="dk.itu.coqoon.ui.newWizards.coq"
