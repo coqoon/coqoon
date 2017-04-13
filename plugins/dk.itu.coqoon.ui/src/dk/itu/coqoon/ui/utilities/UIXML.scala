@@ -23,8 +23,17 @@ import org.eclipse.jface.viewers
 import org.eclipse.jface.layout.{
   GridDataFactory, GridLayoutFactory, RowLayoutFactory}
 
-class UIXML {
-  import UIXML._
+object UIXML {
+  class NameMap {
+    private[UIXML] var names = Map[String, AnyRef]()
+    def get[A <: AnyRef](name : String)(implicit a0 : Manifest[A]) =
+      names.get(name).flatMap(TryCast[A])
+    def getMany[A <: AnyRef](
+        names : String*)
+        (implicit a0 : Manifest[A]) =
+      names.map(n => this.names.get(n).flatMap(TryCast[A]))
+  }
+
   def apply(x : xml.Node, context : AnyRef) = {
     lazy val names = new NameMap
     go(x, context, names)
@@ -286,17 +295,6 @@ class UIXML {
     result.foreach(
         result => x.child.foreach(go(_, result, names)))
     result
-  }
-}
-object UIXML extends UIXML {
-  class NameMap {
-    private[UIXML] var names = Map[String, AnyRef]()
-    def get[A <: AnyRef](name : String)(implicit a0 : Manifest[A]) =
-      names.get(name).flatMap(TryCast[A])
-    def getMany[A <: AnyRef](
-        names : String*)
-        (implicit a0 : Manifest[A]) =
-      names.map(n => this.names.get(n).flatMap(TryCast[A]))
   }
 
   private def first(x : xml.Node, attributes : String*) : Option[String] = {
