@@ -726,13 +726,10 @@ class NLPExternalEntryPage extends LPWizardPage(
     val fb = names.get[Button]("fb").get
     Listener.Selection(fb, Listener {
       case Event.Selection(_) =>
-        import org.eclipse.swt.widgets.DirectoryDialog
-        val ed = new DirectoryDialog(fb.getShell, SWT.OPEN)
-        Option(ed.open) match {
-          case Some(p : String) =>
-            ft.setText(p)
-          case _ =>
-        }
+        UIUtils.Dialog.directory(
+            "Select a directory",
+            "Select a directory containing a Coq development.").foreach(
+                ft.setText)
     })
 
     val nt = names.get[Text]("nt").get
