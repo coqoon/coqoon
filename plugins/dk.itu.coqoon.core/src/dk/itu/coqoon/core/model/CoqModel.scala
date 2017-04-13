@@ -249,11 +249,9 @@ object ExternalLoadPath {
 object AbstractLoadPath {
   def apply(id : String) = LoadPathProvider(s"abstract:${id}")
   def unapply(p : LoadPathProvider) =
-    p.getProvider match {
-      case Some(_ : AbstractLoadPathProvider) =>
-        Some(p.identifier.drop("abstract:".length))
-      case _ => None
-    }
+    if (p.identifier.startsWith("abstract:")) {
+      Some(p.identifier.drop("abstract:".length))
+    } else None
 }
 
 trait LoadPathImplementationProvider {
