@@ -208,6 +208,40 @@ case class LoadPathProvider(identifier : String) {
   def getImplementation() =
     getProvider.flatMap(_.getImplementation(identifier))
 }
+object LoadPathProvider {
+  def toConfig(p : LoadPathProvider) =
+    p match {
+      case AbstractLoadPath(identifier) =>
+        Seq("AbstractLoadPath", identifier)
+      case DefaultOutputLoadPath(bin) =>
+        val path = bin.getProjectRelativePath.toString
+        Seq("DefaultOutput", bin.getProjectRelativePath.toString)
+      case ExternalLoadPath(path_, Nil) =>
+        val path = path_.toString
+        Seq("ExternalLoadPath", path)
+      case ExternalLoadPath(path_, coqdir) =>
+        val path = path_.toString
+        Seq("ExternalLoadPath", path, coqdir.mkString("."))
+      case ProjectLoadPath(project) =>
+        val path = project.getName
+        Seq("ProjectLoadPath", project.getName)
+      case SourceLoadPath(src, None, Seq()) =>
+        val srcPath = src.getProjectRelativePath.toString
+        Seq("SourceLoadPath", srcPath)
+      case SourceLoadPath(src, Some(bin), Seq()) =>
+        val srcPath = src.getProjectRelativePath.toString
+        val binPath = bin.getProjectRelativePath.toString
+        Seq("SourceLoadPath", srcPath, binPath)
+      case SourceLoadPath(src, None, coqdir) =>
+        val srcPath = src.getProjectRelativePath.toString
+        Seq("SourceLoadPathWithCoqdir", srcPath, coqdir.mkString("."))
+      case SourceLoadPath(src, Some(bin), coqdir) =>
+        val srcPath = src.getProjectRelativePath.toString
+        val binPath = bin.getProjectRelativePath.toString
+        Seq("SourceLoadPathWithCoqdir",
+            srcPath, coqdir.mkString("."), binPath)
+    }
+}
 
 object ProjectLoadPath {
   import ProjectLoadPathProvider._

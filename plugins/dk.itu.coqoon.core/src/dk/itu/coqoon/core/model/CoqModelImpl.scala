@@ -438,49 +438,18 @@ private class CoqProjectImpl(
 
   override def getLoadPathProviders : Seq[LoadPathProvider] =
     getCache.loadPathProviders.get
-  private def providerToSeq(p : LoadPathProvider) =
-    p match {
-      case AbstractLoadPath(identifier) =>
-        Seq("AbstractLoadPath", identifier)
-      case DefaultOutputLoadPath(bin) =>
-        val path = bin.getProjectRelativePath.toString
-        Seq("DefaultOutput", bin.getProjectRelativePath.toString)
-      case ExternalLoadPath(path_, Nil) =>
-        val path = path_.toString
-        Seq("ExternalLoadPath", path)
-      case ExternalLoadPath(path_, coqdir) =>
-        val path = path_.toString
-        Seq("ExternalLoadPath", path, coqdir.mkString("."))
-      case ProjectLoadPath(project) =>
-        val path = project.getName
-        Seq("ProjectLoadPath", project.getName)
-      case SourceLoadPath(src, None, Seq()) =>
-        val srcPath = src.getProjectRelativePath.toString
-        Seq("SourceLoadPath", srcPath)
-      case SourceLoadPath(src, Some(bin), Seq()) =>
-        val srcPath = src.getProjectRelativePath.toString
-        val binPath = bin.getProjectRelativePath.toString
-        Seq("SourceLoadPath", srcPath, binPath)
-      case SourceLoadPath(src, None, coqdir) =>
-        val srcPath = src.getProjectRelativePath.toString
-        Seq("SourceLoadPathWithCoqdir", srcPath, coqdir.mkString("."))
-      case SourceLoadPath(src, Some(bin), coqdir) =>
-        val srcPath = src.getProjectRelativePath.toString
-        val binPath = bin.getProjectRelativePath.toString
-        Seq("SourceLoadPathWithCoqdir",
-            srcPath, coqdir.mkString("."), binPath)
-    }
+
   override def setLoadPathProviders(
       lp : Seq[LoadPathProvider], monitor : IProgressMonitor) =
     setProjectConfiguration(
-        lp.map(providerToSeq) ++
+        lp.map(LoadPathProvider.toConfig) ++
         getProvides.map(providesToSeq), monitor)
 
   override def getProvides() = getCache.provides.get
   private def providesToSeq(p : String) = Seq("Provides", p)
   override def setProvides(ps : Seq[String], monitor : IProgressMonitor) =
     setProjectConfiguration(
-        getLoadPathProviders.map(providerToSeq) ++
+        getLoadPathProviders.map(LoadPathProvider.toConfig) ++
         ps.map(providesToSeq), monitor)
 
   import dk.itu.coqoon.core.ManifestIdentifiers
