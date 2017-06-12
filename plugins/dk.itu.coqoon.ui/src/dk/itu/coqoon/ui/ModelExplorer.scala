@@ -7,6 +7,7 @@
 package dk.itu.coqoon.ui
 
 import dk.itu.coqoon.core.model._
+import dk.itu.coqoon.core.model.CoqEnforcement.{Issue, Severity}
 import dk.itu.coqoon.core.utilities.TryCast
 
 import org.eclipse.ui.part.ViewPart
@@ -92,6 +93,8 @@ class ModelLabelProvider extends LabelProvider {
     workbenchProvider.dispose
   }
 
+  import dk.itu.coqoon.ui.utilities.UIUtils.getWorkbench
+  import org.eclipse.ui.ISharedImages
   override def getImage(a : Any) = a match {
     case p : ICoqPackageFragment =>
       Activator.getDefault.getImageRegistry.get(
@@ -103,6 +106,20 @@ class ModelLabelProvider extends LabelProvider {
           ManifestIdentifiers.Images.PACKAGE_FRAGMENT_ROOT)
     case p : ICoqElement if p.getCorrespondingResource != None =>
       workbenchProvider.getImage(p.getCorrespondingResource.get)
+    case (_ : Issue, s : Severity) =>
+      s match {
+        case Severity.Error =>
+          getWorkbench.getSharedImages.getImage(
+              ISharedImages.IMG_OBJS_ERROR_TSK)
+        case Severity.Information =>
+          getWorkbench.getSharedImages.getImage(
+              ISharedImages.IMG_OBJS_INFO_TSK)
+        case Severity.Warning =>
+          getWorkbench.getSharedImages.getImage(
+              ISharedImages.IMG_OBJS_WARN_TSK)
+        case _ =>
+          null
+      }
     case a => null
   }
   override def getText(a : Any) = a match {
@@ -121,6 +138,8 @@ class ModelLabelProvider extends LabelProvider {
       g.getDeterminingSentence.getText.trim
     case s : ICoqScriptSentence =>
       s.getText.trim
+    case (i : Issue, _ : Severity) =>
+      i.message.trim
     case a =>
       Option(a).map(_.toString.trim).getOrElse("null")
   }
@@ -150,18 +169,29 @@ class ModelContentProvider
     }
 
   private def toCE(o : Any) = Option(o).flatMap(TryCast[ICoqElement])
-  override def getChildren(o : Any) = toCE(o) match {
-    case Some(g : ICoqScriptGroup) =>
-      /* ICoqScriptGroups should always have at least a determining sentence,
-       * so calling getChildren.tail should always be safe */
-      g.getChildren.tail.toArray
-    case Some(p : IParent) =>
-      p.getChildren.toArray
+  override def getChildren(el_ : Any) = toCE(el_) match {
+    case Some(el : ICoqElement) =>
+      (el match {
+        case g : ICoqScriptGroup =>
+          /* ICoqScriptGroups should always have at least a determining sentence,
+           * so calling getChildren.tail should always be safe */
+          g.getChildren.tail.toArray
+        case p : IParent =>
+          p.getChildren.toArray
+        case _ =>
+          Array.empty[Object]
+      }) ++ el.getIssues.toSeq
     case _ =>
       Array.empty
   }
   override def getElements(o : Any) = getChildren(o)
   override def getParent(o : Any) = toCE(o).flatMap(_.getParent).orNull
-  override def hasChildren(o : Any) = toCE(o).flatMap(
-      TryCast[IParent]).map(_.hasChildren).getOrElse(false)
+  override def hasChildren(o : Any) = toCE(o) match {
+    case Some(p : IParent) =>
+      p.hasChildren || !p.getIssues.isEmpty
+    case Some(el : ICoqElement) =>
+      !el.getIssues.isEmpty
+    case _ =>
+      false
+  }
 }
