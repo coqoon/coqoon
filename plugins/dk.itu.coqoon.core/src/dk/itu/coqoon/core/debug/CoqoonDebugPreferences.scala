@@ -121,6 +121,9 @@ object CoqoonDebugPreferences {
       "Log Coq model event notifications",
       "Log debugging messages whenever the Coq model emits a change " +
       "notification.")
+  object Profiling extends ChannelPreference("debug.profiling",
+      "Log profiling information",
+      "Log detailed timing information for some UI tasks.")
 
   val allPrefs = Seq[Preference[_]](
       SuppressStackTraces,
@@ -132,5 +135,6 @@ object CoqoonDebugPreferences {
       LoadPathResolution,
       LoadPathExpansion,
       ProjectBuild,
-      ModelBroadcasts)
+      ModelBroadcasts,
+      Profiling)
 }
