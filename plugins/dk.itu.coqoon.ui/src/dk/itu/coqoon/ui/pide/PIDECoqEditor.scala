@@ -3,6 +3,7 @@ package dk.itu.coqoon.ui.pide
 import dk.itu.coqoon.ui.{
   BaseCoqEditor, CoqGoalsContainer, CoqoonUIPreferences, ManifestIdentifiers}
 import dk.itu.coqoon.ui.text.Region
+import dk.itu.coqoon.ui.utilities.Profile
 import dk.itu.coqoon.core.model.{CoqEnforcement, CoqEnforcementContext}
 import dk.itu.coqoon.core.utilities.SupersedableTask
 
@@ -138,7 +139,11 @@ class PIDECoqEditor
         }
       }).flatten
 
-    asyncExec {
+    val secret = Random.long()
+    println(
+        s"commandsUpdated(changed = ${changed.map(_.id)}) " +
+        s"is scheduling secret task $secret")
+    asyncExec { Profile(s"PIDE UI update task $secret") {
       val workingCopy = getWorkingCopy.get.get
 
       import org.eclipse.jface.text.Position
@@ -154,9 +159,9 @@ class PIDECoqEditor
       try {
         for (i <- changedResultsAndMarkup) i match {
           case (Some(offset), command, results, markup) =>
-            val complete =
-              !(Protocol.Status.make(
-                  markup.map(_._2.markup).iterator).is_running)
+            val status =
+              Protocol.Status.make(markup.map(_._2.markup).iterator)
+            val complete = !status.is_running
 
             lazy val sentence = workingCopy.getSentenceAt(offset)
             /* This sorts out the difference between the offset of the Coqoon
@@ -193,47 +198,59 @@ class PIDECoqEditor
                       msg, severity)
               }
 
-            for (diff <- diff;
-                (_, tree) <- results) {
-              Responses.extractError(tree) match {
-                case Some(t) =>
-                  processError(
-                      diff, t, "interactive/pide-error", Severity.Error)
-                case _ =>
-                  Responses.extractWarning(tree).foreach(t =>
+            Profile(
+                s"PIDE UI update task $secret",
+                "Error and warning extraction") {
+              for (diff <- diff;
+                  (_, tree) <- results) {
+                Responses.extractError(tree) match {
+                  case Some(t) =>
                     processError(
-                        diff, t, "interactive/pide-warning", Severity.Warning))
+                        diff, t, "interactive/pide-error", Severity.Error)
+                  case _ =>
+                    Responses.extractWarning(tree).foreach(t =>
+                      processError(
+                          diff, t, "interactive/pide-warning", Severity.Warning))
+                }
               }
+              if (!errors.isEmpty)
+                sentence.foreach(_.setIssues(errors.values.toSeq.map(
+                    issue => (issue -> issue.severityHint)).toMap))
             }
-            if (!errors.isEmpty)
-              sentence.foreach(_.setIssues(errors.values.toSeq.map(
-                  issue => (issue -> issue.severityHint)).toMap))
 
-            sentence.foreach(_.setEntities(
-              (for ((r, elem) <- markup;
-                    location <- getFile.map(_.getLocation);
-                    diff <- diff;
-                    entity <- PIDEEntity.makeModelEntity(
-                        ibLength, ls, location, elem);
-                    (start, end) <- fixPair(command.source, r.start, r.stop))
-                yield {
-                  (diff + start, diff + (end - start)) -> entity
-                }).toMap))
+            Profile(
+                s"PIDE UI update task $secret",
+                "Entity extraction") {
+              sentence.foreach(_.setEntities(
+                (for ((r, elem) <- markup;
+                      location <- getFile.map(_.getLocation);
+                      diff <- diff;
+                      entity <- PIDEEntity.makeModelEntity(
+                          ibLength, ls, location, elem);
+                      (start, end) <- fixPair(command.source, r.start, r.stop))
+                  yield {
+                    (diff + start, diff + (end - start)) -> entity
+                  }).toMap))
+            }
 
-            val oldAnnotation = annotations.get(command)
-            val newAnnotation =
-              if (!complete) {
-                  Some(new Annotation(
-                      ManifestIdentifiers.Annotations.PROCESSING,
-                      false, "Processing proof"))
-              } else None
+            Profile(
+                s"PIDE UI update task $secret",
+                "Command annotation update") {
+              val oldAnnotation = annotations.get(command)
+              val newAnnotation =
+                if (!complete) {
+                    Some(new Annotation(
+                        ManifestIdentifiers.Annotations.PROCESSING,
+                        false, "Processing proof"))
+                } else None
 
-            /* If the old and new annotations have the same type (or, for that
-             * matter, if neither of them exists), then do nothing */
-            if (newAnnotation.map(_.getType) != oldAnnotation.map(_.getType)) {
-              oldAnnotation.foreach(an => toDelete :+= (command, Some(an)))
-              newAnnotation.foreach(an => annotationsToAdd :+= (command,
-                  an, new Position(offset, command.source.length)))
+              /* If the old and new annotations have the same type (or, for that
+               * matter, if neither of them exists), then do nothing */
+              if (newAnnotation.map(_.getType) != oldAnnotation.map(_.getType)) {
+                oldAnnotation.foreach(an => toDelete :+= (command, Some(an)))
+                newAnnotation.foreach(an => annotationsToAdd :+= (command,
+                    an, new Position(offset, command.source.length)))
+              }
             }
           case (None, command, _, _) =>
             /* This command has been removed from the document; delete its
@@ -241,37 +258,45 @@ class PIDECoqEditor
             toDelete :+= (command, annotations.get(command))
         }
       } finally {
-        import scala.collection.JavaConversions._
-        val del =
-          for ((command, Some(annotation)) <- toDelete)
-            yield {
-              annotations -= command
-              annotation
-            }
-        val add =
-          (for ((command, annotation, position) <- annotationsToAdd)
-            yield {
-              annotations += (command -> annotation)
-              (annotation -> position)
-            }).toMap
+        Profile(
+            s"PIDE UI update task $secret",
+            "Update annotation model") {
+          import scala.collection.JavaConversions._
+          val del =
+            for ((command, Some(annotation)) <- toDelete)
+              yield {
+                annotations -= command
+                annotation
+              }
+          val add =
+            (for ((command, annotation, position) <- annotationsToAdd)
+              yield {
+                annotations += (command -> annotation)
+                (annotation -> position)
+              }).toMap
 
-        if (!del.isEmpty || !add.isEmpty)
-          am.foreach(_.replaceAnnotations(del.toArray, add))
+          if (!del.isEmpty || !add.isEmpty)
+            am.foreach(_.replaceAnnotations(del.toArray, add))
+        }
       }
 
-      lastCommand match {
-        case None =>
-          caretPing
-        case Some(c) if changed.contains(c) =>
-          caretPing
-        case _ =>
+      Profile(
+          s"PIDE UI update task $secret",
+          "Post-change caret update") {
+        lastCommand match {
+          case None =>
+            caretPing
+          case Some(c) if changed.contains(c) =>
+            caretPing
+          case _ =>
+        }
       }
 
       import dk.itu.coqoon.core.model.CoqEnforcement
       for ((el, issues) <- CoqEnforcement.check(workingCopy,
           PIDEEnforcementContext))
         el.addIssues(issues)
-    }
+    } }
   }
 
   import dk.itu.coqoon.core.coqtop.CoqSentence
@@ -500,4 +525,8 @@ private object PIDEEntity {
         None
     }
   }
+}
+
+private object Random {
+  def long() = Math.round(Math.abs(Math.random()) * 100000000)
 }
