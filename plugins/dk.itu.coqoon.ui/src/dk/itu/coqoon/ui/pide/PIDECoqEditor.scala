@@ -3,7 +3,7 @@ package dk.itu.coqoon.ui.pide
 import dk.itu.coqoon.ui.{
   BaseCoqEditor, CoqGoalsContainer, CoqoonUIPreferences, ManifestIdentifiers}
 import dk.itu.coqoon.ui.text.Region
-import dk.itu.coqoon.ui.utilities.Profile
+import dk.itu.coqoon.ui.utilities.Profiler
 import dk.itu.coqoon.core.model.{CoqEnforcement, CoqEnforcementContext}
 import dk.itu.coqoon.core.utilities.SupersedableTask
 
@@ -143,7 +143,9 @@ class PIDECoqEditor
     println(
         s"commandsUpdated(changed = ${changed.map(_.id)}) " +
         s"is scheduling secret task $secret")
-    asyncExec { Profile(s"PIDE UI update task $secret") {
+    asyncExec {
+      val _p = Profiler()
+      _p(s"PIDE UI update task $secret") {
       val workingCopy = getWorkingCopy.get.get
 
       import org.eclipse.jface.text.Position
@@ -159,8 +161,7 @@ class PIDECoqEditor
       try {
         for (i <- changedResultsAndMarkup) i match {
           case (Some(offset), command, results, markup) =>
-            Profile(s"PIDE UI update task $secret",
-                s"command ${command.id}") {
+            _p(s"command ${command.id}") {
             val status =
               Protocol.Status.make(markup.map(_._2.markup).iterator)
             val complete = !status.is_running
@@ -200,10 +201,7 @@ class PIDECoqEditor
                       msg, severity)
               }
 
-            Profile(
-                s"PIDE UI update task $secret",
-                s"command ${command.id}",
-                "Error and warning extraction") {
+            _p("Error and warning extraction") {
               for (diff <- diff;
                   (_, tree) <- results) {
                 Responses.extractError(tree) match {
@@ -221,10 +219,7 @@ class PIDECoqEditor
                     issue => (issue -> issue.severityHint)).toMap))
             }
 
-            Profile(
-                s"PIDE UI update task $secret",
-                s"command ${command.id}",
-                "Entity extraction") {
+            _p("Entity extraction") {
               sentence.foreach(_.setEntities(
                 (for ((r, elem) <- markup;
                       location <- getFile.map(_.getLocation);
@@ -237,10 +232,7 @@ class PIDECoqEditor
                   }).toMap))
             }
 
-            Profile(
-                s"PIDE UI update task $secret",
-                s"command ${command.id}",
-                "Command annotation update") {
+            _p("Command annotation update") {
               val oldAnnotation = annotations.get(command)
               val newAnnotation =
                 if (!complete) {
@@ -264,9 +256,7 @@ class PIDECoqEditor
             toDelete :+= (command, annotations.get(command))
         }
       } finally {
-        Profile(
-            s"PIDE UI update task $secret",
-            "Update annotation model") {
+        _p("Update annotation model") {
           import scala.collection.JavaConversions._
           val del =
             for ((command, Some(annotation)) <- toDelete)
@@ -286,9 +276,7 @@ class PIDECoqEditor
         }
       }
 
-      Profile(
-          s"PIDE UI update task $secret",
-          "Post-change caret update") {
+      _p("Post-change caret update") {
         lastCommand match {
           case None =>
             caretPing

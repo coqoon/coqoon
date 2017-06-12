@@ -2,14 +2,31 @@ package dk.itu.coqoon.ui.utilities
 
 import dk.itu.coqoon.core.debug.CoqoonDebugPreferences.Profiling
 
-object Profile {
-  def apply[A](name : String*)(a : => A) : A = {
-    val start = System.nanoTime()
+trait Profiler {
+  def apply[A](scope : String)(block : => A) : A
+}
+object Profiler {
+  def apply() : Profiler =
+    if (Profiling.get()) {
+      new DebugProfiler()
+    } else NullProfiler
+}
+
+class DebugProfiler private[utilities] extends Profiler {
+  private var scopes : List[(Long, String)] = List()
+  override def apply[A](scope : String)(block : => A) = {
+    scopes +:= (System.nanoTime, scope)
     try {
-      a
+      block
     } finally {
+      val (start, _) = scopes.head
       val duration = (System.nanoTime() - start).toDouble / 1000000000.0d
-      Profiling.log(s"${name.mkString("/")} finished after $duration seconds")
+      val name = scopes.map(_._2).reverse.mkString("/")
+      Profiling.log(s"$name finished after $duration seconds")
+      scopes = scopes.tail
     }
   }
+}
+object NullProfiler extends Profiler {
+  override def apply[A](scope : String)(block : => A) = block
 }
