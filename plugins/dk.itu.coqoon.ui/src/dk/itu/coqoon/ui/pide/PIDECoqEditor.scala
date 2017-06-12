@@ -159,6 +159,8 @@ class PIDECoqEditor
       try {
         for (i <- changedResultsAndMarkup) i match {
           case (Some(offset), command, results, markup) =>
+            Profile(s"PIDE UI update task $secret",
+                s"command ${command.id}") {
             val status =
               Protocol.Status.make(markup.map(_._2.markup).iterator)
             val complete = !status.is_running
@@ -200,6 +202,7 @@ class PIDECoqEditor
 
             Profile(
                 s"PIDE UI update task $secret",
+                s"command ${command.id}",
                 "Error and warning extraction") {
               for (diff <- diff;
                   (_, tree) <- results) {
@@ -220,6 +223,7 @@ class PIDECoqEditor
 
             Profile(
                 s"PIDE UI update task $secret",
+                s"command ${command.id}",
                 "Entity extraction") {
               sentence.foreach(_.setEntities(
                 (for ((r, elem) <- markup;
@@ -235,6 +239,7 @@ class PIDECoqEditor
 
             Profile(
                 s"PIDE UI update task $secret",
+                s"command ${command.id}",
                 "Command annotation update") {
               val oldAnnotation = annotations.get(command)
               val newAnnotation =
@@ -251,6 +256,7 @@ class PIDECoqEditor
                 newAnnotation.foreach(an => annotationsToAdd :+= (command,
                     an, new Position(offset, command.source.length)))
               }
+            }
             }
           case (None, command, _, _) =>
             /* This command has been removed from the document; delete its
