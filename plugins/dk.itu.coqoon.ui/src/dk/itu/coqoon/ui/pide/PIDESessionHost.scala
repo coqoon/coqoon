@@ -83,6 +83,7 @@ trait PIDESessionHost extends OverlayRunner {
   def checkedUpdate(
       edits_ : List[Document.Node.Edit[Text.Edit, Text.Perspective]]) =
     if (!(DeadLock synchronized (DeadLock.dead))) {
+      val perspective = getPerspective
       session.executeWithSessionLockSlot(slot => {
         val submitInitialEdits =
           slot.asOption match {
@@ -117,7 +118,7 @@ trait PIDESessionHost extends OverlayRunner {
             } else edits_
           getNodeName.foreach(nodeName => {
             val textEdits : List[Document.Edit_Text] =
-              edits.map(e => nodeName -> e) :+ (nodeName -> getPerspective)
+              edits.map(e => nodeName -> e) :+ (nodeName -> perspective)
             slot.get.update(Document.Blobs.empty, textEdits, "coq")
           })
         }
