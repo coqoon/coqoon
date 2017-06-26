@@ -263,6 +263,11 @@ object UIXML {
           xml.Elem(_, "tool-tip", _, _, _*)) =>
         context.setToolTipText(juice(x))
         None
+      case (context : widgets.Control,
+          xml.Elem(_, "listener", _, _, _*)) =>
+        CommonListeners(x \@ "kind").foreach(handler =>
+            handler(context, x.asInstanceOf[xml.Elem], names))
+        None
 
       /* If the context is a viewer, and this element has no particular
        * significance for viewers, try to interpret it again using the viewer's
@@ -342,5 +347,43 @@ object UIXML {
       (for (t <- x.child if t.isInstanceOf[xml.Text])
         yield t.text)
     textBlocks.mkString(" ").trim.replaceAll(raw"\s+", " ")
+  }
+
+  object CommonListeners {
+    private def selectDirectory(
+        control : widgets.Control, elem : xml.Elem, names : NameMap) = {
+      val target = elem \@ "target"
+      Listener.Selection(control, Listener {
+        case Event.Selection(_) =>
+          val d = new widgets.DirectoryDialog(control.getShell)
+          Option(d.open()).map(_.trim).filter(_.length > 0) match {
+            case Some(p) =>
+              names.get[widgets.Control](target).foreach(
+                  c => _commonSetText(c, p))
+            case _ =>
+          }
+        case _ =>
+      })
+    }
+
+    private def _commonSetText(c : widgets.Control, text : String) =
+      c match {
+        case b : widgets.Button =>
+          b.setText(text)
+        case t : widgets.Text =>
+          t.setText(text)
+        case s : custom.StyledText =>
+          s.setText(text)
+        case l : widgets.Label =>
+          l.setText(text)
+        case _ =>
+          throw new UnsupportedOperationException(
+              s"Can't set text for mystery widget ${c}")
+      }
+    private val map : Map[String, Function3[
+        widgets.Control, xml.Elem, NameMap, Unit]] = Map(
+      "select-directory" -> selectDirectory)
+
+    def apply(name : String) = map.get(name)
   }
 }
