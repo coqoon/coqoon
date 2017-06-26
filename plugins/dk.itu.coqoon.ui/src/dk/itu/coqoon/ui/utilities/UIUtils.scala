@@ -50,14 +50,6 @@ object UIUtils {
       openInformation(getActiveShell, t, m)
     def question(t : String, m : String) = openQuestion(getActiveShell, t, m)
     def warning(t : String, m : String) = openWarning(getActiveShell, t, m)
-
-    import org.eclipse.swt.widgets
-    def directory(t : String, m : String) = {
-      val d = new widgets.DirectoryDialog(getActiveShell, SWT.NONE)
-      d.setText(t)
-      d.setMessage(m)
-      Option(d.open)
-    }
   }
 
   import org.eclipse.ui.IEditorPart
