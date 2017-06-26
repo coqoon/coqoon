@@ -694,7 +694,8 @@ class NLPExternalEntryPage extends LPWizardPage(
           <text name="ft" border="true">
             <grid-data h-grab="true" />
           </text>
-          <button name="fb" style="push">
+          <button style="push">
+            <listener kind="select-directory" target="ft" />
             Browse...
           </button>
           <label>
@@ -722,14 +723,6 @@ class NLPExternalEntryPage extends LPWizardPage(
                 "The path \"" + path + "\" does not exist")
         }
         getContainer.updateButtons
-    })
-    val fb = names.get[Button]("fb").get
-    Listener.Selection(fb, Listener {
-      case Event.Selection(_) =>
-        UIUtils.Dialog.directory(
-            "Select a directory",
-            "Select a directory containing a Coq development.").foreach(
-                ft.setText)
     })
 
     val nt = names.get[Text]("nt").get
