@@ -876,4 +876,21 @@
             markerType="dk.itu.sdg.kopitiam.problemmarker">
       </markerResolutionGenerator>
    </extension>
+   <extension
+         point="org.eclipse.ui.importWizards">
+      <category
+            id="dk.itu.coqoon.ui:importWizards:coq"
+            name="Coq">
+      </category>
+      <wizard
+            category="dk.itu.coqoon.ui:importWizards:coq"
+            class="dk.itu.coqoon.ui.project.ImportCoqDevelopmentWizard"
+            icon="icons/coqide.png"
+            id="dk.itu.coqoon.ui:newWizards:coqDevelopment"
+            name="Import an existing Coq development">
+         <description>
+            Load an existing non-Coqoon Coq development into the workspace.
+         </description>
+      </wizard>
+   </extension>
 </plugin>

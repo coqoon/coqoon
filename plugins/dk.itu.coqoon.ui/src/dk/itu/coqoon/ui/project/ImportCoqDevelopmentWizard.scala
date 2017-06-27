@@ -1,17 +1,20 @@
 package dk.itu.coqoon.ui.project
 
 import dk.itu.coqoon.ui.utilities.UIXML
+import dk.itu.coqoon.core.model.{ICoqModel, ICoqProject, SourceLoadPath}
 import dk.itu.coqoon.core.utilities.TryCast
 
 import org.eclipse.ui.{IWorkbench, IImportWizard}
 import org.eclipse.ui.model.{WorkbenchLabelProvider, WorkbenchContentProvider}
 import org.eclipse.swt.SWT
-import org.eclipse.swt.widgets.{Text, Button, Control, Composite}
-import org.eclipse.core.runtime.Path
+import org.eclipse.swt.widgets.{Text, Control, Composite}
+import org.eclipse.core.runtime.{Path, IProgressMonitor}
+import org.eclipse.core.resources.{IProject, ResourcesPlugin}
 import org.eclipse.jface.wizard.{Wizard, WizardPage}
 import org.eclipse.jface.viewers.{
   Viewer, CellEditor, TreeViewer, ViewerFilter, ComboBoxCellEditor,
   IStructuredSelection, ITreeContentProvider}
+import org.eclipse.jface.operation.IRunnableWithProgress
 import java.io.File
 
 class ImportCoqDevelopmentWizard extends Wizard with IImportWizard {
@@ -21,8 +24,62 @@ class ImportCoqDevelopmentWizard extends Wizard with IImportWizard {
   override def addPages() = {
     addPage(p)
   }
-  override def performFinish() = {
-    false
+
+  class ProjectCreator(private val project : ICoqProject)
+      extends IRunnableWithProgress {
+    import org.eclipse.core.runtime.SubMonitor
+    import org.eclipse.core.resources.{IWorkspace, IWorkspaceRunnable}
+    import org.eclipse.ui.ide.undo.{WorkspaceUndoUtil,
+      CreateFolderOperation, CreateProjectOperation}
+
+    override def run(monitor_ : IProgressMonitor) = {
+      val monitor = SubMonitor.convert(monitor_, 1)
+
+      monitor.beginTask("Import Coq project", 1)
+      import org.eclipse.core.runtime.Path
+      val infoAdapter = WorkspaceUndoUtil.getUIInfoAdapter(getShell)
+
+      val (projectPath, sourcePath) = (p.directory.get, p.source.get)
+      val relativePath =
+        sourcePath.removeFirstSegments(projectPath.segmentCount)
+      project.getCorrespondingResource.foreach(pr => {
+        val theories = pr.getFolder(relativePath)
+
+        val description = ICoqProject.newDescription(pr)
+        description.setLocation(projectPath)
+        new CreateProjectOperation(description,
+            "Import Coq project").execute(monitor.newChild(1), infoAdapter)
+
+        /* Replace the default SourceLoadPath entry with one corresponding to
+         * whatever the user specified */
+        val lp = project.getLoadPathProviders
+        Option(project.getLoadPathProviders.indexWhere {
+          case SourceLoadPath(_, _, _) => true
+          case _ => false
+        }).filter(_ != -1) foreach {
+          case index =>
+            project.setLoadPathProviders(
+                lp.updated(index, SourceLoadPath(theories, None)),
+                monitor.newChild(1))
+        }
+      })
+    }
+  }
+
+  def createProject() =
+    p.getProjectHandle match {
+      case Some(project) if !project.exists() =>
+        getContainer().run(
+            true, true, new ProjectCreator(
+                ICoqModel.getInstance.getProject(project.getName)))
+      case _ =>
+    }
+
+  import org.eclipse.ui.PlatformUI
+
+  override def performFinish = {
+    createProject
+    true
   }
 }
 
@@ -91,12 +148,17 @@ class ImportCoqDevelopmentWizardPage extends WizardPage("icdwp") {
         file match {
           case Some(f) if f.exists && f.isDirectory =>
             val files = f.list()
-            if (files.contains(".project") ||
-                files.contains(".coqoonProject")) {
+            if (files.contains(".project")) {
               directory = None
-              setErrorMessage(
-                  s"""The directory "$path" already contains """ +
-                  "an Eclipse or Coqoon project")
+              if (files.contains(".coqoonProject")) {
+                setErrorMessage(
+                    s"""The directory "$path" already contains """ +
+                    "a Coqoon project")
+              } else {
+                setErrorMessage(
+                    s"""The directory "$path" already contains """ +
+                    "an Eclipse project")
+              }
             } else {
               setErrorMessage(null)
             }
@@ -165,6 +227,9 @@ class ImportCoqDevelopmentWizardPage extends WizardPage("icdwp") {
 
   override def isPageComplete() =
     (directory != None && name != None && source != None)
+
+  protected[project] def getProjectHandle() =
+    name.map(ResourcesPlugin.getWorkspace().getRoot().getProject(_))
 }
 private object ImportCoqDevelopmentWizardPage {
   private val candidateDirectories = Seq("theories", "src")
