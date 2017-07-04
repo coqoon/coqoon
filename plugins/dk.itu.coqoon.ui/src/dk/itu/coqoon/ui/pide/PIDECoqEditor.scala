@@ -427,8 +427,18 @@ class PIDECoqEditor
       getSession.stop
 
     checkedUpdate(List(Document.Node.Edits(edits)))
+    IgnoreFlag synchronized (IgnoreFlag.flag = false)
   }
   getReconciler.addHandler(reconcileEvents)
+
+  private object IgnoreFlag {
+    var flag = false
+  }
+  private def isIgnoring() =
+    IgnoreFlag synchronized IgnoreFlag.flag
+  getReconciler.addImmediate(_ => {
+    IgnoreFlag synchronized (IgnoreFlag.flag = true)
+  })
 }
 
 object Perspective {
