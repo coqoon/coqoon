@@ -144,154 +144,166 @@ class PIDECoqEditor
         s"commandsUpdated(changed = ${changed.map(_.id)}) " +
         s"is scheduling secret task $secret")
     asyncExec {
+      _doUpdate(secret, ls, changed, changedResultsAndMarkup)
+    }
+  }
+
+  private def _doUpdate(secret : Long, ls : isabelle.Document.Snapshot,
+      changed : Seq[Command],
+      changedResultsAndMarkup : Seq[(
+          Option[Int],
+          isabelle.Command,
+          Seq[isabelle.Command.Results.Entry],
+          Seq[(isabelle.Text.Range, isabelle.XML.Elem)])]) =
+    if (!isIgnoring) {
       val _p = Profiler()
       _p(s"PIDE UI update task $secret") {
-      val workingCopy = getWorkingCopy.get.get
+        val workingCopy = getWorkingCopy.get.get
 
-      import org.eclipse.jface.text.Position
-      var toDelete : Seq[(Command, Option[Annotation])] = Seq()
-      var annotationsToAdd : Seq[(Command, Annotation, Position)] = Seq()
-      var errorsToAdd : Map[Int, ((Command, (Int, Int), String))] = Map()
-      var errorsToDelete : Seq[Command] = Seq()
+        import org.eclipse.jface.text.Position
+        var toDelete : Seq[(Command, Option[Annotation])] = Seq()
+        var annotationsToAdd : Seq[(Command, Annotation, Position)] = Seq()
+        var errorsToAdd : Map[Int, ((Command, (Int, Int), String))] = Map()
+        var errorsToDelete : Seq[Command] = Seq()
 
-      val am =
-        if (CoqoonUIPreferences.ProcessingAnnotations.get) {
-          getAnnotationModel
-        } else None
-      try {
-        for (i <- changedResultsAndMarkup) i match {
-          case (Some(offset), command, results, markup) =>
-            _p(s"command ${command.id}") {
-            val status =
-              Protocol.Status.make(markup.map(_._2.markup).iterator)
-            val complete = !status.is_running
+        val am =
+          if (CoqoonUIPreferences.ProcessingAnnotations.get) {
+            getAnnotationModel
+          } else None
+        try {
+          for (i <- changedResultsAndMarkup) i match {
+            case (Some(offset), command, results, markup) =>
+              _p(s"command ${command.id}") {
+                val status =
+                  Protocol.Status.make(markup.map(_._2.markup).iterator)
+                val complete = !status.is_running
 
-            lazy val sentence = workingCopy.getSentenceAt(offset)
-            /* This sorts out the difference between the offset of the Coqoon
-             * model sentence, which may include whitespace, and the PIDE span
-             * offset, which doesn't */
-            lazy val diff = sentence.map(offset - _.getOffset)
+                lazy val sentence = workingCopy.getSentenceAt(offset)
+                /* This sorts out the difference between the offset of the Coqoon
+                 * model sentence, which may include whitespace, and the PIDE span
+                 * offset, which doesn't */
+                lazy val diff = sentence.map(offset - _.getOffset)
 
-            /* Extract and display error messages and warnings */
-            import dk.itu.coqoon.core.model.CoqEnforcement.{Issue, Severity}
-            /* We use a map here in order to merge errors with the same ID
-             * together */
-            var errors : Map[Int, Issue] = Map()
+                /* Extract and display error messages and warnings */
+                import dk.itu.coqoon.core.model.CoqEnforcement.{Issue, Severity}
+                /* We use a map here in order to merge errors with the same ID
+                 * together */
+                var errors : Map[Int, Issue] = Map()
 
-            def processError(
-                diff : Int, i : (Int, String, Option[Int], Option[Int]),
-                label : String, severity : Severity) =
-              i match {
-                case (id, msg, Some(start_), Some(end_)) =>
-                  fixPair(command.source, start_ - 1, end_ - 1) match {
-                    case Some((start, end)) =>
-                      errors += id -> Issue(label,
-                          diff + start, (end - start),
-                          msg, severity)
-                    case _ =>
-                      /* Fixing the offsets up didn't work, so just associate
-                       * this problem with the whole command */
+                def processError(
+                    diff : Int, i : (Int, String, Option[Int], Option[Int]),
+                    label : String, severity : Severity) =
+                  i match {
+                    case (id, msg, Some(start_), Some(end_)) =>
+                      fixPair(command.source, start_ - 1, end_ - 1) match {
+                        case Some((start, end)) =>
+                          errors += id -> Issue(label,
+                              diff + start, (end - start),
+                              msg, severity)
+                        case _ =>
+                          /* Fixing the offsets up didn't work, so just associate
+                           * this problem with the whole command */
+                          errors += id -> Issue(label,
+                              diff, command.source.length,
+                              msg, severity)
+                      }
+                    case (id, msg, _, _) =>
                       errors += id -> Issue(label,
                           diff, command.source.length,
                           msg, severity)
                   }
-                case (id, msg, _, _) =>
-                  errors += id -> Issue(label,
-                      diff, command.source.length,
-                      msg, severity)
-              }
 
-            _p("Error and warning extraction") {
-              for (diff <- diff;
-                  (_, tree) <- results) {
-                Responses.extractError(tree) match {
-                  case Some(t) =>
-                    processError(
-                        diff, t, "interactive/pide-error", Severity.Error)
-                  case _ =>
-                    Responses.extractWarning(tree).foreach(t =>
-                      processError(
-                          diff, t, "interactive/pide-warning", Severity.Warning))
+                _p("Error and warning extraction") {
+                  for (diff <- diff;
+                      (_, tree) <- results) {
+                    Responses.extractError(tree) match {
+                      case Some(t) =>
+                        processError(
+                            diff, t, "interactive/pide-error", Severity.Error)
+                      case _ =>
+                        Responses.extractWarning(tree).foreach(t =>
+                          processError(
+                              diff, t, "interactive/pide-warning", Severity.Warning))
+                    }
+                  }
+                  if (!errors.isEmpty)
+                    sentence.foreach(_.setIssues(errors.values.toSeq.map(
+                        issue => (issue -> issue.severityHint)).toMap))
+                }
+
+                _p("Entity extraction") {
+                  sentence.foreach(_.setEntities(
+                    (for ((r, elem) <- markup;
+                          location <- getFile.map(_.getLocation);
+                          diff <- diff;
+                          entity <- PIDEEntity.makeModelEntity(
+                              ibLength, ls, location, elem);
+                          (start, end) <- fixPair(command.source, r.start, r.stop))
+                      yield {
+                        (diff + start, diff + (end - start)) -> entity
+                      }).toMap))
+                }
+
+                _p("Command annotation update") {
+                  val oldAnnotation = annotations.get(command)
+                  val newAnnotation =
+                    if (!complete) {
+                        Some(new Annotation(
+                            ManifestIdentifiers.Annotations.PROCESSING,
+                            false, "Processing proof"))
+                    } else None
+
+                  /* If the old and new annotations have the same type (or, for that
+                   * matter, if neither of them exists), then do nothing */
+                  if (newAnnotation.map(_.getType) != oldAnnotation.map(_.getType)) {
+                    oldAnnotation.foreach(an => toDelete :+= (command, Some(an)))
+                    newAnnotation.foreach(an => annotationsToAdd :+= (command,
+                        an, new Position(offset, command.source.length)))
+                  }
                 }
               }
-              if (!errors.isEmpty)
-                sentence.foreach(_.setIssues(errors.values.toSeq.map(
-                    issue => (issue -> issue.severityHint)).toMap))
-            }
+            case (None, command, _, _) =>
+              /* This command has been removed from the document; delete its
+               * annotation, along with any errors it might have */
+              toDelete :+= (command, annotations.get(command))
+          }
+        } finally {
+          _p("Update annotation model") {
+            import scala.collection.JavaConversions._
+            val del =
+              for ((command, Some(annotation)) <- toDelete)
+                yield {
+                  annotations -= command
+                  annotation
+                }
+            val add =
+              (for ((command, annotation, position) <- annotationsToAdd)
+                yield {
+                  annotations += (command -> annotation)
+                  (annotation -> position)
+                }).toMap
 
-            _p("Entity extraction") {
-              sentence.foreach(_.setEntities(
-                (for ((r, elem) <- markup;
-                      location <- getFile.map(_.getLocation);
-                      diff <- diff;
-                      entity <- PIDEEntity.makeModelEntity(
-                          ibLength, ls, location, elem);
-                      (start, end) <- fixPair(command.source, r.start, r.stop))
-                  yield {
-                    (diff + start, diff + (end - start)) -> entity
-                  }).toMap))
-            }
-
-            _p("Command annotation update") {
-              val oldAnnotation = annotations.get(command)
-              val newAnnotation =
-                if (!complete) {
-                    Some(new Annotation(
-                        ManifestIdentifiers.Annotations.PROCESSING,
-                        false, "Processing proof"))
-                } else None
-
-              /* If the old and new annotations have the same type (or, for that
-               * matter, if neither of them exists), then do nothing */
-              if (newAnnotation.map(_.getType) != oldAnnotation.map(_.getType)) {
-                oldAnnotation.foreach(an => toDelete :+= (command, Some(an)))
-                newAnnotation.foreach(an => annotationsToAdd :+= (command,
-                    an, new Position(offset, command.source.length)))
-              }
-            }
-            }
-          case (None, command, _, _) =>
-            /* This command has been removed from the document; delete its
-             * annotation, along with any errors it might have */
-            toDelete :+= (command, annotations.get(command))
+            if (!del.isEmpty || !add.isEmpty)
+              am.foreach(_.replaceAnnotations(del.toArray, add))
+          }
         }
-      } finally {
-        _p("Update annotation model") {
-          import scala.collection.JavaConversions._
-          val del =
-            for ((command, Some(annotation)) <- toDelete)
-              yield {
-                annotations -= command
-                annotation
-              }
-          val add =
-            (for ((command, annotation, position) <- annotationsToAdd)
-              yield {
-                annotations += (command -> annotation)
-                (annotation -> position)
-              }).toMap
 
-          if (!del.isEmpty || !add.isEmpty)
-            am.foreach(_.replaceAnnotations(del.toArray, add))
+        _p("Post-change caret update") {
+          lastCommand match {
+            case None =>
+              caretPing
+            case Some(c) if changed.contains(c) =>
+              caretPing
+            case _ =>
+          }
         }
+
+        import dk.itu.coqoon.core.model.CoqEnforcement
+        for ((el, issues) <- CoqEnforcement.check(workingCopy,
+            PIDEEnforcementContext))
+          el.addIssues(issues)
       }
-
-      _p("Post-change caret update") {
-        lastCommand match {
-          case None =>
-            caretPing
-          case Some(c) if changed.contains(c) =>
-            caretPing
-          case _ =>
-        }
-      }
-
-      import dk.itu.coqoon.core.model.CoqEnforcement
-      for ((el, issues) <- CoqEnforcement.check(workingCopy,
-          PIDEEnforcementContext))
-        el.addIssues(issues)
-    } }
-  }
+    }
 
   import dk.itu.coqoon.core.coqtop.CoqSentence
   import dk.itu.coqoon.core.utilities.TotalReader
