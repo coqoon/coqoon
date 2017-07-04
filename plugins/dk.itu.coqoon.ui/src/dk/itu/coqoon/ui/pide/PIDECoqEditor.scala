@@ -118,35 +118,36 @@ class PIDECoqEditor
             end => (start, end)))
   }
 
-  override protected def commandsUpdated(changed : Seq[Command]) = {
-    val ls = getLastSnapshot.get
-    val changedResultsAndMarkup = ({
-      for (c <- changed if !c.is_ignored)
-        yield {
-          ls.node.command_start(c) match {
-            case Some(offset) if offset < ibLength =>
-              /* If the command's in the initialisation block, then hide
-               * it, as annotating things the user can't see is unhelpful
-               * (and, incidentally, will make JFace throw exceptions). */
-              None
-            case h =>
-              /* Otherwise, fix up the offset, if there was one, and keep
-               * this command and its metadata for further processing. */
-              Some((h.map(_ - ibLength), c,
-                  Responses.extractResults(ls, c),
-                  Responses.extractMarkup(ls, c)))
+  override protected def commandsUpdated(changed : Seq[Command]) =
+    if (!isIgnoring) {
+      val ls = getLastSnapshot.get
+      val changedResultsAndMarkup = ({
+        for (c <- changed if !c.is_ignored)
+          yield {
+            ls.node.command_start(c) match {
+              case Some(offset) if offset < ibLength =>
+                /* If the command's in the initialisation block, then hide
+                 * it, as annotating things the user can't see is unhelpful
+                 * (and, incidentally, will make JFace throw exceptions). */
+                None
+              case h =>
+                /* Otherwise, fix up the offset, if there was one, and keep
+                 * this command and its metadata for further processing. */
+                Some((h.map(_ - ibLength), c,
+                    Responses.extractResults(ls, c),
+                    Responses.extractMarkup(ls, c)))
+            }
           }
-        }
-      }).flatten
+        }).flatten
 
-    val secret = Random.long()
-    println(
-        s"commandsUpdated(changed = ${changed.map(_.id)}) " +
-        s"is scheduling secret task $secret")
-    asyncExec {
-      _doUpdate(secret, ls, changed, changedResultsAndMarkup)
+      val secret = Random.long()
+      println(
+          s"commandsUpdated(changed = ${changed.map(_.id)}) " +
+          s"is scheduling secret task $secret")
+      asyncExec {
+        _doUpdate(secret, ls, changed, changedResultsAndMarkup)
+      }
     }
-  }
 
   private def _doUpdate(secret : Long, ls : isabelle.Document.Snapshot,
       changed : Seq[Command],
