@@ -46,6 +46,14 @@ class MultiReconciler(delay : Int = BatchCollector.DEFAULT_DELAY)
   private var handlers : List[List[DecoratedEvent] => Unit] = List()
   def addHandler(f : List[DecoratedEvent] => Unit) = (handlers :+= f)
 
+  private var immediates : List[DecoratedEvent => Unit] = List()
+  def addImmediate(f : DecoratedEvent => Unit) = (immediates :+= f)
+
+  override def add(item : DecoratedEvent) = {
+    super.add(item)
+    immediates.foreach(immediate => immediate(item))
+  }
+
   override def process(items : List[DecoratedEvent]) =
     handlers.foreach(handler => handler(items))
 }
