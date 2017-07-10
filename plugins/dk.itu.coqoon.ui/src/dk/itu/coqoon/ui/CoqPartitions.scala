@@ -24,10 +24,15 @@ object CoqPartitions {
         coqComment -> (Types.COMMENT, 2))
   }
 
+  import dk.itu.coqoon.ui.utilities.ProfilingProxy
   import org.eclipse.jface.text.{IDocument, IDocumentExtension3}
+  import org.eclipse.jface.text.{
+    IDocumentPartitioner, IDocumentPartitionerExtension}
   def installPartitioner(input : IDocument, partitioning : String) = {
     import dk.itu.coqoon.core.utilities.TryCast
-    val partitioner = createPartitioner
+    val partitioner =
+      ProfilingProxy[IDocumentPartitioner with IDocumentPartitionerExtension](
+          createPartitioner, "documentChanged2")
     TryCast[IDocumentExtension3](input) match {
       case Some(ext) =>
         ext.setDocumentPartitioner(partitioning, partitioner)

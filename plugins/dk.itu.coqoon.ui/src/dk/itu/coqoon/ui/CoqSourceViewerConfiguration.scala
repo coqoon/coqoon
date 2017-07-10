@@ -4,6 +4,7 @@
 package dk.itu.coqoon.ui
 
 import org.eclipse.ui.editors.text.TextSourceViewerConfiguration
+import org.eclipse.jface.text.rules.{Token, IToken, RuleBasedScanner}
 
 class BaseCoqSourceViewerConfiguration(
     editor : BaseCoqEditor) extends TextSourceViewerConfiguration {
@@ -57,17 +58,23 @@ class BaseCoqSourceViewerConfiguration(
   }
 }
 object BaseCoqSourceViewerConfiguration {
+  import dk.itu.coqoon.ui.utilities.ProfilingProxy
   import org.eclipse.jface.text.rules.DefaultDamagerRepairer
-  import org.eclipse.jface.text.presentation.PresentationReconciler
+  import org.eclipse.jface.text.presentation.{
+    IPresentationDamager, IPresentationRepairer, PresentationReconciler}
+
+  def makeDDRProfilingProxy(s : RuleBasedScanner) =
+    ProfilingProxy[IPresentationDamager with IPresentationRepairer](
+        new DefaultDamagerRepairer(s), "createPresentation")
 
   def addDamagerRepairers(pr : PresentationReconciler) = {
     for ((typ, scanner) <- Seq(
         (CoqPartitions.Types.COQ,
-            new DefaultDamagerRepairer(new CoqTokenScanner)),
+            makeDDRProfilingProxy(new CoqTokenScanner)),
         (CoqPartitions.Types.COMMENT,
-            new DefaultDamagerRepairer(new CommentTokenScanner)),
+            makeDDRProfilingProxy(new CommentTokenScanner)),
         (CoqPartitions.Types.STRING,
-            new DefaultDamagerRepairer(new StringTokenScanner)))) {
+            makeDDRProfilingProxy(new StringTokenScanner)))) {
       pr.setDamager(scanner, typ)
       pr.setRepairer(scanner, typ)
     }
@@ -77,7 +84,6 @@ object BaseCoqSourceViewerConfiguration {
 
 import dk.itu.coqoon.ui.utilities.UIUtils
 import org.eclipse.jface.text.TextAttribute
-import org.eclipse.jface.text.rules.{Token, IToken, RuleBasedScanner}
 
 class CoqTokenScanner extends RuleBasedScanner {
   import CoqTokenScanner._
