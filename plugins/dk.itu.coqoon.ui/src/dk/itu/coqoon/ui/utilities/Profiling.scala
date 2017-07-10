@@ -30,3 +30,30 @@ class DebugProfiler private[utilities] extends Profiler {
 object NullProfiler extends Profiler {
   override def apply[A](scope : String)(block : => A) = block
 }
+
+object ProfilingProxy {
+  import java.lang.reflect.{Proxy, Method, InvocationHandler}
+  lazy val cl = getClass.getClassLoader
+  def apply[T](base : AnyRef, methodNames : String*) = {
+    val handler = new InvocationHandler {
+      override def invoke(
+          proxy : AnyRef, method : Method, args : Array[AnyRef]) = {
+        if (methodNames.length == 0 || methodNames.contains(method.getName)) {
+          val as =
+            if (args != null) {
+              s"${args.map(_ts).mkString(", ")}"
+            } else "null"
+          Profiler()(s"${_ts(base)}.${method.getName}($as)") {
+            method.invoke(base, args : _*)
+          }
+        } else method.invoke(base, args : _*)
+      }
+    }
+    Proxy.newProxyInstance(
+        cl, base.getClass.getInterfaces(), handler).asInstanceOf[T]
+  }
+
+  private def _ts(a : AnyRef) =
+    s"${a.getClass.getSimpleName}@" +
+        s"${Integer.toHexString(System.identityHashCode(a))}"
+}
