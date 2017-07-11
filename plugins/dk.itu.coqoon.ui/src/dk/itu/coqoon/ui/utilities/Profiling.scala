@@ -49,8 +49,12 @@ object ProfilingProxy {
         } else method.invoke(base, args : _*)
       }
     }
-    Proxy.newProxyInstance(
-        cl, base.getClass.getInterfaces(), handler).asInstanceOf[T]
+    def getInterfaces(soFar : Set[Class[_]], layer : Class[_]) : Set[Class[_]] =
+      soFar ++ layer.getInterfaces ++
+          (Option(layer.getSuperclass).toSeq.flatMap(
+              sup => getInterfaces(soFar, sup)))
+    val allInterfaces = getInterfaces(Set(), base.getClass)
+    Proxy.newProxyInstance(cl, allInterfaces.toArray, handler).asInstanceOf[T]
   }
 
   private def _ts(a : AnyRef) =
