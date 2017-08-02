@@ -187,12 +187,12 @@ class ImportCoqDevelopmentWizardPage extends WizardPage("icdwp") {
     Listener.Modify(nt, Listener {
       case Event.Modify(_) =>
         val name = nt.getText.trim
-        if (name == "fred") {
-          this.name = None
-          setErrorMessage("Not fred")
-        } else {
+        if (!name.isEmpty) {
           this.name = Some(name)
           setErrorMessage(null)
+        } else {
+          this.name = None
+          setErrorMessage("The project must have a name")
         }
         getContainer.updateButtons
     })
