@@ -8,12 +8,13 @@
 package dk.itu.coqoon.ui.utilities
 
 import dk.itu.coqoon.core.utilities.CacheSlot
+import org.eclipse.jface.resource.ImageDescriptor
 
-object EclipseConsole {
+class EclipseConsole(val label : String, val icon : ImageDescriptor) {
   import org.eclipse.ui.console._
 
   private val console_ = CacheSlot[MessageConsole] {
-    val c = new MessageConsole("Coq", null)
+    val c = new MessageConsole(label, icon)
     ConsolePlugin.getDefault.getConsoleManager.addConsoles(Array(c))
     c
   }
@@ -26,14 +27,17 @@ object EclipseConsole {
     val s = console_.get.newMessageStream
     s.setEncoding("UTF-8")
     UIUtils.exec {
-      s.setColor(RED)
+      s.setColor(ConsoleConstants.RED)
     }
     s
   }
 
   def out = out_.get
   def err = err_.get
+}
+object EclipseConsole extends EclipseConsole("Coq", null)
 
+private object ConsoleConstants {
   import org.eclipse.swt.graphics.Color
-  private final val RED = new Color(UIUtils.getDisplay, 255, 0, 0)
+  final val RED = new Color(UIUtils.getDisplay, 255, 0, 0)
 }
