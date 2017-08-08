@@ -4,9 +4,14 @@ import org.osgi.framework.BundleContext
 import org.eclipse.ui.plugin.AbstractUIPlugin
 
 class Activator extends AbstractUIPlugin {
+  import dk.itu.coqoon.core.debug.{DebugLogger, DebugListener}
+  import dk.itu.coqoon.ui.utilities.DebugConsole
   override def start(context : BundleContext) = {
     super.start(context)
     Activator.instance = this
+
+    DebugListener.unregister(DebugLogger)
+    DebugListener.register(DebugConsole)
   }
   
   override def stop(context : BundleContext) = {

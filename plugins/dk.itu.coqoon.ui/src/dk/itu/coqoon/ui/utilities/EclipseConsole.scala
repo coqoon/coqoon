@@ -7,6 +7,7 @@
 
 package dk.itu.coqoon.ui.utilities
 
+import dk.itu.coqoon.core.debug.DebugListener
 import dk.itu.coqoon.core.utilities.CacheSlot
 import org.eclipse.jface.resource.ImageDescriptor
 
@@ -36,6 +37,19 @@ class EclipseConsole(val label : String, val icon : ImageDescriptor) {
   def err = err_.get
 }
 object EclipseConsole extends EclipseConsole("Coq", null)
+object DebugConsole extends EclipseConsole("Debugging channels", null)
+    with DebugListener {
+  import java.util.Calendar
+  override def onDebugEvent(
+      id : String, message : String, trace : Option[Throwable]) = {
+    val now = Calendar.getInstance().getTime
+    out.println(s"$now: $id\n\t$message")
+    trace.toSeq.flatMap(_.getStackTrace()).drop(1).foreach(el => {
+      err.println(s"$el")
+    })
+    out.println("--")
+  }
+}
 
 private object ConsoleConstants {
   import org.eclipse.swt.graphics.Color
