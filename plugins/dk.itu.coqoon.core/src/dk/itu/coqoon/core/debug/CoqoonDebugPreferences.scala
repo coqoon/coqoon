@@ -76,20 +76,16 @@ object CoqoonDebugPreferences {
 
   class ChannelPreference(id : String, name : String, description : String)
       extends BooleanPreference(id, false, name, s"$description ($id)") {
-    import org.eclipse.core.runtime.{Status, IStatus}
     def log(text : String) =
       if (get()) {
         val dummy =
           if (!SuppressStackTraces.get) {
             new Exception("(dummy stack trace exception)").fillInStackTrace
           } else null
-        Activator.getDefault.getLog.log(new Status(
-            IStatus.INFO,
-            ManifestIdentifiers.PLUGIN,
-            IStatus.OK,
-            s"${id}: ${text}", dummy))
+        DebugListener.onDebugEvent(id, text, Option(dummy))
       }
   }
+
   object PrintProcessInvocations extends ChannelPreference("debug.process",
       "Log coqtop invocations",
       "Log debugging messages whenever new instances of coqtop are started.")
