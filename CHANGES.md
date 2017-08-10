@@ -1,3 +1,39 @@
+Coqoon 0.8.1
+============
+
+9th August 2017
+
+This release adds support for importing existing Coq developments into the
+Eclipse workspace and improves the performance and reliability of PIDE editor
+sessions.
+
+Other significant changes
+-------------------------
+
+* Made the query popup dialog less forgetful
+
+  Each editor's query popup dialog will now show history for that editor
+  session, and its size will be persisted across editors.
+
+* Profiling support
+
+  Certain parts of the code known to have intermittent performance problems,
+  including the editor UI, can now optionally generate profiling information on
+  a separate debug channel.
+
+* New debugging console
+
+  Debugging information is now saved to an Eclipse console as plain text rather
+  than to the event log. (To view this console, open the Console view and
+  choose *Debugging channels* from the *Display Selected Console* dropdown
+  menu.)
+
+Bug fixes
+---------
+
+* Error markers should be much less likely to persist after they've been fixed
+* The failure of one scheduled task should no longer break all other such tasks
+
 Coqoon 0.8.0
 ============
 
