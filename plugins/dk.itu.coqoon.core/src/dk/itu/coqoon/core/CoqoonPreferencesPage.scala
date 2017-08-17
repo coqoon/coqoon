@@ -110,20 +110,25 @@ object CoqoonPreferences {
   object CoqPath {
     final val ID = "coqpath"
 
-    final lazy val pathOverride = {
+    private final lazy val pathOverride = {
       import dk.itu.coqoon.core.utilities.TryCast
       import org.eclipse.core.runtime.RegistryFactory
       RegistryFactory.getRegistry.getConfigurationElementsFor(
           ManifestIdentifiers.EXTENSION_POINT_OVERRIDE).filter(
-              _.getName == "override").headOption.map(
-                  _.createExecutableExtension("override")).flatMap(
-                      TryCast[ICoqPathOverride])
+              _.getName == "override").headOption.flatMap(ice => {
+        import org.osgi.framework.Constants.BUNDLE_NAME
+        val o = Option(ice.createExecutableExtension("override")).flatMap(
+            TryCast[ICoqPathOverride])
+        val bundle = ice.getDeclaringExtension.getNamespaceIdentifier
+        o.map((_, bundle))
+      })
     }
     def isOverridden() = pathOverride != None
+    def getOverridingBundle() = pathOverride.map(_._2)
 
     def get() : Option[IPath] =
       pathOverride match {
-      case Some(o) =>
+      case Some((o, _)) =>
         Some(o.getCoqPath)
       case None =>
         Option(Activator.getDefault.getPreferenceStore.getString(ID)).
