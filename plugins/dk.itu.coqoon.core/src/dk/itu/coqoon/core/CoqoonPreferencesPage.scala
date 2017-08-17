@@ -26,18 +26,35 @@ class CoqoonPreferencesPage
   override def init(w : IWorkbench) =
     setPreferenceStore(Activator.getDefault.getPreferenceStore)
 
+  import org.eclipse.swt.widgets.Composite
+  import org.eclipse.jface.preference.DirectoryFieldEditor
+  private class FriendlyDirectoryFieldEditor(
+      val name : String, val label : String, val parent : Composite)
+      extends DirectoryFieldEditor(name, label, parent) {
+    override def getChangeControl(parent : Composite) =
+      super.getChangeControl(parent)
+  }
+
   import org.eclipse.jface.preference._
   override def createFieldEditors = {
-    if (!CoqoonPreferences.CoqPath.isOverridden)
-      addField({
-        val parent = getFieldEditorParent
-        val ed = new DirectoryFieldEditor(CoqoonPreferences.CoqPath.ID,
-            "Folder containing Coq", parent)
-        ed.getLabelControl(parent).setToolTipText(
-            "The directory containing the coqtop program (or coqtop.exe on " +
-            "Windows systems).")
-        ed
-      })
+    addField({
+      val parent = getFieldEditorParent
+      val ed = new FriendlyDirectoryFieldEditor(CoqoonPreferences.CoqPath.ID,
+          "Folder containing Coq", parent)
+      ed.getLabelControl(parent).setToolTipText(
+          "The directory containing the coqtop program (or coqtop.exe on " +
+          "Windows systems).")
+      if (CoqoonPreferences.CoqPath.isOverridden) {
+        val id = CoqoonPreferences.CoqPath.getOverridingBundle.get
+        ed.getTextControl(parent).setEditable(false)
+        ed.getTextControl(parent).setToolTipText(
+            s"The plugin '$id' is overriding the value of this preference. " +
+            "It must be removed or disabled to make manual changes.")
+        ed.getLabelControl(parent).setEnabled(false)
+        ed.getChangeControl(parent).setEnabled(false)
+      }
+      ed
+    })
     addField({
       val parent = getFieldEditorParent
       val ed = new StringFieldEditor(
