@@ -162,9 +162,13 @@ private object MarkerUpdateJob {
 private trait ICache {
   /* Clear the cache, in whole or in part, in response to the changes
    * represented by @ev. */
-  def update(d : IResourceDelta) = destroy
+  def update(c : ICache.Change) = destroy
   /* Forget all information stored in the cache. */
   def destroy()
+}
+object ICache {
+  sealed abstract class Change
+  case class ResourceChange(d : IResourceDelta) extends Change
 }
 
 private abstract class ParentImpl[
@@ -194,7 +198,7 @@ private class CoqModelImpl(
             notifyListeners(CoqElementRemovedEvent(el))
           case IResourceDelta.CHANGED =>
             val entry = cache synchronized { cache.get(el) }
-            entry.foreach(_.update(d))
+            entry.foreach(_.update(ICache.ResourceChange(d)))
           case _ =>
         })
         true
@@ -282,41 +286,46 @@ private class CoqProjectImpl(
     def destroy = Seq(
         projectFile, loadPathProviders, provides, loadPath).foreach(_.clear())
 
-    override def update(delta : IResourceDelta) : Unit = {
-      /* XXX: Is this a sensible place to send notifications from? */
-      val oldConfig = res.map(_.getFile("_CoqProject").getFullPath)
-      val newConfig = res.map(_.getFile(".coqoonProject").getFullPath)
-      (oldConfig.flatMap(m => Option(delta.findMember(m))),
-          newConfig.flatMap(m => Option(delta.findMember(m)))) match {
-        case (_, Some(_)) | (Some(_), None) =>
-          destroy
-          notifyListeners(CoqProjectLoadPathChangedEvent(CoqProjectImpl.this))
-          return
+    override def update(change : ICache.Change) : Unit =
+      change match {
+        case ICache.ResourceChange(delta) =>
+          /* XXX: Is this a sensible place to send notifications from? */
+          val oldConfig = res.map(_.getFile("_CoqProject").getFullPath)
+          val newConfig = res.map(_.getFile(".coqoonProject").getFullPath)
+          (oldConfig.flatMap(m => Option(delta.findMember(m))),
+              newConfig.flatMap(m => Option(delta.findMember(m)))) match {
+            case (_, Some(_)) | (Some(_), None) =>
+              destroy
+              notifyListeners(
+                  CoqProjectLoadPathChangedEvent(CoqProjectImpl.this))
+              return
+            case _ =>
+          }
+
+          /* XXX: This is over-enthusiastic -- only directories in the load
+           * path should be considered */
+          var hierarchyChanged = false
+          object ProjectVisitor extends IResourceDeltaVisitor {
+            override def visit(delta : IResourceDelta) : Boolean = {
+              if (hierarchyChanged)
+                return false
+              val kind = delta.getKind &
+                  (IResourceDelta.ADDED | IResourceDelta.REMOVED)
+              if (delta.getResource.isInstanceOf[IFolder] && kind != 0) {
+                hierarchyChanged = true
+                false
+              } else true
+            }
+          }
+          delta.accept(ProjectVisitor)
+          if (hierarchyChanged) {
+            /* Only the expanded load path needs to be recomputed */
+            loadPath.clear
+            notifyListeners(
+                CoqProjectLoadPathChangedEvent(CoqProjectImpl.this))
+          }
         case _ =>
       }
-
-      /* XXX: This is over-enthusiastic -- only directories in the load path
-       * should be considered */
-      var hierarchyChanged = false
-      object ProjectVisitor extends IResourceDeltaVisitor {
-        override def visit(delta : IResourceDelta) : Boolean = {
-          if (hierarchyChanged)
-            return false
-          val kind = delta.getKind &
-              (IResourceDelta.ADDED | IResourceDelta.REMOVED)
-          if (delta.getResource.isInstanceOf[IFolder] && kind != 0) {
-            hierarchyChanged = true
-            false
-          } else true
-        }
-      }
-      delta.accept(ProjectVisitor)
-      if (hierarchyChanged) {
-        /* Only the expanded load path needs to be recomputed */
-        loadPath.clear
-        notifyListeners(CoqProjectLoadPathChangedEvent(CoqProjectImpl.this))
-      }
-    }
 
     import CoqProjectFile._
     private[CoqProjectImpl] final val projectFile =
@@ -577,10 +586,14 @@ private class CoqVernacFileImpl(
   protected class Cache extends ICache {
     override def destroy = Seq(contents, sentences, groups).foreach(_.clear())
 
-    override def update(d : IResourceDelta) =
-      if ((d.getFlags() & IResourceDelta.CONTENT) != 0) {
-        destroy
-        notifyListeners(CoqFileContentChangedEvent(CoqVernacFileImpl.this))
+    override def update(change : ICache.Change) =
+      change match {
+        case ICache.ResourceChange(d) =>
+          if ((d.getFlags() & IResourceDelta.CONTENT) != 0) {
+            destroy
+            notifyListeners(CoqFileContentChangedEvent(CoqVernacFileImpl.this))
+          }
+        case _ =>
       }
 
     final val contents = CacheSlot[String] {
