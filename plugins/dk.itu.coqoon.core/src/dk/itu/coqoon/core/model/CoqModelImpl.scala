@@ -168,6 +168,7 @@ private trait ICache {
 }
 object ICache {
   sealed abstract class Change
+  case object CoqPathChange extends Change
   case class ResourceChange(d : IResourceDelta) extends Change
 }
 
@@ -215,11 +216,24 @@ private class CoqModelImpl(
   res.foreach(_.getWorkspace.addResourceChangeListener(
       WorkspaceListener, IResourceChangeEvent.POST_CHANGE))
 
+  import dk.itu.coqoon.core.Activator
+  import dk.itu.coqoon.core.CoqoonPreferences
+  import org.eclipse.jface.util.IPropertyChangeListener
+  object PreferenceListener extends IPropertyChangeListener {
+    import org.eclipse.jface.util.PropertyChangeEvent
+    override def propertyChange(e : PropertyChangeEvent) =
+      if (e.getProperty == CoqoonPreferences.CoqPath.ID)
+        getProjects.flatMap(p => getCacheFor(p).toSeq).foreach(
+            _.update(ICache.CoqPathChange))
+  }
+  Activator.getDefault.getPreferenceStore.addPropertyChangeListener(
+      PreferenceListener)
+
   override def properties = Seq(res)
 
   override def getProject(name : String) =
     new CoqProjectImpl(res.map(_.getProject(name)), this)
-  override def getProjects =
+  override def getProjects : Seq[CoqProjectImpl] =
     res.toSeq.flatMap(_.getProjects).filter(hasNature).map(
       a => new CoqProjectImpl(Some(a), this))
 
@@ -262,6 +276,8 @@ private class CoqModelImpl(
     cache synchronized {
       cache.getOrElseUpdate(element, constructor).asInstanceOf[A]
     }
+  protected[model] def getCacheFor(element : ICoqElement) : Option[ICache] =
+    cache synchronized cache.get(element)
 
   private var listeners : Set[CoqElementChangeListener] = Set()
 
@@ -324,7 +340,9 @@ private class CoqProjectImpl(
             notifyListeners(
                 CoqProjectLoadPathChangedEvent(CoqProjectImpl.this))
           }
-        case _ =>
+        case ICache.CoqPathChange =>
+          loadPath.clear
+          notifyListeners(CoqProjectLoadPathChangedEvent(CoqProjectImpl.this))
       }
 
     import CoqProjectFile._
