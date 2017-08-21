@@ -31,28 +31,10 @@ class CoqCompilerRunner(source : IFile,
   private var ticker : Option[() => Boolean] = None
   def setTicker(f : Option[() => Boolean]) = (ticker = f)
 
-  private class MonitorThread(
-      process : Process, ticker : () => Boolean) extends Thread {
-    setDaemon(true)
-
-    private def isFinished = try {
-      process.exitValue; true
-    } catch {
-      case e : IllegalThreadStateException => false
-    }
-
-    override def run =
-      while (!isFinished) {
-        if (!ticker())
-          process.destroy
-        Thread.sleep(200)
-      }
-  }
-
   private def _configureProcess(pb : ProcessBuilder) : Process = {
     pb.redirectErrorStream(true)
     val process = pb.start
-    ticker.foreach(t => new MonitorThread(process, t).start)
+    ticker.foreach(t => new ProcessMonitorThread(process, t).start)
     process
   }
 
@@ -117,6 +99,24 @@ class CoqCompilerRunner(source : IFile,
             ManifestIdentifiers.PLUGIN, e.getLocalizedMessage, e))
     } finally outputFile.delete
   }
+}
+
+class ProcessMonitorThread(
+    process : Process, ticker : () => Boolean) extends Thread {
+  setDaemon(true)
+
+  private def isFinished = try {
+    process.exitValue; true
+  } catch {
+    case e : IllegalThreadStateException => false
+  }
+
+  override def run =
+    while (!isFinished) {
+      if (!ticker())
+        process.destroy
+      Thread.sleep(200)
+    }
 }
 
 sealed abstract class CoqCompilerResult(val source : IFile)
