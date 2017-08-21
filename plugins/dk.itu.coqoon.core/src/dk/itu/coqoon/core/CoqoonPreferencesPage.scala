@@ -26,33 +26,16 @@ class CoqoonPreferencesPage
   override def init(w : IWorkbench) =
     setPreferenceStore(Activator.getDefault.getPreferenceStore)
 
-  import org.eclipse.swt.widgets.Composite
-  import org.eclipse.jface.preference.DirectoryFieldEditor
-  private class FriendlyDirectoryFieldEditor(
-      val name : String, val label : String, val parent : Composite)
-      extends DirectoryFieldEditor(name, label, parent) {
-    override def getChangeControl(parent : Composite) =
-      super.getChangeControl(parent)
-  }
-
   import org.eclipse.jface.preference._
   override def createFieldEditors = {
     addField({
       val parent = getFieldEditorParent
-      val ed = new FriendlyDirectoryFieldEditor(CoqoonPreferences.CoqPath.ID,
+      val ed = new DirectoryFieldEditor(
+          CoqoonPreferences.CoqPath.ID,
           "Folder containing Coq", parent)
       ed.getLabelControl(parent).setToolTipText(
           "The directory containing the coqtop program (or coqtop.exe on " +
           "Windows systems).")
-      if (CoqoonPreferences.CoqPath.isOverridden) {
-        val id = CoqoonPreferences.CoqPath.getOverridingBundle.get
-        ed.getTextControl(parent).setEditable(false)
-        ed.getTextControl(parent).setToolTipText(
-            s"The plugin '$id' is overriding the value of this preference. " +
-            "It must be removed or disabled to make manual changes.")
-        ed.getLabelControl(parent).setEnabled(false)
-        ed.getChangeControl(parent).setEnabled(false)
-      }
       ed
     })
     addField({
@@ -117,40 +100,18 @@ class CoqoonPreferences extends AbstractPreferenceInitializer {
   }
 }
 
-import org.eclipse.core.runtime.{Path, IPath}
-
-trait ICoqPathOverride {
-  def getCoqPath() : IPath
-}
-
 object CoqoonPreferences {
   object CoqPath {
     final val ID = "coqpath"
 
-    private final lazy val pathOverride = {
-      import dk.itu.coqoon.core.utilities.TryCast
-      import org.eclipse.core.runtime.RegistryFactory
-      RegistryFactory.getRegistry.getConfigurationElementsFor(
-          ManifestIdentifiers.EXTENSION_POINT_OVERRIDE).filter(
-              _.getName == "override").headOption.flatMap(ice => {
-        import org.osgi.framework.Constants.BUNDLE_NAME
-        val o = Option(ice.createExecutableExtension("override")).flatMap(
-            TryCast[ICoqPathOverride])
-        val bundle = ice.getDeclaringExtension.getNamespaceIdentifier
-        o.map((_, bundle))
-      })
-    }
-    def isOverridden() = pathOverride != None
-    def getOverridingBundle() = pathOverride.map(_._2)
-
+    import org.eclipse.core.runtime.{Path, IPath}
     def get() : Option[IPath] =
-      pathOverride match {
-      case Some((o, _)) =>
-        Some(o.getCoqPath)
-      case None =>
-        Option(Activator.getDefault.getPreferenceStore.getString(ID)).
-            map(_.trim).filter(_.length != 0).map(p => new Path(p))
-    }
+      Option(Activator.getDefault.getPreferenceStore.getString(ID)).
+          map(_.trim).filter(_.length != 0).map(p => new Path(p))
+
+    def set(path : IPath) =
+      Option(Activator.getDefault.getPreferenceStore).foreach(
+          _.setValue(ID, path.toString))
 
     private final val candidates = Seq(
         ("/usr/local/bin", "coqtop"),
