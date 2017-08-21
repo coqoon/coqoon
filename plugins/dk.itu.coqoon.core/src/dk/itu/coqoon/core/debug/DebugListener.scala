@@ -9,11 +9,9 @@ object DebugListener {
   }
 
   def register(l : DebugListener) = {
-    System.out.println(s"$this.register($l)")
     DebugLock synchronized (DebugLock.listeners :+= l)
   }
   def unregister(l : DebugListener) = {
-    System.out.println(s"$this.unregister($l)")
     DebugLock synchronized (DebugLock.listeners.filterNot(_ == l))
   }
 
