@@ -71,14 +71,15 @@ class LoadPathOverridePreferencePage
         tv.refresh()
     })
 
+    import dk.itu.coqoon.ui.utilities.jface.Selection
     Listener.Selection(names.get[Button]("remove").get, Listener {
       case Event.Selection(_) =>
         tv.getSelection match {
-          case s : org.eclipse.jface.viewers.IStructuredSelection =>
+          case Selection.Structured(l) =>
             import scala.collection.JavaConversions._
             val o = overrides.get
             val e =
-              for ((p : IPath, q : IPath) <- s.iterator.toList)
+              for ((p : IPath, q : IPath) <- l)
                 yield (p -> q)
             val d = o.diff(e)
             if (d != o) {

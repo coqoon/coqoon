@@ -16,6 +16,7 @@
 
 package dk.itu.coqoon.ocaide
 
+import dk.itu.coqoon.ui.utilities.jface.Selection
 import dk.itu.coqoon.core.utilities.TryCast
 
 import org.eclipse.ui.ISources
@@ -24,7 +25,6 @@ import org.eclipse.core.commands.{ExecutionEvent, AbstractHandler}
 import org.eclipse.core.resources.{
   ICommand, IProject, WorkspaceJob, IProjectDescription}
 import org.eclipse.core.expressions.IEvaluationContext
-import org.eclipse.jface.viewers.IStructuredSelection
 import ocaml.natures.OcamlbuildNature.{ID => OCBNatureID}
 import ocaml.build.ocamlbuild.OcamlbuildBuilder.{ID => OCBBuilderID}
 
@@ -91,19 +91,12 @@ private object SharedConfigurationUtilities {
   def isOCBNature(a : String) = (OCBNatureID == a)
   def isOCBBuilder(a : ICommand) = (OCBBuilderID == a.getBuilderName)
 
-  def getSelection(ec : Object) : Seq[Any] = {
-    TryCast[IEvaluationContext](ec) match {
-      case Some(e) =>
-        TryCast[IStructuredSelection](
-            e.getVariable(ISources.ACTIVE_CURRENT_SELECTION_NAME)) match {
-          case Some(s) =>
-            import scala.collection.JavaConversions.asScalaBuffer
-            s.toList
-          case None =>
-            Seq()
-        }
-      case _ =>
+  def getSelection(ec : Object) : Seq[Any] =
+    TryCast[IEvaluationContext](ec).map(e => Option(
+        e.getVariable(ISources.ACTIVE_CURRENT_SELECTION_NAME))) match {
+      case Some(Selection.Structured(s)) =>
+        s
+      case None =>
         Seq()
     }
-  }
 }

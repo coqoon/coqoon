@@ -9,6 +9,7 @@ package dk.itu.coqoon.ui.loadpath
 
 import org.eclipse.core.resources.{IFolder, IProject}
 import dk.itu.coqoon.ui.utilities.{Event, UIXML, UIUtils, Listener}
+import dk.itu.coqoon.ui.utilities.jface.Selection
 import dk.itu.coqoon.ui.OnlyFoldersFilter
 import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.utilities.{TryCast, CacheSlot}
@@ -280,8 +281,8 @@ class NLPSelectionPage extends WizardPage(
     })
     lv.addSelectionChangedListener(new ISelectionChangedListener {
       override def selectionChanged(ev : SelectionChangedEvent) = {
-        nextPage = TryCast[IStructuredSelection](ev.getSelection).map(
-            _.getFirstElement).flatMap(TryCast[LPWizardPage])
+        nextPage = Selection.Structured.unapply(
+            ev.getSelection).map(_.head).flatMap(TryCast[LPWizardPage])
         nextPage.foreach(_.setWizard(getWizard))
         setPageComplete(nextPage != None)
         getContainer.updateButtons()
@@ -401,9 +402,8 @@ class NLPAbstractEntryPage extends LPWizardPage(
 
     lv.addSelectionChangedListener(new ISelectionChangedListener {
       override def selectionChanged(ev : SelectionChangedEvent) =
-        TryCast[IStructuredSelection](ev.getSelection).map(
-            _.getFirstElement) match {
-          case Some(i : LoadPathImplementation) =>
+        ev.getSelection match {
+          case Selection.Structured((i : LoadPathImplementation) +: _) =>
             at.setText(i.getIdentifier)
           case _ =>
         }
@@ -663,9 +663,8 @@ class NLPProjectEntryPage extends LPWizardPage(
     })
     tv.addSelectionChangedListener(new ISelectionChangedListener {
       override def selectionChanged(ev : SelectionChangedEvent) = {
-        val p = TryCast[IStructuredSelection](ev.getSelection).map(
-            _.getFirstElement).flatMap(TryCast[IProject])
-        project = p
+        project = Selection.Structured.unapply(
+            ev.getSelection).map(_.head).flatMap(TryCast[IProject])
         getContainer.updateButtons()
       }
     })

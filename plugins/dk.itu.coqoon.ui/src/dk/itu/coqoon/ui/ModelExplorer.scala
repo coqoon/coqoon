@@ -6,6 +6,7 @@
 
 package dk.itu.coqoon.ui
 
+import dk.itu.coqoon.ui.utilities.jface.Selection
 import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.model.CoqEnforcement.{Issue, Severity}
 import dk.itu.coqoon.core.utilities.TryCast
@@ -41,19 +42,16 @@ class ModelExplorer extends ViewPart {
       new TreePath(_makePath(c).toArray)
     override def menuAboutToShow(manager : IMenuManager) =
       Option(tree).map(_.getSelection) match {
-        case Some(s : IStructuredSelection) => s.getFirstElement match {
-          case f : ICoqVernacFile =>
-            menuManager.add(ActionFactory("Show corresponding object", {
-              f.getObjectFile.foreach(o =>
-                tree.setSelection(new TreeSelection(makePath(o))))
-            }))
-          case f : ICoqObjectFile =>
-            menuManager.add(ActionFactory("Show corresponding source file", {
-              f.getVernacFiles.headOption.foreach(s =>
-                tree.setSelection(new TreeSelection(makePath(s))))
-            }))
-          case _ =>
-        }
+        case Some(Selection.Structured((f : ICoqVernacFile) +: _)) =>
+          menuManager.add(ActionFactory("Show corresponding object", {
+            f.getObjectFile.foreach(o =>
+              tree.setSelection(new TreeSelection(makePath(o))))
+          }))
+        case Some(Selection.Structured((f : ICoqObjectFile) +: _)) =>
+          menuManager.add(ActionFactory("Show corresponding source file", {
+            f.getVernacFiles.headOption.foreach(s =>
+              tree.setSelection(new TreeSelection(makePath(s))))
+          }))
         case _ =>
       }
   })
@@ -63,15 +61,16 @@ class ModelExplorer extends ViewPart {
     tree.addOpenListener(new IOpenListener {
       import org.eclipse.ui.ide.IDE
       override def open(ev : OpenEvent) = ev.getSelection match {
-        case s : IStructuredSelection => s.getFirstElement match {
-          case f : ICoqVernacFile =>
-            OpenDeclarationHandler.openEditorOn(f)
-          case g : ICoqScriptGroup =>
-            OpenDeclarationHandler.highlightElement(g.getDeterminingSentence)
-          case s : ICoqScriptSentence =>
-            OpenDeclarationHandler.highlightElement(s)
-          case _ =>
-        }
+        case Selection.Structured(s) =>
+          s.headOption foreach {
+            case f : ICoqVernacFile =>
+              OpenDeclarationHandler.openEditorOn(f)
+            case g : ICoqScriptGroup =>
+              OpenDeclarationHandler.highlightElement(g.getDeterminingSentence)
+            case s : ICoqScriptSentence =>
+              OpenDeclarationHandler.highlightElement(s)
+            case _ =>
+          }
         case _ =>
       }
     })

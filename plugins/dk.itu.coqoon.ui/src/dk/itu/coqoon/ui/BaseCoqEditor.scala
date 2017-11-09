@@ -194,18 +194,17 @@ import dk.itu.coqoon.core.model.{
   ICoqElement, ICoqScriptGroup, ICoqScriptSentence}
 
 class CoqContentOutlinePage extends ContentOutlinePage {
-  import org.eclipse.jface.viewers.{
-    TreeViewer, SelectionChangedEvent, IStructuredSelection}
+  import dk.itu.coqoon.ui.utilities.jface.Selection
+  import org.eclipse.jface.viewers.{TreeViewer, SelectionChangedEvent}
   import org.eclipse.swt.widgets.Composite
 
   override def selectionChanged(event : SelectionChangedEvent) : Unit = {
     super.selectionChanged(event)
 
-    TryCast[IStructuredSelection](
-        event.getSelection).flatMap(sel => Option(sel.getFirstElement)) match {
-      case Some(g : ICoqScriptGroup) =>
+    event.getSelection match {
+      case Selection.Structured((g : ICoqScriptGroup) +: _) =>
         OpenDeclarationHandler.highlightElement(g.getDeterminingSentence)
-      case Some(s : ICoqScriptSentence) =>
+      case Selection.Structured((s : ICoqScriptSentence) +: _) =>
         OpenDeclarationHandler.highlightElement(s)
       case _ =>
     }
