@@ -23,7 +23,7 @@ object CoqRecogniser extends PushdownAutomaton[Char] {
 
   object States {
     import PushdownAutomaton.State
-    val base = "CoqRecogniser:"
+    val base = "Coq:"
 
     val coq = State(s"${base}Coq")
     val coqComment = State(s"${base}Coq comment")
