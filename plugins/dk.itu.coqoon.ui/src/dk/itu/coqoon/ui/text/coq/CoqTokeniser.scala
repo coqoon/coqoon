@@ -16,7 +16,7 @@
 
 package dk.itu.coqoon.ui.text.coq
 
-import dk.itu.coqoon.ui.text.{Tokeniser, PushdownAutomaton}
+import dk.itu.coqoon.ui.text.{Tokeniser, TransitionTracker, PushdownAutomaton}
 
 object CoqRecogniser extends PushdownAutomaton[Char] {
   import PushdownAutomaton.Element
@@ -88,4 +88,52 @@ object CoqTokeniser extends Tokeniser(CoqRecogniser) {
   }
 
   TransitionInspector(coqInspector)
+}
+
+private object TransitionTrackerTest {
+  private final val DOCUMENT1 = """
+trivial. "STR" (* Comment *) Qed.
+"""
+  private final val DOCUMENT2 = """
+Theorem t : True.
+Proof. (
+  (* This should be trivial (but has parentheses) (* and a (* very *) nested comment *)*)
+  try *) "and there's a comment terminator hanging around out here" trivial.
+Qed.
+"""
+  private final val DOCUMENT = DOCUMENT2
+  def main(args : Array[String]) =
+    for (DOCUMENT <- Seq(DOCUMENT1, DOCUMENT2)) {
+      val d = new TransitionTracker(CoqRecogniser, CoqRecogniser.States.coq)
+      var i = 0
+      while (i < DOCUMENT.size) {
+        d.update(i, 0, DOCUMENT.substring(i, i + 1))
+        i += 1
+      }
+      println("Rewriting document")
+      i = 0
+      while (i < (DOCUMENT.size - 1)) {
+        print(s"$i (${DOCUMENT.charAt(i)}), ")
+        val preTrace = d.getExecutions
+        d.update(i, 1, "  ")
+        val midTrace = d.getExecutions
+        d.update(i, 0, "")
+        assert(d.getExecutions == midTrace,
+            "contentless change modified the transitions")
+        d.update(i, 2, DOCUMENT.substring(i, i + 1))
+        assert(d.getExecutions == preTrace,
+            "destructive change was not reverted")
+        i += 1
+      }
+      println("done.")
+
+      var pos = 0
+      d.getExecutions foreach {
+        case (exec, len) =>
+          try {
+            print(s"<$exec>${d.getDocument.substring(pos, pos + len)}")
+          } finally pos += len
+      }
+      println
+    }
 }
