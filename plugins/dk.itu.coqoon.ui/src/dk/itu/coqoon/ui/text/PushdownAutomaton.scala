@@ -66,15 +66,31 @@ class PushdownAutomaton[C] {
           None
       }
     }
+
+    override def toString =
+      s"Execution($position, ${stack.mkString("[", ", ", "]")})"
   }
 }
 object PushdownAutomaton {
-  case class Element(label : String)
-  case class State(label : String)
+  case class Element(label : String) {
+    override def toString = s"($label)"
+  }
+  case class State(label : String) {
+    override def toString = s"<$label>"
+  }
 
   case class Transition[C](from : State, pop : Option[Element],
       input : Option[C], push : Option[Element], to : State) {
-    override def toString =
-      s"(${from} ---[${pop.getOrElse("")}/${input.getOrElse("")}/${push.getOrElse("")}]--> ${to})"
+    override def toString = {
+      val pops = pop.map(p => s"popping '$p', ").getOrElse("")
+      val pushs = push.map(p => s", pushing '$p'").getOrElse("")
+      val inputs = input match {
+        case Some(p) =>
+          s"matching '$p'"
+        case None =>
+          s"default transition"
+      }
+      s"(${from} ---[$pops$inputs$pushs}]--> ${to})"
+    }
   }
 }
