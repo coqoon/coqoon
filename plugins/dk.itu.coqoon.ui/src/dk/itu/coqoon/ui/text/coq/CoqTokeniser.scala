@@ -107,7 +107,7 @@ Qed.
       val d = new TransitionTracker(CoqRecogniser, CoqRecogniser.States.coq)
       var i = 0
       while (i < DOCUMENT.size) {
-        d.update(i, 0, DOCUMENT.substring(i, i + 1))
+        d.update(i, 0, DOCUMENT.substring(i, i + 1), DOCUMENT)
         i += 1
       }
       println("Rewriting document")
@@ -115,12 +115,12 @@ Qed.
       while (i < (DOCUMENT.size - 1)) {
         print(s"$i (${DOCUMENT.charAt(i)}), ")
         val preTrace = d.getExecutions
-        d.update(i, 1, "  ")
+        d.update(i, 1, "  ", DOCUMENT)
         val midTrace = d.getExecutions
-        d.update(i, 0, "")
+        d.update(i, 0, "", DOCUMENT)
         assert(d.getExecutions == midTrace,
             "contentless change modified the transitions")
-        d.update(i, 2, DOCUMENT.substring(i, i + 1))
+        d.update(i, 2, DOCUMENT.substring(i, i + 1), DOCUMENT)
         assert(d.getExecutions == preTrace,
             "destructive change was not reverted")
         i += 1
@@ -131,7 +131,7 @@ Qed.
       d.getExecutions foreach {
         case (exec, len) =>
           try {
-            print(s"<$exec>${d.getDocument.substring(pos, pos + len)}")
+            print(s"<$exec>${DOCUMENT.substring(pos, pos + len)}")
           } finally pos += len
       }
       println

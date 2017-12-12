@@ -1,18 +1,26 @@
 package dk.itu.coqoon.ui.text
 
+import org.eclipse.jface.text.IDocument
+
 class TransitionTracker(
     val automaton : PushdownAutomaton[Char],
     val start : PushdownAutomaton.State) {
   import dk.itu.coqoon.ui.text.PushdownAutomaton
   import scala.collection.mutable.ListBuffer
-  private var document : String = ""
   private var trace : ListBuffer[(automaton.Execution, Int)] = ListBuffer()
 
-  def update(offset : Int, length : Int, content : String) = {
-    val newDocument =
-      document.substring(0, Math.min(offset, document.length)) + content +
-          document.substring(Math.min(offset + length, document.length))
+  def update(
+      offset : Int, length : Int, content : String, document : String) : Unit =
+    update(offset, length, content.length, document.charAt, document.length)
 
+  def update(offset : Int,
+      length : Int, content : String, document : IDocument) : Unit =
+    update(
+        offset, length, content.length, document.getChar, document.getLength)
+
+  def update(offset : Int, length : Int, replacedBy : Int,
+      charAt : Int => Char, totalLength : Int) = {
+    val oldLength = totalLength - replacedBy + length
     var traceFragment : ListBuffer[(automaton.Execution, Int)] = ListBuffer()
 
     /* If we already have a view of the executions in the document, then
@@ -55,7 +63,7 @@ class TransitionTracker(
     /* oldState is the execution state (and its index, length and offset) at
      * offset oldPosition in the old document.*/
     var oldState = beginAt
-    var oldPosition = Math.min(offset, document.length)
+    var oldPosition = Math.min(offset, oldLength)
 
     /* newExec is the current execution state we're building up, and
      * newExecLength is its length. (If we're resuming in an old execution
@@ -71,11 +79,11 @@ class TransitionTracker(
 
     import scala.util.control.Breaks.{break, breakable}
     breakable {
-      while (position < newDocument.length) {
+      while (position < totalLength) {
         /* Feed the new document into the recogniser, noting when the execution
          * state changes. (Trivial transitions, like going from a state to
          * itself without modifying the stack, can be safely ignored.) */
-        newExec.accept(newDocument.charAt(position)) match {
+        newExec.accept(charAt(position)) match {
           case Some((_, e)) if e == newExec =>
             newExecLength += 1
           case Some((t, e)) =>
@@ -103,7 +111,7 @@ class TransitionTracker(
                   Some(tfs(oi + 1))
                 } else None
             } else if (oe == newExec &&
-                (position - length + content.length) == oldPosition) {
+                (position - length + replacedBy) == oldPosition) {
               /* The old machine and the new one are back in sync: fix up the
                * length of this execution state and stop evaluating things.*/
               val iNEL = newExecLength
@@ -128,13 +136,10 @@ class TransitionTracker(
       val lastIndex = oldState.map(_._1 + 1).getOrElse(trace.length)
       this.trace.remove(firstIndex, (lastIndex - firstIndex))
       this.trace.insertAll(firstIndex, traceFragment)
-
-      this.document = newDocument
     }
     /* XXX: what would be a useful thing to return here? */
   }
 
-  def getDocument() = document
   /* Returns the live sequence of executions and lengths used as the internal
    * document representation. */
   def getExecutions() = trace
