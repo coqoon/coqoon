@@ -1,6 +1,6 @@
 package dk.itu.coqoon.ui.text
 
-import org.eclipse.jface.text.IDocument
+import org.eclipse.jface.text.{IRegion, IDocument}
 
 class TransitionTracker(
     val automaton : PushdownAutomaton[Char],
@@ -9,28 +9,22 @@ class TransitionTracker(
   import scala.collection.mutable.ListBuffer
   private var trace : ListBuffer[(automaton.Execution, Int)] = ListBuffer()
 
-  def update(
-      offset : Int, length : Int, content : String, document : String) : Unit =
-    update(offset, length, content.length, document.charAt, document.length)
+  def update(offset : Int,
+      length : Int, replacedBy : Int, document : String) : IRegion =
+    update(offset, length, replacedBy, document.charAt, document.length)
 
   def update(offset : Int,
-      length : Int, content : String, document : IDocument) : Unit =
+      length : Int, replacedBy : Int, document : IDocument) : IRegion =
     update(
-        offset, length, content.length, document.getChar, document.getLength)
+        offset, length, replacedBy, document.getChar, document.getLength)
 
   def update(offset : Int, length : Int, replacedBy : Int,
-      charAt : Int => Char, totalLength : Int) = {
-    val oldLength = totalLength - replacedBy + length
+      charAt : Int => Char, totalLength : Int) : IRegion = {
     var traceFragment : ListBuffer[(automaton.Execution, Int)] = ListBuffer()
 
     /* If we already have a view of the executions in the document, then
      * annotate it with their indices and offsets (as a stream to minimise
-     * unnecessary computation).
-     *
-     * The main loop below runs through the automaton with the new document and
-     * iterates through this sequence for the old one. The indices are used to
-     * support that iteration, and the offsets are used to detect when the new
-     * document and the old one resynchronise with each other. */
+     * unnecessary computation). */
     val ts = trace.toStream
     val tfs = {
       var idx = 0
@@ -47,10 +41,16 @@ class TransitionTracker(
     }
 
     /* Work out which execution in the old document we should begin evaluation
-     * at. */
+     * at... */
     val beginAt = tfs.collectFirst {
       case q @ (i, e, s, o)
           if offset >= o && offset <= (o + s) =>
+        q
+    }
+    /* ... and what execution we'll be in after the edit. */
+    val afterEdit = tfs.collectFirst {
+      case q @ (i, e, s, o)
+          if (offset + length) >= o && (offset + length) <= (o + s) =>
         q
     }
     val initialExec = beginAt match {
@@ -62,8 +62,8 @@ class TransitionTracker(
 
     /* oldState is the execution state (and its index, length and offset) at
      * offset oldPosition in the old document.*/
-    var oldState = beginAt
-    var oldPosition = Math.min(offset, oldLength)
+    var oldState = afterEdit
+    var oldPosition = offset + length
 
     /* newExec is the current execution state we're building up, and
      * newExecLength is its length. (If we're resuming in an old execution
@@ -80,6 +80,30 @@ class TransitionTracker(
     import scala.util.control.Breaks.{break, breakable}
     breakable {
       while (position < totalLength) {
+        if (position >= offset + replacedBy) {
+          /* Synchronisation is now possible: when the old document state and
+           * the new are the same, stop execution at once */
+          oldState foreach {
+            case o @ (oi, oe, os, ol)
+                if oe == newExec =>
+              /* The old machine and the new one are back in sync: fix up the
+               * length of this execution state and stop evaluating things.*/
+                newExecLength += ol - oldPosition + os
+                assert(newExecLength > 0,
+                    s"$newExec has invalid length $newExecLength")
+                break
+            case o @ (oi, oe, os, ol) =>
+              if (oldPosition >= (os + ol)) {
+                /* We got to the end of this region; advance to the next one */
+                oldState =
+                  if (tfs.isDefinedAt(oi + 1)) {
+                    Some(tfs(oi + 1))
+                  } else None
+              }
+              oldPosition += 1
+            case _ =>
+          }
+        }
         /* Feed the new document into the recogniser, noting when the execution
          * state changes. (Trivial transitions, like going from a state to
          * itself without modifying the stack, can be safely ignored.) */
@@ -97,31 +121,6 @@ class TransitionTracker(
              * should never happen in a tokenisable document */
             ???
         }
-        /* Iterate through the execution states of the old document, if there
-         * is one, to find out when we're back in sync -- i.e., when the old
-         * state and the new state are the same /and/ the position in the two
-         * documents is the same (after taking @length and @content into
-         * consideration). */
-        oldState foreach {
-          case o @ (oi, oe, os, ol) =>
-            if (oldPosition >= (os + ol)) {
-              /* We got to the end of this region; advance to the next one */
-              oldState =
-                if (tfs.isDefinedAt(oi + 1)) {
-                  Some(tfs(oi + 1))
-                } else None
-            } else if (oe == newExec &&
-                (position - length + replacedBy) == oldPosition) {
-              /* The old machine and the new one are back in sync: fix up the
-               * length of this execution state and stop evaluating things.*/
-              val iNEL = newExecLength
-              newExecLength += ol - (oldPosition + 1) + os
-              assert(newExecLength > 0,
-                  s"$newExec has invalid length $newExecLength")
-              break
-            }
-            oldPosition += 1
-        }
         position += 1
       }
     }
@@ -134,11 +133,17 @@ class TransitionTracker(
 
       val firstIndex = beginAt.map(_._1).getOrElse(0)
       val lastIndex = oldState.map(_._1 + 1).getOrElse(trace.length)
-      this.trace.remove(firstIndex, (lastIndex - firstIndex))
-      this.trace.insertAll(firstIndex, traceFragment)
-    }
-    /* XXX: what would be a useful thing to return here? */
+      if (this.trace.view(firstIndex, lastIndex) != traceFragment) {
+        this.trace.remove(firstIndex, (lastIndex - firstIndex))
+        this.trace.insertAll(firstIndex, traceFragment)
+        Region(offset, length = position - offset)
+      } else {
+        /* Replacing a fragment with itself is a contentless change */
+        Region(offset, length = 0)
+      }
+    } else Region(offset, length = 0)
   }
+  def clear() = trace.clear
 
   /* Returns the live sequence of executions and lengths used as the internal
    * document representation. */
