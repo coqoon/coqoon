@@ -101,13 +101,23 @@ Proof. (
   try *) "and there's a comment terminator hanging around out here" trivial.
 Qed.
 """
+  private final val DOCUMENT3 = "Abcdef."
   private final val DOCUMENT = DOCUMENT2
   def main(args : Array[String]) =
-    for (DOCUMENT <- Seq(DOCUMENT1, DOCUMENT2)) {
+    for (DOCUMENT <- Seq(DOCUMENT1, DOCUMENT2, DOCUMENT3)) {
+      var rep = ""
       val d = new TransitionTracker(CoqRecogniser, CoqRecogniser.States.coq)
+      def upd(pos : Int, len : Int, content : String) = {
+        rep = rep.substring(0, pos) + content + rep.substring(pos + len)
+        val r = d.update(pos, len, content.length, rep)
+        if (r.getLength > 0)
+          println(s"  update modified transitions in region $r")
+        r
+      }
+      println("Building document")
       var i = 0
       while (i < DOCUMENT.size) {
-        d.update(i, 0, DOCUMENT.substring(i, i + 1), DOCUMENT)
+        upd(i, 0, DOCUMENT.substring(i, i + 1))
         i += 1
       }
       println("Rewriting document")
@@ -115,14 +125,22 @@ Qed.
       while (i < (DOCUMENT.size - 1)) {
         print(s"$i (${DOCUMENT.charAt(i)}), ")
         val preTrace = d.getExecutions
-        d.update(i, 1, "  ", DOCUMENT)
+        println(s"blanking")
+        assert(upd(i, 1, "  ").getLength != 0,
+            "blanking change should never be contentless")
         val midTrace = d.getExecutions
-        d.update(i, 0, "", DOCUMENT)
+        println(s"contentless")
+        assert(upd(i, 0, "").getLength == 0,
+            "contentless change caused regions to change")
         assert(d.getExecutions == midTrace,
             "contentless change modified the transitions")
-        d.update(i, 2, DOCUMENT.substring(i, i + 1), DOCUMENT)
+        println("restoring")
+        upd(i, 2, DOCUMENT.substring(i, i + 1))
         assert(d.getExecutions == preTrace,
             "destructive change was not reverted")
+        println("overwriting")
+        assert(upd(i, 1, DOCUMENT.substring(i, i + 1)).getLength == 0,
+            "identical content caused regions to change")
         i += 1
       }
       println("done.")
