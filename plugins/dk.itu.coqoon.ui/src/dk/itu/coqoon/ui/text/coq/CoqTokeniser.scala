@@ -149,9 +149,63 @@ Qed.
       d.getExecutions foreach {
         case (exec, len) =>
           try {
-            print(s"<$exec>${DOCUMENT.substring(pos, pos + len)}")
+            println(s"""(("${exec.position.label}", ${exec.stack.map(e => s""""${e.label}"""").mkString("[", ", ", "]")}), "${DOCUMENT.substring(pos, pos + len)}"),""")
           } finally pos += len
       }
       println
     }
+}
+private object TransitionTrackerExecutionResizingBug {
+  final val DOCUMENT = "a (* *) b"
+  def main(args : Array[String]) : Unit = {
+    val d = new TransitionTracker(CoqRecogniser, CoqRecogniser.States.coq)
+    var rep = ""
+    def upd(pos : Int, len : Int, content : String) = {
+      rep = rep.substring(0, pos) + content + rep.substring(pos + len)
+      val r = d.update(pos, len, content.length, rep)
+      if (r.getLength > 0)
+        println(s"  update modified transitions in region $r")
+      r
+    }
+    upd(0, 0, DOCUMENT)
+    var pos = 0
+    d.getExecutions foreach {
+      case (exec, len) =>
+        try {
+          println(s"""(("${exec.position.label}", ${exec.stack.map(e => s""""${e.label}"""").mkString("[", ", ", "]")}), "${rep.substring(pos, pos + len)}"),""")
+        } finally pos += len
+    }
+    println
+
+    upd(5, 1, "2")
+    pos = 0
+    d.getExecutions foreach {
+      case (exec, len) =>
+        try {
+          println(s"""(("${exec.position.label}", ${exec.stack.map(e => s""""${e.label}"""").mkString("[", ", ", "]")}), "${rep.substring(pos, pos + len)}"),""")
+        } finally pos += len
+    }
+    println
+    upd(5, 1, "*")
+
+    upd(5, 0, "2")
+    pos = 0
+    d.getExecutions foreach {
+      case (exec, len) =>
+        try {
+          println(s"""(("${exec.position.label}", ${exec.stack.map(e => s""""${e.label}"""").mkString("[", ", ", "]")}), "${rep.substring(pos, pos + len)}"),""")
+        } finally pos += len
+    }
+    println
+
+    upd(5, 1, "")
+    pos = 0
+    d.getExecutions foreach {
+      case (exec, len) =>
+        try {
+          println(s"""(("${exec.position.label}", ${exec.stack.map(e => s""""${e.label}"""").mkString("[", ", ", "]")}), "${rep.substring(pos, pos + len)}"),""")
+        } finally pos += len
+    }
+    println
+  }
 }
