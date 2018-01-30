@@ -14,10 +14,10 @@ object CoqPartitions {
     final val STRING = s"${COQ}_string"
     final val COMMENT = s"${COQ}_comment"
   }
-  final lazy val TYPES = mapping.values.map(_._1).toSet.toArray
+  final lazy val TYPES = Array(Types.COQ, Types.STRING, Types.COMMENT)
 
   import dk.itu.coqoon.ui.text.coq.{CoqTokeniser, CoqRecogniser}
-  private[CoqPartitions] lazy val mapping = {
+  private[CoqPartitions] lazy val tokeniserPartitionerMapping = {
     import CoqRecogniser.States._
     Map(coq -> (Types.COQ, 0),
         coqString -> (Types.STRING, 1),
@@ -42,8 +42,26 @@ object CoqPartitions {
     partitioner.connect(input)
   }
 
-  import dk.itu.coqoon.ui.text.{Tokeniser, TokeniserPartitioner}
-  import dk.itu.coqoon.ui.text.coq.{CoqTokeniser, CoqRecogniser}
+  private[CoqPartitions] lazy val transitionPartitionerMapping = {
+    import dk.itu.coqoon.ui.text.TransitionPartitioner.Rule
+    import CoqRecogniser.States._
+    Seq(Rule(leadIn = Seq(nearlyCoqComment, coqComment),
+             leadOut = Seq(nearlyOutOfCoqComment, coq),
+             1, Types.COMMENT),
+        Rule(leadIn = Seq(coqString),
+             leadOut = Seq(coq),
+             1, Types.STRING))
+  }
+
+  import dk.itu.coqoon.ui.CoqoonUIPreferences
+  import dk.itu.coqoon.ui.text.{TokeniserPartitioner, TransitionPartitioner}
   def createPartitioner() =
-    new TokeniserPartitioner(CoqTokeniser, CoqRecogniser.States.coq, mapping)
+    CoqoonUIPreferences.Partitioner.get match {
+      case "token" =>
+        new TokeniserPartitioner(CoqTokeniser,
+            CoqRecogniser.States.coq, tokeniserPartitionerMapping)
+      case _ =>
+        new TransitionPartitioner(CoqRecogniser,
+            CoqRecogniser.States.coq, transitionPartitionerMapping, Types.COQ)
+  }
 }

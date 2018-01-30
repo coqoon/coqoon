@@ -43,6 +43,7 @@ class CoqoonEditorPreferencePage
   override def init(workbench : IWorkbench) =
     setPreferenceStore(Activator.getDefault.getPreferenceStore)
 
+  import org.eclipse.jface.preference.ComboFieldEditor
   import org.eclipse.jface.preference.StringFieldEditor
   import org.eclipse.jface.preference.BooleanFieldEditor
 
@@ -88,6 +89,22 @@ class CoqoonEditorPreferencePage
       ed.getDescriptionControl(parent).setToolTipText(
           "Instruct Coq to only process proofs when they become visible in " +
           "the editor. (Compilation is not affected by this setting.)")
+      ed
+    })
+    addField({
+      val parent = getFieldEditorParent
+      val ed = new ComboFieldEditor(
+          CoqoonUIPreferences.Partitioner.ID,
+          "Coq editor partitioner",
+          Array[Array[String]](
+              Array("Transition-based", "transition"),
+              Array("Token-based", "token")),
+          parent)
+      ed.getLabelControl(parent).setToolTipText(
+          "Override the partitioner used by the Coq editor to find " +
+          "comment and string regions. (Only change " +
+          "this setting if editor services like syntax highlighting seem " +
+          "slow or erratic.)")
       ed
     })
   }
@@ -147,6 +164,8 @@ class CoqoonUIPreferences extends AbstractPreferenceInitializer {
     node.putBoolean(ProcessingAnnotations.ID, true)
 
     node.putBoolean(Folding.ID, true)
+
+    node.put(Partitioner.ID, "transition")
   }
 }
 object CoqoonUIPreferences {
@@ -186,5 +205,10 @@ object CoqoonUIPreferences {
   object Folding {
     val ID = "enableFolding"
     def get() = store.getBoolean(ID)
+  }
+
+  object Partitioner {
+    val ID = "partitioner"
+    def get() = store.getString(ID)
   }
 }
