@@ -55,7 +55,7 @@ class TransitionPartitioner(
           r
       } match {
         case Some(Rule(_, leadOut, leadOutLength, label)) =>
-          if (rSize > 0)
+          if (rSize >= 0)
             regions :+= (rType, rSize)
           rSize = 0
           rType = label
@@ -85,7 +85,7 @@ class TransitionPartitioner(
           transitions = transitions.tail
       }
     }
-    if (rSize > 0)
+    if (rSize >= 0)
       regions :+= (rType, rSize)
     var pos = 0
     this.regions = regions.map {
@@ -100,7 +100,7 @@ class TransitionPartitioner(
   def computePartitioning(offset : Int,
       length : Int, zeroLength : Boolean) : Array[ITypedRegion] = {
     val r = Region(offset, length = length)
-    for (part <- this.regions;
+    for (part <- this.regions if part.getLength > 0 || zeroLength;
          _ <- r.intersection(Region(part.getOffset, length = part.getLength)))
       yield part
   }
