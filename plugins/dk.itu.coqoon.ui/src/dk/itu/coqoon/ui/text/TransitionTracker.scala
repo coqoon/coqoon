@@ -124,10 +124,10 @@ class TransitionTracker(
         position += 1
       }
     }
-    if ((position - offset) != 0) {
-      /* The old and the new documents didn't immediately sync on the first
-       * character, so the document's partitioning has actually changed; update
-       * it accordingly. */
+    if ((position - offset) != 0 || length != replacedBy) {
+      /* If the old and the new documents didn't immediately sync on the first
+       * character, or if the length of the document has changed, the
+       * document's partitioning has changed and should be updated. */
       if (newExecLength != 0)
         traceFragment.append((newExec, newExecLength))
 
