@@ -89,8 +89,6 @@ class TransitionTracker(
               /* The old machine and the new one are back in sync: fix up the
                * length of this execution state and stop evaluating things.*/
                 newExecLength += ol - oldPosition + os
-                assert(newExecLength > 0,
-                    s"$newExec has invalid length $newExecLength")
                 break
             case o @ (oi, oe, os, ol) =>
               if (oldPosition >= (os + ol)) {
@@ -111,9 +109,8 @@ class TransitionTracker(
           case Some((_, e)) if e == newExec =>
             newExecLength += 1
           case Some((t, e)) =>
-            assert(newExecLength != 0,
-                s"$newExec has invalid length $newExecLength")
-            traceFragment.append((newExec, newExecLength))
+            if (newExecLength != 0)
+              traceFragment.append((newExec, newExecLength))
             newExec = e
             newExecLength = 1
           case _ =>
