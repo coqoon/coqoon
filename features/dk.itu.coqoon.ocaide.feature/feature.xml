@@ -2,7 +2,7 @@
 <feature
       id="dk.itu.coqoon.ocaide.feature"
       label="OcaIDE integration for Coqoon"
-      version="0.7.0"
+      version="0.8.2"
       provider-name="IT University of Copenhagen">
 
    <description>

@@ -150,5 +150,11 @@
    <feature url="features/dk.itu.coqoon.opam.feature_0.8.1.jar" id="dk.itu.coqoon.opam.feature" version="0.8.1">
       <category name="coqoon"/>
    </feature>
+   <feature url="features/dk.itu.coqoon.feature_0.8.2.jar" id="dk.itu.coqoon.feature" version="0.8.2">
+      <category name="coqoon"/>
+   </feature>
+   <feature url="features/dk.itu.coqoon.ocaide.feature_0.8.2.jar" id="dk.itu.coqoon.ocaide.feature" version="0.8.2">
+      <category name="coqoon"/>
+   </feature>
    <category-def name="coqoon" label="Coqoon"/>
 </site>

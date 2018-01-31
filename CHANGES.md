@@ -1,3 +1,11 @@
+Coqoon 0.8.2
+============
+
+31st January 2018
+
+This release drastically improves the performance of the Coq editor's
+partitioning code and fixes minor bugs.
+
 Coqoon 0.8.1
 ============
 

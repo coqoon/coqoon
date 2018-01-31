@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: OcaIDE integration for Coqoon
 Bundle-SymbolicName: dk.itu.coqoon.ocaide;singleton:=true
-Bundle-Version: 0.7.0
+Bundle-Version: 0.8.2
 Bundle-Activator: dk.itu.coqoon.ocaide.Activator
 Bundle-Vendor: IT University of Copenhagen
 Require-Bundle: org.eclipse.ui,
