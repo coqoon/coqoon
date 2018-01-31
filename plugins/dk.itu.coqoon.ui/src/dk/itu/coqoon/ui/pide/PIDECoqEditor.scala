@@ -141,9 +141,6 @@ class PIDECoqEditor
         }).flatten
 
       val secret = Random.long()
-      println(
-          s"commandsUpdated(changed = ${changed.map(_.id)}) " +
-          s"is scheduling secret task $secret")
       asyncExec {
         _doUpdate(secret, ls, changed, changedResultsAndMarkup)
       }
