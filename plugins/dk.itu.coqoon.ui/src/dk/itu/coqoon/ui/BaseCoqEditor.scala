@@ -25,7 +25,8 @@ abstract class BaseCoqEditor extends ScalaTextEditor {
   private lazy val workingCopy = CacheSlot[Option[IDetachedCoqVernacFile]] {
     TryCast[IFileEditorInput](getEditorInput).map(_.getFile).flatMap(
         ICoqModel.getInstance.toCoqElement).flatMap(
-            TryCast[ICoqVernacFile]).map(_.detach)
+            TryCast[ICoqVernacFile]).map(_.detach).orElse(
+                Some(IDetachedCoqVernacFile.createDummy))
   }
 
   def getWorkingCopy() = workingCopy

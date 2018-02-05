@@ -323,26 +323,29 @@ class PIDECoqEditor
         case _ =>
           fi.map(fi => TotalReader.read(fi.getFile.getContents))
       }
-    fi match {
-      case Some(f) =>
-        val file = f.getFile
-        val nodeName = getNodeName.get
-
-        import dk.itu.coqoon.core.model.ICoqModel
-        val cp = ICoqModel.toCoqProject(file.getProject)
-        val initialisationBlock =
+    import dk.itu.coqoon.ui.utilities.EclipseConsole
+    import dk.itu.coqoon.core.model.{ICoqModel, ICoqProject}
+    val initialisationBlockContent =
+      fi.flatMap(input => ICoqModel.getInstance.toCoqElement(
+          input.getFile.getProject)) match {
+        case Some(cp : ICoqProject) =>
           cp.getLoadPath.flatMap(_.asCommands).mkString("", "\n", "\n")
-        ibLength = initialisationBlock.length
-
-        List[Document.Node.Edit[Text.Edit, Text.Perspective]](
-            Document.Node.Clear(),
-            Document.Node.Edits(List(
-                Text.Edit.insert(0,
-                    initialisationBlock + text.getOrElse("")))),
-            getPerspective)
-      case _ =>
-        List()
-    }
+        case _ =>
+          EclipseConsole.err.println(
+s"""The Coq file ${fi.map(_.getName).getOrElse("(unknown")} is not part of a Coqoon project.
+(Using Coqoon in this way is not recommended; Coq files should generally be
+kept in Coqoon projects.)
+A simple Coq session has been created for it with an empty load path.
+Some Coqoon features may not work in this session.""")
+          ""
+      }
+    ibLength = initialisationBlockContent.length
+    List[Document.Node.Edit[Text.Edit, Text.Perspective]](
+        Document.Node.Clear(),
+        Document.Node.Edits(List(
+            Text.Edit.insert(0,
+                    initialisationBlockContent + text.getOrElse("")))),
+        getPerspective)
   }
 
   import org.eclipse.core.resources.IFile
