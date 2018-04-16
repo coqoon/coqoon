@@ -463,24 +463,27 @@ class CoqBuilder extends IncrementalProjectBuilder {
     var deps = Seq.newBuilder[TrackerT#Dependency]
     deps += ((None, "(self)"), resolveDummy(location)(_), emptyPath)
     file accept {
-      case l : ICoqLoadSentence =>
-        deps += ((Some(l), l.getIdent()), resolveLoad(_), emptyPath)
-        false
-      case r : ICoqRequireSentence =>
-        for (i <- r.getIdentifiers)
-          deps += ((Some(r), i), resolveRequire(Seq())(_), emptyPath)
-        false
-      /* XXX: do this properly (and implement it in the configure script) */
-      case f : ICoqFromRequireSentence =>
-        val prefix = f.getPrefix.split("\\.")
-        for (i <- f.getIdentifiers)
-          deps += ((Some(f), i), resolveRequire(prefix)(_), emptyPath)
-        false
-      case d : ICoqDeclareMLSentence =>
-        deps += ((Some(d), d.getIdent), resolveDeclareML(_), emptyPath)
+      case s : ICoqScriptSentence =>
+        import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier._
+        s match {
+          case LoadSentence(ident) =>
+            deps += ((Some(s), ident), resolveLoad(_), emptyPath)
+          case RequireSentence(_, idents) =>
+            for (i <- idents)
+              deps += ((Some(s), i), resolveRequire(Seq())(_), emptyPath)
+          case FromRequireSentence(prefix_, _, idents) =>
+            val prefix = prefix_.split("\\.")
+            for (i <- idents)
+              deps += ((Some(s), i), resolveRequire(prefix)(_), emptyPath)
+          case DeclareMLSentence(ident) =>
+            /* XXX: do this properly (and implement it in the configure
+             * script) */
+            deps += ((Some(s), ident), resolveDeclareML(_), emptyPath)
+          case _ =>
+        }
         false
       case e : IParent => true
-      case _ => false
+      case i => false
     }
     deps.result
   }

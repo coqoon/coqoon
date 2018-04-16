@@ -87,149 +87,182 @@ object CoqSentence {
   }
 
   object Classifier {
+    import dk.itu.coqoon.core.model.ICoqScriptSentence
     object LtacSentence {
       val expr = ("(?s)^\\s*Ltac\\s+([a-zA-Z0-9_']+)(.*)\\.$").r
-      def unapply(input : CharSequence) = input match {
+      def unapply(input : String) = input match {
         case expr(identifier, body) => Some(identifier, body)
         case _ => None
       }
+      def unapply(s : ICoqScriptSentence) : Option[(String, String)] =
+        unapply(s.getText)
     }
 
     object ModuleStartSentence {
       val expr = ("(?s)^\\s*Module\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
-      def unapply(input : CharSequence) = input match {
+      def unapply(input : String) = input match {
         case expr(identifier) => Some(identifier)
         case _ => None
       }
+      def unapply(s : ICoqScriptSentence) : Option[String] = unapply(s.getText)
     }
 
     object SectionStartSentence {
       val expr = ("(?s)^\\s*Section\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
-      def unapply(input : CharSequence) = input match {
+      def unapply(input : String) = input match {
         case expr(identifier) => Some(identifier)
         case _ => None
       }
+      def unapply(s : ICoqScriptSentence) : Option[String] = unapply(s.getText)
     }
 
     object IdentifiedEndSentence {
       val expr = ("(?s)^\\s*End\\s+([a-zA-Z0-9_']+)\\s*\\.$").r
-      def unapply(input : CharSequence) = input match {
+      def unapply(input : String) = input match {
         case expr(identifier) => Some(identifier)
         case _ => None
       }
+      def unapply(s : ICoqScriptSentence) : Option[String] = unapply(s.getText)
     }
 
     object AssertionSentence {
       val expr =
         ("(?s)^\\s*(Theorem|Lemma|Remark|Fact|Corollary|" +
          "Proposition|Definition|Example)\\s+([a-zA-Z0-9_']+)(.*)\\.$").r
-      def unapply(input : CharSequence) = input match {
+      def unapply(input : String) = input match {
         case expr(keyword, identifier, body) =>
           Some((keyword, identifier, body))
         case _ => None
       }
+      def unapply(s : ICoqScriptSentence) : Option[(String, String, String)] =
+        unapply(s.getText)
     }
 
     object FixpointSentence {
       val expr =
         ("(?s)^\\s*(Fixpoint|CoFixpoint)\\s+([a-zA-Z0-9_']+)(.*)\\.$").r
-      def unapply(input : CharSequence) = input match {
+      def unapply(input : String) = input match {
         case expr(keyword, identifier, body) =>
           Some((keyword, identifier, body))
         case _ => None
       }
+      def unapply(s : ICoqScriptSentence) : Option[(String, String, String)] =
+        unapply(s.getText)
     }
 
     object InductiveSentence {
       val expr =
         ("(?s)^\\s*(Inductive|CoInductive)\\s+([a-zA-Z0-9_']+)(.*)\\.$").r
-      def unapply(input : CharSequence) = input match {
+      def unapply(input : String) = input match {
         case expr(keyword, identifier, body) =>
           Some((keyword, identifier, body))
         case _ => None
       }
+      def unapply(s : ICoqScriptSentence) : Option[(String, String, String)] =
+        unapply(s.getText)
     }
 
     object DefinitionSentence {
       val expr =
         ("(?s)^\\s*(Definition|Let)\\s+([a-zA-Z0-9_']+)(.*):=(.*)\\.$").r
-      def unapply(input : CharSequence) = input match {
+      def unapply(input : String) = input match {
         case expr(keyword, identifier, binders, body) =>
           Some((keyword, identifier, binders, body))
         case _ => None
       }
+      def unapply(s : ICoqScriptSentence) :
+          Option[(String, String, String, String)] =
+        unapply(s.getText)
     }
 
     object ProofStartSentence {
       val expr = ("(?s)^\\s*(Proof|Next Obligation)\\s*\\.$").r
-      def unapply(input : CharSequence) = input match {
+      def unapply(input : String) = input match {
         case expr(keyword) => Some(keyword)
         case _ => None
       }
+      def unapply(s : ICoqScriptSentence) : Option[String] = unapply(s.getText)
     }
 
     object ProofEndSentence {
       val expr = ("(?s)^\\s*(Qed|Defined|Admitted|Abort)\\s*\\.$").r
-      def unapply(input : CharSequence) = input match {
+      def unapply(input : String) = input match {
         case expr(keyword) => Some(keyword)
         case _ => None
       }
+      def unapply(s : ICoqScriptSentence) : Option[String] = unapply(s.getText)
     }
 
     object LoadSentence {
       val expr = ("(?s)^\\s*Load\\s+(.*)\\s*\\.$").r
-      def unapply(input : CharSequence) = input match {
+      def unapply(input : String) = input match {
         case expr(ident) => Some(ident)
         case _ => None
       }
+      def unapply(s : ICoqScriptSentence) : Option[String] = unapply(s.getText)
     }
 
     object RequireSentence {
       val expr = ("(?s)^\\s*Require\\s+(Import\\s+|Export\\s+|)(.*)\\s*\\.$").r
-      def unapply(input : CharSequence) = input match {
-        case expr(kind, ident) => Some((kind, ident))
+      def unapply(input : String) = input match {
+        case expr(kind, ident) =>
+          val idents : Seq[String] =
+            if (ident(0) == '"') {
+              Seq(ident.substring(1).split("\"", 2)(0))
+            } else ident.split("\\s+")
+          Some(kind, idents)
         case _ => None
       }
+      def unapply(s : ICoqScriptSentence) : Option[(String, Seq[String])] =
+        unapply(s.getText)
     }
 
     object FromRequireSentence {
       val expr = ("(?s)^\\s*From\\s+(.*)\\s+Require\\s+(Import\\s+|Export\\s+|)(.*)\\s*\\.$").r
-      def unapply(input : CharSequence) = input match {
-        case expr(prefix, kind, ident) => Some((prefix, kind, ident))
+      def unapply(input : String) = input match {
+        case expr(prefix, kind, idents) =>
+          Some((prefix, kind, idents.split("\\s+").toSeq))
         case _ => None
       }
+      def unapply(s : ICoqScriptSentence) :
+          Option[(String, String, Seq[String])] =
+        unapply(s.getText)
     }
 
     object DeclareMLSentence {
       val expr = ("(?s)^\\s*Declare\\s+ML\\s+Module\\s+\"(.*)\"\\s*\\.$").r
-      def unapply(input : CharSequence) = input match {
+      def unapply(input : String) = input match {
         case expr(ident) => Some(ident)
         case _ => None
       }
+      def unapply(s : ICoqScriptSentence) : Option[String] = unapply(s.getText)
     }
 
     object BulletSentence {
       val expr = ("(?s)^\\s*(-+|\\*+|\\++)\\s*$").r
-      def unapply(input : CharSequence) = input match {
+      def unapply(input : String) = input match {
         case expr(bullet) => Some(bullet)
         case _ => None
       }
+      def unapply(s : ICoqScriptSentence) : Option[String] = unapply(s.getText)
     }
 
     object SubproofSentence {
       val expr = ("(?s)^\\s*\\{\\s*$").r
-      def unapply(input : CharSequence) = input match {
+      def unapply(input : String) = input match {
         case expr() => true
         case _ => false
       }
+      def unapply(s : ICoqScriptSentence) : Boolean = unapply(s.getText)
     }
 
     object EndSubproofSentence {
       val expr = ("(?s)^\\s*\\}\\s*$").r
-      def unapply(input : CharSequence) = input match {
+      def unapply(input : String) = input match {
         case expr() => true
         case _ => false
       }
+      def unapply(s : ICoqScriptSentence) : Boolean = unapply(s.getText)
     }
   }
 }

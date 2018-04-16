@@ -54,17 +54,20 @@ object CoqEnforcement {
     class Runner extends CoqEnforcement.Runner {
       private var requireDone = false
       override def getIssues(i : ICoqElement) = {
+        import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier._
         i match {
-          case s : ICoqRequireSentence if requireDone =>
-            Seq(IsolatedRequire(s))
-          case s : ICoqFromRequireSentence if requireDone =>
-            Seq(IsolatedRequire(s))
-
-          case s : ICoqRequireSentence => Seq()
-          case s : ICoqFromRequireSentence => Seq()
-          case s : ICoqScriptSentence if s.isSynthetic => Seq()
-
-          case s : ICoqScriptElement =>
+          case i : ICoqScriptSentence => i match {
+            case RequireSentence(_) | FromRequireSentence(_) if requireDone =>
+              Seq(IsolatedRequire(i))
+            case RequireSentence(_) | FromRequireSentence(_) =>
+              Seq()
+            case _ if i.isSynthetic =>
+              Seq()
+            case _ =>
+              requireDone = true
+              Seq()
+          }
+          case i : ICoqScriptElement =>
             requireDone = true
             Seq()
           case _ => Seq()

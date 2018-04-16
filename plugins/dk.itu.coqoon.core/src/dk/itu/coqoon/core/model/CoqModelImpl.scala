@@ -622,44 +622,7 @@ private class CoqVernacFileImpl(
     final val sentences = CacheSlot[Seq[ICoqScriptSentence]] {
       val content = contents.get
       val sentences = CoqSentence.getNextSentences(content, 0, content.length)
-
-      import CoqSentence.Classifier._
-      for (i <- sentences) yield i match {
-        case (LtacSentence(_, _), _) =>
-          new CoqLtacSentenceImpl(i, CoqVernacFileImpl.this)
-        case (FixpointSentence(_, _, _), _) =>
-          new CoqFixpointSentenceImpl(i, CoqVernacFileImpl.this)
-        case (InductiveSentence(_, _, _), _) =>
-          new CoqInductiveSentenceImpl(i, CoqVernacFileImpl.this)
-        case (DefinitionSentence(_, _, _, _), _) =>
-          new CoqDefinitionSentenceImpl(i, CoqVernacFileImpl.this)
-        case (LoadSentence(_), _) =>
-          new CoqLoadSentenceImpl(i, CoqVernacFileImpl.this)
-        case (RequireSentence(_, _), _) =>
-          new CoqRequireSentenceImpl(i, CoqVernacFileImpl.this)
-        case (FromRequireSentence(_, _, _), _) =>
-          new CoqFromRequireSentenceImpl(i, CoqVernacFileImpl.this)
-        case (DeclareMLSentence(_), _) =>
-          new CoqDeclareMLSentenceImpl(i, CoqVernacFileImpl.this)
-        case (AssertionSentence(_, _, _), _) =>
-          new CoqAssertionSentenceImpl(i, CoqVernacFileImpl.this)
-        case (SectionStartSentence(_), _) =>
-          new CoqSectionStartSentenceImpl(i, CoqVernacFileImpl.this)
-        case (IdentifiedEndSentence(_), _) =>
-          new CoqIdentifiedEndSentenceImpl(i, CoqVernacFileImpl.this)
-        case (ProofStartSentence(_), _) =>
-          new CoqProofStartSentenceImpl(i, CoqVernacFileImpl.this)
-        case (ProofEndSentence(_), _) =>
-          new CoqProofEndSentenceImpl(i, CoqVernacFileImpl.this)
-        case (BulletSentence(_), _) =>
-          new CoqBulletSentenceImpl(i, CoqVernacFileImpl.this)
-        case (SubproofSentence(), _) =>
-          new CoqSubproofStartSentenceImpl(i, CoqVernacFileImpl.this)
-        case (EndSubproofSentence(), _) =>
-          new CoqSubproofEndSentenceImpl(i, CoqVernacFileImpl.this)
-        case h =>
-          new CoqScriptSentenceImpl(i, CoqVernacFileImpl.this)
-      }
+      sentences.map(s => new CoqScriptSentenceImpl(s, CoqVernacFileImpl.this))
     }
 
     final val groups = CacheSlot[Seq[ICoqScriptElement]] {
@@ -678,70 +641,71 @@ private class CoqVernacFileImpl(
 
       var sentences = this.sentences.get
       while (sentences != Nil) {
+        import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier._
         sentences = sentences match {
-          case (h : ICoqSectionStartSentence) :: tail =>
-            stack.pushContext(s"section-${h.getIdentifier}")
+          case (h @ SectionStartSentence(id)) :: tail =>
+            stack.pushContext(s"section-$id")
             stack.push(h)
             tail
-          case (h : ICoqIdentifiedEndSentence) :: tail
-              if innermostIs(s"section-${h.getIdentifier}") =>
+          case (h @ IdentifiedEndSentence(id)) :: tail
+              if innermostIs(s"section-$id") =>
             stack.push(h)
             val (tag, body) = stack.popContext
             stack.push(new CoqScriptGroupImpl(
                 body.reverse, CoqVernacFileImpl.this))
             tail
 
-          case (h : ICoqModuleStartSentence) :: tail =>
-            stack.pushContext(s"module-${h.getIdentifier}")
+          case (h @ ModuleStartSentence(id)) :: tail =>
+            stack.pushContext(s"module-$id")
             stack.push(h)
             tail
-          case (h : ICoqIdentifiedEndSentence) :: tail
-              if innermostIs(s"module-${h.getIdentifier}") =>
+          case (h @ IdentifiedEndSentence(id)) :: tail
+              if innermostIs(s"module-${id}") =>
             stack.push(h)
             val (tag, body) = stack.popContext
             stack.push(
                 new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
             tail
 
-          case (h : ICoqDefinitionSentence) :: tail =>
+          case (h @ DefinitionSentence(_)) :: tail =>
             stack.push(h)
             tail
-          case (h : ICoqLtacSentence) :: tail =>
+          case (h @ LtacSentence(_)) :: tail =>
             stack.push(h)
             tail
-          case (h : ICoqFixpointSentence) :: tail =>
+          case (h @ FixpointSentence(_)) :: tail =>
             stack.push(h)
             tail
-          case (h : ICoqInductiveSentence) :: tail =>
-            stack.push(h)
-            tail
-
-          case (h : ICoqLoadSentence) :: tail =>
-            stack.push(h)
-            tail
-          case (h : ICoqRequireSentence) :: tail =>
-            stack.push(h)
-            tail
-          case (h : ICoqFromRequireSentence) :: tail =>
-            stack.push(h)
-            tail
-          case (h : ICoqDeclareMLSentence) :: tail =>
+          case (h @ InductiveSentence(_)) :: tail =>
             stack.push(h)
             tail
 
-          case (h : ICoqAssertionSentence) :: tail =>
-            stack.pushContext(s"proof-${h.getIdentifier}")
+          case (h @ LoadSentence(_)) :: tail =>
             stack.push(h)
             tail
-          case (h : ICoqProofEndSentence) ::
-               (i : ICoqProofStartSentence) :: tail =>
+          case (h @ RequireSentence(_)) :: tail =>
+            stack.push(h)
+            tail
+          case (h @ FromRequireSentence(_)) :: tail =>
+            stack.push(h)
+            tail
+          case (h @ DeclareMLSentence(_)) :: tail =>
+            stack.push(h)
+            tail
+
+          case (h @ AssertionSentence(_, id, _)) :: tail =>
+            stack.pushContext(s"proof-$id")
+            stack.push(h)
+            tail
+          case (h @ ProofEndSentence(_)) ::
+               (i @ ProofStartSentence(_)) :: tail =>
             /* This isn't really the end of a proof (perhaps Program is being
              * used?) */
             stack.push(h)
             stack.push(i)
             tail
 
-          case (h : ICoqProofEndSentence) :: tail
+          case (h @ ProofEndSentence(_)) :: tail
               if stack.getContext {
                 case f if f.startsWith("proof-") => true
                 case _ => false
@@ -758,7 +722,7 @@ private class CoqVernacFileImpl(
                 new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
             tail
 
-          case (h : ICoqSubproofStartSentence) :: tail =>
+          case (h @ SubproofSentence()) :: tail =>
             stack.pushContext(s"subproof-curly")
             stack.push(h)
             tail
@@ -766,7 +730,7 @@ private class CoqVernacFileImpl(
           /* If we encounter a "}" (and no new proof has started since we saw
            * the corresponding "{"), then close any intervening subproofs
            * before also closing this one */
-          case (h : ICoqSubproofEndSentence) :: tail
+          case (h @ EndSubproofSentence()) :: tail
               if stack.getContext {
                 case f if f == "subproof-curly" => true
                 case f if f.startsWith("proof-") => true
@@ -779,8 +743,8 @@ private class CoqVernacFileImpl(
                 new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
             tail
 
-          case (h : ICoqBulletSentence) :: tail =>
-            val label = s"bullet-${h.getKind}"
+          case (h @ BulletSentence(kind)) :: tail =>
+            val label = s"bullet-$kind"
             if (stack.getContext {
                   case f if f == label => true
                   case f if f == "subproof-curly" => true
@@ -798,7 +762,7 @@ private class CoqVernacFileImpl(
 
           /* Something of the form "Foo. Proof." is probably a proof, even if
            * we don't recognise what "Foo." means (unless it's a comment) */
-          case h :: (i : ICoqProofStartSentence) :: tail =>
+          case h :: (i @ ProofStartSentence(_)) :: tail =>
             /* XXX: scan "h" for a proof identifier? */
             stack.pushContext("proof-baffling")
             stack.push(h)
@@ -921,107 +885,6 @@ private class CoqScriptSentenceImpl(
       notifyListeners(CoqEntitiesChangedEvent(this))
     }
 }
-
-private class CoqLtacSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent) with ICoqLtacSentence
-
-private class CoqFixpointSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqFixpointSentence
-
-private class CoqInductiveSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqInductiveSentence
-
-private class CoqDefinitionSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqDefinitionSentence
-
-private class CoqLoadSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqLoadSentence
-
-private class CoqRequireSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqRequireSentence
-
-private class CoqFromRequireSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqFromRequireSentence
-
-private class CoqDeclareMLSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqDeclareMLSentence
-
-private class CoqAssertionSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqAssertionSentence
-
-private class CoqModuleStartSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqModuleStartSentence
-
-private class CoqSectionStartSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqSectionStartSentence
-
-private class CoqIdentifiedEndSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqIdentifiedEndSentence
-
-private class CoqProofStartSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqProofStartSentence
-
-private class CoqProofEndSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqProofEndSentence
-
-private class CoqSubproofStartSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqSubproofStartSentence
-
-private class CoqSubproofEndSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqSubproofEndSentence
-
-private class CoqBulletSentenceImpl(
-    private val sentence : Sentence,
-    private val parent : ICoqElement with IParent)
-        extends CoqScriptSentenceImpl(sentence, parent)
-            with ICoqBulletSentence
 
 private class CoqScriptGroupImpl(
     val elements : Seq[ICoqScriptElement],
