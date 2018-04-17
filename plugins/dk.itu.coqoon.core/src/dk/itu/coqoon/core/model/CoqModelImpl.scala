@@ -619,14 +619,14 @@ private class CoqVernacFileImpl(
     }
 
     import dk.itu.coqoon.core.coqtop.{CoqSentence, ParserStack}
-    final val sentences = CacheSlot[Seq[ICoqScriptSentence]] {
+    final val sentences = CacheSlot[Seq[ICoqScriptSentence with ReparentableCSE]] {
       val content = contents.get
       val sentences = CoqSentence.getNextSentences(content, 0, content.length)
       sentences.map(s => new CoqScriptSentenceImpl(s, CoqVernacFileImpl.this))
     }
 
-    final val groups = CacheSlot[Seq[ICoqScriptElement]] {
-      val stack = new ParserStack[ICoqScriptElement, String]()
+    final val groups = CacheSlot[Seq[ICoqScriptElement with ReparentableCSE]] {
+      val stack = new ParserStack[ICoqScriptElement with ReparentableCSE, String]()
 
       def _closeUntil(contextLabel : String) = {
         var context = stack.getInnermostContext
@@ -863,12 +863,18 @@ private class DetachedCoqVernacFileImpl(
   }
 }
 
+private trait ReparentableCSE {
+  def reparent(p : ICoqElement with IParent) :
+      ICoqScriptElement with ReparentableCSE
+}
+
 import dk.itu.coqoon.core.coqtop.CoqSentence.Sentence
 import dk.itu.coqoon.core.utilities.Substring
 private class CoqScriptSentenceImpl(
     private val sentence : Sentence,
     private val parent : ICoqElement with IParent)
-        extends CoqElementImpl(None, parent) with ICoqScriptSentence {
+        extends CoqElementImpl(None, parent)
+        with ICoqScriptSentence with ReparentableCSE {
   override lazy val getText = sentence._1.toString
   override lazy val getOffset = sentence._1.start
   override lazy val getLength = sentence._1.length
@@ -884,15 +890,27 @@ private class CoqScriptSentenceImpl(
       this.entities = entities
       notifyListeners(CoqEntitiesChangedEvent(this))
     }
+
+  override def reparent(p : ICoqElement with IParent) : CoqScriptSentenceImpl =
+    if (p != parent) {
+      new CoqScriptSentenceImpl(sentence, p)
+    } else this
 }
 
 private class CoqScriptGroupImpl(
-    val elements : Seq[ICoqScriptElement],
-    val parent : ICoqElement with IParent)
-    extends ParentImpl(None, parent) with ICoqScriptGroup {
+    private val elements_ : Seq[ICoqScriptElement with ReparentableCSE],
+    private val parent : ICoqElement with IParent)
+        extends ParentImpl(None, parent)
+        with ICoqScriptGroup with ReparentableCSE {
+  lazy val elements = elements_.map(_.reparent(this))
   override def getChildren = elements
 
   override def toString = s"CoqScriptGroupImpl(${getDeterminingSentence})"
+
+  def reparent(p : ICoqElement with IParent) : CoqScriptGroupImpl =
+    if (p != parent) {
+      new CoqScriptGroupImpl(elements, p)
+    } else this
 }
 
 private case class CoqObjectFileImpl(
