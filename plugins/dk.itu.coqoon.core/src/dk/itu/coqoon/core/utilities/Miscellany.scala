@@ -16,7 +16,7 @@
 
 package dk.itu.coqoon.core.utilities
 
-class Substring(val base : CharSequence, val start : Int, val end : Int)
+case class Substring(val base : CharSequence, val start : Int, val end : Int)
     extends CharSequence {
   override final lazy val length = end - start
 
@@ -38,8 +38,6 @@ object Substring {
     apply(base, 0, base.length)
   def apply(base : CharSequence, start : Int) : Substring =
     apply(base, start, base.length)
-  def apply(base : CharSequence, start : Int, end : Int) : Substring =
-    new Substring(base, start, end)
 }
 
 object TotalReader {

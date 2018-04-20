@@ -882,6 +882,8 @@ private class CoqScriptSentenceImpl(
     private val parent : ICoqElement with IParent)
         extends CoqElementImpl(None, parent)
         with ICoqScriptSentence with ReparentableCSE {
+  override def properties = super.properties :+ sentence
+
   override lazy val getText = sentence._1.toString
   override lazy val getOffset = sentence._1.start
   override lazy val getLength = sentence._1.length
