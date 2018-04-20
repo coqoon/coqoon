@@ -75,10 +75,37 @@ object CoqEnforcement {
       }
     }
   }
+  object NestedProof extends RunnerProvider {
+    final val ID = "enforcement/nestedProof"
+    def apply(sentence : ICoqScriptSentence) =
+      Issue(NestedProof.ID, sentence,
+          "Nested proofs may lead to anomalous behaviour when Coq is evaluating proofs asynchronously",
+          Severity.Warning)
+    private def isProofGroup(g : ICoqScriptGroup) = {
+      import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier.AssertionSentence
+      AssertionSentence.unapply(g.getDeterminingSentence) != None
+    }
+    override def makeRunner = new Runner
+    class Runner extends CoqEnforcement.Runner {
+      override def getIssues(i : ICoqElement) = {
+        import dk.itu.coqoon.core.utilities.TryCast
+        i match {
+          case g : ICoqScriptGroup if isProofGroup(g) =>
+            if (g.getParent().flatMap(
+                TryCast[ICoqScriptGroup]).exists(isProofGroup)) {
+              val ds = g.getDeterminingSentence
+              Seq((ds, NestedProof(ds)))
+            } else Seq()
+          case s =>
+            Seq()
+        }
+      }
+    }
+  }
 
   def check(f : ICoqVernacFile, context : CoqEnforcementContext) :
       Map[ICoqElement, Map[Issue, Severity]] = {
-    val runners = Seq(IsolatedRequire.makeRunner)
+    val runners = Seq(IsolatedRequire.makeRunner, NestedProof.makeRunner)
 
     import scala.collection.mutable.{Map => MMap}
     var complaints : MMap[ICoqElement, MMap[Issue, Severity]] = MMap()

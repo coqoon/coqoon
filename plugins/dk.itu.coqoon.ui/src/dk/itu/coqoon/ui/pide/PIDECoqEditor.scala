@@ -484,6 +484,8 @@ object PIDEEnforcementContext extends CoqEnforcementContext {
   def getSeverity(i : CoqEnforcement.Issue) = i.id match {
     case CoqEnforcement.IsolatedRequire.ID =>
       CoqEnforcement.Severity.Error
+    case CoqEnforcement.NestedProof.ID =>
+      CoqEnforcement.Severity.Error
     case _ =>
       i.severityHint
   }
