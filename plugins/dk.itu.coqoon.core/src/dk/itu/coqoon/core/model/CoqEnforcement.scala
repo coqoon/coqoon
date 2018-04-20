@@ -38,7 +38,7 @@ object CoqEnforcement {
     object Error extends Severity
   }
   trait Runner {
-    def getIssues(i : ICoqElement) : Seq[Issue]
+    def getIssues(i : ICoqElement) : Seq[(ICoqElement, Issue)]
   }
   trait RunnerProvider {
     def makeRunner() : Runner
@@ -58,7 +58,7 @@ object CoqEnforcement {
         i match {
           case i : ICoqScriptSentence => i match {
             case RequireSentence(_) | FromRequireSentence(_) if requireDone =>
-              Seq(IsolatedRequire(i))
+              Seq((i, IsolatedRequire(i)))
             case RequireSentence(_) | FromRequireSentence(_) =>
               Seq()
             case _ if i.isSynthetic =>
@@ -80,20 +80,19 @@ object CoqEnforcement {
       Map[ICoqElement, Map[Issue, Severity]] = {
     val runners = Seq(IsolatedRequire.makeRunner)
 
-    var complaints : Map[ICoqElement, Map[Issue, Severity]] = Map()
+    import scala.collection.mutable.{Map => MMap}
+    var complaints : MMap[ICoqElement, MMap[Issue, Severity]] = MMap()
     f.accept(element => {
-      val filtered = runners.flatMap(
-          runner => runner.getIssues(element)).flatMap(issue => {
-        val severity = context.getSeverity(issue)
-        if (severity != Severity.Suppressed) {
-          Some((issue, severity))
-        } else None
-      })
-      if (!filtered.isEmpty)
-        complaints += (element -> filtered.toMap)
+      for (r <- runners;
+           (e, issue) <- r.getIssues(element);
+           s = context.getSeverity(issue) if s != Severity.Suppressed)
+        complaints.getOrElseUpdate(e, MMap()).update(issue, s)
       true
     })
-    complaints
+    Map((complaints map {
+      case (el, issues) =>
+        (el, Map(issues.toSeq : _*))
+    }).toSeq : _*)
   }
 }
 
