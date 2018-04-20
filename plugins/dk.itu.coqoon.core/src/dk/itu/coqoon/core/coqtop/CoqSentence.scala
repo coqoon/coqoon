@@ -86,8 +86,8 @@ object CoqSentence {
     steps.result
   }
 
+  import dk.itu.coqoon.core.model.ICoqScriptSentence
   object Classifier {
-    import dk.itu.coqoon.core.model.ICoqScriptSentence
     object LtacSentence {
       val expr = ("(?s)^\\s*Ltac\\s+([a-zA-Z0-9_']+)(.*)\\.$").r
       def unapply(input : String) = input match {
@@ -264,6 +264,11 @@ object CoqSentence {
       }
       def unapply(s : ICoqScriptSentence) : Boolean = unapply(s.getText)
     }
+  }
+  object CollectComments {
+    def unapplySeq[B <: ICoqScriptSentence](
+        input : Seq[B]) : (Seq[B], Seq[B]) =
+      input.splitAt(input.indexWhere(_.isSynthetic == false))
   }
 }
 

@@ -641,69 +641,76 @@ private class CoqVernacFileImpl(
 
       var sentences = this.sentences.get
       while (sentences != Nil) {
+        import dk.itu.coqoon.core.coqtop.CoqSentence.CollectComments
         import dk.itu.coqoon.core.coqtop.CoqSentence.Classifier._
+        def _withoutSynthetic(
+            tail : Seq[ICoqScriptSentence with ReparentableCSE]) = {
+          val (comments, rest) = CollectComments.unapplySeq(tail)
+          comments.foreach(stack.push)
+          rest
+        }
         sentences = sentences match {
           case (h @ SectionStartSentence(id)) :: tail =>
             stack.pushContext(s"section-$id")
             stack.push(h)
-            tail
+            _withoutSynthetic(tail)
           case (h @ IdentifiedEndSentence(id)) :: tail
               if innermostIs(s"section-$id") =>
             stack.push(h)
             val (tag, body) = stack.popContext
             stack.push(new CoqScriptGroupImpl(
                 body.reverse, CoqVernacFileImpl.this))
-            tail
+            _withoutSynthetic(tail)
 
           case (h @ ModuleStartSentence(id)) :: tail =>
             stack.pushContext(s"module-$id")
             stack.push(h)
-            tail
+            _withoutSynthetic(tail)
           case (h @ IdentifiedEndSentence(id)) :: tail
               if innermostIs(s"module-${id}") =>
             stack.push(h)
             val (tag, body) = stack.popContext
             stack.push(
                 new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
-            tail
+            _withoutSynthetic(tail)
 
           case (h @ DefinitionSentence(_)) :: tail =>
             stack.push(h)
-            tail
+            _withoutSynthetic(tail)
           case (h @ LtacSentence(_)) :: tail =>
             stack.push(h)
-            tail
+            _withoutSynthetic(tail)
           case (h @ FixpointSentence(_)) :: tail =>
             stack.push(h)
-            tail
+            _withoutSynthetic(tail)
           case (h @ InductiveSentence(_)) :: tail =>
             stack.push(h)
-            tail
+            _withoutSynthetic(tail)
 
           case (h @ LoadSentence(_)) :: tail =>
             stack.push(h)
-            tail
+            _withoutSynthetic(tail)
           case (h @ RequireSentence(_)) :: tail =>
             stack.push(h)
-            tail
+            _withoutSynthetic(tail)
           case (h @ FromRequireSentence(_)) :: tail =>
             stack.push(h)
-            tail
+            _withoutSynthetic(tail)
           case (h @ DeclareMLSentence(_)) :: tail =>
             stack.push(h)
-            tail
+            _withoutSynthetic(tail)
 
           case (h @ AssertionSentence(_, id, _)) :: tail =>
             stack.pushContext(s"proof-$id")
             stack.push(h)
-            tail
+            _withoutSynthetic(tail)
           case (h @ ProofEndSentence(_)) ::
                (i @ ProofStartSentence(_)) :: tail =>
             /* This isn't really the end of a proof (perhaps Program is being
              * used?) */
             stack.push(h)
             stack.push(i)
-            tail
+            _withoutSynthetic(tail)
 
           case (h @ ProofEndSentence(_)) :: tail
               if stack.getContext {
@@ -720,12 +727,12 @@ private class CoqVernacFileImpl(
             val (tag, body) = stack.popContext
             stack.push(
                 new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
-            tail
+            _withoutSynthetic(tail)
 
           case (h @ SubproofSentence()) :: tail =>
             stack.pushContext(s"subproof-curly")
             stack.push(h)
-            tail
+            _withoutSynthetic(tail)
 
           /* If we encounter a "}" (and no new proof has started since we saw
            * the corresponding "{"), then close any intervening subproofs
@@ -741,7 +748,7 @@ private class CoqVernacFileImpl(
             val (tag, body) = stack.popContext
             stack.push(
                 new CoqScriptGroupImpl(body.reverse, CoqVernacFileImpl.this))
-            tail
+            _withoutSynthetic(tail)
 
           case (h @ BulletSentence(kind)) :: tail =>
             val label = s"bullet-$kind"
@@ -758,7 +765,7 @@ private class CoqVernacFileImpl(
             }
             stack.pushContext(label)
             stack.push(h)
-            tail
+            _withoutSynthetic(tail)
 
           /* Something of the form "Foo. Proof." is probably a proof, even if
            * we don't recognise what "Foo." means (unless it's a comment) */
@@ -767,11 +774,11 @@ private class CoqVernacFileImpl(
             stack.pushContext("proof-baffling")
             stack.push(h)
             stack.push(i)
-            tail
+            _withoutSynthetic(tail)
 
           case h :: tail =>
             stack.push(h)
-            tail
+            _withoutSynthetic(tail)
           case Nil =>
             Nil
         }
