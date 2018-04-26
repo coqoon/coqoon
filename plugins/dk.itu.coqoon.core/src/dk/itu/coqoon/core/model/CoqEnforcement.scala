@@ -62,6 +62,11 @@ object CoqEnforcement {
             case RequireSentence(_) | FromRequireSentence(_) =>
               Seq()
             case _ if i.isSynthetic =>
+              /* Comments are fine */
+              Seq()
+            case SetSentence(_) =>
+              /* Fiddling around with the Coq options at this point is also
+               * fine */
               Seq()
             case _ =>
               requireDone = true
