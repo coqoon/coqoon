@@ -264,6 +264,15 @@ object CoqSentence {
       }
       def unapply(s : ICoqScriptSentence) : Boolean = unapply(s.getText)
     }
+
+    object SetSentence {
+      val expr = ("(?s)^\\s*Set\\s+(.*)\\s*\\.$").r
+      def unapply(input : String) = input match {
+        case expr(what) => Some(what)
+        case _ => None
+      }
+      def unapply(s : ICoqScriptSentence) : Option[String] = unapply(s.getText)
+    }
   }
   object CollectComments {
     def unapplySeq[B <: ICoqScriptSentence](
