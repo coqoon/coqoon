@@ -514,7 +514,7 @@ private class CoqProjectImpl(
       getCache.loadPath.clear
     })
 
-  override def getDefaultOutputLocation : Option[IFolder] = {
+  override def getDefaultOutputLocation : Option[IContainer] = {
     for (DefaultOutputLoadPath(folder) <- getLoadPathProviders)
       return Some(folder)
     res.map(_.getFolder("bin"))
@@ -535,13 +535,13 @@ private class CoqProjectImpl(
 }
 
 private class CoqPackageFragmentRootImpl(
-    val res : Option[IFolder], val parent : ICoqProject)
+    val res : Option[IContainer], val parent : ICoqProject)
     extends ParentImpl(res, parent) with ICoqPackageFragmentRoot {
-  private def gpfRecurse(res : IFolder) : List[ICoqPackageFragment] = {
+  private def gpfRecurse(res : IContainer) : List[ICoqPackageFragment] = {
     var results = List[ICoqPackageFragment]()
     if (res.exists() && res.getName.matches("^[a-zA-Z0-9-_]+$")) {
       results = results :+ new CoqPackageFragmentImpl(Some(res), this)
-      for (i <- res.members; j <- TryCast[IFolder](i))
+      for (i <- res.members; j <- TryCast[IContainer](i))
         results = results ++ gpfRecurse(j)
     }
     results
@@ -555,7 +555,7 @@ private class CoqPackageFragmentRootImpl(
 }
 
 private class CoqPackageFragmentImpl(
-    val res : Option[IFolder], val parent : ICoqPackageFragmentRoot)
+    val res : Option[IContainer], val parent : ICoqPackageFragmentRoot)
     extends ParentImpl(res, parent) with ICoqPackageFragment {
   import CoqPackageFragmentImpl._
 

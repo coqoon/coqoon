@@ -65,9 +65,9 @@ protected object LoadPathModel {
     override def getProvider = AbstractLoadPath(identifier)
   }
 
-  import org.eclipse.core.resources.IFolder
-  case class SourceLPE(parent : Option[LPProvider], folder : IFolder,
-      coqdir : Seq[String], output : Option[IFolder], index : Int)
+  import org.eclipse.core.resources.{IFolder, IContainer}
+  case class SourceLPE(parent : Option[LPProvider], folder : IContainer,
+      coqdir : Seq[String], output : Option[IContainer], index : Int)
       extends LPProvider(parent, index) {
     override def getChildren =
       Seq(OutputSLPE(Some(this), output), NamespaceSLPE(Some(this), coqdir))
@@ -76,7 +76,7 @@ protected object LoadPathModel {
   }
 
   case class DefaultOutputLPE(parent : Option[LPProvider],
-      folder : IFolder, index : Int) extends LPProvider(parent, index) {
+      folder : IContainer, index : Int) extends LPProvider(parent, index) {
     override def getProvider = DefaultOutputLoadPath(folder)
   }
 
@@ -98,7 +98,7 @@ protected object LoadPathModel {
   }
 
   case class OutputSLPE(parent : Option[LPProvider],
-      output : Option[IFolder]) extends LPBase(parent)
+      output : Option[IContainer]) extends LPBase(parent)
   case class NamespaceSLPE(parent : Option[LPProvider],
       coqdir : Seq[String]) extends LPBase(parent)
   case class LocationSLPE(parent : Option[LPProvider],

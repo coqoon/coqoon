@@ -329,7 +329,7 @@ class CoqBuilder extends IncrementalProjectBuilder {
   }
 
   override protected def clean(monitor : IProgressMonitor) = {
-    def deleteObjects(f : IFolder) = if (f.exists)
+    def deleteObjects(f : IContainer) = if (f.exists)
       traverse[IFile](f,
           a => TryCast[IFile](a).flatMap(extensionFilter("vo", "vio")),
           a => a.delete(IResource.NONE, monitor))
@@ -363,11 +363,11 @@ class CoqBuilder extends IncrementalProjectBuilder {
     /* Make sure that the output directories are marked as derived (XXX: when,
      * if ever, should the derived flag be cleared?) */
     for (i <- coqProject.get.getLoadPathProviders) i match {
-      case DefaultOutputLoadPath(bin) =>
+      case DefaultOutputLoadPath(bin : IFolder) =>
         if (!bin.exists()) {
           bin.create(IResource.FORCE | IResource.DERIVED, true, null)
         } else bin.setDerived(true, null)
-      case SourceLoadPath(_, Some(bin), _) =>
+      case SourceLoadPath(_, Some(bin : IFolder), _) =>
         if (!bin.exists()) {
           bin.create(IResource.FORCE | IResource.DERIVED, true, null)
         } else bin.setDerived(true, null)

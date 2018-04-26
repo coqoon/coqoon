@@ -124,11 +124,11 @@ class SourceLoadPathProvider extends LoadPathImplementationProvider {
   override def getName() = "Source"
 }
 object SourceLoadPathProvider {
-  import org.eclipse.core.resources.IFolder
+  import org.eclipse.core.resources.IContainer
 
   case class Implementation(
-      private val provider : SourceLoadPathProvider, val folder : IFolder,
-      val output : Option[IFolder], val coqdir : Seq[String])
+      private val provider : SourceLoadPathProvider, val folder : IContainer,
+      val output : Option[IContainer], val coqdir : Seq[String])
       extends LoadPathImplementation {
     override def getProvider() : LoadPathImplementationProvider = provider
 
@@ -145,8 +145,8 @@ object SourceLoadPathProvider {
   }
 
   import dk.itu.coqoon.core.project.CoqProjectEntry.escape
-  def makeIdentifier(
-      folder : IFolder, output : Option[IFolder], coqdir : Seq[String]) = {
+  def makeIdentifier(folder : IContainer,
+      output : Option[IContainer], coqdir : Seq[String]) = {
     val parts = Seq(folder.getProject.getName,
         folder.getProjectRelativePath.toString,
         output.map(_.getProjectRelativePath.toString).getOrElse(""),
@@ -178,11 +178,11 @@ class DefaultOutputLoadPathProvider extends LoadPathImplementationProvider {
   override def getName() = "Default output"
 }
 object DefaultOutputLoadPathProvider {
-  import org.eclipse.core.resources.IFolder
+  import org.eclipse.core.resources.IContainer
 
   case class Implementation(
       private val provider : DefaultOutputLoadPathProvider,
-      val folder : IFolder) extends LoadPathImplementation {
+      val folder : IContainer) extends LoadPathImplementation {
     override def getProvider(): DefaultOutputLoadPathProvider = provider
 
     import dk.itu.coqoon.core.project.CoqProjectEntry.escape
@@ -197,7 +197,7 @@ object DefaultOutputLoadPathProvider {
   }
 
   import dk.itu.coqoon.core.project.CoqProjectEntry.escape
-  def makeIdentifier(folder : IFolder) = {
+  def makeIdentifier(folder : IContainer) = {
     val parts = Seq(folder.getProject.getName,
         folder.getProjectRelativePath.toString)
     s"default-output:" + parts.map(escape).mkString(" ")

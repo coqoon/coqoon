@@ -24,7 +24,7 @@ import dk.itu.coqoon.core.utilities.TryCast
 import org.eclipse.core.runtime.{IPath, Path, IProgressMonitor}
 import org.eclipse.core.resources.{
   IResource, IProjectDescription, ICommand,
-  IFile, IFolder, IProject, IWorkspace, IWorkspaceRoot}
+  IFile, IFolder, IProject, IContainer, IWorkspace, IWorkspaceRoot}
 
 trait IParent {
   def getChildren() : Seq[ICoqElement]
@@ -254,7 +254,7 @@ object ProjectLoadPath {
 
 object SourceLoadPath {
   import SourceLoadPathProvider._
-  def apply(folder : IFolder, output : Option[IFolder] = None,
+  def apply(folder : IContainer, output : Option[IContainer] = None,
       coqdir : Seq[String] = Nil) =
     LoadPathProvider(makeIdentifier(folder, output, coqdir))
   def unapply(p : LoadPathProvider) =
@@ -264,7 +264,7 @@ object SourceLoadPath {
 
 object DefaultOutputLoadPath {
   import DefaultOutputLoadPathProvider._
-  def apply(folder : IFolder) =
+  def apply(folder : IContainer) =
     LoadPathProvider(makeIdentifier(folder))
   def unapply(p : LoadPathProvider) =
     p.getImplementation.flatMap(TryCast[Implementation]).map(
@@ -480,7 +480,7 @@ trait ICoqProject extends ICoqElement with IParent {
   def getLocalOverrides() : Map[IPath, IPath]
   def setLocalOverrides(overrides : Map[IPath, IPath])
 
-  def getDefaultOutputLocation() : Option[IFolder]
+  def getDefaultOutputLocation() : Option[IContainer]
 
   def getPackageFragmentRoot(folder : IPath) : ICoqPackageFragmentRoot
   def getPackageFragmentRoots() : Seq[ICoqPackageFragmentRoot]
@@ -525,7 +525,7 @@ object ICoqProject {
 }
 
 trait ICoqPackageFragmentRoot extends ICoqElement with IParent {
-  override def getCorrespondingResource : Option[IFolder]
+  override def getCorrespondingResource : Option[IContainer]
   override def getParent : Option[ICoqProject]
 
   def getPackageFragment(folder : IPath) : ICoqPackageFragment
@@ -536,7 +536,7 @@ trait ICoqPackageFragmentRoot extends ICoqElement with IParent {
 }
 
 trait ICoqPackageFragment extends ICoqElement with IParent {
-  override def getCorrespondingResource : Option[IFolder]
+  override def getCorrespondingResource : Option[IContainer]
   override def getParent : Option[ICoqPackageFragmentRoot]
 
   def getCoqdir() : Option[Seq[String]]
