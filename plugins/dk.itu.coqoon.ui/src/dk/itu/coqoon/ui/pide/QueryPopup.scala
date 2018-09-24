@@ -46,17 +46,18 @@ class QueryPopup(
   }
 
   import dk.itu.coqoon.ui.utilities.UIUtils
-  override def onResult(result : Either[String, String]) =
+  override def onResult(result : Seq[Either[String, String]]) =
     UIUtils.asyncExec {
-      val (message, styler) =
-        result match {
+      result.foreach(r => {
+        val (message, styler) = r match {
           case Left(error) =>
             (error, Stylers.Error)
           case Right(result) =>
             (result, Stylers.Result)
         }
-      editor.queryHistory :+= (message + "\n", styler)
-      appendResult(message + "\n", styler)
+        editor.queryHistory :+= (message + "\n", styler)
+        appendResult(message + "\n", styler)
+      })
       (queryButton.toSeq ++ queryText.toSeq).filterNot(
           _.isDisposed).foreach(_.setEnabled(true))
       (getShell +: queryResults.toSeq).filterNot(

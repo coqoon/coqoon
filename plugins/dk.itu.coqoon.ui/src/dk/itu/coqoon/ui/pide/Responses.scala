@@ -27,18 +27,18 @@ object Responses {
     _extract(markupTree)
   }
 
-  /* The left-hand side of this Either is an error message, and the right is
-   * a normal status message. */
+  /* The left-hand sides of the returned Eithers are error messages, and the
+   * right sides are normal status messages. */
   def extractQueryResult(snapshot : Document.Snapshot,
-      command : isabelle.Command, queryID_ : Long) : Option[Either[String, String]] = {
+      command : isabelle.Command, queryID_ : Long) : Seq[Either[String, String]] = {
     val queryID = queryID_.toString
 
     import isabelle.XML.Elem
-    val results = (extractResults(snapshot, command) collect {
+    val results = extractResults(snapshot, command) collect {
       case (_, e @ Elem(Markup(Markup.RESULT, properties), _))
           if properties.contains(Markup.INSTANCE -> queryID) =>
         e
-    })
+    }
 
     val finished = results exists {
       case XML.Elem(_, List(XML.Elem(Markup(Markup.STATUS, _),
@@ -50,7 +50,7 @@ object Responses {
 
     if (finished) {
       val r =
-        results collectFirst {
+        results collect {
           case XML.Elem(_, List(XML.Elem(Markup(Markup.ERROR, _),
               List(t : XML.Text)))) =>
             Left(t.content.trim)
@@ -58,8 +58,16 @@ object Responses {
               List(t : XML.Text)))) =>
             Right(t.content.trim)
         }
-      r.orElse(Some(Left("Query finished without producing output")))
-    } else None
+      if (!r.isEmpty) {
+        if (r.forall(_.isRight)) {
+          r
+        } else {
+          /* If there was *any* error output, then suppress the normal output;
+           * Coq has a tendency to copy errors as normal status messages */
+          r.filter(_.isLeft)
+        }
+      } else Seq(Left("Query finished without producing output"))
+    } else Seq()
   }
 
   def extractResults(snapshot : Document.Snapshot,

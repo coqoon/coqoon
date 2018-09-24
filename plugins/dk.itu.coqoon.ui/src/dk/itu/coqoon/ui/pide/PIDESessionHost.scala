@@ -53,8 +53,9 @@ trait PIDESessionHost extends OverlayRunner {
         overlay match {
           case Some((o @ Overlay(command, _, _), listener))
               if changed.commands.contains(command) =>
-            Responses.extractQueryResult(
-                ls.get, command, o.id).foreach(listener.onResult)
+            val result = Responses.extractQueryResult(ls.get, command, o.id)
+            if (!result.isEmpty)
+              listener.onResult(result)
           case _ =>
         }
       case _ =>

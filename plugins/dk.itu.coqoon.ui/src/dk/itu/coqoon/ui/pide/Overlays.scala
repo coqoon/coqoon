@@ -23,7 +23,7 @@ trait OverlayRunner {
 }
 
 trait OverlayListener {
-  def onResult(result : Either[String, String])
+  def onResult(result : Seq[Either[String, String]])
 }
 
 object Queries {
