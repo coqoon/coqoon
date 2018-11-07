@@ -25,17 +25,20 @@ class TransitionTracker(
   import scala.collection.mutable.ListBuffer
   private var trace : ListBuffer[(automaton.Execution, Int)] = ListBuffer()
 
+  type Diff =
+    (IRegion, Seq[(automaton.Execution, Int)], Seq[(automaton.Execution, Int)])
+
   def update(offset : Int,
-      length : Int, replacedBy : Int, document : String) : IRegion =
+      length : Int, replacedBy : Int, document : String) : Diff =
     update(offset, length, replacedBy, document.charAt, document.length)
 
   def update(offset : Int,
-      length : Int, replacedBy : Int, document : IDocument) : IRegion =
+      length : Int, replacedBy : Int, document : IDocument) : Diff =
     update(
         offset, length, replacedBy, document.getChar, document.getLength)
 
   def update(offset : Int, length : Int, replacedBy : Int,
-      charAt : Int => Char, totalLength : Int) : IRegion = {
+      charAt : Int => Char, totalLength : Int) : Diff = {
     var traceFragment : ListBuffer[(automaton.Execution, Int)] = ListBuffer()
 
     /* If we already have a view of the executions in the document, then
@@ -147,14 +150,15 @@ class TransitionTracker(
       val firstIndex = beginAt.map(_._1).getOrElse(0)
       val lastIndex = oldState.map(_._1 + 1).getOrElse(trace.length)
       if (this.trace.view(firstIndex, lastIndex) != traceFragment) {
+        val old = this.trace.slice(firstIndex, (lastIndex - firstIndex)).toList
         this.trace.remove(firstIndex, (lastIndex - firstIndex))
         this.trace.insertAll(firstIndex, traceFragment)
-        Region(offset, length = position - offset)
+        (Region(offset, length = position - offset), old, traceFragment.toList)
       } else {
         /* Replacing a fragment with itself is a contentless change */
-        Region(offset, length = 0)
+        (Region(offset, length = 0), Seq(), Seq())
       }
-    } else Region(offset, length = 0)
+    } else (Region(offset, length = 0), Seq(), Seq())
   }
   def clear() = trace.clear
 

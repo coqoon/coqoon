@@ -109,7 +109,7 @@ Qed.
       val d = new TransitionTracker(CoqRecogniser, CoqRecogniser.States.coq)
       def upd(pos : Int, len : Int, content : String) = {
         rep = rep.substring(0, pos) + content + rep.substring(pos + len)
-        val r = d.update(pos, len, content.length, rep)
+        val (r, _, _) = d.update(pos, len, content.length, rep)
         if (r.getLength > 0)
           println(s"  update modified transitions in region $r")
         r
@@ -162,7 +162,7 @@ private object TransitionTrackerExecutionResizingBug {
     var rep = ""
     def upd(pos : Int, len : Int, content : String) = {
       rep = rep.substring(0, pos) + content + rep.substring(pos + len)
-      val r = d.update(pos, len, content.length, rep)
+      val (r, _, _) = d.update(pos, len, content.length, rep)
       if (r.getLength > 0)
         println(s"  update modified transitions in region $r")
       r

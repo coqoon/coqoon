@@ -36,8 +36,8 @@ class TransitionPartitioner(
 
   def connect(d : IDocument, delayInitialisation : Boolean) = {
     document = Option(d)
-    tracker.update(0, 0, d.getLength, d.getChar, d.getLength)
-    recomputeRegions(tracker.getExecutions)
+    val r = tracker.update(0, 0, d.getLength, d.getChar, d.getLength)
+    recomputeRegions(tracker.getExecutions, r)
   }
   def disconnect() = {
     regions = Array()
@@ -52,12 +52,12 @@ class TransitionPartitioner(
   def documentChanged2(ev : DocumentEvent) : IRegion = {
     val r = tracker.update(
         ev.fOffset, ev.fLength, ev.fText.length, ev.fDocument)
-    recomputeRegions(tracker.getExecutions)
-    r
+    recomputeRegions(tracker.getExecutions, r)
+    r._1
   }
     
   import TransitionPartitioner.{Rule, Transition}
-  private def recomputeRegions(s_ : Seq[Transition]) = {
+  private def recomputeRegions(s_ : Seq[Transition], d : tracker.Diff) = {
     var transitions = s_
 
     var regions = Seq[(String, Int)]()
