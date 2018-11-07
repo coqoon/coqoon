@@ -268,6 +268,12 @@ object UIXML {
         CommonListeners(x \@ "kind").foreach(handler =>
             handler(context, x.asInstanceOf[xml.Elem], names))
         None
+      case (parent : widgets.Combo, xml.Elem(_, "entry", _, _, _*)) =>
+        val text = juice(x)
+        parent.add(text)
+        if (x \@ "selected" == "true")
+          parent.setText(text)
+        None
 
       /* If the context is a viewer, and this element has no particular
        * significance for viewers, try to interpret it again using the viewer's
