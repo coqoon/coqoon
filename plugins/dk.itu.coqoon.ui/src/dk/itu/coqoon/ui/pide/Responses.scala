@@ -27,10 +27,11 @@ object Responses {
     _extract(markupTree)
   }
 
-  /* The left-hand sides of the returned Eithers are error messages, and the
-   * right sides are normal status messages. */
+  /* The left-hand side of the returned Either is a single error message, and
+   * the right side contains (potentially many) normal response messages. */
   def extractQueryResult(snapshot : Document.Snapshot,
-      command : isabelle.Command, queryID_ : Long) : Seq[Either[String, String]] = {
+      command : isabelle.Command, queryID_ : Long) :
+      Either[String, Seq[String]] = {
     val queryID = queryID_.toString
 
     import isabelle.XML.Elem
@@ -59,15 +60,22 @@ object Responses {
             Right(t.content.trim)
         }
       if (!r.isEmpty) {
-        if (r.forall(_.isRight)) {
-          r
-        } else {
-          /* If there was *any* error output, then suppress the normal output;
-           * Coq has a tendency to copy errors as normal status messages */
-          r.filter(_.isLeft)
+        r collectFirst {
+          case Left(e) => e
+        } match {
+          case Some(error) =>
+            Left(error)
+          case None =>
+            Right(r.flatMap(_.right.toOption))
         }
-      } else Seq(Left("Query finished without producing output"))
-    } else Seq()
+      } else Left("Query finished without producing output")
+    } else {
+      /* I really don't know what to do in this case: if the command has
+       * changed, why wasn't there any indication in the markup? To avoid
+       * hanging the query and leaving the overlay in an inconsistent state, I
+       * suppose returning *some*thing is preferable... */
+      Left("Query did not finish normally")
+    }
   }
 
   def extractResults(snapshot : Document.Snapshot,

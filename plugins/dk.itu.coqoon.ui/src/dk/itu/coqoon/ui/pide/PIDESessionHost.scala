@@ -53,9 +53,10 @@ trait PIDESessionHost extends OverlayRunner {
         overlay match {
           case Some((o @ Overlay(command, _, _), listener))
               if changed.commands.contains(command) =>
-            val result = Responses.extractQueryResult(ls.get, command, o.id)
-            if (!result.isEmpty)
-              listener.onResult(result)
+            /* XXX: what if the command has *changed* but not finished? (Is
+             * this a possibility?) */
+            listener.onResult(
+                Responses.extractQueryResult(ls.get, command, o.id))
           case _ =>
         }
       case _ =>

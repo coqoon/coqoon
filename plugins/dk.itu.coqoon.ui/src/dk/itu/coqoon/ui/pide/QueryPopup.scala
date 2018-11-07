@@ -38,26 +38,20 @@ class QueryPopup(
     editor.setOverlay(Some((Queries.coq_query(command, query), this)))
     (getShell +: queryResults.toSeq).filterNot(
           _.isDisposed).foreach(_.setCursor(busyCursor.get))
-    val (message, styler) = (query + "\n", Stylers.Query)
-    editor.queryHistory :+= (message, styler)
-    appendResult(message, styler)
+    appendResult(query, Stylers.Query, true)
     (queryButton.toSeq ++ queryText.toSeq).filterNot(
         _.isDisposed).foreach(_.setEnabled(false))
   }
 
   import dk.itu.coqoon.ui.utilities.UIUtils
-  override def onResult(result : Seq[Either[String, String]]) =
+  override def onResult(result : Either[String, Seq[String]]) =
     UIUtils.asyncExec {
-      result.foreach(r => {
-        val (message, styler) = r match {
-          case Left(error) =>
-            (error, Stylers.Error)
-          case Right(result) =>
-            (result, Stylers.Result)
-        }
-        editor.queryHistory :+= (message + "\n", styler)
-        appendResult(message + "\n", styler)
-      })
+      result match {
+        case Left(error) =>
+          appendResult(error, Stylers.Error, true)
+        case Right(results) =>
+          results.foreach(appendResult(_, Stylers.Result, true))
+      }
       (queryButton.toSeq ++ queryText.toSeq).filterNot(
           _.isDisposed).foreach(_.setEnabled(true))
       (getShell +: queryResults.toSeq).filterNot(
@@ -66,7 +60,11 @@ class QueryPopup(
       editor.setOverlay(None)
     }
 
-  def appendResult(result: String, styler: StyledString.Styler) = {
+  def appendResult(result_ : String, styler : StyledString.Styler,
+      addToHistory : Boolean = false) = {
+    val result = result_ + "\n"
+    if (addToHistory)
+      editor.queryHistory :+= (result_, styler)
     queryResults.foreach(qr => {
       val scroll = (qr.getCaretOffset == qr.getText.length)
       val oldEnd = qr.getText.length
