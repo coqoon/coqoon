@@ -1,4 +1,4 @@
-package dk.itu.coqoon.core.coqtop
+package dk.itu.coqoon.core.coqtop.ideslave
 
 object CoqTypes {
   /* This is just a Scala translation of lib/interface.mli */

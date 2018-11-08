@@ -14,7 +14,7 @@
  * License for the specific language governing permissions and limitations
  * under the License. */
 
-package dk.itu.coqoon.core.coqtop
+package dk.itu.coqoon.core.coqtop.ideslave
 
 trait CoqTopIdeSlave {
   def version : String

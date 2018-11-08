@@ -9,7 +9,7 @@ package dk.itu.coqoon.ui
 
 import dk.itu.coqoon.ui.utilities.{UIUtils, EclipseConsole}
 import dk.itu.coqoon.core.{ManifestIdentifiers => CMI}
-import dk.itu.coqoon.core.coqtop.CoqTypes
+import dk.itu.coqoon.core.coqtop.ideslave.CoqTypes
 import dk.itu.coqoon.core.utilities.{
   JobBase, JobRunner, ObjectRule, JobUtilities}
 

@@ -9,7 +9,7 @@ package dk.itu.coqoon.ui.pide
 
 object Responses {
   import isabelle._
-  import dk.itu.coqoon.core.coqtop.CoqTypes
+  import dk.itu.coqoon.core.coqtop.ideslave.CoqTypes
   def extractMarkup(snapshot : Document.Snapshot,
       command : isabelle.Command) : Seq[(Text.Range, XML.Elem)] = {
     def _extract(t : Markup_Tree) : Seq[(Text.Range, XML.Elem)] = {
@@ -96,7 +96,7 @@ object Responses {
   /* For the time being, we convert exciting new PIDE data into boring old
    * -ideslave-8.4 data, to make it easier to support both at once. */
   private object GoalAssist {
-    import dk.itu.coqoon.core.coqtop.CoqTypes
+    import dk.itu.coqoon.core.coqtop.ideslave.CoqTypes
     def extractGoalList(e : Tree) : List[CoqTypes.goal] = e match {
       case e : Elem =>
         e.body.flatMap(extractGoal)

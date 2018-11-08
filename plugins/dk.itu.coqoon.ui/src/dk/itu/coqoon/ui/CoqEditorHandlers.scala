@@ -8,7 +8,8 @@
 package dk.itu.coqoon.ui
 
 import dk.itu.coqoon.ui.utilities.UIUtils
-import dk.itu.coqoon.core.coqtop.{CoqTypes, CoqSentence}
+import dk.itu.coqoon.core.coqtop.CoqSentence
+import dk.itu.coqoon.core.coqtop.ideslave.CoqTypes
 import dk.itu.coqoon.core.utilities.{TryCast, Substring}
 import org.eclipse.ui.IEditorPart
 

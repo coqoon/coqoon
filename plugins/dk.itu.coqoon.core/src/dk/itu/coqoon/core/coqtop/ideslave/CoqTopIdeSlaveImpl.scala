@@ -14,9 +14,10 @@
  * License for the specific language governing permissions and limitations
  * under the License. */
 
-package dk.itu.coqoon.core.coqtop
+package dk.itu.coqoon.core.coqtop.ideslave
 
 import dk.itu.coqoon.core.debug.CoqoonDebugPreferences
+import dk.itu.coqoon.core.coqtop.{CoqProgram, CoqProgramInstance}
 
 class OptionCache(ct : CoqTopIdeSlave_v20120710) {
   import CoqTypes._
@@ -114,8 +115,8 @@ private class CoqTopIdeSlaveImpl(
     Elem(null, "bool", attr("val", a.toString), scala.xml.TopScope, true)
 
   private def unwrapBoolean(e : Elem) = e.attribute("val") match {
-  	case Some(Seq(Text(a))) => a.trim.toBoolean
-  	case _ => false
+    case Some(Seq(Text(a))) => a.trim.toBoolean
+    case _ => false
   }
 
   private def unwrapValue[A](e : Elem, f : Elem => A) : CoqTypes.value[A] = {

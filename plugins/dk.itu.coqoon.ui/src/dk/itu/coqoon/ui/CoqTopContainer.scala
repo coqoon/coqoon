@@ -1,6 +1,6 @@
 package dk.itu.coqoon.ui
 
-import dk.itu.coqoon.core.coqtop.{CoqTypes, CoqTopIdeSlave_v20120710}
+import dk.itu.coqoon.core.coqtop.ideslave.{CoqTypes, CoqTopIdeSlave_v20120710}
 import dk.itu.coqoon.core.utilities.TryCast
 
 trait CoqContainer {

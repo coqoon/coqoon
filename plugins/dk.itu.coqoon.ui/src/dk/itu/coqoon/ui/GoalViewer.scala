@@ -1,7 +1,7 @@
 package dk.itu.coqoon.ui
 
 import dk.itu.coqoon.ui.utilities.UIUtils.asyncExec
-import dk.itu.coqoon.core.coqtop.CoqTypes
+import dk.itu.coqoon.core.coqtop.ideslave.CoqTypes
 import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}
 
 import org.eclipse.swt.widgets.{Text, Control, Composite}

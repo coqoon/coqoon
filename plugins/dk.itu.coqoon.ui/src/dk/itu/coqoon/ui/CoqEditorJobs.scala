@@ -3,7 +3,7 @@ package dk.itu.coqoon.ui
 import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core
 import dk.itu.coqoon.core.model.ICoqModel
-import dk.itu.coqoon.core.coqtop.CoqTypes
+import dk.itu.coqoon.core.coqtop.ideslave.CoqTypes
 import dk.itu.coqoon.core.utilities.JobRunner
 
 import org.eclipse.core.runtime.{IProgressMonitor, IStatus, Status, SubMonitor}
