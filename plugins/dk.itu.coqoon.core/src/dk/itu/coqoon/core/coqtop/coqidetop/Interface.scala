@@ -88,7 +88,7 @@ object Interface {
     private def _attr(e : Elem, a : String) =
       Option(e \@ a).filterNot(_.isEmpty)
     private def _elch(e : Elem) = e.child.filter(_.isInstanceOf[Elem])
-    def unwrapValue[A](a : Elem => A)(e : Elem) =
+    def unwrapValue[A](a : Elem => A)(e : Elem) : value[A] =
       (_attr(e, "val"), _elch(e)) match {
         case (Some("good"), Seq(c : Elem)) =>
           Good(a(c))
@@ -122,6 +122,15 @@ object Interface {
         case Some("false") => false
       }
 
+    def unwrapList[A](a : Elem => A)(e : Elem) =
+      e.child.map(_.asInstanceOf[Elem]).map(a).toList
+    def unwrapOption[A](a : Elem => A)(e : Elem) =
+      _attr(e, "val") match {
+        case Some("some") =>
+          Some(a(e.child(0).asInstanceOf[Elem]))
+        case _ =>
+          None
+      }
     def wrapPair[A, B](a : A => Elem, b : B => Elem)(v : (A, B)) =
       <pair>{a(v._1)}{b(v._2)}</pair>
     def unwrapPair[A, B](a : Elem => A, b : Elem => B)(e : Elem) =
@@ -137,56 +146,20 @@ object Interface {
         case Right(r) =>
           <union val="in_r">{b(r)}</union>
       }
-    def unwrapUnion[A, B](a : Elem => A, b : Elem => B)(e : Elem) =
+    def unwrapUnion[A, B](a : Elem => A, b : Elem => B)(e : Elem) : Either[A, B] =
       (_attr(e, "val"), _elch(e)) match {
         case (Some("in_l"), Seq(c : Elem)) =>
-          a(c)
+          Left(a(c))
         case (Some("in_r"), Seq(c : Elem)) =>
-          b(c)
+          Right(b(c))
       }
-  }
 
-  import XML._
-  
-  def wrapAddCall(stateId : Integer, command : String, v : verbose) =
-    <call val="Add">{wrapPair(wrapPair(wrapString, wrapInt), wrapPair(wrapStateId, wrapBoolean))((command, 1), (stateId, v))}</call>
-  def unwrapAddResponse(e : Elem) =
-    unwrapValue(unwrapPair(unwrapStateId, unwrapPair(unwrapUnion(unwrapUnit, unwrapStateId), unwrapString)))(e)
-  
-  val good1 =
-    <value val="good">
-      <pair>
-        <state_id val="98"/>
-        <pair>
-          <union val="in_l"><unit/></union>
-          <string>Added to the thing.</string>
-        </pair>
-      </pair>
-    </value>
-  val good2 =
-    <value val="good">
-      <pair>
-        <state_id val="98"/>
-        <pair>
-          <union val="in_r"><state_id val="101"/></union>
-          <string>Added to the other thing.</string>
-        </pair>
-      </pair>
-    </value>
-  val fail1 =
-    <value val="fail"
-        loc_s="4"
-        loc_e="10">
-      <state_id val="98"/>
-      <richpp>This isn't good.</richpp>
-    </value>
-  val fail2 =
-    <value val="fail">
-      <state_id val="98"/>
-      <richpp>That wasn't good.</richpp>
-    </value>
-  def main(args : Array[String]) : Unit = {
-    println(wrapAddCall(1, "Set Printing All.", true))
-    Seq(good1, good2, fail1, fail2).foreach(e => println(unwrapAddResponse(e)))
+    def unwrapStatus(e : Elem) : status = e.child match {
+      case Seq(a : Elem, b : Elem, c : Elem, d : Elem) =>
+        status(unwrapList(unwrapString)(a),
+            unwrapOption(unwrapString)(b),
+            unwrapList(unwrapString)(c),
+            unwrapInt(d))
+    }
   }
 }
