@@ -141,7 +141,8 @@ object CoqoonPreferences {
     import dk.itu.coqoon.core.project.CoqProjectFile.shellTokenise
 
     final val ID = "extraarguments"
-    def get() =
-      shellTokenise(Activator.getDefault.getPreferenceStore.getString(ID))
+    def get() = shellTokenise(
+      Option(Activator.getDefault).map(
+          act => act.getPreferenceStore().getString(ID)).getOrElse(""))
   }
 }

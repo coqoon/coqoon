@@ -77,7 +77,7 @@ object CoqoonDebugPreferences {
   class ChannelPreference(id : String, name : String, description : String)
       extends BooleanPreference(id, false, name, s"$description ($id)") {
     def log(text : String) =
-      if (get()) {
+      if (Activator.getDefault != null && get()) {
         val dummy =
           if (!SuppressStackTraces.get) {
             new Exception("(dummy stack trace exception)").fillInStackTrace
