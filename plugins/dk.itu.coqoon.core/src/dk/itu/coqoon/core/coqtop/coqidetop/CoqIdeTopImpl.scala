@@ -118,7 +118,13 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
   def about() = unwrapAboutResponse(send(wrapAboutCall))
   def add(stateId : Integer, command : String, v : Interface.verbose) =
     unwrapAddResponse(send(wrapAddCall(stateId, command, v)))
+  def editAt(stateId : Integer) =
+    unwrapEditAtResponse(send(wrapEditAtCall(stateId)))
   def goal() = unwrapGoalResponse(send(wrapGoalCall))
+  def init(scriptPath : Option[String]) =
+    unwrapInitResponse(send(wrapInitCall(scriptPath)))
+  def query(routeId : Integer, query : String, stateId : Integer) =
+    unwrapQueryResponse(send(wrapQueryCall(routeId, query, stateId)))
   def status(force : Boolean) =
     unwrapStatusResponse(send(wrapStatusCall(force)))
 }
@@ -142,11 +148,33 @@ private object CoqIdeTopImpl {
         unwrapStateId, unwrapPair(
             unwrapUnion(unwrapUnit, unwrapStateId), unwrapString)))(e)
 
+  def wrapEditAtCall(stateId : Integer) =
+    <call val="EditAt">{
+    wrapStateId(stateId)}</call>
+  def unwrapEditAtResponse(e : Elem) =
+    unwrapValue(unwrapUnion(
+        unwrapUnit, unwrapPair(unwrapStateId, unwrapPair(
+            unwrapStateId, unwrapStateId))))(e)
+
   def wrapGoalCall() =
     <call val="Goal">{
     wrapUnit()}</call>
   def unwrapGoalResponse(e : Elem) =
     unwrapValue(unwrapOption(unwrapGoals))(e)
+
+  def wrapInitCall(scriptPath : Option[String]) =
+    <call val="Init">{
+    wrapOption(wrapString)(scriptPath)
+    }</call>
+  def unwrapInitResponse(e : Elem) =
+    unwrapValue(unwrapStateId)(e)
+
+  def wrapQueryCall(rid : Int, query : String, sid : Int) =
+    <call val="Query">{
+    wrapPair(wrapRouteId, wrapPair(wrapString, wrapStateId))(
+        rid, (query, sid))}</call>
+  def unwrapQueryResponse(e : Elem) =
+    unwrapValue(unwrapString)(e)
 
   def wrapStatusCall(force : Boolean) =
     <call val="Status">{
@@ -196,18 +224,21 @@ object CoqIdeTopImplTest {
   def main(args : Array[String]) : Unit = {
     val a = new CoqIdeTopImpl(Seq())
     var head = 1
+    a.init(None)
     println(a.about())
     document foreach {
       case s =>
         a.add(head, s, true) match {
           case Interface.Good((newHead, (Left(()), c))) =>
             head = newHead
+            println(a.goal)
             a.status(true) match {
               case Interface.Good(Interface.status(_, Some(p), _, _)) =>
                 println(s"Now editing proof $p")
                 println(a.goal)
               case _ =>
             }
+            println(a.query(1, "Check I.", newHead))
           case Interface.Fail((s, l, e)) =>
             println(e)
         }

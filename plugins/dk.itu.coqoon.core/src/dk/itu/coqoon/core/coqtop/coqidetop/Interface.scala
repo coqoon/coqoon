@@ -125,6 +125,8 @@ object Interface {
     def wrapStateId(a : state_id) = <state_id val={a.toString} />
     def unwrapStateId(e : Elem) : state_id = _attr(e, "val").get.toInt
 
+    def wrapRouteId(a : route_id) = <route_id val={a.toString} />
+
     def wrapBoolean(a : Boolean) = <bool val={a.toString} />
     def unwrapBoolean(e : Elem) =
       _attr(e, "val") match {
@@ -134,6 +136,14 @@ object Interface {
 
     def unwrapList[A](a : Elem => A)(e : Elem) =
       e.child.map(_.asInstanceOf[Elem]).map(a).toList
+
+    def wrapOption[A](a : A => Elem)(v : Option[A]) =
+      v match {
+        case Some(u) =>
+          <option val="some">{a(u)}</option>
+        case None =>
+          <option val="none" />
+      }
     def unwrapOption[A](a : Elem => A)(e : Elem) =
       _attr(e, "val") match {
         case Some("some") =>
