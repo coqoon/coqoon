@@ -54,6 +54,7 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
     ReaderThread.ValueLock synchronized {
       import ReaderThread.ValueLock._
       replyAwaited = true
+      println("-> " + e.toString)
       pr.get.stdin.write(e.toString)
       pr.get.stdin.flush
       while (value.isEmpty)
@@ -91,7 +92,6 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
           if (sofar.endsWith(">")) {
             try {
               val doc = CoqOutputParser.parse(sofar)
-              println(doc.children(0))
               Some(doc.children(0).asInstanceOf[Elem])
             } catch {
               case e : scala.xml.parsing.FatalError =>
@@ -100,6 +100,7 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
           } else _util(sofar)
         }
         val elem = _util().get
+        println("<- " + elem)
         ValueLock synchronized {
           import ValueLock._
           if (!replyAwaited) {
