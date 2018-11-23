@@ -115,14 +115,22 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
       }
   }
 
+  def about() = unwrapAboutResponse(send(wrapAboutCall))
   def add(stateId : Integer, command : String, v : Interface.verbose) =
     unwrapAddResponse(send(wrapAddCall(stateId, command, v)))
+  def goal() = unwrapGoalResponse(send(wrapGoalCall))
   def status(force : Boolean) =
     unwrapStatusResponse(send(wrapStatusCall(force)))
 }
 private object CoqIdeTopImpl {
   import Interface._
   import Interface.XML._
+
+  def wrapAboutCall() =
+    <call val="About">{
+    wrapUnit()}</call>
+  def unwrapAboutResponse(e : Elem) =
+    unwrapValue(unwrapCoqInfo)(e)
 
   def wrapAddCall(stateId : Integer, command : String, v : verbose) =
     <call val="Add">{
@@ -133,6 +141,12 @@ private object CoqIdeTopImpl {
     unwrapValue(unwrapPair(
         unwrapStateId, unwrapPair(
             unwrapUnion(unwrapUnit, unwrapStateId), unwrapString)))(e)
+
+  def wrapGoalCall() =
+    <call val="Goal">{
+    wrapUnit()}</call>
+  def unwrapGoalResponse(e : Elem) =
+    unwrapValue(unwrapOption(unwrapGoals))(e)
 
   def wrapStatusCall(force : Boolean) =
     <call val="Status">{
@@ -182,14 +196,16 @@ object CoqIdeTopImplTest {
   def main(args : Array[String]) : Unit = {
     val a = new CoqIdeTopImpl(Seq())
     var head = 1
+    println(a.about())
     document foreach {
       case s =>
         a.add(head, s, true) match {
           case Interface.Good((newHead, (Left(()), c))) =>
             head = newHead
             a.status(true) match {
-              case Interface.Good(Interface.status(_, Some(a), _, _)) =>
-                println(s"Now editing proof $a")
+              case Interface.Good(Interface.status(_, Some(p), _, _)) =>
+                println(s"Now editing proof $p")
+                println(a.goal)
               case _ =>
             }
           case Interface.Fail((s, l, e)) =>

@@ -1,6 +1,6 @@
 package dk.itu.coqoon.core.coqtop.coqidetop
 
-import scala.xml.{Elem, Attribute}
+import scala.xml.{Elem, Node, Attribute}
 
 object Interface {
   /* This is just a Scala translation of lib/interface.mli */
@@ -85,9 +85,19 @@ object Interface {
   type union[A, B] = Either[A, B]
 
   object XML {
+    object SimpleElem {
+      def unapplySeq(n : Node) : Option[(String, Seq[Node])] =
+        Elem.unapplySeq(n) match {
+          case Some((prefix, label, attribs, scope, children)) =>
+            Some((label, children))
+          case _ =>
+            None
+        }
+    }
     private def _attr(e : Elem, a : String) =
       Option(e \@ a).filterNot(_.isEmpty)
     private def _elch(e : Elem) = e.child.filter(_.isInstanceOf[Elem])
+
     def unwrapValue[A](a : Elem => A)(e : Elem) : value[A] =
       (_attr(e, "val"), _elch(e)) match {
         case (Some("good"), Seq(c : Elem)) =>
@@ -119,7 +129,7 @@ object Interface {
     def unwrapBoolean(e : Elem) =
       _attr(e, "val") match {
         case Some("true") => true
-        case Some("false") => false
+        case _ => false
       }
 
     def unwrapList[A](a : Elem => A)(e : Elem) =
@@ -154,12 +164,39 @@ object Interface {
           Right(b(c))
       }
 
-    def unwrapStatus(e : Elem) : status = e.child match {
-      case Seq(a : Elem, b : Elem, c : Elem, d : Elem) =>
-        status(unwrapList(unwrapString)(a),
-            unwrapOption(unwrapString)(b),
-            unwrapList(unwrapString)(c),
-            unwrapInt(d))
+    def unwrapStatus(e : Elem) : status = e match {
+      case SimpleElem(
+          "status", p : Elem, pname : Elem, ap : Elem, pn : Elem) =>
+        status(unwrapList(unwrapString)(p),
+            unwrapOption(unwrapString)(pname),
+            unwrapList(unwrapString)(ap),
+            unwrapInt(pn))
+    }
+
+    def unwrapCoqInfo(e : Elem) : coq_info = e match {
+      case SimpleElem(
+          "coq_info", ctv : Elem, prv : Elem, rd : Elem, cd : Elem) =>
+        coq_info(unwrapString(ctv),
+            unwrapString(prv),
+            unwrapString(rd),
+            unwrapString(cd))
+    }
+
+    def unwrapGoal(e : Elem) : goal = e match {
+      case SimpleElem("goal", id : Elem, hyps : Elem, ccl : Elem) =>
+        goal(unwrapString(id),
+            unwrapList(unwrapString)(hyps),
+            unwrapString(ccl))
+    }
+
+    def unwrapGoals(e : Elem) : goals = e match {
+      case SimpleElem("goals",
+          cur : Elem, bac : Elem, she : Elem, aba : Elem) =>
+        goals(unwrapList(unwrapGoal)(cur),
+            unwrapList(unwrapPair(
+                unwrapList(unwrapGoal), unwrapList(unwrapGoal)))(bac),
+            unwrapList(unwrapGoal)(she),
+            unwrapList(unwrapGoal)(aba))
     }
   }
 }
