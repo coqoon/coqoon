@@ -1,6 +1,6 @@
 package dk.itu.coqoon.core.coqtop.coqidetop
 
-import scala.xml.{Elem, Node, Attribute}
+import scala.xml.{Elem, Node, Text, Attribute}
 
 object Interface {
   /* This is just a Scala translation of ide/interface.mli */
@@ -102,6 +102,8 @@ object Interface {
       (_attr(e, "val"), _elch(e)) match {
         case (Some("good"), Seq(c : Elem)) =>
           Good(a(c))
+        case (Some("good"), Seq()) =>
+          Fail(-1, None, "Non-XML response body -- shouldn't happen!")
         case (Some("fail"), Seq(sid : Elem, error : Elem)) =>
           val loc = 
             (_attr(e, "loc_s"), _attr(e, "loc_e")) match {
@@ -248,6 +250,25 @@ object Interface {
     def unwrapHint(e : Elem) : hint =
       unwrapList(unwrapPair(unwrapString, unwrapString))(e)
 
-    def _unwrapIgnoring(e : Elem) = ()
+    def wrapSearchConstraint(v : search_constraint) = v match {
+      case Name_Pattern(p) =>
+        <search_cst val="name_pattern">{wrapString(p)}</search_cst>
+      case Type_Pattern(p) =>
+        <search_cst val="type_pattern">{wrapString(p)}</search_cst>
+      case SubType_Pattern(p) =>
+        <search_cst val="subtype_pattern">{wrapString(p)}</search_cst>
+      case In_Module(p) =>
+        <search_cst val="in_module">{wrapList(wrapString)(p)}</search_cst>
+      case Include_Blacklist() =>
+        <search_cst val="include_blacklist" />
+    }
+    def unwrapCoqObject[A](a : Elem => A)(e : Elem) : coq_object[A] =
+      _elch(e) match {
+        case Seq(m : Elem, n : Elem, d : Elem) =>
+          coq_object(
+              unwrapList(unwrapString)(m), unwrapList(unwrapString)(n), a(d))
+      }
+
+    def _unwrapRaw(e : Elem) = e
   }
 }

@@ -118,6 +118,8 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
   def about() = unwrapAboutResponse(send(wrapAboutCall))
   def add(stateId : Integer, command : String, v : Interface.verbose) =
     unwrapAddResponse(send(wrapAddCall(stateId, command, v)))
+  def annotate(annotation : String) =
+    unwrapAnnotateResponse(send(wrapAnnotateCall(annotation)))
   def editAt(stateId : Integer) =
     unwrapEditAtResponse(send(wrapEditAtCall(stateId)))
   def evars() = unwrapEvarsResponse(send(wrapEvarsCall))
@@ -126,14 +128,21 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
   def hints() = unwrapHintsResponse(send(wrapHintsCall))
   def init(scriptPath : Option[String]) =
     unwrapInitResponse(send(wrapInitCall(scriptPath)))
+  def mkCases(s : String) =
+    unwrapMkCasesResponse(send(wrapMkCasesCall(s)))
+  def printAst(stateId : Integer) =
+    unwrapPrintAstResponse(send(wrapPrintAstCall(stateId)))
   def query(routeId : Integer, query : String, stateId : Integer) =
     unwrapQueryResponse(send(wrapQueryCall(routeId, query, stateId)))
   /* def quit() = unwrapQuitResponse(send(wrapQuitCall)) */
-  /* def search(constraints : Seq[Interface.search_constraint]) */
+  def search(constraints : Seq[(Interface.search_constraint, Boolean)]) =
+    unwrapSearchResponse(send(wrapSearchCall(constraints)))
   def setOptions(options : Seq[(Seq[String], Interface.option_value)]) =
     unwrapSetOptionsResponse(send(wrapSetOptionsCall(options)))
   def status(force : Boolean) =
     unwrapStatusResponse(send(wrapStatusCall(force)))
+  def stopWorker(worker : String) =
+    unwrapStopWorkerResponse(send(wrapStopWorkerCall(worker)))
 }
 private object CoqIdeTopImpl {
   import Interface._
@@ -155,6 +164,12 @@ private object CoqIdeTopImpl {
         unwrapStateId, unwrapPair(
             unwrapUnion(unwrapUnit, unwrapStateId), unwrapString)))(e)
 
+  def wrapAnnotateCall(annotation : String) =
+    <call val="Annotate">{
+    wrapString(annotation)
+    }</call>
+  def unwrapAnnotateResponse(e : Elem) =
+    unwrapValue(_unwrapRaw)(e)
   def wrapEditAtCall(stateId : Integer) =
     <call val="EditAt">{
     wrapStateId(stateId)}</call>
@@ -196,6 +211,20 @@ private object CoqIdeTopImpl {
   def unwrapInitResponse(e : Elem) =
     unwrapValue(unwrapStateId)(e)
 
+  def wrapMkCasesCall(s : String) =
+    <call val="MkCases">{
+    wrapString(s)
+    }</call>
+  def unwrapMkCasesResponse(e : Elem) =
+    unwrapValue(unwrapList(unwrapList(unwrapString)))(e)
+
+  def wrapPrintAstCall(sid : state_id) =
+    <call val="PrintAst">{
+    wrapStateId(sid)
+    }</call>
+  def unwrapPrintAstResponse(e : Elem) =
+    unwrapValue(_unwrapRaw)(e)
+
   def wrapQueryCall(rid : Int, query : String, sid : Int) =
     <call val="Query">{
     wrapPair(wrapRouteId, wrapPair(wrapString, wrapStateId))(
@@ -209,6 +238,12 @@ private object CoqIdeTopImpl {
   def unwrapQuitResponse(e : Elem) =
     unwrapValue(unwrapUnit)(e)
 
+  def wrapSearchCall(constraints : Seq[(search_constraint, Boolean)]) =
+    <call val="Search">{
+    wrapList(wrapPair(wrapSearchConstraint, wrapBoolean))(constraints)}</call>
+  def unwrapSearchResponse(e : Elem) =
+    unwrapValue(unwrapList(unwrapCoqObject(unwrapString)))(e)
+
   def wrapSetOptionsCall(options : Seq[(Seq[String], option_value)]) =
     <call val="SetOptions">{
     wrapList(wrapPair(wrapList(wrapString), wrapOptionValue))(options)}</call>
@@ -221,6 +256,13 @@ private object CoqIdeTopImpl {
     }</call>
   def unwrapStatusResponse(e : Elem) =
     unwrapValue(unwrapStatus)(e)
+
+  def wrapStopWorkerCall(worker : String) =
+    <call val="StopWorker">{
+    wrapString(worker)
+    }</call>
+  def unwrapStopWorkerResponse(e : Elem) =
+    unwrapValue(unwrapUnit)(e)
 }
 
 object CoqIdeTopImplTest {
@@ -267,10 +309,13 @@ object CoqIdeTopImplTest {
     println(a.about())
     println(a.getOptions)
     a.setOptions(Seq((Seq("Printing", "All"), BoolValue(true))))
+    print(a.search(Seq((Interface.Name_Pattern("^I$"), true))))
     document foreach {
       case s =>
         a.add(head, s, true) match {
           case Interface.Good((newHead, (Left(()), c))) =>
+            println(a.printAst(head))
+            println(a.annotate(s))
             head = newHead
             println(a.goal)
             a.status(true) match {
