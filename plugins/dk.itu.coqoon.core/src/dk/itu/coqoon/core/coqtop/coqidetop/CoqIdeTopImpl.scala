@@ -269,38 +269,6 @@ object CoqIdeTopImplTest {
   import Interface._
   import Interface.XML._
 
-  val good1 =
-    <value val="good">
-      <pair>
-        <state_id val="98"/>
-        <pair>
-          <union val="in_l"><unit/></union>
-          <string>Added to the thing.</string>
-        </pair>
-      </pair>
-    </value>
-  val good2 =
-    <value val="good">
-      <pair>
-        <state_id val="98"/>
-        <pair>
-          <union val="in_r"><state_id val="101"/></union>
-          <string>Added to the other thing.</string>
-        </pair>
-      </pair>
-    </value>
-  val fail1 =
-    <value val="fail"
-        loc_s="4"
-        loc_e="10">
-      <state_id val="98"/>
-      <richpp>This isn't good.</richpp>
-    </value>
-  val fail2 =
-    <value val="fail">
-      <state_id val="98"/>
-      <richpp>That wasn't good.</richpp>
-    </value>
   val document = Seq("Theorem t : True /\\ True /\\ True.", "Proof.", "split.", "trivial.", "split.", "trivial.", "split.", "trivial.", "split.", "Qed.")
   def main(args : Array[String]) : Unit = {
     val a = new CoqIdeTopImpl(Seq())
