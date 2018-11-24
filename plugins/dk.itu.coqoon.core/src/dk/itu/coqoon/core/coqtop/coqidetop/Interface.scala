@@ -3,7 +3,7 @@ package dk.itu.coqoon.core.coqtop.coqidetop
 import scala.xml.{Elem, Node, Attribute}
 
 object Interface {
-  /* This is just a Scala translation of lib/interface.mli */
+  /* This is just a Scala translation of ide/interface.mli */
   type raw = Boolean
   type verbose = Boolean
 
@@ -39,7 +39,7 @@ object Interface {
   case class StringValue(
     value : String) extends option_value
   case class StringOptValue(
-    value : String) extends option_value
+    value : Option[String]) extends option_value
 
   case class option_state(
     opt_sync : Boolean,
@@ -134,6 +134,8 @@ object Interface {
         case _ => false
       }
 
+    def wrapList[A](a : A => Elem)(v : Seq[A]) =
+      <list>{v.map(a)}</list>
     def unwrapList[A](a : Elem => A)(e : Elem) =
       e.child.map(_.asInstanceOf[Elem]).map(a).toList
 
@@ -208,5 +210,44 @@ object Interface {
             unwrapList(unwrapGoal)(she),
             unwrapList(unwrapGoal)(aba))
     }
+
+    def wrapOptionValue(v : option_value) = v match {
+      case BoolValue(b) =>
+        <option_value val="boolvalue">{wrapBoolean(b)}</option_value>
+      case IntValue(i) =>
+        <option_value val="intvalue">{wrapOption(wrapInt)(i)}</option_value>
+      case StringValue(s) =>
+        <option_value val="stringvalue">{wrapString(s)}</option_value>
+      case StringOptValue(s) =>
+        <option_value val="stringoptvalue">{
+          wrapOption(wrapString)(s)}</option_value>
+    }
+    def unwrapOptionValue(e : Elem) : option_value =
+    (_attr(e, "val"), _elch(e)) match {
+      case (Some("boolvalue"), Seq(e : Elem)) =>
+        BoolValue(unwrapBoolean(e))
+      case (Some("intvalue"), Seq(e : Elem)) =>
+        IntValue(unwrapOption(unwrapInt)(e))
+      case (Some("stringvalue"), Seq(e : Elem)) =>
+        StringValue(unwrapString(e))
+      case (Some("stringoptvalue"), Seq(e : Elem)) =>
+        StringOptValue(unwrapOption(unwrapString)(e))
+    }
+
+    /* <option_state /> elements are never sent to Coq */
+    def unwrapOptionState(e : Elem) : option_state =
+      _elch(e) match {
+        case Seq(s : Elem, d : Elem, n : Elem, v : Elem) =>
+          option_state(
+              unwrapBoolean(s),
+              unwrapBoolean(d),
+              unwrapString(n),
+              unwrapOptionValue(v))
+      }
+
+    def unwrapHint(e : Elem) : hint =
+      unwrapList(unwrapPair(unwrapString, unwrapString))(e)
+
+    def _unwrapIgnoring(e : Elem) = ()
   }
 }

@@ -120,11 +120,18 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
     unwrapAddResponse(send(wrapAddCall(stateId, command, v)))
   def editAt(stateId : Integer) =
     unwrapEditAtResponse(send(wrapEditAtCall(stateId)))
+  def evars() = unwrapEvarsResponse(send(wrapEvarsCall))
+  def getOptions() = unwrapGetOptionsResponse(send(wrapGetOptionsCall))
   def goal() = unwrapGoalResponse(send(wrapGoalCall))
+  def hints() = unwrapHintsResponse(send(wrapHintsCall))
   def init(scriptPath : Option[String]) =
     unwrapInitResponse(send(wrapInitCall(scriptPath)))
   def query(routeId : Integer, query : String, stateId : Integer) =
     unwrapQueryResponse(send(wrapQueryCall(routeId, query, stateId)))
+  /* def quit() = unwrapQuitResponse(send(wrapQuitCall)) */
+  /* def search(constraints : Seq[Interface.search_constraint]) */
+  def setOptions(options : Seq[(Seq[String], Interface.option_value)]) =
+    unwrapSetOptionsResponse(send(wrapSetOptionsCall(options)))
   def status(force : Boolean) =
     unwrapStatusResponse(send(wrapStatusCall(force)))
 }
@@ -156,11 +163,31 @@ private object CoqIdeTopImpl {
         unwrapUnit, unwrapPair(unwrapStateId, unwrapPair(
             unwrapStateId, unwrapStateId))))(e)
 
+  def wrapEvarsCall() =
+    <call val="Evars">{
+    wrapUnit()}</call>
+  def unwrapEvarsResponse(e : Elem) =
+    unwrapValue(unwrapOption(unwrapList(unwrapString)))(e)
+
+  def wrapGetOptionsCall() =
+    <call val="GetOptions">{
+    wrapUnit()}</call>
+  def unwrapGetOptionsResponse(e : Elem) =
+    unwrapValue(unwrapList(unwrapPair(
+        unwrapList(unwrapString), unwrapOptionState)))(e)
+
   def wrapGoalCall() =
     <call val="Goal">{
     wrapUnit()}</call>
   def unwrapGoalResponse(e : Elem) =
     unwrapValue(unwrapOption(unwrapGoals))(e)
+
+  def wrapHintsCall() =
+    <call val="Hints">{
+    wrapUnit()}</call>
+  def unwrapHintsResponse(e : Elem) =
+    unwrapValue(unwrapOption(unwrapPair(
+        unwrapList(unwrapHint), unwrapHint)))(e)
 
   def wrapInitCall(scriptPath : Option[String]) =
     <call val="Init">{
@@ -175,6 +202,18 @@ private object CoqIdeTopImpl {
         rid, (query, sid))}</call>
   def unwrapQueryResponse(e : Elem) =
     unwrapValue(unwrapString)(e)
+
+  def wrapQuitCall() =
+    <call val="Quit">{
+    wrapUnit()}</call>
+  def unwrapQuitResponse(e : Elem) =
+    unwrapValue(unwrapUnit)(e)
+
+  def wrapSetOptionsCall(options : Seq[(Seq[String], option_value)]) =
+    <call val="SetOptions">{
+    wrapList(wrapPair(wrapList(wrapString), wrapOptionValue))(options)}</call>
+  def unwrapSetOptionsResponse(e : Elem) =
+    unwrapValue(unwrapUnit)(e)
 
   def wrapStatusCall(force : Boolean) =
     <call val="Status">{
@@ -226,6 +265,8 @@ object CoqIdeTopImplTest {
     var head = 1
     a.init(None)
     println(a.about())
+    println(a.getOptions)
+    a.setOptions(Seq((Seq("Printing", "All"), BoolValue(true))))
     document foreach {
       case s =>
         a.add(head, s, true) match {
@@ -239,6 +280,8 @@ object CoqIdeTopImplTest {
               case _ =>
             }
             println(a.query(1, "Check I.", newHead))
+            println(a.evars())
+            println(a.hints())
           case Interface.Fail((s, l, e)) =>
             println(e)
         }
