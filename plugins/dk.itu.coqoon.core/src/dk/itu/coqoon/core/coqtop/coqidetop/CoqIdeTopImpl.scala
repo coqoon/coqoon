@@ -284,7 +284,6 @@ object CoqIdeTopImplTest {
     override def onFeedback(f : Feedback) = println(f)
   }
   import Interface._
-  import Interface.XML._
 
   val doc = """
 Theorem t : True /\ True /\ True /\ True.
@@ -305,11 +304,9 @@ Qed."""
     val a = new CoqIdeTopImpl(Seq())
     a.addListener(FeedbackListener)
     var head = 1
-    a.init(None)
+    println(a.init(None))
     println(a.about())
-    /*println(a.getOptions)
-    a.setOptions(Seq((Seq("Printing", "All"), BoolValue(true))))
-    print(a.search(Seq((Interface.Name_Pattern("^I$"), true))))*/
+    println(a.setOptions(Seq((Seq("Printing", "All"), BoolValue(true)))))
     var off = 0
     var goalMappings : Map[(Int, Int), Interface.goals] = Map()
     sentences foreach {
@@ -319,30 +316,17 @@ Qed."""
       case (s, false) =>
         a.add(head, s, true) match {
           case Interface.Good((newHead, (Left(()), c))) =>
-            /*println(a.printAst(head))
-            println(a.annotate(s))*/
             head = newHead
             a.goal match {
               case Interface.Good(Some(goals)) =>
                 goalMappings += (off, off + s.length) -> goals
               case _ =>
             }
-            /*a.status(true) match {
-              case Interface.Good(Interface.status(_, Some(p), _, _)) =>
-                println(s"Now editing proof $p")
-                println(a.goal)
-              case _ =>
-            }*/
             off += s.length
-            /*println(a.query(1, "Check I.", newHead))
-            println(a.evars())
-            println(a.hints())*/
           case Interface.Fail((s, l, e)) =>
             println(e)
         }
     }
     println(goalMappings)
-    /*println(wrapAddCall(1, "Set Printing All.", true))
-    Seq(good1, good2, fail1, fail2).foreach(e => println(unwrapAddResponse(e)))*/
   }
 }
