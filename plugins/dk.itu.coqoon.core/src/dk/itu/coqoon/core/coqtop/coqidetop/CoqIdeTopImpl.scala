@@ -304,19 +304,27 @@ Qed."""
   def main(args : Array[String]) : Unit = {
     val a = new CoqIdeTopImpl(Seq())
     a.addListener(FeedbackListener)
-    var head = 1
-    println(a.init(None))
+    var head = a.init(None) match {
+      case Interface.Good(head) =>
+        head
+      case _ =>
+        1
+    }
     println(a.about())
     println(a.setOptions(Seq((Seq("Printing", "All"), BoolValue(true)))))
     var off = 0
-    var goalMappings : Map[(Int, Int), Interface.goals] = Map()
-    sentences foreach {
-      case (s, true) =>
+    var stateIdMappings : Map[Int, state_id] = Map()
+    var goalMappings : Map[(state_id, Int), Interface.goals] = Map()
+    var statusMappings :
+        Map[state_id, Interface.value[Interface.status]] = Map()
+    sentences.zipWithIndex foreach {
+      case ((s, true), _) =>
         /* Coq doesn't need to know about comments and whatnot */
         off += s.length
-      case (s, false) =>
+      case ((s, false), i) =>
         a.add(head, s, true) match {
           case Interface.Good((newHead, (Left(()), c))) =>
+            stateIdMappings += (i -> newHead)
             head = newHead
             a.goal match {
               case Interface.Good(Some(goals)) =>
@@ -324,10 +332,10 @@ Qed."""
               case _ =>
             }
             off += s.length
+            statusMappings += (newHead -> a.status(false))
           case Interface.Fail((s, l, e)) =>
             println(e)
         }
     }
-    println(goalMappings)
   }
 }
