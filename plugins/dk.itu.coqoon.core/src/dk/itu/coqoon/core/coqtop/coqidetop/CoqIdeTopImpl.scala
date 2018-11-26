@@ -115,33 +115,37 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
       }
   }
 
-  def about() = unwrapAboutResponse(send(wrapAboutCall))
-  def add(stateId : Integer, command : String, v : Interface.verbose) =
+  override def about() = unwrapAboutResponse(send(wrapAboutCall))
+  override def add(
+      stateId : Integer, command : CharSequence, v : Interface.verbose) =
     unwrapAddResponse(send(wrapAddCall(stateId, command, v)))
   def annotate(annotation : String) =
     unwrapAnnotateResponse(send(wrapAnnotateCall(annotation)))
-  def editAt(stateId : Integer) =
+  override def editAt(stateId : Integer) =
     unwrapEditAtResponse(send(wrapEditAtCall(stateId)))
-  def evars() = unwrapEvarsResponse(send(wrapEvarsCall))
-  def getOptions() = unwrapGetOptionsResponse(send(wrapGetOptionsCall))
-  def goal() = unwrapGoalResponse(send(wrapGoalCall))
-  def hints() = unwrapHintsResponse(send(wrapHintsCall))
-  def init(scriptPath : Option[String]) =
+  override def evars() = unwrapEvarsResponse(send(wrapEvarsCall))
+  override def getOptions() =
+    unwrapGetOptionsResponse(send(wrapGetOptionsCall))
+  override def goal() = unwrapGoalResponse(send(wrapGoalCall))
+  override def hints() = unwrapHintsResponse(send(wrapHintsCall))
+  override def init(scriptPath : Option[String]) =
     unwrapInitResponse(send(wrapInitCall(scriptPath)))
-  def mkCases(s : String) =
+  override def mkCases(s : String) =
     unwrapMkCasesResponse(send(wrapMkCasesCall(s)))
   def printAst(stateId : Integer) =
     unwrapPrintAstResponse(send(wrapPrintAstCall(stateId)))
-  def query(routeId : Integer, query : String, stateId : Integer) =
+  override def query(routeId : Integer, query : String, stateId : Integer) =
     unwrapQueryResponse(send(wrapQueryCall(routeId, query, stateId)))
-  /* def quit() = unwrapQuitResponse(send(wrapQuitCall)) */
-  def search(constraints : Seq[(Interface.search_constraint, Boolean)]) =
+  /* override def quit() = unwrapQuitResponse(send(wrapQuitCall)) */
+  override def search(
+      constraints : Seq[(Interface.search_constraint, Boolean)]) =
     unwrapSearchResponse(send(wrapSearchCall(constraints)))
-  def setOptions(options : Seq[(Seq[String], Interface.option_value)]) =
+  override def setOptions(
+      options : Seq[(Seq[String], Interface.option_value)]) =
     unwrapSetOptionsResponse(send(wrapSetOptionsCall(options)))
-  def status(force : Boolean) =
+  override def status(force : Boolean) =
     unwrapStatusResponse(send(wrapStatusCall(force)))
-  def stopWorker(worker : String) =
+  override def stopWorker(worker : String) =
     unwrapStopWorkerResponse(send(wrapStopWorkerCall(worker)))
 }
 private object CoqIdeTopImpl {
