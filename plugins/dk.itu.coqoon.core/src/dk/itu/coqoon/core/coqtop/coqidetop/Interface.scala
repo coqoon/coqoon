@@ -118,7 +118,7 @@ object Interface {
     def wrapUnit() = <unit />
     def unwrapUnit(e : Elem) = ()
     
-    def wrapString(a : String) = <string>{a}</string>
+    def wrapString(a : CharSequence) = <string>{a}</string>
     def unwrapString(e : Elem) = e.text.trim()
   
     def wrapInt(a : Int) = <int>{a}</int>

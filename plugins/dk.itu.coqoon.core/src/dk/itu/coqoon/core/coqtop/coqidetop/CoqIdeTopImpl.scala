@@ -154,7 +154,7 @@ private object CoqIdeTopImpl {
   def unwrapAboutResponse(e : Elem) =
     unwrapValue(unwrapCoqInfo)(e)
 
-  def wrapAddCall(stateId : Integer, command : String, v : verbose) =
+  def wrapAddCall(stateId : Integer, command : CharSequence, v : verbose) =
     <call val="Add">{
     wrapPair(
         wrapPair(wrapString, wrapInt),
@@ -170,6 +170,7 @@ private object CoqIdeTopImpl {
     }</call>
   def unwrapAnnotateResponse(e : Elem) =
     unwrapValue(_unwrapRaw)(e)
+
   def wrapEditAtCall(stateId : Integer) =
     <call val="EditAt">{
     wrapStateId(stateId)}</call>
