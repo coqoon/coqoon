@@ -5,6 +5,7 @@ import scala.io.Source
 import scala.xml.{XML, Elem}
 import scala.xml.parsing.ConstructingParser
 import dk.itu.coqoon.core.CoqoonPreferences
+import dk.itu.coqoon.core.coqtop.CoqSentence
 import dk.itu.coqoon.core.coqtop.{CoqProgram, CoqProgramInstance}
 
 private class StringBuilderSource(
@@ -278,36 +279,61 @@ object CoqIdeTopImplTest {
   import Interface._
   import Interface.XML._
 
-  val document = Seq("Theorem t : True /\\ True /\\ True.", "Proof.", "split.", "trivial.", "split.", "trivial.", "split.", "trivial.", "split.", "Qed.")
+  val doc = """
+Theorem t : True /\ True /\ True /\ True.
+Proof.
+  (* This is a Synthetic Sentence *)
+  (* Synthetic Sentence description 3 *)
+  split.
+  + trivial.
+  + split.
+    - trivial.
+    - split.
+      * trivial.
+      * trivial.
+Qed."""
+  val sentences = CoqSentence.getNextSentences(doc, 0, doc.length)
+
   def main(args : Array[String]) : Unit = {
     val a = new CoqIdeTopImpl(Seq())
     var head = 1
     a.init(None)
     println(a.about())
-    println(a.getOptions)
+    /*println(a.getOptions)
     a.setOptions(Seq((Seq("Printing", "All"), BoolValue(true))))
-    print(a.search(Seq((Interface.Name_Pattern("^I$"), true))))
-    document foreach {
-      case s =>
+    print(a.search(Seq((Interface.Name_Pattern("^I$"), true))))*/
+    var off = 0
+    var goalMappings : Map[(Int, Int), Interface.goals] = Map()
+    sentences foreach {
+      case (s, true) =>
+        /* Coq doesn't need to know about comments and whatnot */
+        off += s.length
+      case (s, false) =>
         a.add(head, s, true) match {
           case Interface.Good((newHead, (Left(()), c))) =>
-            println(a.printAst(head))
-            println(a.annotate(s))
+            /*println(a.printAst(head))
+            println(a.annotate(s))*/
             head = newHead
-            println(a.goal)
-            a.status(true) match {
+            a.goal match {
+              case Interface.Good(Some(goals)) =>
+                goalMappings += (off, off + s.length) -> goals
+              case _ =>
+            }
+            /*a.status(true) match {
               case Interface.Good(Interface.status(_, Some(p), _, _)) =>
                 println(s"Now editing proof $p")
                 println(a.goal)
               case _ =>
-            }
-            println(a.query(1, "Check I.", newHead))
+            }*/
+            off += s.length
+            /*println(a.query(1, "Check I.", newHead))
             println(a.evars())
-            println(a.hints())
+            println(a.hints())*/
           case Interface.Fail((s, l, e)) =>
             println(e)
         }
     }
+    println(goalMappings)
     /*println(wrapAddCall(1, "Set Printing All.", true))
     Seq(good1, good2, fail1, fail2).foreach(e => println(unwrapAddResponse(e)))*/
   }
