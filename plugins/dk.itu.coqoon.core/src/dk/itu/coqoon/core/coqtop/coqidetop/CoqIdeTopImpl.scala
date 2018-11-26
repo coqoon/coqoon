@@ -186,7 +186,7 @@ private object CoqIdeTopImpl {
     unwrapValue(_unwrapRaw)(e)
 
   def wrapEditAtCall(stateId : Integer) =
-    <call val="EditAt">{
+    <call val="Edit_at">{
     wrapStateId(stateId)}</call>
   def unwrapEditAtResponse(e : Elem) =
     unwrapValue(unwrapUnion(
