@@ -280,6 +280,9 @@ private object CoqIdeTopImpl {
 }
 
 object CoqIdeTopImplTest {
+  object FeedbackListener extends CoqIdeTopFeedbackListener {
+    override def onFeedback(f : Feedback) = println(f)
+  }
   import Interface._
   import Interface.XML._
 
@@ -300,6 +303,7 @@ Qed."""
 
   def main(args : Array[String]) : Unit = {
     val a = new CoqIdeTopImpl(Seq())
+    a.addListener(FeedbackListener)
     var head = 1
     a.init(None)
     println(a.about())
