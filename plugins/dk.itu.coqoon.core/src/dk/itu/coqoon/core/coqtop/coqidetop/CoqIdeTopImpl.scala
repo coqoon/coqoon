@@ -35,7 +35,10 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
   import CoqIdeTopImpl._
 
   private var pr : Option[CoqProgramInstance] = None
-  private def notifyListeners(e : Elem) = ()
+  private def notifyListeners(e : Elem) = {
+    val f =  Feedback.XML.unwrapFeedback(e)
+    listeners.foreach(_.onFeedback(f))
+  }
   
   private def send(e : Elem) : Elem = {
     if (pr == None) {

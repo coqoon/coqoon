@@ -23,4 +23,12 @@ trait CoqIdeTop_v20170413 {
       value[Unit]
   def status(force : Boolean) : value[status]
   def stopWorker(worker : String) : value[Unit]
+
+  protected var listeners : Set[CoqIdeTopFeedbackListener] = Set()
+  def addListener(l : CoqIdeTopFeedbackListener) = (listeners += l)
+  def removeListener(l : CoqIdeTopFeedbackListener) = (listeners -= l)
+}
+
+trait CoqIdeTopFeedbackListener {
+  def onFeedback(f : Feedback)
 }
