@@ -54,7 +54,8 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
     ReaderThread.ValueLock synchronized {
       import ReaderThread.ValueLock._
       replyAwaited = true
-      println("-> " + e.toString)
+      if (_DEBUG_PRINT)
+        println("-> " + e.toString)
       pr.get.stdin.write(e.toString)
       pr.get.stdin.flush
       while (value.isEmpty)
@@ -100,7 +101,8 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
           } else _util(sofar)
         }
         val elem = _util().get
-        println("<- " + elem)
+        if (_DEBUG_PRINT)
+          println("<- " + elem)
         ValueLock synchronized {
           import ValueLock._
           if (!replyAwaited) {
@@ -149,6 +151,8 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
     unwrapStopWorkerResponse(send(wrapStopWorkerCall(worker)))
 }
 private object CoqIdeTopImpl {
+  private final val _DEBUG_PRINT = false
+
   import Interface._
   import Interface.XML._
 
