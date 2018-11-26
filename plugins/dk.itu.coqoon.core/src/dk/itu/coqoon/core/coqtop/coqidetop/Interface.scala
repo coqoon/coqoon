@@ -85,7 +85,7 @@ object Interface {
   type union[A, B] = Either[A, B]
 
   object XML {
-    object SimpleElem {
+    private[coqidetop] object SimpleElem {
       def unapplySeq(n : Node) : Option[(String, Seq[Node])] =
         Elem.unapplySeq(n) match {
           case Some((prefix, label, attribs, scope, children)) =>
@@ -94,9 +94,9 @@ object Interface {
             None
         }
     }
-    private def _attr(e : Elem, a : String) =
+    private[coqidetop] def _attr(e : Elem, a : String) =
       Option(e \@ a).filterNot(_.isEmpty)
-    private def _elch(e : Elem) = e.child.filter(_.isInstanceOf[Elem])
+    private[coqidetop] def _elch(e : Elem) = e.child.filter(_.isInstanceOf[Elem])
 
     def unwrapValue[A](a : Elem => A)(e : Elem) : value[A] =
       (_attr(e, "val"), _elch(e)) match {
@@ -269,6 +269,110 @@ object Interface {
               unwrapList(unwrapString)(m), unwrapList(unwrapString)(n), a(d))
       }
 
+    /* XXX: ... er, there's probably more to do here */
+    def unwrapPp(e : Elem) = e.text
+
     def _unwrapRaw(e : Elem) = e
+  }
+}
+
+case class Feedback(obj : String, route : Interface.route_id,
+    state : Interface.state_id, content : Feedback.FeedbackContent)
+object Feedback {
+  type location = (/* start */ Int, /* stop */ Int)
+  type worker_status = (/* workerName */ String, /* status */ String)
+  type message = (MessageLevel.MessageLevel, Option[location], String)
+
+  /* Taken from to_feedback_content in ide/xmlprotocol.ml */
+  sealed abstract class FeedbackContent
+  case object AddedAxiom extends FeedbackContent
+  case object Processed extends FeedbackContent
+  case class ProcessingIn(where : String) extends FeedbackContent
+  case object Incomplete extends FeedbackContent
+  case object Complete extends FeedbackContent
+  case class GlobRef(loc : location, filePath : String, modPath : String,
+      ident : String, ty : String) extends FeedbackContent
+  case class GlobDef(loc : location, ident : String, secPath : String,
+      ty : String) extends FeedbackContent
+  case class InProgress(n : Int) extends FeedbackContent
+  case class WorkerStatus(status : worker_status) extends FeedbackContent
+  case class Custom(loc : location, name : String,
+      content : Elem) extends FeedbackContent
+  case class FileDependency(
+      via : Option[String], dep : String) extends FeedbackContent
+  case class FileLoaded(module : String, file : String) extends FeedbackContent
+  object MessageLevel extends Enumeration {
+    type MessageLevel = Value
+    val Info, Warning, Notice, Error, Debug = Value
+  }
+  case class Message(msg : message) extends FeedbackContent
+
+  case object Unrecognised extends FeedbackContent
+
+  object XML {
+    import Interface.XML.{_attr, _elch, SimpleElem}
+
+    import Interface.XML.{unwrapPp,
+      unwrapInt, unwrapPair, unwrapOption, unwrapString, unwrapStateId}
+
+    def unwrapLoc(e : Elem) : location =
+      (_attr(e, "start").get.toInt, _attr(e, "stop").get.toInt)
+    def unwrapMessageLevel(e : Elem) : MessageLevel.MessageLevel =
+      _attr(e, "val") match {
+        case Some("info") => MessageLevel.Info
+        case Some("warning") => MessageLevel.Warning
+        case Some("notice") => MessageLevel.Notice
+        case Some("error") => MessageLevel.Error
+        case Some("debug") => MessageLevel.Debug
+      }
+    def unwrapMessage(e : Elem) : message =
+      _elch(e) match {
+        case Seq(lvl : Elem, loc : Elem, m : Elem) =>
+          (unwrapMessageLevel(lvl), unwrapOption(unwrapLoc)(loc), unwrapPp(m))
+      }
+
+    def unwrapFeedbackContent(feedback : Elem) : FeedbackContent =
+      (_attr(feedback, "val"), _elch(feedback)) match {
+        case (Some("addedaxiom"), _) =>
+          AddedAxiom
+        case (Some("processed"), _) =>
+          Processed
+        case (Some("processingin"), Seq(where : Elem)) =>
+          ProcessingIn(Interface.XML.unwrapString(where))
+        case (Some("incomplete"), _) =>
+          Incomplete
+        case (Some("complete"), _) =>
+          Complete
+        case (Some("globref"), Seq(
+            loc : Elem, fp : Elem, mp : Elem, i : Elem, ty : Elem)) =>
+          GlobRef(unwrapLoc(loc), unwrapString(fp), unwrapString(mp),
+              unwrapString(i), unwrapString(ty))
+        case (Some("globdef"), Seq(
+            loc : Elem, i : Elem, sp : Elem, ty : Elem)) =>
+          GlobDef(unwrapLoc(loc), unwrapString(i), unwrapString(sp),
+              unwrapString(ty))
+        case (Some("inprogress"), Seq(i : Elem)) =>
+          InProgress(unwrapInt(i))
+        case (Some("workerstatus"), Seq(p : Elem)) =>
+          WorkerStatus(unwrapPair(unwrapString, unwrapString)(p))
+        case (Some("custom"), Seq(loc : Elem, name : Elem, x : Elem)) =>
+          Custom(unwrapLoc(loc), unwrapString(name), x)
+        case (Some("filedependency"), Seq(from : Elem, dep : Elem)) =>
+          FileDependency(unwrapOption(unwrapString)(from), unwrapString(dep))
+        case (Some("fileloaded"), Seq(dp : Elem, fn : Elem)) =>
+          FileLoaded(unwrapString(dp), unwrapString(fn))
+        case (Some("message"), Seq(m : Elem)) =>
+          Message(unwrapMessage(m))
+
+        case _ =>
+          Unrecognised
+      }
+
+    def unwrapFeedback(e : Elem) =
+      (_attr(e, "object"), _attr(e, "route"), _elch(e)) match {
+        case (Some(obj), Some(route), Seq(sid : Elem, content : Elem)) =>
+          Feedback(obj, route.toInt,
+              unwrapStateId(sid), unwrapFeedbackContent(content))
+      }
   }
 }
