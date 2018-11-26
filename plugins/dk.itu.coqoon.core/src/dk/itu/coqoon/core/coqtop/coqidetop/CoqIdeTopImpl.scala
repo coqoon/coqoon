@@ -50,6 +50,7 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
       pr = Option(ct.run(
           (args ++ Seq("-toploop", "coqidetop", "-main-channel", "stdfds")) ++
           CoqoonPreferences.ExtraArguments.get))
+      ReaderThread.running = true
       ReaderThread.start
     }
     ReaderThread.ValueLock synchronized {
@@ -80,7 +81,7 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
 
     private val buf : Array[Char] = Array(32768)
     
-    var running = true
+    var running = false
     override def run() =
       while (running) {
         @scala.annotation.tailrec def _util(
