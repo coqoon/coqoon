@@ -69,6 +69,7 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
         value.get
       } finally {
         queuedFeedback.foreach(notifyListeners)
+        queuedFeedback = Seq()
         value = None
         replyAwaited = false
       }
