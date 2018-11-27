@@ -91,6 +91,14 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
         @scala.annotation.tailrec def _util(
             sofar_ : StringBuilder = StringBuilder.newBuilder) :
                 Option[Elem] = {
+          /* (XXX: this seems to work okay, but would freeze if stderr filled
+           * up in the middle of a blocking read on stdout; to address that,
+           * this code should move to another thread) */
+          /* We don't care about standard error, but we do need to make sure it
+           * doesn't fill up and cause coqtop to block */
+          if (pr.get.stderr.ready)
+            pr.get.stderr.read(buf)
+
           var sofar = sofar_
           val count = pr.get.stdout.read(buf)
           if (count == -1)
