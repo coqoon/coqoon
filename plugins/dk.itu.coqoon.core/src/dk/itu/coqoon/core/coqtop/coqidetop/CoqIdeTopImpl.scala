@@ -42,13 +42,11 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
   
   private def send(e : Elem) : Elem = {
     if (pr == None) {
-      val ct = CoqProgram.makeProgram(
-          "/home/alec/coq-instances/coq-8.8.1/usr/bin/coqtop")
+      val ct = CoqProgram
       if (!ct.check) {
         throw new java.io.IOException("Couldn't find the coqtop program")
       } else if (ct.version == None) {
-        throw new java.io.IOException(
-            "Couldn't detect Coq version")
+        throw new java.io.IOException("Couldn't detect Coq version")
       }
       pr = Option(ct.run(
           (args ++ Seq("-toploop", "coqidetop", "-main-channel", "stdfds")) ++

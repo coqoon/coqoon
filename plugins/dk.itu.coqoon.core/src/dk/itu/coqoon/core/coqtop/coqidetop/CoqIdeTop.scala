@@ -28,6 +28,11 @@ trait CoqIdeTop_v20170413 {
   def addListener(l : CoqIdeTopFeedbackListener) = (listeners += l)
   def removeListener(l : CoqIdeTopFeedbackListener) = (listeners -= l)
 }
+object CoqIdeTop_v20170413 {
+  def apply() : CoqIdeTop_v20170413 = apply(Seq.empty)
+
+  def apply(args : Seq[String]) : CoqIdeTop_v20170413 = new CoqIdeTopImpl(args)
+}
 
 trait CoqIdeTopFeedbackListener {
   def onFeedback(f : Feedback)
