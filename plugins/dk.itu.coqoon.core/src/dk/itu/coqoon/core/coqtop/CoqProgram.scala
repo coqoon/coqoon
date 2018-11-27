@@ -71,6 +71,7 @@ trait CoqProgramInstance {
   import java.io.{Reader, Writer}
 
   def stdin : Writer
+  def stderr : Reader
   def stdout : Reader
   def readAll : (Int, String) = {
     val r = TotalReader.read(stdout)

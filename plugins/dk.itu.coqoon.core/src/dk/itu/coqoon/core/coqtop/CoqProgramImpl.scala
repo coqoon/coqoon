@@ -8,17 +8,19 @@ private class CoqProgramInstanceImpl(argv : Seq[String],
   CoqoonDebugPreferences.PrintProcessInvocations.log(
       "RUN " + argv.mkString("[", ", ", "]"))
 
-  protected val (in, out, pr) = {
+  protected val (in, out, err, pr) = {
     import java.io.{InputStreamReader, OutputStreamWriter}
 
     val pb = new ProcessBuilder(argv : _*)
     val pr = start(pb)
     val in = new OutputStreamWriter(pr.getOutputStream, "UTF-8")
     val out = new InputStreamReader(pr.getInputStream, "UTF-8")
-    (in, out, pr)
+    val err = new InputStreamReader(pr.getErrorStream, "UTF-8")
+    (in, out, err, pr)
   }
 
   override def stdin = in
+  override def stderr = err
   override def stdout = out
 
   override def kill = pr.destroy
