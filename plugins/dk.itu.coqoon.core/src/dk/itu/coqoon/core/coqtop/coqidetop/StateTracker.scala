@@ -46,19 +46,24 @@ class StateTracker(
       extends CoqElementChangeListener with CoqIdeTopFeedbackListener {
     override def coqElementChanged(ev : CoqElementEvent) =
       ev match {
-        case CoqFileContentChangedEvent(f) if file.contains(f) =>
-          stateIds = Seq()
-          goals = Map()
-          status = Map()
-          feedback = Map()
-          ct.editAt(1)
-          f.accept {
-            case s : ICoqScriptSentence =>
-              submit(s)
-              false
-            case _ : ICoqScriptGroup | _ : ICoqVernacFile =>
+        case CoqFileContentChangedEvent(
+            f : ICoqVernacFile) if file.contains(f) =>
+          val zippedIDs = f.getSentences.map(
+              s => Some(makeSentenceID(s))).zipAll(
+                  stateIds.map(s => Some(s._1)), None, None)
+          val divergence = zippedIDs.indexWhere {
+            case (a, b) if a != b =>
+              println(s"$a != $b")
               true
+            case (a, b) =>
+              println(s"$a == $b")
+              false
           }
+          removeData(stateIds.drop(divergence).map(_._2))
+          stateIds = stateIds.take(divergence)
+          println(s"Keeping first ${divergence} commands")
+          ct.editAt(getHead)
+          f.getSentences.drop(divergence).foreach(submit)
         case _ =>
     }
     override def onFeedback(f : Feedback) = {
