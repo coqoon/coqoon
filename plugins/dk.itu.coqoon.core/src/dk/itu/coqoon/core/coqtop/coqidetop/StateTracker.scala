@@ -59,11 +59,12 @@ class StateTracker(
               println(s"$a == $b")
               false
           }
-          removeData(stateIds.drop(divergence).map(_._2))
-          stateIds = stateIds.take(divergence)
-          println(s"Keeping first ${divergence} commands")
-          ct.editAt(getHead)
-          submitAll(f.getSentences.drop(divergence))
+          if (divergence != -1) {
+            removeData(stateIds.drop(divergence).map(_._2))
+            stateIds = stateIds.take(divergence)
+            ct.editAt(getHead)
+            submitAll(f.getSentences.drop(divergence))
+          }
         case _ =>
     }
     override def onFeedback(f : Feedback) = {
