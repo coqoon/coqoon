@@ -1,3 +1,20 @@
+Coqoon 0.8.3
+============
+
+28th November 2018
+
+This release adds **very experimental** support for Coq 8.7 and 8.8 with a new
+editor built on the `coqidetop` interface.
+
+Bug fixes
+---------
+
+* The Coq model now correctly tracks the hierarchy of sentences in a Coq file
+* The Coq model no longer gets confused when comments appear in certain places
+* Coq editors should now work on files outside of a Coqoon load path
+* Warnings are now generated for nested proofs
+* Files beginning with `Set` commands no longer trigger `Import` warnings
+
 Coqoon 0.8.2
 ============
 
