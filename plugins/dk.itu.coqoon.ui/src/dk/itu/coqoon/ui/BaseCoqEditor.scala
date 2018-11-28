@@ -23,10 +23,14 @@ abstract class BaseCoqEditor extends ScalaTextEditor {
   import dk.itu.coqoon.core.utilities.CacheSlot
   import org.eclipse.ui.IFileEditorInput
   private lazy val workingCopy = CacheSlot[Option[IDetachedCoqVernacFile]] {
-    TryCast[IFileEditorInput](getEditorInput).map(_.getFile).flatMap(
-        ICoqModel.getInstance.toCoqElement).flatMap(
-            TryCast[ICoqVernacFile]).map(_.detach).orElse(
-                Some(IDetachedCoqVernacFile.createDummy))
+    val file = TryCast[IFileEditorInput](getEditorInput).map(_.getFile)
+    val element = file.flatMap(ICoqModel.getInstance.toCoqElement)
+    element.flatMap(TryCast[ICoqVernacFile]).map(_.detach).orElse {
+      Console.err.println(
+          s"$this: dummy Coq vernac file created " +
+          s"for $getEditorInput (file = $file, element = $element)")
+      Some(IDetachedCoqVernacFile.createDummy)
+    }
   }
 
   def getWorkingCopy() = workingCopy
