@@ -2,15 +2,15 @@ package dk.itu.coqoon.core.coqtop.coqidetop
 
 import scala.xml.{Elem, Node, Text, Attribute}
 
+import dk.itu.coqoon.core.coqtop.ideslave.CoqTypes
+
 object Interface {
   /* This is just a Scala translation of ide/interface.mli */
   type raw = Boolean
   type verbose = Boolean
 
-  case class goal(
-    goal_id : String,
-    goal_hyp : List[String],
-    goal_ccl : String)
+  val goal = CoqTypes.goal
+  type goal = CoqTypes.goal
 
   case class evar(
     evar_info : String)
@@ -21,11 +21,8 @@ object Interface {
     status_allproofs : List[String],
     status_proofnum : Int)
 
-  case class goals(
-    fg_goals : List[goal],
-    bg_goals : List[(List[goal], List[goal])],
-    shelved_goals : List[goal],
-    given_up_goals : List[goal])
+  val goals = CoqTypes.goals
+  type goals = CoqTypes.goals
 
   type hint = List[(String, String)]
 
