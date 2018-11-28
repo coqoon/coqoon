@@ -830,6 +830,7 @@ private class CoqVernacFileImpl(
     } else None
   }
 
+  override def getSentences() = getCache.sentences.get
   override def getSentenceAt(offset : Int) : Option[ICoqScriptSentence] = {
     var pos = 0
     for (i <- getCache.sentences.get) {

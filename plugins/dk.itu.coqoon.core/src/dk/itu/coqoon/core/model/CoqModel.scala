@@ -565,11 +565,15 @@ trait ICoqFile extends ICoqElement {
 import java.io.InputStream
 
 trait ICoqVernacFile extends ICoqFile with IParent {
+  /* Returns a structured, hierarchical view of the document content. */
   override def getChildren() : Seq[ICoqScriptElement]
 
   def getObjectFile() : Option[ICoqObjectFile]
 
   def getLineOffset(line : Int) : Option[Int]
+
+  /* Returns a linear view of all of the sentences in the document. */
+  def getSentences() : Seq[ICoqScriptSentence]
   def getSentenceAt(offset : Int) : Option[ICoqScriptSentence]
 
   def detach() : IDetachedCoqVernacFile
