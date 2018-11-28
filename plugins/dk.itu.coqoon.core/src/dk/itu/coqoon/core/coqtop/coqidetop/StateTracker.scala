@@ -3,7 +3,8 @@ package dk.itu.coqoon.core.coqtop.coqidetop
 import scala.collection.DefaultMap
 import scala.collection.mutable.{Buffer => MBuffer}
 
-import dk.itu.coqoon.core.model.{ICoqVernacFile}
+import dk.itu.coqoon.core.model.CoqEnforcement
+import dk.itu.coqoon.core.model.ICoqVernacFile
 import dk.itu.coqoon.core.model.{ICoqScriptGroup, ICoqScriptSentence}
 import dk.itu.coqoon.core.model.CoqElementChangeListener
 import dk.itu.coqoon.core.model.{CoqElementEvent, CoqFileContentChangedEvent}
@@ -110,6 +111,21 @@ class StateTracker(
           val ps = nextPrivateState
           stateIds :+= (makeSentenceID(s) -> ps)
           status += (ps -> Interface.Fail(sid, loc, msg))
+
+          /* Try to create an error marker */
+          val (pos, len) = loc match {
+            case Some((start, stop)) =>
+              (start, stop - start)
+            case None =>
+              (0, s.getLength)
+          }
+          val issue = CoqEnforcement.Issue(
+              ERR_ADD_FAILED, pos, len, msg, CoqEnforcement.Severity.Error)
+          println(issue)
+          s.addIssue((issue, CoqEnforcement.Severity.Error))
+          println(s.getAncestor[ICoqVernacFile])
+
+          /* Stop processing commands here */
           false
       }
     } else true
@@ -137,4 +153,7 @@ object StateTracker {
   type SentenceID = (Int, Int)
   private def makeSentenceID(s : ICoqScriptSentence) : SentenceID =
     (s.getOffset, s.getText.hashCode)
+
+  final val ERR_ADD_FAILED =
+    "dk.itu.coqoon.core.coqtop.coqidetop.StateTracker:addFailed"
 }
