@@ -57,8 +57,7 @@ class CoqIdeTopEditor
         sentence.flatMap(st.getFeedback).toSeq.flatten.foreach {
           case Feedback(_, _, _, Feedback.Message((level, None, text))) =>
             EclipseConsole.out.println(text)
-          case w =>
-            println(w)
+          case _ =>
         }
       })
     }

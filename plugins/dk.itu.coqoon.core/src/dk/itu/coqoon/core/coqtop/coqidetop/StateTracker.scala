@@ -97,7 +97,6 @@ class StateTracker(
   }
   def submit(
       s : Either[CoqSentence.Sentence, ICoqScriptSentence]) : Boolean = {
-    println(s"$this.submit(s = $s) (head is $getHead)")
     val (text, synthetic) = s match {
       case Left((text, syn)) => (text, syn)
       case Right(s) => (s.getText, s.isSynthetic)
