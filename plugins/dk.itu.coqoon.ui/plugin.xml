@@ -169,7 +169,7 @@
             extensions="v"
             icon="icons/coqfileblue_obj.gif"
             id="dk.itu.coqoon.ui.PIDECoqEditor"
-            name="Coq Editor (v8.5+, PIDE)">
+            name="Coq Editor (v8.5-v8.6, PIDE)">
          <contentTypeBinding
                contentTypeId="dk.itu.coqoon.core.CoqFile">
          </contentTypeBinding>
@@ -181,7 +181,7 @@
             extensions="v"
             icon="icons/coqide.png"
             id="dk.itu.coqoon.ui.CoqIdeTopEditor"
-            name="Coq Editor (v8.8+, coqidetop)">
+            name="Coq Editor (v8.7+, coqidetop)">
          <contentTypeBinding
                contentTypeId="dk.itu.coqoon.core.CoqFile">
          </contentTypeBinding>
