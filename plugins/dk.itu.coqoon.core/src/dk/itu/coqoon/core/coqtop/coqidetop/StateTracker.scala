@@ -8,18 +8,26 @@ import dk.itu.coqoon.core.model.ICoqVernacFile
 import dk.itu.coqoon.core.model.{ICoqScriptGroup, ICoqScriptSentence}
 import dk.itu.coqoon.core.model.CoqElementChangeListener
 import dk.itu.coqoon.core.model.{CoqElementEvent, CoqFileContentChangedEvent}
+import dk.itu.coqoon.core.coqtop.CoqSentence
 
 class StateTracker(
     ct : CoqIdeTop_v20170413) {
   import StateTracker._
 
   private var file : Option[ICoqVernacFile] = None
+  private var initialisationBlock : Option[String] = None
   private var stateIds : Seq[(SentenceID, Interface.state_id)] = Seq()
 
   private var goals : Map[Interface.state_id, Interface.goals] = Map()
   private var status :
       Map[Interface.state_id, Interface.value[Interface.status]] = Map()
   private var feedback : Map[Interface.state_id, MBuffer[Feedback]] = Map()
+
+  private def sendInitialisationBlock() =
+    initialisationBlock.foreach(ib => {
+      CoqSentence.getNextSentences(ib, 0, ib.length).foreach(
+          s => submit(Left(s)))
+    })
 
   def sentenceKnown(s : ICoqScriptSentence) = (getStateID(s) != None)
 
@@ -54,16 +62,16 @@ class StateTracker(
                   stateIds.map(s => Some(s._1)), None, None)
           val divergence = zippedIDs.indexWhere {
             case (a, b) if a != b =>
-              println(s"$a != $b")
               true
             case (a, b) =>
-              println(s"$a == $b")
               false
           }
           if (divergence != -1) {
             removeData(stateIds.drop(divergence).map(_._2))
             stateIds = stateIds.take(divergence)
             ct.editAt(getHead)
+            if (getHead == 1)
+              sendInitialisationBlock
             submitAll(f.getSentences.drop(divergence))
           }
         case _ =>
@@ -83,13 +91,19 @@ class StateTracker(
     var sentences = sentences_
     var continuing = true
     while (continuing && !sentences.isEmpty) {
-      continuing = submit(sentences.head)
+      continuing = submit(Right(sentences.head))
       sentences = sentences.tail
     }
   }
-  def submit(s : ICoqScriptSentence) : Boolean =
-    if (!s.isSynthetic) {
-      ct.add(getHead, s.getText, true) match {
+  def submit(
+      s : Either[CoqSentence.Sentence, ICoqScriptSentence]) : Boolean = {
+    println(s"$this.submit(s = $s) (head is $getHead)")
+    val (text, synthetic) = s match {
+      case Left((text, syn)) => (text, syn)
+      case Right(s) => (s.getText, s.isSynthetic)
+    }
+    if (!synthetic) {
+      ct.add(getHead, text, true) match {
         case Interface.Good((sid, (Left(()), msg))) =>
           stateIds :+= (makeSentenceID(s) -> sid)
           val st = ct.status(false)
@@ -112,28 +126,33 @@ class StateTracker(
           stateIds :+= (makeSentenceID(s) -> ps)
           status += (ps -> Interface.Fail(sid, loc, msg))
 
-          /* Try to create an error marker */
-          val (pos, len) = loc match {
-            case Some((start, stop)) =>
-              (start, stop - start)
-            case None =>
-              (0, s.getLength)
-          }
-          val issue = CoqEnforcement.Issue(
-              ERR_ADD_FAILED, pos, len, msg, CoqEnforcement.Severity.Error)
-          println(issue)
-          s.addIssue((issue, CoqEnforcement.Severity.Error))
-          println(s.getAncestor[ICoqVernacFile])
+          s.right.foreach(s => {
+            /* Try to create an error marker */
+            val (pos, len) = loc match {
+              case Some((start, stop)) =>
+                (start, stop - start)
+              case None =>
+                (0, s.getLength)
+            }
+            val issue = CoqEnforcement.Issue(
+                ERR_ADD_FAILED, pos, len, msg, CoqEnforcement.Severity.Error)
+            s.addIssue((issue, CoqEnforcement.Severity.Error))
+          })
 
           /* Stop processing commands here */
           false
+        case _ =>
+          true
       }
     } else true
+  }
 
-  def attach(f : ICoqVernacFile) = {
+  def attach(f : ICoqVernacFile, ib : String = "") = {
     file.foreach(_ => detach())
+    initialisationBlock = Option(ib).filter(!_.isEmpty)
     file = Some(f)
     f.getModel.addListener(ChangeListener)
+    sendInitialisationBlock()
     submitAll(f.getSentences)
   }
   def detach() = file.foreach(f => {
@@ -153,6 +172,14 @@ object StateTracker {
   type SentenceID = (Int, Int)
   private def makeSentenceID(s : ICoqScriptSentence) : SentenceID =
     (s.getOffset, s.getText.hashCode)
+  private def makeSentenceID(s : CoqSentence.Sentence) : SentenceID =
+    (s._1.start, s._1.hashCode)
+  private def makeSentenceID(
+      s : Either[CoqSentence.Sentence, ICoqScriptSentence]) : SentenceID =
+    s match {
+      case Left(s) => makeSentenceID(s)
+      case Right(s) => makeSentenceID(s)
+    }
 
   final val ERR_ADD_FAILED =
     "dk.itu.coqoon.core.coqtop.coqidetop.StateTracker:addFailed"
