@@ -2,7 +2,7 @@ package dk.itu.coqoon.ui.coqidetop
 
 import dk.itu.coqoon.ui.{BaseCoqEditor, CoqGoalsContainer}
 import dk.itu.coqoon.ui.utilities.{UIUtils, EclipseConsole}
-import dk.itu.coqoon.core.model.ICoqScriptSentence
+import dk.itu.coqoon.core.model.{ICoqModel, ICoqProject, ICoqScriptSentence}
 import dk.itu.coqoon.core.coqtop.coqidetop.{Feedback, Interface}
 import dk.itu.coqoon.core.utilities.SupersedableTask
 
@@ -68,7 +68,24 @@ class CoqIdeTopEditor
   import org.eclipse.ui.{IEditorInput, IFileEditorInput}
   override def doSetInput(input : IEditorInput) = {
     super.doSetInput(input)
-    st.attach(getWorkingCopy().get.get)
+
+    val fi = TryCast[IFileEditorInput](getEditorInput)
+    val initialisationBlockContent =
+      fi.flatMap(input => ICoqModel.getInstance.toCoqElement(
+          input.getFile.getProject)) match {
+        case Some(cp : ICoqProject) =>
+          cp.getLoadPath.flatMap(_.asCommands).mkString("", "\n", "\n")
+        case _ =>
+          EclipseConsole.err.println(
+s"""The Coq file ${fi.map(_.getName).getOrElse("(unknown")} is not part of a Coqoon project.
+(Using Coqoon in this way is not recommended; Coq files should generally be
+kept in Coqoon projects.)
+A simple Coq session has been created for it with an empty load path.
+Some Coqoon features may not work in this session.""")
+          ""
+      }
+
+    st.attach(getWorkingCopy().get.get, initialisationBlockContent)
   }
 
   import org.eclipse.core.resources.IFile
