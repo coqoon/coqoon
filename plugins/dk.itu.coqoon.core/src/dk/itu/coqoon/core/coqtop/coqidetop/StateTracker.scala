@@ -63,7 +63,7 @@ class StateTracker(
           stateIds = stateIds.take(divergence)
           println(s"Keeping first ${divergence} commands")
           ct.editAt(getHead)
-          f.getSentences.drop(divergence).foreach(submit)
+          submitAll(f.getSentences.drop(divergence))
         case _ =>
     }
     override def onFeedback(f : Feedback) = {
@@ -77,7 +77,15 @@ class StateTracker(
   }
   ct.addListener(ChangeListener)
 
-  def submit(s : ICoqScriptSentence) =
+  def submitAll(sentences_ : Seq[ICoqScriptSentence]) = {
+    var sentences = sentences_
+    var continuing = true
+    while (continuing && !sentences.isEmpty) {
+      continuing = submit(sentences.head)
+      sentences = sentences.tail
+    }
+  }
+  def submit(s : ICoqScriptSentence) : Boolean =
     if (!s.isSynthetic) {
       ct.add(getHead, s.getText, true) match {
         case Interface.Good((sid, (Left(()), msg))) =>
@@ -93,20 +101,23 @@ class StateTracker(
               }
             case _ =>
           }
+          true
+        case Interface.Fail((sid, loc, msg)) =>
+          /* Adding this state to the document failed, so it doesn't have a
+           * state ID -- and we need one to associate the error with. Make up
+           * for this by inventing a fake state ID for this command */
+          val ps = nextPrivateState
+          stateIds :+= (makeSentenceID(s) -> ps)
+          status += (ps -> Interface.Fail(sid, loc, msg))
+          false
       }
-    }
+    } else true
 
   def attach(f : ICoqVernacFile) = {
     file.foreach(_ => detach())
     file = Some(f)
     f.getModel.addListener(ChangeListener)
-    f.accept {
-      case s : ICoqScriptSentence =>
-        submit(s)
-        false
-      case _ : ICoqScriptGroup | _ : ICoqVernacFile =>
-        true
-    }
+    submitAll(f.getSentences)
   }
   def detach() = file.foreach(f => {
     f.getModel.removeListener(ChangeListener)
@@ -116,6 +127,10 @@ class StateTracker(
     status = Map()
     feedback = Map()
   })
+
+  private var privateState = -1
+  private def nextPrivateState() : Interface.state_id =
+    try privateState finally privateState -= 1
 }
 object StateTracker {
   type SentenceID = (Int, Int)
