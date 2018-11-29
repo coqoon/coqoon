@@ -163,6 +163,34 @@ class StateTracker(
     feedback = Map()
   })
 
+  def query(s : ICoqScriptSentence,
+      query : String) : Either[String, Seq[String]] = {
+    val stid = makeSentenceID(s)
+    stateIds.find(_._1 == stid).map(_._2) match {
+      case Some(sid) =>
+        val route = 32 + (scala.math.random * 32768.0).asInstanceOf[Int]
+        var messages : Seq[String] = Seq()
+        val collector = CoqIdeTopFeedbackListener {
+          case Feedback(_, r, _, Feedback.Message((level, _, msg)))
+              if r == route =>
+            messages :+= msg
+        }
+        ct.addListener(collector)
+        try {
+          ct.query(route, query, sid) match {
+            case Interface.Good(str) =>
+              Right(messages)
+            case Interface.Fail((_, _, msg)) =>
+              Left(msg)
+          }
+        } finally {
+          ct.removeListener(collector)
+        }
+      case None =>
+        Left("Command not yet assigned a state by Coq")
+    }
+  }
+
   private var privateState = -1
   private def nextPrivateState() : Interface.state_id =
     try privateState finally privateState -= 1
