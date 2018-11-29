@@ -1,13 +1,14 @@
 package dk.itu.coqoon.ui.editors.coqidetop
 
 import dk.itu.coqoon.ui.editors.{BaseCoqEditor, CoqGoalsContainer}
+import dk.itu.coqoon.ui.editors.pide.{QueryHost, QueryListener}
 import dk.itu.coqoon.ui.utilities.{UIUtils, EclipseConsole}
 import dk.itu.coqoon.core.model.{ICoqModel, ICoqProject, ICoqScriptSentence}
 import dk.itu.coqoon.core.coqtop.coqidetop.{Feedback, Interface}
 import dk.itu.coqoon.core.utilities.SupersedableTask
 
-class CoqIdeTopEditor
-    extends BaseCoqEditor with CoqGoalsContainer {
+class CoqIdeTopEditor extends BaseCoqEditor
+    with CoqGoalsContainer with QueryHost[ICoqScriptSentence] {
   import dk.itu.coqoon.core.coqtop.coqidetop.{
     CoqIdeTop_v20170413, StateTracker}
   private val st = new StateTracker(CoqIdeTop_v20170413())
@@ -98,4 +99,14 @@ Some Coqoon features may not work in this session.""")
     }
   }
   getReconciler.addHandler(reconcileEvents)
+
+  override def findActiveCommand() =
+    getWorkingCopy.asOption.map(_.get).flatMap(
+        _.getSentenceAt(getViewer.getTextWidget.getCaretOffset))
+  override def runQuery(s : ICoqScriptSentence,
+      queryContent : String, responseListener : QueryListener) =
+    responseListener.onQueryResult(st.query(s, queryContent))
 }
+
+import dk.itu.coqoon.ui.editors.pide.QueryHandler
+class CoqIdeTopQueryHandler extends QueryHandler[ICoqScriptSentence]

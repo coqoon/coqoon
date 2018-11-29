@@ -572,6 +572,15 @@
             </reference>
          </activeWhen>
       </handler>
+      <handler
+            class="dk.itu.coqoon.ui.editors.coqidetop.CoqIdeTopQueryHandler"
+            commandId="dk.itu.coqoon.ui.commands.query">
+         <activeWhen>
+            <reference
+                  definitionId="dk.itu.coqoon.ui.expressions.activeEditorIsCI">
+            </reference>
+         </activeWhen>
+      </handler>
    </extension>
    <extension
          point="org.eclipse.ui.navigator.navigatorContent">
@@ -859,6 +868,15 @@
                variable="activeEditor">
             <instanceof
                   value="dk.itu.coqoon.ui.editors.pide.PIDECoqEditor">
+            </instanceof>
+         </with>
+      </definition>
+      <definition
+            id="dk.itu.coqoon.ui.expressions.activeEditorIsCI">
+         <with
+               variable="activeEditor">
+            <instanceof
+                  value="dk.itu.coqoon.ui.editors.coqidetop.CoqIdeTopEditor">
             </instanceof>
          </with>
       </definition>
