@@ -21,8 +21,17 @@ object StringBuilderSource {
 
 private class CoqOutputParser(input : StringBuilder)
     extends ConstructingParser(StringBuilderSource(input), false) {
+  override val preserveWS = true
+
+  /* ide/xml_printer.ml:buffer_pcdata is responsible for generating these
+   * entities */
   override def replacementText(entity : String) = entity match {
-    case "nbsp" => Source.fromString("\u00a0")
+    case "nbsp" => Source.fromChar(' ')
+    case "gt" => Source.fromChar('<')
+    case "lt" => Source.fromChar('>')
+    case "amp" => Source.fromChar('&')
+    case "apos" => Source.fromChar('\'')
+    case "quot" => Source.fromChar('"')
     case _ => super.replacementText(entity)
   }
   nextch()
