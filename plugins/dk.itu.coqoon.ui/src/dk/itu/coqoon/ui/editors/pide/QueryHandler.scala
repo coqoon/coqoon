@@ -7,7 +7,7 @@
 
 package dk.itu.coqoon.ui.editors.pide
 
-import dk.itu.coqoon.ui.editors.EditorHandler
+import dk.itu.coqoon.ui.editors.{EditorHandler, BaseCoqEditor}
 import dk.itu.coqoon.core.utilities.TryCast
 import org.eclipse.swt.SWT
 import org.eclipse.swt.widgets.{Shell, Caret, Widget, Control, Composite}
@@ -18,7 +18,7 @@ import org.eclipse.jface.window.Window
 import org.eclipse.jface.dialogs.{Dialog, PopupDialog}
 import org.eclipse.jface.viewers.StyledString
 
-class QueryHandler extends EditorHandler {
+class QueryHandler[C](implicit a0 : Manifest[C]) extends EditorHandler {
   private val settings =
     new org.eclipse.jface.dialogs.DialogSettings(
         "Transient query dialog settings")
@@ -26,7 +26,7 @@ class QueryHandler extends EditorHandler {
   import dk.itu.coqoon.ui.utilities.UIUtils
   override def execute(ev : ExecutionEvent) = {
     getEditor.flatMap(
-        TryCast[PIDECoqEditor with QueryHost[isabelle.Command]]).foreach(
+        TryCast[BaseCoqEditor with QueryHost[C]]).foreach(
         editor => {
       val text = editor.getViewer.getTextWidget
       var (rx, ry) = {
@@ -54,3 +54,5 @@ class QueryHandler extends EditorHandler {
     null
   }
 }
+
+class PIDEQueryHandler extends QueryHandler[isabelle.Command]
