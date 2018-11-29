@@ -37,3 +37,9 @@ object CoqIdeTop_v20170413 {
 trait CoqIdeTopFeedbackListener {
   def onFeedback(f : Feedback)
 }
+object CoqIdeTopFeedbackListener {
+  def apply(pf : PartialFunction[Feedback, _]) =
+    new CoqIdeTopFeedbackListener {
+      override def onFeedback(f : Feedback) = if (pf.isDefinedAt(f)) pf(f)
+    }
+}
