@@ -1,8 +1,11 @@
 /* (c) 2010-2011 Hannes Mehnert and David Christiansen
  * Copyright © 2014 Alexander Faithfull */
 
-package dk.itu.coqoon.ui
+package dk.itu.coqoon.ui.editors
 
+import dk.itu.coqoon.ui.{Activator, CoqPartitions, EventReconciler,
+  MultiReconciler, CoqoonUIPreferences, ModelLabelProvider,
+  ModelContentProvider, OpenDeclarationHandler}
 import dk.itu.coqoon.core.utilities.TryCast
 import org.eclipse.ui.editors.text.TextEditor
 

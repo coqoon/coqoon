@@ -5,8 +5,9 @@
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
-package dk.itu.coqoon.ui
+package dk.itu.coqoon.ui.editors.ideslave
 
+import dk.itu.coqoon.ui.ManifestIdentifiers
 import dk.itu.coqoon.ui.utilities.{UIUtils, EclipseConsole}
 import dk.itu.coqoon.core.{ManifestIdentifiers => CMI}
 import dk.itu.coqoon.core.coqtop.ideslave.CoqTypes

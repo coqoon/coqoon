@@ -151,7 +151,7 @@
    <extension
          point="org.eclipse.ui.editors">
       <editor
-            class="dk.itu.coqoon.ui.CoqEditor"
+            class="dk.itu.coqoon.ui.editors.ideslave.CoqEditor"
             contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
             default="false"
             extensions="v"
@@ -163,7 +163,7 @@
          </contentTypeBinding>
       </editor>
       <editor
-            class="dk.itu.coqoon.ui.pide.PIDECoqEditor"
+            class="dk.itu.coqoon.ui.editors.pide.PIDECoqEditor"
             contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
             default="true"
             extensions="v"
@@ -175,7 +175,7 @@
          </contentTypeBinding>
       </editor>
       <editor
-            class="dk.itu.coqoon.ui.coqidetop.CoqIdeTopEditor"
+            class="dk.itu.coqoon.ui.editors.coqidetop.CoqIdeTopEditor"
             contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor"
             default="false"
             extensions="v"
@@ -474,7 +474,7 @@
    <extension
          point="org.eclipse.ui.handlers">
       <handler
-            class="dk.itu.coqoon.ui.CoqStepForwardHandler"
+            class="dk.itu.coqoon.ui.editors.ideslave.CoqStepForwardHandler"
             commandId="dk.itu.coqoon.ui.commands.step_forward">
          <activeWhen>
             <reference
@@ -483,7 +483,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.coqoon.ui.CoqStepBackHandler"
+            class="dk.itu.coqoon.ui.editors.ideslave.CoqStepBackHandler"
             commandId="dk.itu.coqoon.ui.commands.step_backward">
          <activeWhen>
             <reference
@@ -492,7 +492,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.coqoon.ui.CoqStepToCursorHandler"
+            class="dk.itu.coqoon.ui.editors.ideslave.CoqStepToCursorHandler"
             commandId="dk.itu.coqoon.ui.commands.step_cursor">
          <activeWhen>
             <reference
@@ -501,7 +501,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.coqoon.ui.CoqStepAllHandler"
+            class="dk.itu.coqoon.ui.editors.ideslave.CoqStepAllHandler"
             commandId="dk.itu.coqoon.ui.commands.step_all">
          <activeWhen>
             <reference
@@ -510,7 +510,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.coqoon.ui.CoqRetractAllHandler"
+            class="dk.itu.coqoon.ui.editors.ideslave.CoqRetractAllHandler"
             commandId="dk.itu.coqoon.ui.commands.retract">
          <activeWhen>
             <reference
@@ -519,7 +519,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.coqoon.ui.StopCoqHandler"
+            class="dk.itu.coqoon.ui.editors.ideslave.StopCoqHandler"
             commandId="dk.itu.coqoon.ui.commands.stop_coq">
          <activeWhen>
             <reference
@@ -528,7 +528,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.coqoon.ui.InterruptCoqHandler"
+            class="dk.itu.coqoon.ui.editors.ideslave.InterruptCoqHandler"
             commandId="dk.itu.coqoon.ui.commands.interrupt_coq">
          <activeWhen>
             <reference
@@ -537,7 +537,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.coqoon.ui.ToggleCoqFlagHandler"
+            class="dk.itu.coqoon.ui.editors.ideslave.ToggleCoqFlagHandler"
             commandId="dk.itu.coqoon.ui.commands.toggle_coq_flag">
          <activeWhen>
             <reference
@@ -555,7 +555,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.coqoon.ui.ReformatCoqHandler"
+            class="dk.itu.coqoon.ui.editors.ReformatCoqHandler"
             commandId="dk.itu.coqoon.ui.commands.reformat">
          <activeWhen>
             <reference
@@ -564,7 +564,7 @@
          </activeWhen>
       </handler>
       <handler
-            class="dk.itu.coqoon.ui.pide.QueryHandler"
+            class="dk.itu.coqoon.ui.editors.pide.QueryHandler"
             commandId="dk.itu.coqoon.ui.pide.commands.query">
          <activeWhen>
             <reference
@@ -840,7 +840,7 @@
          <with
                variable="activeEditor">
             <instanceof
-                  value="dk.itu.coqoon.ui.CoqEditor">
+                  value="dk.itu.coqoon.ui.editors.ideslave.CoqEditor">
             </instanceof>
          </with>
       </definition>
@@ -849,7 +849,7 @@
          <with
                variable="activeEditor">
             <instanceof
-                  value="dk.itu.coqoon.ui.BaseCoqEditor">
+                  value="dk.itu.coqoon.ui.editors.BaseCoqEditor">
             </instanceof>
          </with>
       </definition>
@@ -858,7 +858,7 @@
          <with
                variable="activeEditor">
             <instanceof
-                  value="dk.itu.coqoon.ui.pide.PIDECoqEditor">
+                  value="dk.itu.coqoon.ui.editors.pide.PIDECoqEditor">
             </instanceof>
          </with>
       </definition>
@@ -884,7 +884,7 @@
    <extension
          point="org.eclipse.ui.ide.markerResolution">
       <markerResolutionGenerator
-            class="dk.itu.coqoon.ui.ResolutionGenerator"
+            class="dk.itu.coqoon.ui.editors.ResolutionGenerator"
             markerType="dk.itu.sdg.kopitiam.problemmarker">
       </markerResolutionGenerator>
    </extension>

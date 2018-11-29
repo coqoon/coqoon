@@ -1,6 +1,6 @@
-package dk.itu.coqoon.ui.coqidetop
+package dk.itu.coqoon.ui.editors.coqidetop
 
-import dk.itu.coqoon.ui.{BaseCoqEditor, CoqGoalsContainer}
+import dk.itu.coqoon.ui.editors.{BaseCoqEditor, CoqGoalsContainer}
 import dk.itu.coqoon.ui.utilities.{UIUtils, EclipseConsole}
 import dk.itu.coqoon.core.model.{ICoqModel, ICoqProject, ICoqScriptSentence}
 import dk.itu.coqoon.core.coqtop.coqidetop.{Feedback, Interface}

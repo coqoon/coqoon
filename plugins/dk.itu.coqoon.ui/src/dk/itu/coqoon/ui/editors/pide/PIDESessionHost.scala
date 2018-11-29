@@ -1,4 +1,4 @@
-package dk.itu.coqoon.ui.pide
+package dk.itu.coqoon.ui.editors.pide
 
 trait PIDESessionHost extends OverlayRunner {
   protected val session = SessionPool.makePooledSession
@@ -7,7 +7,6 @@ trait PIDESessionHost extends OverlayRunner {
   /* XXX: does the annotation model really belong in this trait? */
   protected def getAnnotationModel() : Option[AnnotationModel]
 
-  import dk.itu.coqoon.ui.pide.Overlay
   private var overlay : Option[(Overlay, OverlayListener)] = None
   protected def getOverlay() : Option[(Overlay, OverlayListener)] = overlay
   override def setOverlay(overlay : Option[(Overlay, OverlayListener)]) =

@@ -1,8 +1,9 @@
 /* (c) 2010-2011 Hannes Mehnert and David Christiansen
  * Copyright © 2013, 2014 Alexander Faithfull */
 
-package dk.itu.coqoon.ui
+package dk.itu.coqoon.ui.editors
 
+import dk.itu.coqoon.ui.CoqPartitions
 import org.eclipse.ui.editors.text.TextSourceViewerConfiguration
 import org.eclipse.jface.text.rules.{Token, IToken, RuleBasedScanner}
 

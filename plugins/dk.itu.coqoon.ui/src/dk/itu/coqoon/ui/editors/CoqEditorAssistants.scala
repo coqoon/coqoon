@@ -5,10 +5,12 @@
  * You may use, copy, modify and/or redistribute this code subject to the terms
  * of either the license of Kopitiam or the Apache License, version 2.0 */
 
-package dk.itu.coqoon.ui
+package dk.itu.coqoon.ui.editors
 
+import dk.itu.coqoon.ui.CoqoonUIPreferences
 import dk.itu.coqoon.ui.CoqoonUIPreferences.{SpacesPerIndentationLevel => SPIL}
 import dk.itu.coqoon.ui.text.Region
+import dk.itu.coqoon.ui.utilities.UIUtils
 import org.eclipse.jface.text.{
   IDocument, TextUtilities => TU, DocumentCommand, IAutoEditStrategy}
 import org.eclipse.jface.text.rules.ICharacterScanner
@@ -269,7 +271,6 @@ class CoqQuickAssistProcessor extends IQuickAssistProcessor {
   override def getErrorMessage = null
 }
 
-import utilities.UIUtils
 import org.eclipse.ui.{IMarkerResolution, IMarkerResolutionGenerator}
 import org.eclipse.core.resources.IMarker
 

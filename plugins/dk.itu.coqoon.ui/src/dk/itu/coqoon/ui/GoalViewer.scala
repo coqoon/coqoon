@@ -1,5 +1,6 @@
 package dk.itu.coqoon.ui
 
+import dk.itu.coqoon.ui.editors.{CoqWordDetector, CoqGoalsContainer}
 import dk.itu.coqoon.ui.utilities.UIUtils.asyncExec
 import dk.itu.coqoon.core.coqtop.ideslave.CoqTypes
 import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}

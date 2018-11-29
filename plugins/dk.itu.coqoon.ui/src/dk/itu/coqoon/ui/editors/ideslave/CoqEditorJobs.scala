@@ -1,5 +1,6 @@
-package dk.itu.coqoon.ui
+package dk.itu.coqoon.ui.editors.ideslave
 
+import dk.itu.coqoon.ui.ManifestIdentifiers
 import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core
 import dk.itu.coqoon.core.model.ICoqModel

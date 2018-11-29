@@ -1,4 +1,4 @@
-package dk.itu.coqoon.ui.pide
+package dk.itu.coqoon.ui.editors.pide
 
 trait QueryListener {
   def onQueryResult(result : Either[String, Seq[String]])

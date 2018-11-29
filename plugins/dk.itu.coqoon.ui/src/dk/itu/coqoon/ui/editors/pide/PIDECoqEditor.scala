@@ -1,8 +1,8 @@
-package dk.itu.coqoon.ui.pide
+package dk.itu.coqoon.ui.editors.pide
 
-import dk.itu.coqoon.ui.{
-  BaseCoqEditor, CoqGoalsContainer, CoqoonUIPreferences, ManifestIdentifiers}
+import dk.itu.coqoon.ui.{CoqoonUIPreferences, ManifestIdentifiers}
 import dk.itu.coqoon.ui.text.Region
+import dk.itu.coqoon.ui.editors.{BaseCoqEditor, CoqGoalsContainer}
 import dk.itu.coqoon.ui.utilities.Profiler
 import dk.itu.coqoon.core.model.{CoqEnforcement, CoqEnforcementContext}
 import dk.itu.coqoon.core.utilities.SupersedableTask

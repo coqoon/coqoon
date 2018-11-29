@@ -10,6 +10,7 @@ package dk.itu.coqoon.ui
 import org.eclipse.core.commands.ExecutionEvent
 import org.eclipse.jface.text.source.ISourceViewer
 
+import dk.itu.coqoon.ui.editors.{BaseCoqEditor, EditorHandler, CoqWordDetector}
 import dk.itu.coqoon.ui.utilities.UIUtils
 import dk.itu.coqoon.core.model._
 import dk.itu.coqoon.core.utilities.{TryCast, TryAdapt}

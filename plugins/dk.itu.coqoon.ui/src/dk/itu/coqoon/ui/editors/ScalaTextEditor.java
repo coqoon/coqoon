@@ -1,4 +1,4 @@
-package dk.itu.coqoon.ui;
+package dk.itu.coqoon.ui.editors;
 
 import org.eclipse.ui.editors.text.TextEditor;
 import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
