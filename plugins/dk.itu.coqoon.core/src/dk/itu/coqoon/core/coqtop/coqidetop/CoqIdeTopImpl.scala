@@ -75,8 +75,6 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
       try {
         value.get
       } finally {
-        queuedFeedback.foreach(notifyListeners)
-        queuedFeedback = Seq()
         value = None
         replyAwaited = false
       }
@@ -87,7 +85,6 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
     object ValueLock {
       var replyAwaited = false
       var value : Option[Elem] = None
-      var queuedFeedback : Seq[Elem] = Seq()
     }
 
     private val buf : Array[Char] = Array(32768)
@@ -126,14 +123,10 @@ class CoqIdeTopImpl(args : Seq[String]) extends CoqIdeTop_v20170413 {
           println("<- " + elem)
         ValueLock synchronized {
           import ValueLock._
-          if (!replyAwaited) {
-            notifyListeners(elem)
-          } else if (elem.label == "value") {
+          if (elem.label == "value") {
             value = Some(elem)
             ValueLock.notify
-          } else {
-            queuedFeedback :+= elem
-          }
+          } else notifyListeners(elem)
         }
       }
   }
