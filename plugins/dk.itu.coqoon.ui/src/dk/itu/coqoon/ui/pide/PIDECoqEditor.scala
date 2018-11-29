@@ -7,10 +7,9 @@ import dk.itu.coqoon.ui.utilities.Profiler
 import dk.itu.coqoon.core.model.{CoqEnforcement, CoqEnforcementContext}
 import dk.itu.coqoon.core.utilities.SupersedableTask
 
-class PIDECoqEditor
-    extends BaseCoqEditor with CoqGoalsContainer with PIDESessionHost {
+class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer
+    with PIDESessionHost with QueryHost[isabelle.Command] {
   import org.eclipse.jface.viewers.StyledString.Styler
-  protected[pide] var queryHistory : Seq[(String, Styler)] = Seq()
 
   import org.eclipse.jface.text.IViewportListener
   object ViewportListener extends IViewportListener {
@@ -452,6 +451,20 @@ Some Coqoon features may not work in this session.""")
   getReconciler.addImmediate(_ => {
     IgnoreFlag synchronized (IgnoreFlag.flag = true)
   })
+
+  override def findActiveCommand() =
+    findCommand(getViewer.getTextWidget.getCaretOffset).map(_._2)
+
+  override def runQuery(
+      c : Command, queryContent : String, resultListener : QueryListener) = {
+    setOverlay(Some((Queries.coq_query(c, queryContent), new OverlayListener {
+      override def onResult(result : Either[String, Seq[String]]) = {
+        resultListener.onQueryResult(result)
+        clearQuery()
+      }
+    })))
+  }
+  override def clearQuery() = setOverlay(None)
 }
 
 object Perspective {

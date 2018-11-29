@@ -25,7 +25,9 @@ class QueryHandler extends EditorHandler {
 
   import dk.itu.coqoon.ui.utilities.UIUtils
   override def execute(ev : ExecutionEvent) = {
-    getEditor.flatMap(TryCast[PIDECoqEditor]).foreach(editor => {
+    getEditor.flatMap(
+        TryCast[PIDECoqEditor with QueryHost[isabelle.Command]]).foreach(
+        editor => {
       val text = editor.getViewer.getTextWidget
       var (rx, ry) = {
         val cl = text.getCaret.getLocation
@@ -33,6 +35,7 @@ class QueryHandler extends EditorHandler {
          * computer!) */
         (cl.x, cl.y + 80)
       }
+
       var control : Option[Control] = Some(text)
       while (control != None) {
         control.foreach(control => {
@@ -43,11 +46,10 @@ class QueryHandler extends EditorHandler {
         control = control.flatMap(c => Option(c.getParent))
       }
 
-      val command = editor.findCommand(
-          editor.getViewer.getTextWidget.getCaretOffset)
+      val command = editor.findActiveCommand()
       command.foreach(c =>
           new QueryPopup(
-              editor, c._2, text.getShell, new Point(rx, ry), settings).open)
+              editor, c, text.getShell, new Point(rx, ry), settings).open)
     })
     null
   }

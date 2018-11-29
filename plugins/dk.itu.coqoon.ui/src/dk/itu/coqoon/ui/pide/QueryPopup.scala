@@ -15,13 +15,13 @@ import org.eclipse.swt.graphics.Point
 import org.eclipse.jface.dialogs.{PopupDialog, IDialogSettings}
 import org.eclipse.jface.resource.JFaceResources
 
-class QueryPopup(
-    editor : PIDECoqEditor,
-    command : isabelle.Command,
+class QueryPopup[C](
+    queryHost : QueryHost[C],
+    command : C,
     shell: Shell, position: Point,
     settings : IDialogSettings)
     extends PopupDialog(shell, SWT.RESIZE | SWT.ON_TOP, true, true, false,
-        false, false, null, null) with OverlayListener {
+        false, false, null, null) with QueryListener {
   override protected def getDialogSettings = settings
 
   import org.eclipse.swt.graphics.Cursor
@@ -35,7 +35,7 @@ class QueryPopup(
   private var queryResults: Option[StyledText] = None
 
   def runQuery(query: String) = {
-    editor.setOverlay(Some((Queries.coq_query(command, query), this)))
+    queryHost.runQuery(command, query, this)
     (getShell +: queryResults.toSeq).filterNot(
           _.isDisposed).foreach(_.setCursor(busyCursor.get))
     appendResult(query, Stylers.Query, true)
@@ -44,7 +44,7 @@ class QueryPopup(
   }
 
   import dk.itu.coqoon.ui.utilities.UIUtils
-  override def onResult(result : Either[String, Seq[String]]) =
+  override def onQueryResult(result : Either[String, Seq[String]]) =
     UIUtils.asyncExec {
       result match {
         case Left(error) =>
@@ -57,14 +57,13 @@ class QueryPopup(
       (getShell +: queryResults.toSeq).filterNot(
           _.isDisposed).foreach(_.setCursor(null))
       queryText.foreach(_.setFocus)
-      editor.setOverlay(None)
     }
 
   def appendResult(result_ : String, styler : StyledString.Styler,
       addToHistory : Boolean = false) = {
     val result = result_ + "\n"
     if (addToHistory)
-      editor.queryHistory :+= (result_, styler)
+      queryHost.queryHistory :+= (result_, styler)
     queryResults.foreach(qr => {
       val scroll = (qr.getCaretOffset == qr.getText.length)
       val oldEnd = qr.getText.length
@@ -129,7 +128,7 @@ class QueryPopup(
     queryButton.foreach(Listener.Selection(_, l))
     queryText.foreach(Listener.DefaultSelection(_, l))
 
-    editor.queryHistory.foreach {
+    queryHost.queryHistory.foreach {
       case (result, styler) =>
         appendResult(result, styler)
     }
@@ -138,7 +137,7 @@ class QueryPopup(
   }
 
   override def close() = {
-    editor.setOverlay(None)
+    queryHost.clearQuery
     (getShell +: queryResults.toSeq).filterNot(
           _.isDisposed).foreach(_.setCursor(null))
     busyCursor.asOption.foreach(cursor => {
