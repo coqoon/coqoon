@@ -83,6 +83,12 @@ class StateTracker(
       if (!feedback.contains(f.state))
         feedback += (f.state -> MBuffer())
       feedback.get(f.state).get += f
+
+      /* Resend this feedback to our own listeners, with the expectation that
+       * they'll basically ignore its content and will use a SupersedableTask
+       * or something to update the presentation based on the current tracked
+       * state */
+      listeners.foreach(_.onFeedback(f))
     }
   }
   ct.addListener(ChangeListener)
@@ -194,6 +200,10 @@ class StateTracker(
   private var privateState = -1
   private def nextPrivateState() : Interface.state_id =
     try privateState finally privateState -= 1
+
+  protected var listeners : Set[CoqIdeTopFeedbackListener] = Set()
+  def addListener(l : CoqIdeTopFeedbackListener) = (listeners += l)
+  def removeListener(l : CoqIdeTopFeedbackListener) = (listeners -= l)
 }
 object StateTracker {
   type SentenceID = (Int, Int)
