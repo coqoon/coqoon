@@ -18,6 +18,24 @@ package dk.itu.coqoon.core.utilities
 
 case class Substring(val base : CharSequence, val start : Int, val end : Int)
     extends CharSequence {
+  def contentEquals(cs : CharSequence) : Boolean =
+    if (length == cs.length) {
+      var i = 0
+      while (i < length)
+        try {
+          if (charAt(i) != cs.charAt(i))
+            return false
+        } finally i += 1
+      true
+    } else false
+
+  override def equals(a : Any) = a match {
+    case a : Substring =>
+      contentEquals(a)
+    case _ =>
+      super.equals(a)
+  }
+
   override final lazy val length = end - start
 
   override def charAt(offset : Int) = base.charAt(start + offset)

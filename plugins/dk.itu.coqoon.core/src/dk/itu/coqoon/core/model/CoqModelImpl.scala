@@ -37,8 +37,18 @@ private abstract class CoqElementImpl[
   }
 
   final override def equals(a : Any) =
-    Option(a).filter(_.getClass == getClass).flatMap(
-        TryCast[CoqElementImpl[_, _]]).exists(_.properties == properties)
+    Option(a) match {
+      case Some(a : CoqElementImpl[_, _]) if a.getClass == getClass =>
+        if (a.properties == properties) {
+          true
+        } else {
+          false
+        }
+      case Some(a : CoqElementImpl[_, _]) =>
+        false
+      case _ =>
+        false
+    }
 
   override def toString =
     getClass.getSimpleName + properties.mkString("(", ", ", ")")
@@ -877,13 +887,12 @@ private trait ReparentableCSE {
 }
 
 import dk.itu.coqoon.core.coqtop.CoqSentence.Sentence
-import dk.itu.coqoon.core.utilities.Substring
 private class CoqScriptSentenceImpl(
     private val sentence : Sentence,
     private val parent : ICoqElement with IParent)
         extends CoqElementImpl(None, parent)
         with ICoqScriptSentence with ReparentableCSE {
-  override def properties = super.properties :+ sentence
+  override def properties = super.properties :+ sentence :+ getOffset
 
   override lazy val getText = sentence._1.toString
   override lazy val getOffset = sentence._1.start
