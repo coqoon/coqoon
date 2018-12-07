@@ -19,7 +19,9 @@ class StateTracker(
   var initialisationBlock : Option[String] = None
 
   private object Lock {
-    var stateIds : Seq[(SentenceID, Interface.state_id)] = Seq()
+    var stateIds : Seq[(ICoqScriptSentence, Interface.state_id)] = Seq()
+    def appendState(s : ICoqScriptSentence, sid : Interface.state_id) =
+      stateIds :+= (s, sid)
     var goals : Map[Interface.state_id, Interface.goals] = Map()
     var status :
         Map[Interface.state_id, Interface.value[Interface.status]] = Map()
@@ -37,18 +39,12 @@ class StateTracker(
 
   def sentenceKnown(s : ICoqScriptSentence) = (getStateID(s) != None)
 
-  private def _getStateID(
-      sentenceID : SentenceID) : Option[Interface.state_id] =
-    Lock synchronized {
-      import Lock._
-      stateIds.find(_._1 == sentenceID).map(_._2)
-    }
   private def getStateID(
       s : ICoqScriptSentence) : Option[Interface.state_id] =
-    _getStateID(makeSentenceID(s))
-  private def getStateID(
-      s : CoqSentence.Sentence) : Option[Interface.state_id] =
-    _getStateID(makeSentenceID(s))
+    Lock synchronized {
+      import Lock._
+      stateIds.find(_._1 == s).map(_._2)
+    }
 
   def getGoals(s : ICoqScriptSentence) =
     Lock synchronized getStateID(s).flatMap(Lock.goals.get)
@@ -65,7 +61,12 @@ class StateTracker(
     })
 
   private def getHead() : Interface.state_id =
-    Lock synchronized Lock.stateIds.lastOption.map(_._2).getOrElse(1)
+    Lock synchronized {
+      val head = Lock.stateIds.lastIndexWhere(_._2 > 0)
+      if (head != -1) {
+        Lock.stateIds(head)._2
+      } else 1
+    }
 
   private object ChangeListener
       extends CoqElementChangeListener with CoqIdeTopFeedbackListener {
@@ -73,26 +74,57 @@ class StateTracker(
       ev match {
         case CoqFileContentChangedEvent(
             f : ICoqVernacFile) if file.contains(f) =>
-          val zippedIDs = Lock synchronized {
-            f.getSentences.map(
-                s => Some(makeSentenceID(s))).zipAll(
-                    Lock.stateIds.map(s => Some(s._1)), None, None)
+          val (ibCount, zippedSentences) = Lock synchronized {
+            /* Count, and filter out, the initialisation block states */
+            val ibCount = Lock.stateIds.indexWhere(_._1 != null)
+            val stateIds = Lock.stateIds.drop(ibCount)
+            (ibCount, f.getSentences.map(s => Some(s)).zipAll(
+                stateIds.map(s => Some(s._1)), None, None))
           }
-          val divergence = zippedIDs.indexWhere {
+          val divergence = zippedSentences.indexWhere {
             case (a, b) if a != b =>
               true
             case (a, b) =>
               false
           }
           if (divergence != -1) {
-            Lock synchronized {
-              removeData(Lock.stateIds.drop(divergence).map(_._2))
-              Lock.stateIds = Lock.stateIds.take(divergence)
+            val rewound = Lock synchronized {
+              import Lock._
+              /* divergence is the index at which the user-visible part of the
+               * document has changed, but let's not forget about the
+               * initialisation block! */
+              removeData(stateIds.drop(ibCount + divergence).map(_._2))
+              stateIds = stateIds.take(ibCount + divergence)
+
+              /* Having done that, the new head *might* be a state for which
+               * EditAt will fail; check the status to find out. */
+              var rewound = 0
+              var continue = true
+              while (continue && !stateIds.isEmpty) {
+                val (_, sid) = stateIds.last
+                status.get(sid) match {
+                  case Some(Interface.Good(_)) =>
+                    /* This is a valid head */
+                    continue = false
+                  case Some(Interface.Fail(_)) | None =>
+                    /* This is either an invalid head or a synthetic one --
+                     * remove it (we'll resubmit it in a moment anyway) */
+                    stateIds = stateIds.dropRight(1)
+                    rewound += 1
+                }
+              }
+              rewound
             }
-            ct.editAt(getHead)
+            ct.editAt(getHead) match {
+              case Interface.Good(_) =>
+              case Interface.Fail((sid, _, msg)) =>
+                new InvalidManagedStateError(
+                    s"Coqoon tried to backtrack into an error state ($sid) " +
+                    "-- shouldn't happen!\n" + msg).printStackTrace()
+            }
             if (getHead == 1)
               sendInitialisationBlock
-            f.getSentences.drop(divergence).foreach(Submitter.add)
+            f.getSentences.drop(divergence - rewound).foreach(Submitter.add)
           }
         case _ =>
     }
@@ -101,8 +133,9 @@ class StateTracker(
         import Lock._
 
         /* Feedback might arrive before we've processed the return value of
-         * add(), so instead of going through stateIds to work out which command
-         * this message is associated with, just stash it away immediately */
+         * add(), so instead of going through stateIds to work out which
+         * command this message is associated with, just stash it away
+         * immediately */
         if (!feedback.contains(f.state))
           feedback += (f.state -> MBuffer())
         feedback.get(f.state).get += f
@@ -133,8 +166,8 @@ class StateTracker(
         case Right(s) => (s.getText, s.isSynthetic)
       }
       if (!synthetic) {
-        ct.add(getHead, text, true) match {
-          case Interface.Good((sid, (Left(()), msg))) =>
+        (s, ct.add(getHead, text, true)) match {
+          case (Right(s), Interface.Good((sid, (Left(()), msg)))) =>
             val st = ct.status(false)
             val goalData = st match {
               case Interface.Good(Interface.status(_, Some(_), _, _)) =>
@@ -150,14 +183,22 @@ class StateTracker(
 
             Lock synchronized {
               import Lock._
-              stateIds :+= (makeSentenceID(s) -> sid)
+              appendState(s, sid)
               status += (sid -> st)
               goalData.foreach(gs => goals += (sid -> gs))
             }
-            true
-          case Interface.Fail((sid, loc, msg)) =>
-            s.right.foreach(s => {
-              /* Try to create an error marker */
+          case (Left(_), Interface.Good((sid, (Left(()), _)))) =>
+            /* This was an initialisation block sentence, and so not backed by
+             * a model object -- but we need to note sid in the stateIds "map",
+             * because it's the new head. Store a dummy entry */
+            Lock synchronized {
+              import Lock._
+              appendState(null, sid)
+            }
+          case (Right(s), Interface.Fail((sid, loc, msg))) =>
+            if (sid == getHead) {
+              /* Something went wrong when we tried to add this command; try to
+               * create an error marker */
               val (pos, len) = loc match {
                 case Some((start, stop)) =>
                   (start, stop - start)
@@ -167,19 +208,41 @@ class StateTracker(
               val issue = CoqEnforcement.Issue(
                   ERR_ADD_FAILED, pos, len, msg, CoqEnforcement.Severity.Error)
               s.addIssue((issue, CoqEnforcement.Severity.Error))
-            })
-
-            Lock synchronized {
-              import Lock._
-              /* Adding this state to the document failed, so it doesn't have a
-               * state ID -- and we need one to associate the error with. Make
-               * up for this by inventing a fake state ID for this command */
-              val ps = nextPrivateState
-              stateIds :+= (makeSentenceID(s) -> ps)
-              status += (ps -> Interface.Fail(sid, loc, msg))
+              Lock synchronized {
+                import Lock._
+                /* Adding this state to the document failed, so it doesn't have
+                 * a state ID -- and we need one to associate the failed
+                 * status with. Invent a fake one for this purpose */
+                val ps = nextPrivateState
+                appendState(s, ps)
+                status += (ps -> Interface.Fail(sid, loc, msg))
+              }
+            } else {
+              /* Something was wrong with a previous command, and Coq is still
+               * complaining about it. Do nothing here; we've presumably
+               * already drawn an error on that previous command */
             }
+
+            if (msg.startsWith("Currently, the parsing api")) {
+              new InvalidManagedStateError(
+                  "Coqoon directed Coq to the wrong point in the " +
+                  "document -- shouldn't happen!\n" + msg).printStackTrace()
+            }
+          case (Left(s), Interface.Fail((sid, loc, msg))) =>
+            new InvalidManagedStateError(
+                "Coqoon generated an initialisation block sentence " +
+                s"(${s.toString}) with errors -- shouldn't " +
+                "happen!\n" + msg).printStackTrace()
           case _ =>
         }
+      } else {
+        s.right.foreach(s => {
+          /* Synthetic model sentences should go into our view of the document
+           * to make sure it doesn't get too out of sync with the model, but
+           * they don't get a real state ID -- or even a convincing fake state
+           * ID */
+          Lock synchronized Lock.appendState(s, 0)
+        })
       }
     }
   }
@@ -192,14 +255,16 @@ class StateTracker(
     sendInitialisationBlock()
     f.getSentences.foreach(Submitter.add)
   }
-  def detach() = file.foreach(f => Lock synchronized {
-    import Lock._
+  def detach() = file.foreach(f => {
     f.getModel.removeListener(ChangeListener)
     file = None
-    stateIds = Seq()
-    goals = Map()
-    status = Map()
-    feedback = Map()
+    Lock synchronized {
+      import Lock._
+      stateIds = Seq()
+      goals = Map()
+      status = Map()
+      feedback = Map()
+    }
   })
 
   def query(s : ICoqScriptSentence,
@@ -233,18 +298,8 @@ class StateTracker(
   def removeListener(l : CoqIdeTopFeedbackListener) = (listeners -= l)
 }
 object StateTracker {
-  type SentenceID = (Int, Int)
-  private def makeSentenceID(s : ICoqScriptSentence) : SentenceID =
-    (s.getOffset, s.getText.hashCode)
-  private def makeSentenceID(s : CoqSentence.Sentence) : SentenceID =
-    (s._1.start, s._1.hashCode)
-  private def makeSentenceID(
-      s : Either[CoqSentence.Sentence, ICoqScriptSentence]) : SentenceID =
-    s match {
-      case Left(s) => makeSentenceID(s)
-      case Right(s) => makeSentenceID(s)
-    }
-
   final val ERR_ADD_FAILED =
     "dk.itu.coqoon.core.coqtop.coqidetop.StateTracker:addFailed"
 }
+
+class InvalidManagedStateError(val msg : String) extends Error(msg)
