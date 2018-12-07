@@ -28,7 +28,7 @@ object Interface {
 
   type option_name = List[String]
 
-  abstract class option_value
+  sealed abstract class option_value
   case class BoolValue(
     value : Boolean) extends option_value
   case class IntValue(
@@ -44,7 +44,7 @@ object Interface {
     opt_name : String,
     opt_value : option_value)
 
-  abstract class search_constraint
+  sealed abstract class search_constraint
   case class Name_Pattern(
     value : String) extends search_constraint
   case class Type_Pattern(
@@ -75,7 +75,7 @@ object Interface {
   /* Obsolete(?) */
   type edit_id = Int
 
-  abstract class value[A]
+  sealed abstract class value[A]
   case class Good[A](value : A) extends value[A]
   case class Fail[A](value : (state_id, location, String)) extends value[A]
 
