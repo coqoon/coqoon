@@ -1,3 +1,16 @@
+Coqoon 0.8.4
+============
+
+12th December 2018
+
+This release adds query and error marker support to the `coqidetop` editor, as
+well as drastically improving its performance.
+
+Bug fixes
+---------
+
+* HTML entities in `coqidetop` responses are now properly supported
+
 Coqoon 0.8.3
 ============
 
