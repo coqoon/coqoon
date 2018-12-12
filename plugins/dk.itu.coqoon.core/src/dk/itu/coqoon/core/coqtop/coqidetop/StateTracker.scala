@@ -240,22 +240,19 @@ class StateTracker(
             }
           case (Right(s), Interface.Fail((0, loc, msg))) =>
             /* Something went wrong when we tried to add this command; stash
-             * the error away with a private state ID of our own creation and
-             * trigger a model update to draw the error */
-            val (pos, len) = positionToFixedSpan(s, loc)
-            val issue = CoqEnforcement.Issue(
-                ADD_FAILED, pos, len, msg, CoqEnforcement.Severity.Error)
-            s.addIssue((issue, CoqEnforcement.Severity.Error))
+             * the error away with a private state ID of our own creation... */
             val ps = Lock synchronized {
               import Lock._
-              /* Adding this state to the document failed, so it doesn't have
-               * a state ID -- and we need one to associate the failed status
-               * with. Invent a fake one for this purpose */
               val ps = nextPrivateState
               appendState(s, ps)
               status += (ps -> Interface.Fail(0, loc, msg))
               ps
             }
+            /* ... and now turn it into a fake feedback message and ping
+             * ChangeListener to update the model accordingly */
+            ChangeListener.onFeedback(
+                Feedback("state", 0, ps, Feedback.Message((
+                    Feedback.MessageLevel.Error, loc, msg))))
             ChangeListener.onStateAssigned(s, ps)
 
             if (msg.startsWith("Currently, the parsing api")) {
