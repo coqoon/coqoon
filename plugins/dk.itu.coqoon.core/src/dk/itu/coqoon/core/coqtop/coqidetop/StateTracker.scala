@@ -37,7 +37,7 @@ class StateTracker(
       CoqSentence.getNextSentences(ib, 0, ib.length).foreach(Submitter.add)
     })
 
-  def sentenceKnown(s : ICoqScriptSentence) = (getStateID(s) != None)
+  def sentenceKnown(s : ICoqScriptSentence) = (getStateID(s).exists(_ != 0))
 
   private def getStateID(
       s : ICoqScriptSentence) : Option[Interface.state_id] =
