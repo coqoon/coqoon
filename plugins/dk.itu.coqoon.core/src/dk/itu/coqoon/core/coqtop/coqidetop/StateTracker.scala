@@ -211,32 +211,28 @@ class StateTracker(
               import Lock._
               appendState(null, sid)
             }
-          case (Right(s), Interface.Fail((sid, loc, msg))) =>
-            if (sid == getHead) {
-              /* Something went wrong when we tried to add this command; try to
-               * create an error marker */
-              val (pos, len) = loc match {
-                case Some((start, stop)) =>
-                  (start, stop - start)
-                case None =>
-                  (0, s.getLength)
-              }
-              val issue = CoqEnforcement.Issue(
-                  ERR_ADD_FAILED, pos, len, msg, CoqEnforcement.Severity.Error)
-              s.addIssue((issue, CoqEnforcement.Severity.Error))
-              Lock synchronized {
-                import Lock._
-                /* Adding this state to the document failed, so it doesn't have
-                 * a state ID -- and we need one to associate the failed
-                 * status with. Invent a fake one for this purpose */
-                val ps = nextPrivateState
-                appendState(s, ps)
-                status += (ps -> Interface.Fail(sid, loc, msg))
-              }
-            } else {
-              /* Something was wrong with a previous command, and Coq is still
-               * complaining about it. Do nothing here; we've presumably
-               * already drawn an error on that previous command */
+          case (Right(s), Interface.Fail((0, loc, msg))) =>
+            /* Something went wrong when we tried to add this command; stash
+             * the error away with a private state ID of our own creation and
+             * trigger a model update to draw the error */
+            val (pos, len) = loc match {
+              case Some((start, stop)) =>
+                (start, stop - start)
+              case None =>
+                (0, s.getLength)
+            }
+            val issue = CoqEnforcement.Issue(
+                ERR_ADD_FAILED, pos, len, msg, CoqEnforcement.Severity.Error)
+            s.addIssue((issue, CoqEnforcement.Severity.Error))
+            val ps = Lock synchronized {
+              import Lock._
+              /* Adding this state to the document failed, so it doesn't have
+               * a state ID -- and we need one to associate the failed status
+               * with. Invent a fake one for this purpose */
+              val ps = nextPrivateState
+              appendState(s, ps)
+              status += (ps -> Interface.Fail(0, loc, msg))
+              ps
             }
             ChangeListener.onStateAssigned(s, ps)
 
