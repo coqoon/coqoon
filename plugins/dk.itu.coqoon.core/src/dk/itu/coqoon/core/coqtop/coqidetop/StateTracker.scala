@@ -128,16 +128,46 @@ class StateTracker(
           }
         case _ =>
     }
+
     def updateModel(s : ICoqScriptSentence, f : Feedback) =
-      println(s.getText.trim, f)
+      f.content match {
+        case Feedback.Message((level, position_, message)) =>
+          import dk.itu.coqoon.core.model.CoqEnforcement
+          val severity = level match {
+            case Feedback.MessageLevel.Debug |
+                 Feedback.MessageLevel.Info |
+                 Feedback.MessageLevel.Notice =>
+              CoqEnforcement.Severity.Information
+            case Feedback.MessageLevel.Warning =>
+              CoqEnforcement.Severity.Warning
+            case Feedback.MessageLevel.Error =>
+              CoqEnforcement.Severity.Error
+          }
+          val (offset, length) = position_ match {
+            case Some((start, end)) =>
+              (start, end - start)
+            case None =>
+              val leadingWhitespace = s.getText.takeWhile(_.isWhitespace).size
+              (leadingWhitespace, s.getLength - leadingWhitespace)
+          }
+          s.addIssue(CoqEnforcement.Issue(
+              FEEDBACK_MSG, offset, length, message, severity), severity)
+        case _ =>
+      }
     def onStateAssigned(
         s : ICoqScriptSentence, sid : Interface.state_id) =
       Lock.synchronized {
         Lock.feedback.get(sid)
       }.getOrElse(MBuffer()).foreach(f => updateModel(s, f))
+
     override def onFeedback(f : Feedback) = {
       Lock synchronized {
         import Lock._
+
+        /* (XXX: all normal feedback messages come back on route 0, with the
+         * notable exception of queries, which specify a response route. While
+         * the model is only updated based on route 0, should perhaps even more
+         * of this code be gated in this way?) */
 
         /* Feedback might arrive before we've processed the return value of
          * add(), so instead of going through stateIds to work out which
@@ -147,12 +177,14 @@ class StateTracker(
           feedback += (f.state -> MBuffer())
         feedback.get(f.state).get += f
 
-        /* Update the model using this feedback, if we know what sentence it
-         * belongs to. If we don't, then Submitter will let us know eventually
-         * by calling onStateAssigned  */
-        stateIds.find(_._2 == f.state) foreach {
-          case (null, _) => /* do nothing */
-          case (s, _) => updateModel(s, f)
+        if (f.route == 0) {
+          /* Update the model using this feedback, if we know what sentence it
+           * belongs to. If we don't, then Submitter will let us know
+           * eventually by calling onStateAssigned  */
+          stateIds.find(_._2 == f.state) foreach {
+            case (null, _) => /* do nothing */
+            case (s, _) => updateModel(s, f)
+          }
         }
       }
 
@@ -222,7 +254,7 @@ class StateTracker(
                 (0, s.getLength)
             }
             val issue = CoqEnforcement.Issue(
-                ERR_ADD_FAILED, pos, len, msg, CoqEnforcement.Severity.Error)
+                ADD_FAILED, pos, len, msg, CoqEnforcement.Severity.Error)
             s.addIssue((issue, CoqEnforcement.Severity.Error))
             val ps = Lock synchronized {
               import Lock._
@@ -311,8 +343,8 @@ class StateTracker(
   def removeListener(l : CoqIdeTopFeedbackListener) = (listeners -= l)
 }
 object StateTracker {
-  final val ERR_ADD_FAILED =
-    "dk.itu.coqoon.core.coqtop.coqidetop.StateTracker:addFailed"
+  final val ADD_FAILED = "state-tracker/add-failed"
+  final val FEEDBACK_MSG = "state-tracker/feedback"
 }
 
 class InvalidManagedStateError(val msg : String) extends Error(msg)
