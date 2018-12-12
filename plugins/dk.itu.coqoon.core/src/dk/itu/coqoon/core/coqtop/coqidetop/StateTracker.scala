@@ -128,6 +128,13 @@ class StateTracker(
           }
         case _ =>
     }
+    def updateModel(s : ICoqScriptSentence, f : Feedback) =
+      println(s.getText.trim, f)
+    def onStateAssigned(
+        s : ICoqScriptSentence, sid : Interface.state_id) =
+      Lock.synchronized {
+        Lock.feedback.get(sid)
+      }.getOrElse(MBuffer()).foreach(f => updateModel(s, f))
     override def onFeedback(f : Feedback) = {
       Lock synchronized {
         import Lock._
@@ -139,6 +146,14 @@ class StateTracker(
         if (!feedback.contains(f.state))
           feedback += (f.state -> MBuffer())
         feedback.get(f.state).get += f
+
+        /* Update the model using this feedback, if we know what sentence it
+         * belongs to. If we don't, then Submitter will let us know eventually
+         * by calling onStateAssigned  */
+        stateIds.find(_._2 == f.state) foreach {
+          case (null, _) => /* do nothing */
+          case (s, _) => updateModel(s, f)
+        }
       }
 
       /* Resend this feedback to our own listeners, with the expectation that
@@ -187,6 +202,7 @@ class StateTracker(
               status += (sid -> st)
               goalData.foreach(gs => goals += (sid -> gs))
             }
+            ChangeListener.onStateAssigned(s, sid)
           case (Left(_), Interface.Good((sid, (Left(()), _)))) =>
             /* This was an initialisation block sentence, and so not backed by
              * a model object -- but we need to note sid in the stateIds "map",
@@ -222,6 +238,7 @@ class StateTracker(
                * complaining about it. Do nothing here; we've presumably
                * already drawn an error on that previous command */
             }
+            ChangeListener.onStateAssigned(s, ps)
 
             if (msg.startsWith("Currently, the parsing api")) {
               new InvalidManagedStateError(
