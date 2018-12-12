@@ -10,6 +10,7 @@ import dk.itu.coqoon.core.model.CoqElementChangeListener
 import dk.itu.coqoon.core.model.{CoqElementEvent, CoqFileContentChangedEvent}
 import dk.itu.coqoon.core.coqtop.CoqSentence
 import dk.itu.coqoon.core.utilities.BatchCollector
+import dk.itu.coqoon.core.utilities.OffsetCorrection.fixPair
 
 class StateTracker(
     ct : CoqIdeTop_v20170413) {
@@ -131,7 +132,7 @@ class StateTracker(
 
     def updateModel(s : ICoqScriptSentence, f : Feedback) =
       f.content match {
-        case Feedback.Message((level, position_, message)) =>
+        case Feedback.Message((level, position, message)) =>
           import dk.itu.coqoon.core.model.CoqEnforcement
           val severity = level match {
             case Feedback.MessageLevel.Debug |
@@ -143,13 +144,7 @@ class StateTracker(
             case Feedback.MessageLevel.Error =>
               CoqEnforcement.Severity.Error
           }
-          val (offset, length) = position_ match {
-            case Some((start, end)) =>
-              (start, end - start)
-            case None =>
-              val leadingWhitespace = s.getText.takeWhile(_.isWhitespace).size
-              (leadingWhitespace, s.getLength - leadingWhitespace)
-          }
+          val (offset, length) = positionToFixedSpan(s, position)
           s.addIssue(CoqEnforcement.Issue(
               FEEDBACK_MSG, offset, length, message, severity), severity)
         case _ =>
@@ -247,12 +242,7 @@ class StateTracker(
             /* Something went wrong when we tried to add this command; stash
              * the error away with a private state ID of our own creation and
              * trigger a model update to draw the error */
-            val (pos, len) = loc match {
-              case Some((start, stop)) =>
-                (start, stop - start)
-              case None =>
-                (0, s.getLength)
-            }
+            val (pos, len) = positionToFixedSpan(s, loc)
             val issue = CoqEnforcement.Issue(
                 ADD_FAILED, pos, len, msg, CoqEnforcement.Severity.Error)
             s.addIssue((issue, CoqEnforcement.Severity.Error))
@@ -345,6 +335,16 @@ class StateTracker(
 object StateTracker {
   final val ADD_FAILED = "state-tracker/add-failed"
   final val FEEDBACK_MSG = "state-tracker/feedback"
+
+  private def positionToFixedSpan(
+      s : ICoqScriptSentence, position: Option[(Int, Int)]) =
+    position.flatMap(p => fixPair(s.getText, p._1, p._2)) match {
+      case Some((start, end)) =>
+        (start, end - start)
+      case None =>
+        val leadingWhitespace = s.getText.takeWhile(_.isWhitespace).size
+        (leadingWhitespace, s.getLength - leadingWhitespace)
+    }
 }
 
 class InvalidManagedStateError(val msg : String) extends Error(msg)

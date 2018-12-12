@@ -73,6 +73,11 @@ object OffsetCorrection {
     None
   }
 
+  def fixPair(seq : CharSequence, start : Int, end : Int) =
+    utf8OffsetToCharOffset(start, seq).flatMap(
+        start => utf8OffsetToCharOffset(end, seq).map(
+            end => (start, end)))
+
   import java.nio.charset.Charset
   private val testVector = "abc🍪de fgæp école"
   val offsets = Seq(

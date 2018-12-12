@@ -110,13 +110,6 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer
   import org.eclipse.jface.text.source.Annotation
   private var annotations : Map[Command, Annotation] = Map()
 
-  private def fixPair(seq : CharSequence, start : Int, end : Int) = {
-    import dk.itu.coqoon.core.utilities.OffsetCorrection.utf8OffsetToCharOffset
-    utf8OffsetToCharOffset(start, seq).flatMap(
-        start => utf8OffsetToCharOffset(end, seq).map(
-            end => (start, end)))
-  }
-
   override protected def commandsUpdated(changed : Seq[Command]) =
     if (!isIgnoring) {
       val ls = getLastSnapshot.get
@@ -168,6 +161,7 @@ class PIDECoqEditor extends BaseCoqEditor with CoqGoalsContainer
             getAnnotationModel
           } else None
         try {
+          import dk.itu.coqoon.core.utilities.OffsetCorrection.fixPair
           for (i <- changedResultsAndMarkup) i match {
             case (Some(offset), command, results, markup) =>
               _p(s"command ${command.id}") {
