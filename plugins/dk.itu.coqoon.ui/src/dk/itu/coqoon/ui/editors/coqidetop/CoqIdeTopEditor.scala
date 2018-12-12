@@ -51,8 +51,10 @@ class CoqIdeTopEditor extends BaseCoqEditor
         var sentence : Option[ICoqScriptSentence] = None
         while (sentence.isEmpty && caret >= 0) {
           sentence = getWorkingCopy.get.get.getSentenceAt(caret)
-          if (!sentence.exists(st.sentenceKnown))
+          if (!sentence.exists(st.sentenceKnown)) {
             caret = sentence.map(_.getOffset - 1).getOrElse(caret - 1)
+            sentence = None
+          }
         }
         sentence.flatMap(st.getStatus) foreach {
           case Interface.Fail((_, loc, msg)) =>
