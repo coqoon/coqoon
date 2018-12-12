@@ -156,26 +156,25 @@ class StateTracker(
       }.getOrElse(MBuffer()).foreach(f => updateModel(s, f))
 
     override def onFeedback(f : Feedback) = {
-      Lock synchronized {
-        import Lock._
+      /* All Coq-initiated feedback messages should arrive on route 0; as
+       * such, those are the only ones we handle here. (Query responses come
+       * on other routes, but query() installs a special feedback handler to
+       * act on them.) */
+      if (f.route == 0) {
+        Lock synchronized {
+          import Lock._
 
-        /* (XXX: all normal feedback messages come back on route 0, with the
-         * notable exception of queries, which specify a response route. While
-         * the model is only updated based on route 0, should perhaps even more
-         * of this code be gated in this way?) */
+          /* Feedback might arrive before we've processed the return value of
+           * add(), so instead of going through stateIds to work out which
+           * command this message is associated with, just stash it away
+           * immediately */
+          if (!feedback.contains(f.state))
+            feedback += (f.state -> MBuffer())
+          feedback.get(f.state).get += f
 
-        /* Feedback might arrive before we've processed the return value of
-         * add(), so instead of going through stateIds to work out which
-         * command this message is associated with, just stash it away
-         * immediately */
-        if (!feedback.contains(f.state))
-          feedback += (f.state -> MBuffer())
-        feedback.get(f.state).get += f
-
-        if (f.route == 0) {
           /* Update the model using this feedback, if we know what sentence it
            * belongs to. If we don't, then Submitter will let us know
-           * eventually by calling onStateAssigned  */
+           * eventually by calling onStateAssigned */
           stateIds.find(_._2 == f.state) foreach {
             case (null, _) => /* do nothing */
             case (s, _) => updateModel(s, f)
