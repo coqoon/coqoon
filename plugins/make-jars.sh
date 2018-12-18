@@ -24,6 +24,7 @@ buildjar() {
 	)
 }
 
+cd "`dirname "$0"`"
 buildjar dk.itu.coqoon.core \
 	src/ lib/ plugin.xml schema/ license.txt -C bin/ dk/
 buildjar dk.itu.coqoon.ui \
